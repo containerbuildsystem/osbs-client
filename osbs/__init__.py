@@ -1,4 +1,5 @@
-import  logging
+import logging
+
 
 def set_logging(name="osbs", level=logging.DEBUG):
     # create logger
