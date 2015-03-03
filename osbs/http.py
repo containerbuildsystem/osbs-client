@@ -1,7 +1,10 @@
 """
 abstraction on top of http api calls
 
-use requests, fallback to pycurl
+use pycurl (can handle chunked response properly), fallback to requests
+
+chunked implementation for pycurl taken from:
+  http://stackoverflow.com/a/21809888/909579
 """
 
 from __future__ import print_function, absolute_import, unicode_literals
