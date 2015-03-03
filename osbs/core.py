@@ -1,9 +1,13 @@
 from __future__ import print_function, unicode_literals, absolute_import
 import httplib
+import logging
 
 import time
 from urlparse import urljoin
 from .http import get_http_session
+
+
+logger = logging.getLogger(__name__)
 
 
 class OpenshiftException(Exception):
