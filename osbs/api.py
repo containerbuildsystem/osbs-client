@@ -11,7 +11,8 @@ class OSBS(object):
         """ """
         self.conf = configuration
         self.os = Openshift(openshift_url=self.conf.get_openshift_uri(),
-                            kubelet_base=self.conf.get_kubelet_uri())
+                            kubelet_base=self.conf.get_kubelet_uri(),
+                            verbose=self.conf.get_verbosity())
 
     def list_builds(self):
         builds = self.os.list_builds().json()

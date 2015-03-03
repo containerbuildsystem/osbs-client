@@ -55,3 +55,6 @@ class Configuration(object):
 
     def get_kubelet_uri(self):
         return self._get_value("kubelet_uri", "General", "kubelet_uri")
+
+    def get_verbosity(self):
+        return self._get_value("verbose", "General", "verbose")
