@@ -77,13 +77,18 @@ class Openshift(object):
         """
         redir_url = self._build_url("redirect/buildLogs/%s" % build_id)
         bl = self.con.get(redir_url, allow_redirects=False)
-        while bl.status_code == 500:
+        attempts = 10
+        while bl.status_code not in (httplib.OK, httplib.TEMPORARY_REDIRECT, httplib.MOVED_PERMANENTLY):
             bl = self.con.get(redir_url, allow_redirects=False)
-            time.sleep(3)
+            time.sleep(5)  # 50 seconds got to be enough
+            if attempts <= 0:
+                break
+            attempts -= 1
         buildlogs_url = self._build_k8s_url(
             "containerLogs/default/build-%s/custom-build?follow=%d" % (
                 build_id, 1 if follow else 0))
-        response = self.con.get(buildlogs_url, stream=True, headers={'Connection': 'close'})
+        time.sleep(15)  # container ***STILL*** may not be ready
+        response = self.con.get(buildlogs_url, stream=follow, headers={'Connection': 'close'})
         return response.iter_lines()
 
     def list_builds(self):
