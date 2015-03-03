@@ -1,25 +1,35 @@
 #!/usr/bin/python -tt
 from __future__ import print_function, absolute_import, unicode_literals
+import copy
 import logging
-import pprint
 
 import sys
 import argparse
 from osbs import set_logging
-from osbs.build import BuildManager
-from osbs.constants import BUILD_JSON_STORE
-from osbs.core import Openshift, OSBS
+from osbs.api import OSBS
+from osbs.conf import Configuration
+from osbs.constants import BUILD_JSON_STORE, DEFAULT_CONFIGURATION_FILE
+
 
 logger = logging.getLogger('osbs')
 
 
-def list_builds(args):
-    os = Openshift(openshift_url=args.openshift_base, kubelet_base=args.kubelet_base)
-    builds = os.list_builds().json()
+def gracful_chain_get(d, *args):
+    t = copy.deepcopy(d)
+    for arg in args:
+        try:
+            t = t[arg]
+        except (AttributeError, KeyError):
+            return None
+    return t
+
+
+def cmd_list_builds(args, osbs):
+    builds = osbs.list_builds()
     format_str = "{name:48} {status:16} {image:64}"
     print(format_str.format(**{"name": "BUILD NAME", "status": "STATUS", "image": "IMAGE NAME"}), file=sys.stderr)
     for build in builds['items']:
-        image = build['parameters']['output']['imageTag']
+        image = gracful_chain_get(build, 'parameters', 'output', 'imageTag')
         if args.USER:
             if not image.startswith(args.USER + "/"):
                 continue
@@ -31,10 +41,8 @@ def list_builds(args):
         print(format_str.format(**b))
 
 
-def get_build(args):
-    os = Openshift(openshift_url=args.openshift_base, kubelet_base=args.kubelet_base)
-    response = os.get_build(args.BUILD_ID[0])
-    build_json = response.json()
+def cmd_get_build(args, osbs):
+    build_json = osbs.get_build(args.BUILD_ID[0])
     # FIXME: pretty printing json could be a better idea
     template = """\
 BUILD ID: {build_id}
@@ -56,31 +64,27 @@ PACKAGES
     context = {
         "build_id": build_json['metadata']['name'],
         "status": build_json['status'],
-        "image": build_json['parameters']['output']['imageTag'],
+        "image": gracful_chain_get(build_json, 'parameters', 'output', 'imageTag'),
         "date": build_json['metadata']['creationTimestamp'],
-        "dockerfile": build_json['metadata']['labels']['dockerfile'],
-        "logs": build_json['metadata']['labels']['logs'],
-        "packages": build_json['metadata']['labels']['rpm-packages'],
+        "dockerfile": gracful_chain_get(build_json, 'metadata', 'labels', 'dockerfile'),
+        "logs": gracful_chain_get(build_json, 'metadata', 'labels', 'logs'),
+        "packages": gracful_chain_get(build_json, 'metadata', 'labels', 'rpm-packages'),
     }
     print(template.format(**context))
 
 
-def prod_build(args):
-    os = Openshift(openshift_url=args.openshift_base, kubelet_base=args.kubelet_base,
-                   verbose=args.verbose)
-    osbs = OSBS(os)
-    bm = BuildManager(build_json_store=args.build_json_dir)
-    build = bm.get_prod_build(
+def cmd_prod_build(args, osbs):
+    build_id = osbs.create_prod_build(
         git_uri=args.git_url,
         git_ref=args.git_commit,
         user=args.user,
         component=args.component,
-        registry_uri=args.registry,
-        koji_target=args.target,
+        registry=args.registry,
+        target=args.target,
+        build_json_dir=args.build_json_dir
     )
-    osbs.create_and_start_plain_build(build)
-    print("Build submitted, watching logs (feel free to interrupt)")
-    for line in os.logs(build.build_id, follow=True):
+    print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
+    for line in osbs.get_build_logs(build_id, follow=True):
         print(line)
 
 
@@ -97,11 +101,11 @@ def cli():
     list_builds_parser = subparsers.add_parser('list-builds', help='list builds in OSBS')
     list_builds_parser.add_argument("USER", help="list builds only for specified username",
                                     nargs="?")
-    list_builds_parser.set_defaults(func=list_builds)
+    list_builds_parser.set_defaults(func=cmd_list_builds)
 
     get_build_parser = subparsers.add_parser('get-build', help='get info about build')
     get_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
-    get_build_parser.set_defaults(func=get_build)
+    get_build_parser.set_defaults(func=cmd_get_build)
 
     build_parser = subparsers.add_parser('build', help='build an image in OSBS')
     build_parser.add_argument("--build-json-dir", help="directory with build jsons",
@@ -122,12 +126,14 @@ def cli():
                                    help="username (will be image prefix)")
     prod_build_parser.add_argument("-r", "--registry", action='store', required=True,
                                    help="registry where image should be pushed")
-    prod_build_parser.set_defaults(func=prod_build)
+    prod_build_parser.set_defaults(func=cmd_prod_build)
 
-    parser.add_argument("--openshift-uri", action='store', metavar="URL", dest="openshift_base",
+    parser.add_argument("--openshift-uri", action='store', metavar="URL",
                         help="openshift URL to remote API", required=True)
-    parser.add_argument("--kubelet-uri", action='store', metavar="URL", dest="kubelet_base",
+    parser.add_argument("--kubelet-uri", action='store', metavar="URL",
                         help="kubelet URL to remote API", required=True)
+    parser.add_argument("--config", action='store', metavar="PATH",
+                        help="path to configuration file", default=DEFAULT_CONFIGURATION_FILE)
     args = parser.parse_args()
     return parser, args
 
@@ -140,8 +146,12 @@ def main():
         set_logging(level=logging.WARNING)
     else:
         set_logging(level=logging.INFO)
+
+    configuration = Configuration(conf_file=args.config, cli_args=args)
+    osbs = OSBS(configuration)
+
     try:
-        args.func(args)
+        args.func(args, osbs)
     except AttributeError as ex:
         if hasattr(args, 'func'):
             raise

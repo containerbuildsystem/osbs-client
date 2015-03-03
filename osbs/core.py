@@ -1,14 +1,25 @@
 from __future__ import print_function, unicode_literals, absolute_import
-import copy
+import httplib
 
 import time
-import json
-import datetime
-import logging
 from urlparse import urljoin
 from .http import get_http_session
 
 
+class OpenshiftException(Exception):
+    """ OpenShift didn't respond with OK (200) status """
+
+    def __init__(self, status_code, *args, **kwargs):
+        super(OpenshiftException, self).__init__(*args, **kwargs)
+        self.status_code = status_code
+
+
+def check_response(response):
+    if response.status_code != httplib.OK:
+        raise OpenshiftException(response.status_code)
+
+
+# TODO: error handling: create function which handles errors in response object
 class Openshift(object):
 
     def __init__(self, openshift_url, kubelet_base, verbose=False):
@@ -85,46 +96,7 @@ class Openshift(object):
         :return:
         """
         url = self._build_url("builds/%s/" % build_id)
-        return self.con.get(url)
-
-
-class OSBS(object):
-
-    def __init__(self, openshift):
-        self.os = openshift
-
-    def create_and_start_plain_build(self, build):
-        """
-        create a build object from provided build in openshift,
-        this will also start the build right away
-
-        :param build:
-        :return:
-        """
-        response = self.os.create_build(json.dumps(build.build_json))
-        build.response = response
-        return build
-
-    def create_build_config(self, build):
-        """
-
-        :param build:
-        :return:
-        """
-        build_config = copy.deepcopy(build.build_json)
-        build_config['kind'] = "BuildConfig"
-        response = self.os.create_build_config(json.dumps(build_config))
-        build.response = response
-        return build
-
-    def start_build(self, build_config_id):
-        """
-
-        :param build:
-        :return:
-        """
-        response = self.os.get_build_config(build_config_id)
-        build_json = response.json()
-        build_json["kind"] = "Build"
-        response = self.os.create_build(json.dumps(build_json))
+        response = self.con.get(url)
+        check_response(response)
         return response
+

@@ -135,13 +135,9 @@ class PycurlAdapter(object):
         self.url = url
         method = method.lower()
         if method == 'post':
-            print("setting post")
             self.c.setopt(pycurl.POST, 1)
-            self.c.setopt(pycurl.HTTPGET, 0)
         elif method == 'get':
-            print("setting get")
             self.c.setopt(pycurl.HTTPGET, 1)
-            self.c.setopt(pycurl.POST, 0)
         elif method == 'put':
             self.c.setopt(pycurl.PUT, 1)
         elif method == 'delete':
@@ -156,9 +152,8 @@ class PycurlAdapter(object):
         self.c.setopt(pycurl.VERBOSE, 1 if self.verbose else 0)
 
         if data:
+            # curl sets the method to post if one sets any POSTFIELDS (even '')
             self.c.setopt(pycurl.POSTFIELDS, data)
-        #else:
-        #    self.c.setopt(pycurl.POSTFIELDS, '')
 
         if allow_redirects:
             self.c.setopt(pycurl.FOLLOWLOCATION, 1)
