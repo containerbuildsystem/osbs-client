@@ -1,6 +1,3 @@
-# don't store build jsons in git yet
-inputs/
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

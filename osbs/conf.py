@@ -58,3 +58,12 @@ class Configuration(object):
 
     def get_verbosity(self):
         return self._get_value("verbose", "General", "verbose")
+
+    def get_kojiroot(self):
+        return self._get_value("koji_root", "General", "koji_root")
+
+    def get_kojihub(self):
+        return self._get_value("koji_hub", "General", "koji_hub")
+
+    def get_rpkg_binary(self):
+        return self._get_value("rpkg_binary", "General", "rpkg_binary")

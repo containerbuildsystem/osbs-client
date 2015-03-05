@@ -31,6 +31,10 @@ class OSBS(object):
             user=user,
             component=component,
             registry_uri=registry,
+            openshift_uri=self.conf.get_openshift_uri(),
+            kojiroot=self.conf.get_kojiroot(),
+            kojihub=self.conf.get_kojihub(),
+            rpkg_bin=self.conf.get_rpkg_binary(),
             koji_target=target,
         )
         response = self.os.create_build(json.dumps(build.build_json))

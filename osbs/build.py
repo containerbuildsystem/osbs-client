@@ -4,17 +4,18 @@ import copy
 import json
 import os
 import datetime
-from osbs.constants import BUILD_JSON_STORE, DEFAULT_GIT_REF
+from osbs.constants import DEFAULT_GIT_REF
 
 
 class DockJsonManipulator(object):
     """ """
-    def __init__(self, build_json):
+    def __init__(self, build_json, dock_json):
         """ """
         self.build_json = build_json
-        self.dock_json = self.get_dock_json()
+        self.dock_json = dock_json
 
     def get_dock_json(self):
+        """ return dock json from existing build json """
         env_json = self.build_json['parameters']['strategy']['customStrategy']['env']
         p = [env for env in env_json if env["name"] == "DOCK_PLUGINS"]
         if len(p) <= 0:
@@ -50,6 +51,7 @@ class Build(object):
         """ """
         self.build_json = None  # rendered template
         self._template = None  # template loaded from filesystem
+        self._inner_template = None  # dock json
         self.build_json_store = build_json_store
 
     def render(self):
@@ -73,7 +75,15 @@ class Build(object):
             with open(path, "r") as fp:
                 self._template = json.load(fp)
         return copy.deepcopy(self._template)
-       
+
+    @property
+    def inner_template(self):
+        if self._inner_template is None:
+            path = os.path.join(self.build_json_store, "%s_inner.json" % self.key)
+            with open(path, "r") as fp:
+                self._template = json.load(fp)
+        return copy.deepcopy(self._template)
+
 
 class ProductionBuild(Build):
     """
@@ -82,6 +92,7 @@ class ProductionBuild(Build):
     key = "prod"
 
     def __init__(self, git_uri, koji_target, user, component, registry_uri,
+                 openshift_uri, kojiroot, kojihub, rpkg_bin,
                  git_ref=DEFAULT_GIT_REF, **kwargs):
         """ """
         super(ProductionBuild, self).__init__(**kwargs)
@@ -91,11 +102,16 @@ class ProductionBuild(Build):
         self.user = user
         self.component = component
         self.registry_uri = registry_uri
+        self.openshift_uri = openshift_uri
+        self.kojiroot = kojiroot
+        self.kojihub = kojihub
+        self.rpkg_bin = rpkg_bin
         d = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         self.name = "%s-%s" % (self.component, d)
 
     def render(self):
         config = self.template
+        inner_config = self.inner_template
 
         # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
         config['metadata']['name'] = self.name
@@ -108,8 +124,11 @@ class ProductionBuild(Build):
 
         config['parameters']['output']['registry'] = self.registry_uri
 
-        dj = DockJsonManipulator(config)
+        dj = DockJsonManipulator(config, inner_config)
         dj.dock_json_set_arg('prebuild_plugins', "koji", "target", self.koji_target)
+        dj.dock_json_set_arg('prebuild_plugins', "koji", "root", self.kojiroot)
+        dj.dock_json_set_arg('prebuild_plugins', "koji", "hub", self.kojihub)
+        dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url", self.openshift_uri)
         dj.write_dock_json()
         self.build_json = config
         return self.build_json

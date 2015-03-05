@@ -1,0 +1,45 @@
+{
+  "prebuild_plugins": [
+    {
+      "name": "change_from_in_dockerfile"
+    },
+    {
+      "args": {
+        "binary": "{{RPKG_BIN}}"
+      },
+      "name": "distgit_fetch_artefacts"
+    },
+    {
+      "args": {
+        "root": "{{KOJI_ROOT}}",
+        "target": "{{KOJI_TARGET}}",
+        "hub": "{{KOJI_HUB}}"
+      },
+      "name": "koji"
+    },
+    {
+      "name": "inject_yum_repo"
+    },
+    {
+      "name": "dockerfile_content"
+    }
+  ],
+  "postbuild_plugins": [
+    {
+      "name": "remove_built_image"
+    },
+    {
+      "args": {
+        "image_id": "BUILT_IMAGE_ID"
+      },
+      "name": "all_rpm_packages"
+    },
+    {
+      "args": {
+        "url": "{{OPENSHIFT_URI}}"
+      },
+      "name": "store_metadata_in_osv3"
+    }
+  ]
+}
+
