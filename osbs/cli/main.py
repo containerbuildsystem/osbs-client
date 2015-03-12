@@ -129,9 +129,9 @@ def cli():
     prod_build_parser.set_defaults(func=cmd_prod_build)
 
     parser.add_argument("--openshift-uri", action='store', metavar="URL",
-                        help="openshift URL to remote API", required=True)
+                        help="openshift URL to remote API")
     parser.add_argument("--kubelet-uri", action='store', metavar="URL",
-                        help="kubelet URL to remote API", required=True)
+                        help="kubelet URL to remote API")
     parser.add_argument("--config", action='store', metavar="PATH",
                         help="path to configuration file", default=DEFAULT_CONFIGURATION_FILE)
     args = parser.parse_args()

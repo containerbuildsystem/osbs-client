@@ -39,12 +39,22 @@ SELECT_TIMEOUT = 9999
 class Response(object):
     """ let's mock Response object of requests """
 
-    def __init__(self, status_code=0, content='', curl=None):
+    def __init__(self, status_code=0, content='', curl=None, raw_headers=None):
         self.status_code = status_code
         self.content = content
         self.curl = curl
         self.curl_multi = getattr(self.curl, "curl_multi", None)
         self.response_buffer = getattr(self.curl, "response", None)
+        self._raw_headers = raw_headers
+        self._headers = None
+
+    @property
+    def headers(self):
+        if self._headers is None:
+            m = httplib.HTTPMessage(self._raw_headers, False)
+            m.readheaders()
+            self._headers = m.dict
+        return self._headers
 
     def json(self):
         return json.loads(self.content)
@@ -123,6 +133,7 @@ class PycurlAdapter(object):
         self._c = None
         self.url = None
         self.response = StringIO()
+        self.response_headers = StringIO()
         self.verbose = verbose
 
     @property
@@ -151,8 +162,12 @@ class PycurlAdapter(object):
         self.c.setopt(pycurl.URL, url)
         self.c.setopt(pycurl.COOKIEFILE, '')
         self.c.setopt(pycurl.WRITEFUNCTION, self.response.write)
+        self.c.setopt(pycurl.HEADERFUNCTION, self.response_headers.write)
         self.c.setopt(pycurl.SSL_VERIFYPEER, 1 if verify_ssl else 0)
         self.c.setopt(pycurl.VERBOSE, 1 if self.verbose else 0)
+        self.c.setopt(pycurl.SSL_VERIFYPEER, 0)  # FIXME
+        # TODO: add basic auth
+        # self.c.setopt(pycurl.USERPWD, ...)
 
         if data:
             # curl sets the method to post if one sets any POSTFIELDS (even '')
@@ -187,6 +202,8 @@ class PycurlAdapter(object):
             self.c.perform()
             response.status_code = self.c.getinfo(pycurl.HTTP_CODE)
             response.content = self.response.getvalue()
+            self.response_headers.seek(0)
+            response._raw_headers = self.response_headers
             # clear buffer
             self.response.truncate(0)
         return response

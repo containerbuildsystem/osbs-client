@@ -1,5 +1,6 @@
 from ConfigParser import SafeConfigParser
 import ConfigParser
+from urlparse import urljoin
 from osbs.constants import DEFAULT_CONFIGURATION_FILE
 
 
@@ -50,8 +51,31 @@ class Configuration(object):
                 return value
         raise RuntimeError("value '%s' not found" % args_key)
 
-    def get_openshift_uri(self):
+    def get_openshift_base_uri(self):
+        """
+        https://<host>[:<port>]/
+
+        :return: str
+        """
         return self._get_value("openshift_uri", "General", "openshift_uri")
+
+    def get_openshift_api_uri(self):
+        """
+        https://<host>[:<port>]/osapi/v<number>beta<number>/
+
+        :return: str
+        """
+        base_uri = self.get_openshift_base_uri()
+        return urljoin(base_uri, "/osapi/v1beta1/")
+
+    def get_openshift_oauth_api_uri(self):
+        """
+        https://<host>[:<port>]/oauth/authorize/
+
+        :return: str
+        """
+        base_uri = self.get_openshift_base_uri()
+        return urljoin(base_uri, "/oauth/authorize")  # MUST NOT END WITH SLASH
 
     def get_kubelet_uri(self):
         return self._get_value("kubelet_uri", "General", "kubelet_uri")

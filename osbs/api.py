@@ -10,7 +10,8 @@ class OSBS(object):
     def __init__(self, configuration):
         """ """
         self.conf = configuration
-        self.os = Openshift(openshift_url=self.conf.get_openshift_uri(),
+        self.os = Openshift(openshift_api_url=self.conf.get_openshift_api_uri(),
+                            openshift_oauth_url=self.conf.get_openshift_oauth_api_uri(),
                             kubelet_base=self.conf.get_kubelet_uri(),
                             verbose=self.conf.get_verbosity())
 
@@ -31,7 +32,7 @@ class OSBS(object):
             user=user,
             component=component,
             registry_uri=registry,
-            openshift_uri=self.conf.get_openshift_uri(),
+            openshift_uri=self.conf.get_openshift_api_uri(),
             kojiroot=self.conf.get_kojiroot(),
             kojihub=self.conf.get_kojihub(),
             rpkg_bin=self.conf.get_rpkg_binary(),
