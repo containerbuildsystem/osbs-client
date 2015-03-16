@@ -26,9 +26,6 @@
   ],
   "postbuild_plugins": [
     {
-      "name": "remove_built_image"
-    },
-    {
       "args": {
         "image_id": "BUILT_IMAGE_ID"
       },
@@ -36,9 +33,13 @@
     },
     {
       "args": {
-        "url": "{{OPENSHIFT_URI}}"
+        "url": "{{OPENSHIFT_URI}}",
+        "verify_ssl": false
       },
       "name": "store_metadata_in_osv3"
+    },
+    {
+      "name": "remove_built_image"
     }
   ]
 }
