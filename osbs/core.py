@@ -27,12 +27,19 @@ def check_response(response):
 # TODO: error handling: create function which handles errors in response object
 class Openshift(object):
 
-    def __init__(self, openshift_api_url, openshift_oauth_url, kubelet_base, verbose=False):
+    def __init__(self, openshift_api_url, openshift_oauth_url, kubelet_base, verbose=False,
+                 username=None, password=None, use_kerberos=False):
         self.os_api_url = openshift_api_url
         self._os_oauth_url = openshift_oauth_url
         self.kubelet_base = kubelet_base
         self.verbose = verbose
         self._con = get_http_session(verbose=self.verbose)
+
+        # auth stuff
+        self.use_kerberos = use_kerberos
+        self.username = username
+        self.password = password
+        self.use_auth = bool(use_kerberos or (username and password))
         self.token = None
 
     @property
@@ -47,7 +54,7 @@ class Openshift(object):
 
     def _request_args(self, with_auth=True, **kwargs):
         headers = kwargs.pop("headers", {})
-        if with_auth:
+        if with_auth and self.use_auth:
             if self.token is None:
                 self.get_oauth_token()
             headers["Authorization"] = "Bearer %s" % self.token
@@ -63,7 +70,12 @@ class Openshift(object):
 
     def get_oauth_token(self):
         url = self.os_oauth_url + "?response_type=token&client_id=openshift-challenging-client"
-        r = self._get(url, with_auth=False, allow_redirects=False)
+        if self.username and self.password:
+            r = self._get(url, with_auth=False, allow_redirects=False, username=self.username, password=self.password)
+        elif self.use_kerberos:
+            r = self._get(url, with_auth=False, allow_redirects=False, kerberos_auth=True)
+        else:
+            raise ValueError("You need to specify an authentication type!")
         redir_url = r.headers['location']
         parsed_url = urlparse.urlparse(redir_url)
         fragment = parsed_url.fragment

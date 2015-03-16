@@ -13,7 +13,9 @@ class OSBS(object):
         self.os = Openshift(openshift_api_url=self.conf.get_openshift_api_uri(),
                             openshift_oauth_url=self.conf.get_openshift_oauth_api_uri(),
                             kubelet_base=self.conf.get_kubelet_uri(),
-                            verbose=self.conf.get_verbosity())
+                            verbose=self.conf.get_verbosity(),
+                            username=self.conf.get_username(),
+                            password=self.conf.get_password())
 
     def list_builds(self):
         builds = self.os.list_builds().json()

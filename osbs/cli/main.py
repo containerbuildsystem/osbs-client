@@ -134,6 +134,12 @@ def cli():
                         help="kubelet URL to remote API")
     parser.add_argument("--config", action='store', metavar="PATH",
                         help="path to configuration file", default=DEFAULT_CONFIGURATION_FILE)
+    parser.add_argument("--username", action='store',
+                        help="username within OSBS")
+    parser.add_argument("--password", action='store',
+                        help="password within OSBS")
+    parser.add_argument("--use-kerberos", action='store_true',
+                        help="use kerberos for authentication")
     args = parser.parse_args()
     return parser, args
 

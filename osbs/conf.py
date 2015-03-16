@@ -21,7 +21,7 @@ class Configuration(object):
         self.args = cli_args
         self.kwargs = kwargs
 
-    def _get_value(self, args_key, conf_section, conf_key):
+    def _get_value(self, args_key, conf_section, conf_key, can_miss=False):
         def get_value_from_kwargs():
             try:
                 return self.kwargs[args_key]
@@ -49,6 +49,8 @@ class Configuration(object):
             value = func()
             if value is not None:
                 return value
+        if can_miss:
+            return None
         raise RuntimeError("value '%s' not found" % args_key)
 
     def get_openshift_base_uri(self):
@@ -91,3 +93,12 @@ class Configuration(object):
 
     def get_rpkg_binary(self):
         return self._get_value("rpkg_binary", "General", "rpkg_binary")
+
+    def get_username(self):
+        return self._get_value("username", "General", "username", can_miss=True)
+
+    def get_password(self):
+        return self._get_value("password", "General", "password", can_miss=True)
+
+    def get_use_kerberos(self):
+        return self._get_value("use_kerberos", "General", "use_kerberos", can_miss=True)
