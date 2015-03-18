@@ -14,7 +14,7 @@ from osbs.constants import BUILD_JSON_STORE, DEFAULT_CONFIGURATION_FILE
 logger = logging.getLogger('osbs')
 
 
-def gracful_chain_get(d, *args):
+def graceful_chain_get(d, *args):
     t = copy.deepcopy(d)
     for arg in args:
         try:
@@ -29,7 +29,7 @@ def cmd_list_builds(args, osbs):
     format_str = "{name:48} {status:16} {image:64}"
     print(format_str.format(**{"name": "BUILD NAME", "status": "STATUS", "image": "IMAGE NAME"}), file=sys.stderr)
     for build in builds['items']:
-        image = gracful_chain_get(build, 'parameters', 'output', 'imageTag')
+        image = graceful_chain_get(build, 'parameters', 'output', 'imageTag')
         if args.USER:
             if not image.startswith(args.USER + "/"):
                 continue
@@ -64,11 +64,11 @@ PACKAGES
     context = {
         "build_id": build_json['metadata']['name'],
         "status": build_json['status'],
-        "image": gracful_chain_get(build_json, 'parameters', 'output', 'imageTag'),
+        "image": graceful_chain_get(build_json, 'parameters', 'output', 'imageTag'),
         "date": build_json['metadata']['creationTimestamp'],
-        "dockerfile": gracful_chain_get(build_json, 'metadata', 'labels', 'dockerfile'),
-        "logs": gracful_chain_get(build_json, 'metadata', 'labels', 'logs'),
-        "packages": gracful_chain_get(build_json, 'metadata', 'labels', 'rpm-packages'),
+        "dockerfile": graceful_chain_get(build_json, 'metadata', 'labels', 'dockerfile'),
+        "logs": graceful_chain_get(build_json, 'metadata', 'labels', 'logs'),
+        "packages": graceful_chain_get(build_json, 'metadata', 'labels', 'rpm-packages'),
     }
     print(template.format(**context))
 
