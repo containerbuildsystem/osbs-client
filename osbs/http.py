@@ -11,9 +11,18 @@ from __future__ import print_function, absolute_import, unicode_literals
 
 import sys
 import json
-import httplib
-import urllib2
-from cStringIO import StringIO
+
+try:
+    # py2
+    import httplib
+    from urllib2 import HTTPError
+    from cStringIO import StringIO
+except ImportError:
+    # py3
+    import http.client as httplib
+    from urllib.error import HTTPError
+    from io import StringIO
+
 
 requests_imported = False
 pycurl_imported = False
@@ -72,7 +81,7 @@ class Response(object):
         if self.status_code == 0:
             self.status_code = self.curl.getinfo(pycurl.HTTP_CODE)
         if self.status_code != 0 and self.status_code != httplib.OK:
-            raise urllib2.HTTPError(self.curl.url, self.status_code, None, None, None)
+            raise HTTPError(self.curl.url, self.status_code, None, None, None)
 
     def _check_curl_errors(self):
         for f in self.curl_multi.info_read()[2]:

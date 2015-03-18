@@ -1,6 +1,11 @@
-from ConfigParser import SafeConfigParser
-import ConfigParser
-from urlparse import urljoin
+try:
+    # py2
+    import ConfigParser as configparser
+    from urlparse import urljoin
+except ImportError:
+    # py3
+    import configparser
+    from urllib.parse import urljoin
 from osbs.constants import DEFAULT_CONFIGURATION_FILE
 
 
@@ -13,7 +18,7 @@ class Configuration(object):
         :param args:
         :return:
         """
-        self.scp = SafeConfigParser()
+        self.scp = configparser.SafeConfigParser()
         try:
             self.scp.read(conf_file)
         except IOError:
@@ -37,7 +42,7 @@ class Configuration(object):
         def get_value_from_conf():
                 try:
                     return self.scp.get(conf_section, conf_key)
-                except ConfigParser.Error:
+                except configparser.Error:
                     pass
 
         retrieval_order = [
