@@ -24,7 +24,7 @@ BuildRequires:  python3-setuptools
 %endif
 
 Requires:       python-pycurl
-Requires:       python-requests
+#Requires:       python-requests
 
 %description
 It is able to query OpenShift v3 for various stuff related to building images.
@@ -37,7 +37,7 @@ Summary:        Python module and command line client for OpenShift Build Servic
 Group:          Development/Tools
 License:        BSD
 Requires:       python3-pycurl
-Requires:       python3-requests
+#Requires:       python3-requests
 
 %description -n python3-osbs
 It is able to query OpenShift v3 for various stuff related to building images.
@@ -116,6 +116,7 @@ popd
 %changelog
 * Thu Mar 19 2015 Jiri Popelka <jpopelka@redhat.com> - 0.1-3
 - rename to python-osbs
+- no need to require also python-requests
 
 * Thu Mar 19 2015 Jiri Popelka <jpopelka@redhat.com> - 0.1-2
 - separate executable for python 3
