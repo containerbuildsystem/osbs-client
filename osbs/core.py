@@ -1,10 +1,17 @@
 from __future__ import print_function, unicode_literals, absolute_import
-import httplib
-import logging
 
+import logging
 import time
-from urlparse import urljoin
-import urlparse
+
+try:
+    # py2
+    import httplib
+    import urlparse
+except ImportError:
+    # py3
+    import http.client as httplib
+    import urllib.parse as urlparse
+
 from .http import get_http_session
 
 
@@ -47,10 +54,10 @@ class Openshift(object):
         return self._os_oauth_url
 
     def _build_url(self, url):
-        return urljoin(self.os_api_url, url)
+        return urlparse.urljoin(self.os_api_url, url)
 
     def _build_k8s_url(self, url):
-        return urljoin(self.kubelet_base, url)
+        return urlparse.urljoin(self.kubelet_base, url)
 
     def _request_args(self, with_auth=True, **kwargs):
         headers = kwargs.pop("headers", {})
