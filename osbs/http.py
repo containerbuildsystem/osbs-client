@@ -153,7 +153,7 @@ class PycurlAdapter(object):
 
     def request(self, url, method, data=None, kerberos_auth=False,
                 allow_redirects=True, verify_ssl=True,
-                headers=None, stream=False):
+                headers=None, stream=False, username=None, password=None):
         self.c.reset()
         self.url = url
         method = method.lower()
@@ -175,8 +175,8 @@ class PycurlAdapter(object):
         self.c.setopt(pycurl.SSL_VERIFYPEER, 1 if verify_ssl else 0)
         self.c.setopt(pycurl.VERBOSE, 1 if self.verbose else 0)
         self.c.setopt(pycurl.SSL_VERIFYPEER, 0)  # FIXME
-        # TODO: add basic auth
-        # self.c.setopt(pycurl.USERPWD, ...)
+        if username and password:
+            self.c.setopt(pycurl.USERPWD, "%s:%s" % (username, password))
 
         if data:
             # curl sets the method to post if one sets any POSTFIELDS (even '')
