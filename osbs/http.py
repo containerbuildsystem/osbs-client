@@ -230,7 +230,7 @@ class PycurlAdapter(object):
         return self.request(url, "delete", **kwargs)
 
 
-def get_http_session(verbose=None):
+def get_http_session(verbose=None, verify_ssl=True):
     if pycurl_imported:
         return PycurlAdapter(verbose=verbose)
     elif requests_imported:

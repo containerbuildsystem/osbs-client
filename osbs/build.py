@@ -92,7 +92,7 @@ class ProductionBuild(Build):
     key = "prod"
 
     def __init__(self, git_uri, koji_target, user, component, registry_uri,
-                 openshift_uri, kojiroot, kojihub, rpkg_bin,
+                 openshift_uri, kojiroot, kojihub, sources_command,
                  git_ref=DEFAULT_GIT_REF, **kwargs):
         """ """
         super(ProductionBuild, self).__init__(**kwargs)
@@ -105,7 +105,7 @@ class ProductionBuild(Build):
         self.openshift_uri = openshift_uri
         self.kojiroot = kojiroot
         self.kojihub = kojihub
-        self.rpkg_bin = rpkg_bin
+        self.sources_command = sources_command
         d = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         self.name = "%s-%s" % (self.component, d)
 
@@ -128,6 +128,7 @@ class ProductionBuild(Build):
         dj.dock_json_set_arg('prebuild_plugins', "koji", "target", self.koji_target)
         dj.dock_json_set_arg('prebuild_plugins', "koji", "root", self.kojiroot)
         dj.dock_json_set_arg('prebuild_plugins', "koji", "hub", self.kojihub)
+        dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts", "command", self.sources_command)
         dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url", self.openshift_uri)
         dj.write_dock_json()
         self.build_json = config
@@ -139,7 +140,7 @@ class BuildManager(object):
     def __init__(self, build_json_store):
         self.build_json_store = build_json_store
 
-    def get_prod_build(self, *args, **kwargs):
+    def get_build(self, *args, **kwargs):
         kwargs.setdefault("build_json_store", self.build_json_store)
         b = ProductionBuild(*args, **kwargs)
         b.render()

@@ -8,7 +8,7 @@ import argparse
 from osbs import set_logging
 from osbs.api import OSBS
 from osbs.conf import Configuration
-from osbs.constants import BUILD_JSON_STORE, DEFAULT_CONFIGURATION_FILE
+from osbs.constants import BUILD_JSON_STORE, DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION
 
 
 logger = logging.getLogger('osbs')
@@ -74,14 +74,12 @@ PACKAGES
 
 
 def cmd_prod_build(args, osbs):
-    build_id = osbs.create_prod_build(
+    build_id = osbs.create_build(
         git_uri=args.git_url,
         git_ref=args.git_commit,
         user=args.user,
         component=args.component,
-        registry=args.registry,
         target=args.target,
-        build_json_dir=args.build_json_dir
     )
     print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
     for line in osbs.get_build_logs(build_id, follow=True):
@@ -109,7 +107,7 @@ def cli():
 
     build_parser = subparsers.add_parser('build', help='build an image in OSBS')
     build_parser.add_argument("--build-json-dir", help="directory with build jsons",
-                              default=BUILD_JSON_STORE, metavar="PATH", action="store")
+                              metavar="PATH", action="store")
     build_subparsers = build_parser.add_subparsers(help="build subcommands")
 
     prod_build_parser = build_subparsers.add_parser('prod', help='build an image in OSBS')
@@ -124,22 +122,26 @@ def cli():
                                    help="koji target name")
     prod_build_parser.add_argument("-u", "--user", action='store', required=True,
                                    help="username (will be image prefix)")
-    prod_build_parser.add_argument("-r", "--registry", action='store', required=True,
-                                   help="registry where image should be pushed")
     prod_build_parser.set_defaults(func=cmd_prod_build)
 
     parser.add_argument("--openshift-uri", action='store', metavar="URL",
                         help="openshift URL to remote API")
     parser.add_argument("--kubelet-uri", action='store', metavar="URL",
                         help="kubelet URL to remote API")
+    parser.add_argument("--registry-uri", action='store', metavar="URL",
+                        help="registry where images should be pushed")
     parser.add_argument("--config", action='store', metavar="PATH",
                         help="path to configuration file", default=DEFAULT_CONFIGURATION_FILE)
+    parser.add_argument("--config-section", action='store', metavar="SECTION_NAME",
+                        help="section within config for requested instance", default=DEFAULT_CONFIGURATION_SECTION)
     parser.add_argument("--username", action='store',
                         help="username within OSBS")
     parser.add_argument("--password", action='store',
                         help="password within OSBS")
     parser.add_argument("--use-kerberos", action='store_true',
                         help="use kerberos for authentication")
+    parser.add_argument("--verify-ssl", action='store_true', default=True,
+                        help="verify CA on secure connections")
     args = parser.parse_args()
     return parser, args
 
@@ -153,8 +155,9 @@ def main():
     else:
         set_logging(level=logging.INFO)
 
-    configuration = Configuration(conf_file=args.config, cli_args=args)
-    osbs = OSBS(configuration)
+    os_conf = Configuration(conf_file=args.config, conf_section=args.config_section, cli_args=args)
+    build_conf = Configuration(conf_file=args.config, conf_section=args.config_section, cli_args=args)
+    osbs = OSBS(os_conf, build_conf)
 
     try:
         args.func(args, osbs)

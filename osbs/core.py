@@ -35,11 +35,12 @@ def check_response(response):
 class Openshift(object):
 
     def __init__(self, openshift_api_url, openshift_oauth_url, kubelet_base, verbose=False,
-                 username=None, password=None, use_kerberos=False):
+                 username=None, password=None, use_kerberos=False, verify_ssl=True):
         self.os_api_url = openshift_api_url
         self._os_oauth_url = openshift_oauth_url
         self.kubelet_base = kubelet_base
         self.verbose = verbose
+        self.verify_ssl = verify_ssl
         self._con = get_http_session(verbose=self.verbose)
 
         # auth stuff
@@ -73,11 +74,11 @@ class Openshift(object):
 
     def _post(self, url, with_auth=True, **kwargs):
         headers, kwargs = self._request_args(with_auth, **kwargs)
-        return self._con.get(url, headers=headers, **kwargs)
+        return self._con.get(url, headers=headers, verify_ssl=self.verify_ssl, **kwargs)
 
     def _get(self, url, with_auth=True, **kwargs):
         headers, kwargs = self._request_args(with_auth, **kwargs)
-        return self._con.get(url, headers=headers, **kwargs)
+        return self._con.get(url, headers=headers, verify_ssl=self.verify_ssl, **kwargs)
 
     def get_oauth_token(self):
         url = self.os_oauth_url + "?response_type=token&client_id=openshift-challenging-client"

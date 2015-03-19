@@ -5,7 +5,7 @@
     },
     {
       "args": {
-        "binary": "{{RPKG_BIN}}"
+        "command": "{{SOURCES_COMMAND}}"
       },
       "name": "distgit_fetch_artefacts"
     },
@@ -34,7 +34,7 @@
     {
       "args": {
         "url": "{{OPENSHIFT_URI}}",
-        "verify_ssl": false
+        "verify_ssl": true
       },
       "name": "store_metadata_in_osv3"
     },
