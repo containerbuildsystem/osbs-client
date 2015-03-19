@@ -62,6 +62,10 @@ class Openshift(object):
     def _request_args(self, with_auth=True, **kwargs):
         headers = kwargs.pop("headers", {})
         if with_auth and self.use_auth:
+            # TODO: this setup is not covered:
+            # httpd being used as an basic auth proxy: you need to pass Authorization to httpd
+            # and at the same time authenticate within openshift, therefore we would have to
+            # append token to URL, and set Authorization for httpd's basic auth
             if self.token is None:
                 self.get_oauth_token()
             headers["Authorization"] = "Bearer %s" % self.token
