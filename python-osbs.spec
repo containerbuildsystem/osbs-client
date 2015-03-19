@@ -3,9 +3,9 @@
 %global commit e073d7cc6cf7a07eafa00e2d44a654a040640390
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 
-Name:           osbs
+Name:           python-osbs
 Version:        0.1
-Release:        2%{?dist}
+Release:        3%{?dist}
 
 Summary:        Python module and command line client for OpenShift Build Service
 Group:          Development/Tools
@@ -73,17 +73,28 @@ pushd %{py3dir}
 %{__python3} setup.py install --skip-build --root %{buildroot}
 popd
 pushd %{buildroot}%{_bindir}
-mv osbs osbs3
+mv osbs python3-osbs
+for i in osbs3; do
+  ln -s python3-osbs $i
+done
 popd
 %endif # with_python3
 
 %{__python} setup.py install --skip-build --root %{buildroot}
-
+pushd %{buildroot}%{_bindir}
+mv osbs python-osbs
+for i in python2-osbs osbs osbs2; do
+  ln -s python-osbs $i
+done
+popd
 
 %files
 %doc README.md
 %license LICENSE
 %{_bindir}/osbs
+%{_bindir}/osbs2
+%{_bindir}/python-osbs
+%{_bindir}/python2-osbs
 %{python2_sitelib}/osbs/
 %{python2_sitelib}/osbs-%{version}-py2.*.egg-info/
 %dir %{_datadir}/osbs
@@ -95,6 +106,7 @@ popd
 %doc README.md
 %license LICENSE
 %{_bindir}/osbs3
+%{_bindir}/python3-osbs
 %{python3_sitelib}/osbs/
 %{python3_sitelib}/osbs-%{version}-py3.*.egg-info/
 %dir %{_datadir}/osbs
@@ -102,6 +114,9 @@ popd
 %endif # with_python3
 
 %changelog
+* Thu Mar 19 2015 Jiri Popelka <jpopelka@redhat.com> - 0.1-3
+- rename to python-osbs
+
 * Thu Mar 19 2015 Jiri Popelka <jpopelka@redhat.com> - 0.1-2
 - separate executable for python 3
 
