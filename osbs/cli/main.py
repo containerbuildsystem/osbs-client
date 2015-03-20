@@ -169,6 +169,7 @@ def main():
         else:
             parser.print_help()
     except KeyboardInterrupt:
+        print("Quitting on user request.")
         pass
     except Exception as ex:
         if args.verbose:
