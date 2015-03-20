@@ -1,7 +1,9 @@
 from __future__ import print_function, unicode_literals, absolute_import
+import json
 
 import logging
 import time
+from osbs.constants import POD_FINISHED_STATES
 
 try:
     # py2
@@ -163,6 +165,24 @@ class Openshift(object):
         """
         url = self._build_url("builds/%s/" % build_id)
         response = self._get(url)
+        check_response(response)
+        return response
+
+    def wait(self, build_id):
+        """
+        :param build_id: wait for build to finish
+
+        :return:
+        """
+        logger.info("watching build '%s'", build_id)
+        url = self._build_url("watch/builds/%s/" % build_id)
+        response = self._get(url, stream=True, headers={'Connection': 'close'})
+        for line in response.iter_lines():
+            j = json.loads(line)
+            logger.debug("got object change: '%s'", j['type'])
+            if j['object']['status'].lower() in POD_FINISHED_STATES:
+                logger.info("build has finished")
+                return j['object']
         check_response(response)
         return response
 

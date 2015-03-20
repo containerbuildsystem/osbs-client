@@ -86,6 +86,10 @@ def cmd_prod_build(args, osbs):
         print(line)
 
 
+def cmd_watch_build(args, osbs):
+    build_json = osbs.wait_for_build_to_finish(args.BUILD_ID[0])
+
+
 def cli():
     parser = argparse.ArgumentParser(
         description="OpenShift Build Service client"
@@ -100,6 +104,10 @@ def cli():
     list_builds_parser.add_argument("USER", help="list builds only for specified username",
                                     nargs="?")
     list_builds_parser.set_defaults(func=cmd_list_builds)
+
+    watch_build_parser = subparsers.add_parser('watch-build', help='wait till build finishes')
+    watch_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
+    watch_build_parser.set_defaults(func=cmd_watch_build)
 
     get_build_parser = subparsers.add_parser('get-build', help='get info about build')
     get_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)

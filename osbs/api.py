@@ -64,3 +64,7 @@ class OSBS(object):
                 return build["metadata"]["labels"]["logs"]
             else:
                 return self.os.logs(build_id, follow)
+
+    def wait_for_build_to_finish(self, build_id):
+        response = self.os.wait(build_id)
+        return response
