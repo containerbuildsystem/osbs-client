@@ -42,7 +42,7 @@ def cmd_list_builds(args, osbs):
 
 
 def cmd_get_build(args, osbs):
-    build_json = osbs.get_build(args.BUILD_ID[0])
+    build_json = osbs.get_build(args.BUILD_ID[0]).json
     # FIXME: pretty printing json could be a better idea
     template = """\
 BUILD ID: {build_id}
@@ -74,13 +74,14 @@ PACKAGES
 
 
 def cmd_prod_build(args, osbs):
-    build_id = osbs.create_build(
+    build = osbs.create_build(
         git_uri=args.git_url,
         git_ref=args.git_commit,
         user=args.user,
         component=args.component,
         target=args.target,
     )
+    build_id = build.build_id
     print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
     for line in osbs.get_build_logs(build_id, follow=True):
         print(line)

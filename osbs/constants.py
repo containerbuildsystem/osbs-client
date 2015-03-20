@@ -4,3 +4,6 @@ DEFAULT_CONFIGURATION_FILE = "/etc/osbs.conf"
 DEFAULT_CONFIGURATION_SECTION = "default"
 GENERAL_CONFIGURATION_SECTION = "general"
 POD_FINISHED_STATES = ["failed", "succeeded"]
+POD_FAILED_STATES = ["failed"]
+POD_SUCCEEDED_STATES = ["succeeded"]
+POD_RUNNING_STATES = ["pending", "running"]

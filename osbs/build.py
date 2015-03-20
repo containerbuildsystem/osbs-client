@@ -4,7 +4,8 @@ import copy
 import json
 import os
 import datetime
-from osbs.constants import DEFAULT_GIT_REF
+from osbs.constants import DEFAULT_GIT_REF, POD_FINISHED_STATES, POD_FAILED_STATES, POD_SUCCEEDED_STATES, \
+    POD_RUNNING_STATES
 
 
 class DockJsonManipulator(object):
@@ -42,7 +43,7 @@ class DockJsonManipulator(object):
         p[0]['value'] = json.dumps(self.dock_json)
 
 
-class Build(object):
+class BuildRequest(object):
     """ """
 
     key = None
@@ -85,7 +86,7 @@ class Build(object):
         return copy.deepcopy(self._template)
 
 
-class ProductionBuild(Build):
+class ProductionBuild(BuildRequest):
     """
     """
 
@@ -133,6 +134,48 @@ class ProductionBuild(Build):
         dj.write_dock_json()
         self.build_json = config
         return self.build_json
+
+
+class BuildResponse(object):
+    def __init__(self, request):
+        """
+
+        :param request: http.Request
+        """
+        self.request = request
+        self._json = None
+        self._status = None
+        self._build_id = None
+
+    @property
+    def json(self):
+        if self._json is None:
+            self._json = self.request.json()
+        return self._json
+
+    @property
+    def status(self):
+        if self._status is None:
+            self._status = self.json['status'].lower()
+        return self._status
+
+    @property
+    def build_id(self):
+        if self._build_id is None:
+            self._build_id = self.json['metadata']['name']
+        return self._build_id
+
+    def is_finished(self):
+        return self.status in POD_FINISHED_STATES
+
+    def is_failed(self):
+        return self.status in POD_FAILED_STATES
+
+    def is_succeeded(self):
+        return self.status in POD_SUCCEEDED_STATES
+
+    def is_running(self):
+        return self.status in POD_RUNNING_STATES
 
 
 class BuildManager(object):

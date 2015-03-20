@@ -1,6 +1,6 @@
 from __future__ import print_function, unicode_literals, absolute_import
 import json
-from osbs.build import BuildManager
+from osbs.build import BuildManager, BuildResponse
 from osbs.constants import BUILD_JSON_STORE
 from osbs.core import Openshift, OpenshiftException
 
@@ -28,12 +28,14 @@ class OSBS(object):
         return self._bm
 
     def list_builds(self):
+        # FIXME: return list of BuildResponse objects
         builds = self.os.list_builds().json()
         return builds
 
     def get_build(self, build_id):
-        build = self.os.get_build(build_id).json()
-        return build
+        response = self.os.get_build(build_id)
+        build_response = BuildResponse(response)
+        return build_response
 
     def create_build(self, git_uri, git_ref, user, component, target):
         build = self.bm.get_build(
@@ -49,7 +51,8 @@ class OSBS(object):
             koji_target=target,
         )
         response = self.os.create_build(json.dumps(build.build_json))
-        return build.build_id
+        build_response = BuildResponse(response)
+        return build_response
 
     def get_build_logs(self, build_id, follow=False):
         if follow:
@@ -66,5 +69,7 @@ class OSBS(object):
                 return self.os.logs(build_id, follow)
 
     def wait_for_build_to_finish(self, build_id):
+        # FIXME: since OS returns whole build json in watch we could return
+        #        instance of BuildResponse here
         response = self.os.wait(build_id)
         return response
