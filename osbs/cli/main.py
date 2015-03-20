@@ -91,7 +91,7 @@ def cli():
         description="OpenShift Build Service client"
     )
     exclusive_group = parser.add_mutually_exclusive_group()
-    exclusive_group.add_argument("--verbose", action="store_true")
+    exclusive_group.add_argument("--verbose", action="store_true", default=None)
     exclusive_group.add_argument("-q", "--quiet", action="store_true")
 
     subparsers = parser.add_subparsers(help='commands')
@@ -148,15 +148,17 @@ def cli():
 
 def main():
     parser, args = cli()
-    if args.verbose:
+    os_conf = Configuration(conf_file=args.config, conf_section=args.config_section, cli_args=args)
+    build_conf = Configuration(conf_file=args.config, conf_section=args.config_section, cli_args=args)
+
+    if bool(os_conf.get_verbosity()):
         set_logging(level=logging.DEBUG)
+        logger.debug("Logging level set to debug")
     elif args.quiet:
         set_logging(level=logging.WARNING)
     else:
         set_logging(level=logging.INFO)
 
-    os_conf = Configuration(conf_file=args.config, conf_section=args.config_section, cli_args=args)
-    build_conf = Configuration(conf_file=args.config, conf_section=args.config_section, cli_args=args)
     osbs = OSBS(os_conf, build_conf)
 
     try:
