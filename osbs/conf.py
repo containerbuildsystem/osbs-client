@@ -37,6 +37,9 @@ class Configuration(object):
             self.scp.read(conf_file)
         except IOError:
             pass
+        else:
+            if not self.scp.has_section(conf_section):
+                raise RuntimeError("Specified section '%s' not found in '%s'" % (conf_section, conf_file))
         self.conf_section = conf_section
         self.args = cli_args
         self.kwargs = kwargs
