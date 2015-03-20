@@ -24,22 +24,28 @@ except ImportError:
     from io import StringIO
 
 
-requests_imported = False
-pycurl_imported = False
+# requests_imported = False
+# pycurl_imported = False
 
-# prefered http lib is pycurl, since it understands chunked response
-try:
-    import pycurl
-except ImportError:
-    try:
-        import requests
-    except ImportError:
-        print("Neither requests, nor pycurl are available.")
-        sys.exit(1)
-    else:
-        requests_imported = True
-else:
-    pycurl_imported = True
+# prefered http lib is pycurl, since it understands chunked responses and kerberos
+import pycurl
+pycurl_imported = True
+
+# FIXME: fix compat abstraction between requests and pycurl
+#        so core doesn't have to care about chosen http lib
+
+# try:
+#     import pycurl
+# except ImportError:
+#     try:
+#         import requests
+#     except ImportError:
+#         print("Neither requests, nor pycurl are available.")
+#         sys.exit(1)
+#     else:
+#         requests_imported = True
+# else:
+#     pycurl_imported = True
 
 
 SELECT_TIMEOUT = 9999
