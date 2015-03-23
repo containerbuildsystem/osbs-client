@@ -148,7 +148,9 @@ class Openshift(object):
                 build_id, 1 if follow else 0))
         time.sleep(15)  # container ***STILL*** may not be ready
         response = self._get(buildlogs_url, stream=follow, headers={'Connection': 'close'})
-        return response.iter_lines()
+        if follow:
+            return response.iter_lines()
+        return response.content
 
     def list_builds(self):
         """

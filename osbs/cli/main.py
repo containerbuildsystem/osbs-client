@@ -86,6 +86,18 @@ def cmd_prod_build(args, osbs):
         print(line)
 
 
+def cmd_build_logs(args, osbs):
+    build_id = args.BUILD_ID[0]
+    follow = args.follow
+
+    if follow:
+        for line in osbs.get_build_logs(build_id, follow=True):
+            print(line)
+    else:
+        logs = osbs.get_build_logs(build_id, follow=False)
+        print(logs, end="")
+
+
 def cmd_watch_build(args, osbs):
     build_json = osbs.wait_for_build_to_finish(args.BUILD_ID[0])
 
@@ -112,6 +124,12 @@ def cli():
     get_build_parser = subparsers.add_parser('get-build', help='get info about build')
     get_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
     get_build_parser.set_defaults(func=cmd_get_build)
+
+    build_logs_parser = subparsers.add_parser('build-logs', help='get or follow build logs')
+    build_logs_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
+    build_logs_parser.add_argument("-f", "--follow", help="follow logs as they come", action="store_true",
+                                   default=False)
+    build_logs_parser.set_defaults(func=cmd_build_logs)
 
     build_parser = subparsers.add_parser('build', help='build an image in OSBS')
     build_parser.add_argument("--build-json-dir", help="directory with build jsons",
