@@ -1,11 +1,11 @@
 %global with_python3 0
 
-%global commit e073d7cc6cf7a07eafa00e2d44a654a040640390
+%global commit 758648c85e1eed2bbd233183dcc65e9950c06100
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 
 Name:           osbs
 Version:        0.1
-Release:        3%{?dist}
+Release:        4%{?dist}
 
 Summary:        Python module and command line client for OpenShift Build Service
 Group:          Development/Tools
@@ -102,6 +102,9 @@ popd
 %endif # with_python3
 
 %changelog
+* Tue Mar 24 2015 Jiri Popelka <jpopelka@redhat.com> - 0.1-4
+- update to 758648c8
+
 * Thu Mar 19 2015 Jiri Popelka <jpopelka@redhat.com> - 0.1-3
 - no need to require also python-requests
 
