@@ -33,7 +33,7 @@ setup(
     license="BSD",
     packages=find_packages(exclude=["tests"]),
     entry_points={
-          'console_scripts': ['osbs=osbs.cli.main:run'],
+          'console_scripts': ['osbs=osbs.cli.main:main'],
     },
     install_requires=_install_requirements(),
     data_files=data_files.items(),
