@@ -34,7 +34,7 @@
     {
       "args": {
         "url": "{{OPENSHIFT_URI}}",
-        "verify_ssl": true
+        "verify_ssl": false
       },
       "name": "store_metadata_in_osv3"
     },
