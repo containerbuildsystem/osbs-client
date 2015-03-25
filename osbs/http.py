@@ -203,7 +203,7 @@ class PycurlAdapter(object):
         if headers:
             header_list = []
             for header_key, header_value in headers.items():
-                header_list.append("%s: %s" % (header_key, header_value))
+                header_list.append(str("%s: %s" % (header_key, header_value)))
             self.c.setopt(pycurl.HTTPHEADER, header_list)
 
         response = Response()
