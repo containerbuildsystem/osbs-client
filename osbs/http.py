@@ -72,6 +72,7 @@ class Response(object):
         return self._headers
 
     def json(self):
+        self._check_status_code()
         return json.loads(self.content)
 
     def _any_data_received(self):
@@ -87,7 +88,11 @@ class Response(object):
         if self.status_code == 0:
             self.status_code = self.curl.getinfo(pycurl.HTTP_CODE)
         if self.status_code != 0 and self.status_code != httplib.OK:
-            raise HTTPError(self.curl.url, self.status_code, None, None, None)
+            if self.curl:
+                url = self.curl.url
+            else:
+                url = None
+            raise HTTPError(url, self.status_code, None, None, None)
 
     def _check_curl_errors(self):
         for f in self.curl_multi.info_read()[2]:
