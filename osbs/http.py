@@ -174,8 +174,8 @@ class PycurlAdapter(object):
         else:
             raise RuntimeError("Unsupported method '%s' for curl call!" % method)
 
-        self.c.setopt(pycurl.URL, url)
         self.c.setopt(pycurl.COOKIEFILE, '')
+        self.c.setopt(pycurl.URL, str(url))
         self.c.setopt(pycurl.WRITEFUNCTION, self.response.write)
         self.c.setopt(pycurl.HEADERFUNCTION, self.response_headers.write)
         self.c.setopt(pycurl.SSL_VERIFYPEER, 1 if verify_ssl else 0)
