@@ -8,6 +8,7 @@ from osbs import set_logging
 from osbs.api import OSBS
 from osbs.conf import Configuration
 from osbs.constants import BUILD_JSON_STORE, DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION
+from urllib2 import HTTPError
 
 
 logger = logging.getLogger('osbs')
@@ -197,6 +198,8 @@ def main():
     except KeyboardInterrupt:
         print("Quitting on user request.")
         pass
+    except HTTPError as ex:
+        logger.error("HTTP error: %d", ex.getcode())
     except Exception as ex:
         if args.verbose:
             raise
