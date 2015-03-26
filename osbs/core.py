@@ -29,7 +29,7 @@ class OpenshiftException(Exception):
 
 
 def check_response(response):
-    if response.status_code != httplib.OK:
+    if response.status_code not in (httplib.OK, httplib.CREATED):
         raise OpenshiftException(response.status_code)
 
 

@@ -87,7 +87,7 @@ class Response(object):
     def _check_status_code(self):
         if self.status_code == 0:
             self.status_code = self.curl.getinfo(pycurl.HTTP_CODE)
-        if self.status_code != 0 and self.status_code != httplib.OK:
+        if self.status_code not in (0, httplib.OK, httplib.CREATED):
             if self.curl:
                 url = self.curl.url
             else:
