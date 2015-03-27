@@ -16,12 +16,12 @@ try:
     # py2
     import httplib
     from urllib2 import HTTPError
-    from cStringIO import StringIO
+    from cStringIO import StringIO as BytesIO
 except ImportError:
     # py3
     import http.client as httplib
     from urllib.error import HTTPError
-    from io import StringIO
+    from io import BytesIO
 
 
 # requests_imported = False
@@ -54,7 +54,7 @@ SELECT_TIMEOUT = 9999
 class Response(object):
     """ let's mock Response object of requests """
 
-    def __init__(self, status_code=0, content='', curl=None, raw_headers=None):
+    def __init__(self, status_code=0, content=b'', curl=None, raw_headers=None):
         self.status_code = status_code
         self.content = content
         self.curl = curl
@@ -66,14 +66,28 @@ class Response(object):
     @property
     def headers(self):
         if self._headers is None:
+            ### FIXME: the API for this is different in Python3
             m = httplib.HTTPMessage(self._raw_headers, False)
             m.readheaders()
             self._headers = m.dict
         return self._headers
 
+    @property
+    def encoding(self):
+        encoding = None
+        if 'content-type' in self.headers:
+            content_type = self.headers['content-type'].lower()
+            match = re.search('charset=(\S+)', content_type)
+            if match:
+                encoding = match.group(1)
+        if encoding is None:
+            encoding = 'utf-8' # assume utf-8
+
+        return encoding
+
     def json(self):
         self._check_status_code()
-        return json.loads(self.content)
+        return json.loads(self.content.decode(self.encoding))
 
     def _any_data_received(self):
         return self.response_buffer.tell() != 0
@@ -128,6 +142,7 @@ class Response(object):
         pending = None
         for chunk in chunks:
 
+            ### FIXME: how to handle decoding Python3's BytesIO here?
             if pending is not None:
                 chunk = pending + chunk
             lines = chunk.splitlines()
@@ -152,8 +167,8 @@ class PycurlAdapter(object):
     def __init__(self, verbose=None):
         self._c = None
         self.url = None
-        self.response = StringIO()
-        self.response_headers = StringIO()
+        self.response = BytesIO()
+        self.response_headers = BytesIO()
         self.verbose = verbose
 
     @property
