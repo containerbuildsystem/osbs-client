@@ -8,7 +8,13 @@ from osbs import set_logging
 from osbs.api import OSBS
 from osbs.conf import Configuration
 from osbs.constants import BUILD_JSON_STORE, DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION
-from urllib2 import HTTPError
+
+try:
+    # py2
+    from urllib2 import HTTPError
+except ImportError:
+    # py3
+    from urllib.error import HTTPError
 
 
 logger = logging.getLogger('osbs')
