@@ -9,7 +9,7 @@ chunked implementation for pycurl taken from:
 
 from __future__ import print_function, absolute_import, unicode_literals
 
-import sys
+import re
 import json
 
 try:
@@ -256,10 +256,10 @@ class PycurlAdapter(object):
         return self.request(url, "delete", **kwargs)
 
 
-def get_http_session(verbose=None, verify_ssl=True):
+def get_http_session(verbose=None):
     if pycurl_imported:
         return PycurlAdapter(verbose=verbose)
-    elif requests_imported:
-        return requests.Session()
+    #elif requests_imported:
+    #    return requests.Session()
     else:
         RuntimeError("no http library imported")
