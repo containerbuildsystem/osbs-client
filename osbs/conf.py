@@ -108,7 +108,15 @@ class Configuration(object):
         return self._get_value("kubelet_uri", self.conf_section, "kubelet_uri")
 
     def get_verbosity(self):
-        return self._get_value("verbose", GENERAL_CONFIGURATION_SECTION, "verbose")
+        val = self._get_value("verbose", GENERAL_CONFIGURATION_SECTION, "verbose")
+        try:
+            int_val = int(val)
+        except ValueError:
+            if val.lower() == 'true':
+                return True
+            return False
+        else:
+            return bool(int_val)
 
     def get_kojiroot(self):
         return self._get_value("koji_root", self.conf_section, "koji_root")

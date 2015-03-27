@@ -184,7 +184,7 @@ def main():
     os_conf = Configuration(conf_file=args.config, conf_section=args.config_section, cli_args=args)
     build_conf = Configuration(conf_file=args.config, conf_section=args.config_section, cli_args=args)
 
-    if bool(os_conf.get_verbosity()):
+    if os_conf.get_verbosity():
         set_logging(level=logging.DEBUG)
         logger.debug("Logging level set to debug")
     elif args.quiet:
