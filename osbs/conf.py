@@ -44,7 +44,7 @@ class Configuration(object):
         self.args = cli_args
         self.kwargs = kwargs
 
-    def _get_value(self, args_key, conf_section, conf_key, can_miss=False):
+    def _get_value(self, args_key, conf_section, conf_key, can_miss=False, default=None):
         # FIXME: this is too bloated: split it into separate classes
         # and implement it as mixins
         def get_value_from_kwargs():
@@ -75,7 +75,7 @@ class Configuration(object):
             if value is not None:
                 return value
         if can_miss:
-            return None
+            return default
         raise RuntimeError("value '%s' not found" % args_key)
 
     def get_openshift_base_uri(self):
@@ -143,4 +143,4 @@ class Configuration(object):
         return self._get_value("build_json_dir", self.conf_section, "build_json_dir")
 
     def get_verify_ssl(self):
-        return self._get_value("verify_ssl", self.conf_section, "verify_ssl")
+        return self._get_value("verify_ssl", self.conf_section, "verify_ssl", default=True, can_miss=True)
