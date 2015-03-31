@@ -108,12 +108,14 @@ class Configuration(object):
         return self._get_value("kubelet_uri", self.conf_section, "kubelet_uri")
 
     def get_verbosity(self):
-        val = self._get_value("verbose", GENERAL_CONFIGURATION_SECTION, "verbose")
+        val = self._get_value("verbose", GENERAL_CONFIGURATION_SECTION, "verbose", can_miss=True)
         try:
             int_val = int(val)
         except ValueError:
             if val.lower() == 'true':
                 return True
+            return False
+        except TypeError:
             return False
         else:
             return bool(int_val)
