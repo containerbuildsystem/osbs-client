@@ -149,7 +149,7 @@ class Configuration(object):
         return self._get_value("registry_uri", self.conf_section, "registry_uri")
 
     def get_build_json_store(self):
-        return self._get_value("build_json_dir", self.conf_section, "build_json_dir")
+        return self._get_value("build_json_dir", GENERAL_CONFIGURATION_SECTION, "build_json_dir")
 
     def get_verify_ssl(self):
         return self._get_value("verify_ssl", self.conf_section, "verify_ssl", default=True, can_miss=True, is_bool_val=True)

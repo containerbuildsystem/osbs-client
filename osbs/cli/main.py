@@ -166,7 +166,7 @@ def cli():
                         help="registry where images should be pushed")
     parser.add_argument("--config", action='store', metavar="PATH",
                         help="path to configuration file", default=DEFAULT_CONFIGURATION_FILE)
-    parser.add_argument("--config-section", action='store', metavar="SECTION_NAME",
+    parser.add_argument("--instance", "-i", action='store', metavar="SECTION_NAME",
                         help="section within config for requested instance", default=DEFAULT_CONFIGURATION_SECTION)
     parser.add_argument("--username", action='store',
                         help="username within OSBS")
@@ -185,8 +185,8 @@ def cli():
 
 def main():
     parser, args = cli()
-    os_conf = Configuration(conf_file=args.config, conf_section=args.config_section, cli_args=args)
-    build_conf = Configuration(conf_file=args.config, conf_section=args.config_section, cli_args=args)
+    os_conf = Configuration(conf_file=args.config, conf_section=args.instance, cli_args=args)
+    build_conf = Configuration(conf_file=args.config, conf_section=args.instance, cli_args=args)
 
     if os_conf.get_verbosity():
         set_logging(level=logging.DEBUG)
