@@ -151,6 +151,27 @@ class ProductionBuild(BuildRequest):
         dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts", "command", self.sources_command)
         dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url", self.openshift_uri)
 
+@register_build_class
+class SimpleBuild(BuildRequest):
+    """
+    Simple build type for scratch builds - gets sources from git, builds image
+    according to Dockerfile, pushes it to a registry.
+    """
+
+    key = "simple"
+
+    def __init__(self, **kwargs):
+        """ """
+        super(SimpleBuild, self).__init__(**kwargs)
+        # only common BuildRequest parameters are used
+
+    def _render(self, config, dj):
+        timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        config['parameters']['output']['imageTag'] = "%s/%s:%s" % \
+            (self.user, self.component, timestamp)
+
+        dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url", self.openshift_uri)
+
 
 class BuildResponse(object):
     def __init__(self, request):
