@@ -128,13 +128,13 @@ class Configuration(object):
         return val
 
     def get_kojiroot(self):
-        return self._get_value("koji_root", self.conf_section, "koji_root")
+        return self._get_value("koji_root", self.conf_section, "koji_root", can_miss=True)
 
     def get_kojihub(self):
-        return self._get_value("koji_hub", self.conf_section, "koji_hub")
+        return self._get_value("koji_hub", self.conf_section, "koji_hub", can_miss=True)
 
     def get_sources_command(self):
-        return self._get_value("sources_command", self.conf_section, "sources_command")
+        return self._get_value("sources_command", self.conf_section, "sources_command", can_miss=True)
 
     def get_username(self):
         return self._get_value("username", self.conf_section, "username", can_miss=True)
@@ -153,3 +153,6 @@ class Configuration(object):
 
     def get_verify_ssl(self):
         return self._get_value("verify_ssl", self.conf_section, "verify_ssl", default=True, can_miss=True, is_bool_val=True)
+
+    def get_build_type(self):
+        return self._get_value("build_type", self.conf_section, "build_type")

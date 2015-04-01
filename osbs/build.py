@@ -7,6 +7,11 @@ import datetime
 from osbs.constants import DEFAULT_GIT_REF, POD_FINISHED_STATES, POD_FAILED_STATES, POD_SUCCEEDED_STATES, \
     POD_RUNNING_STATES
 
+build_classes = {}
+
+def register_build_class(cls):
+    build_classes[cls.key] = cls
+    return cls
 
 class DockJsonManipulator(object):
     """ """
@@ -48,16 +53,50 @@ class BuildRequest(object):
 
     key = None
 
-    def __init__(self, build_json_store):
+    def __init__(self, build_json_store, git_uri, user, component, registry_uri,
+                 openshift_uri, git_ref=DEFAULT_GIT_REF, **kwargs):
         """ """
         self.build_json = None  # rendered template
         self._template = None  # template loaded from filesystem
         self._inner_template = None  # dock json
         self.build_json_store = build_json_store
 
+        # common template parameters
+        self.git_uri = git_uri
+        self.git_ref = git_ref
+        self.user = user
+        self.component = component
+        self.registry_uri = registry_uri
+        self.openshift_uri = openshift_uri
+        d = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        self.name = "%s-%s" % (self.component, d)
+
+    @staticmethod
+    def new_by_type(build_name, *args, **kwargs):
+        """Find BuildRequest with the given name."""
+        try:
+            build_class = build_classes[build_name]
+            return build_class(*args, **kwargs)
+        except KeyError:
+            raise RuntimeError("Unknown build type '{0}'".format(build_name))
+
     def render(self):
         """ fill in input template of build json """
-        raise NotImplemented()
+        config = self.template
+        inner_config = self.inner_template
+        dj = DockJsonManipulator(config, inner_config)
+
+        # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
+        config['metadata']['name'] = self.name
+        config['parameters']['source']['git']['uri'] = self.git_uri
+        config['parameters']['source']['git']['ref'] = self.git_ref
+        config['parameters']['output']['registry'] = self.registry_uri
+
+        self._render(config, dj)
+
+        dj.write_dock_json()
+        self.build_json = config
+        return self.build_json
 
     def validate_input(self):
         """ """
@@ -86,54 +125,31 @@ class BuildRequest(object):
         return copy.deepcopy(self._template)
 
 
+@register_build_class
 class ProductionBuild(BuildRequest):
     """
     """
 
     key = "prod"
 
-    def __init__(self, git_uri, koji_target, user, component, registry_uri,
-                 openshift_uri, kojiroot, kojihub, sources_command,
-                 git_ref=DEFAULT_GIT_REF, **kwargs):
+    def __init__(self, koji_target, kojiroot, kojihub, sources_command, **kwargs):
         """ """
         super(ProductionBuild, self).__init__(**kwargs)
-        self.git_uri = git_uri
-        self.git_ref = git_ref
         self.koji_target = koji_target
-        self.user = user
-        self.component = component
-        self.registry_uri = registry_uri
-        self.openshift_uri = openshift_uri
         self.kojiroot = kojiroot
         self.kojihub = kojihub
         self.sources_command = sources_command
-        d = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        self.name = "%s-%s" % (self.component, d)
 
-    def render(self):
-        config = self.template
-        inner_config = self.inner_template
-
-        # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
-        config['metadata']['name'] = self.name
-        config['parameters']['source']['git']['uri'] = self.git_uri
-        config['parameters']['source']['git']['ref'] = self.git_ref
-
+    def _render(self, config, dj):
         timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         config['parameters']['output']['imageTag'] = "%s/%s:%s-%s" % \
             (self.user, self.component, self.koji_target, timestamp)
 
-        config['parameters']['output']['registry'] = self.registry_uri
-
-        dj = DockJsonManipulator(config, inner_config)
         dj.dock_json_set_arg('prebuild_plugins', "koji", "target", self.koji_target)
         dj.dock_json_set_arg('prebuild_plugins', "koji", "root", self.kojiroot)
         dj.dock_json_set_arg('prebuild_plugins', "koji", "hub", self.kojihub)
         dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts", "command", self.sources_command)
         dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url", self.openshift_uri)
-        dj.write_dock_json()
-        self.build_json = config
-        return self.build_json
 
 
 class BuildResponse(object):
@@ -183,9 +199,9 @@ class BuildManager(object):
     def __init__(self, build_json_store):
         self.build_json_store = build_json_store
 
-    def get_build(self, *args, **kwargs):
+    def get_build(self, build_type, *args, **kwargs):
         kwargs.setdefault("build_json_store", self.build_json_store)
-        b = ProductionBuild(*args, **kwargs)
+        b = BuildRequest.new_by_type(build_type, *args, **kwargs)
         b.render()
         b.validate_build_json()
         return b

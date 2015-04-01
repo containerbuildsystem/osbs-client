@@ -39,6 +39,7 @@ class OSBS(object):
 
     def create_build(self, git_uri, git_ref, user, component, target, namespace="default"):
         build = self.bm.get_build(
+            build_type=self.build_conf.get_build_type(),
             git_uri=git_uri,
             git_ref=git_ref,
             user=user,
