@@ -34,15 +34,30 @@ class DockJsonManipulator(object):
         dock_json = json.loads(dock_json_str)
         return dock_json
 
-    def dock_json_set_arg(self, plugin_type, plugin_name, arg_key, arg_value):
+    def _dock_json_get_plugin_conf(self, plugin_type, plugin_name, arg_key):
         try:
             match = [x for x in self.dock_json[plugin_type] if x.get('name', None) == plugin_name]
         except KeyError:
             raise RuntimeError("Invalid dock json: plugin type '%s' misses" % plugin_type)
         if len(match) <= 0:
             raise RuntimeError("no such plugin in dock json: \"%s\"" % plugin_name)
-        plugin_conf = match[0]
+        return match[0]
+
+    def dock_json_set_arg(self, plugin_type, plugin_name, arg_key, arg_value):
+        plugin_conf = self._dock_json_get_plugin_conf (plugin_type, plugin_name, arg_key)
         plugin_conf['args'][arg_key] = arg_value
+
+    def dock_json_merge_arg(self, plugin_type, plugin_name, arg_key, arg_dict):
+        plugin_conf = self._dock_json_get_plugin_conf (plugin_type, plugin_name, arg_key)
+
+        # Values from the template JSON override our implicit values
+        template_value = plugin_conf['args'].get(arg_key, {})
+        if not isinstance(template_value, dict):
+            template_value = {}
+
+        value = copy.deepcopy(arg_dict)
+        value.update (template_value)
+        plugin_conf['args'][arg_key] = value
 
     def write_dock_json(self):
         env_json = self.build_json['parameters']['strategy']['customStrategy']['env']
