@@ -156,3 +156,12 @@ class Configuration(object):
 
     def get_build_type(self):
         return self._get_value("build_type", self.conf_section, "build_type")
+
+    def get_vendor(self):
+        return self._get_value("vendor", self.conf_section, "vendor", can_miss=True)
+
+    def get_build_host(self):
+        return self._get_value("build_host", self.conf_section, "build_host", can_miss=True)
+
+    def get_authoritative_registry(self):
+        return self._get_value("authoritative_registry", self.conf_section, "authoritative_registry", can_miss=True)

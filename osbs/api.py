@@ -51,6 +51,8 @@ class OSBS(object):
             kojihub=self.build_conf.get_kojihub(),
             sources_command=self.build_conf.get_sources_command(),
             koji_target=target,
+            vendor=self.build_conf.get_vendor(),
+            build_host=self.build_conf.get_build_host(),
         )
         response = self.os.create_build(json.dumps(build.build_json), namespace=namespace)
         build_response = BuildResponse(response)
