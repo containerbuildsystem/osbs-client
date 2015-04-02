@@ -31,7 +31,7 @@ def graceful_chain_get(d, *args):
 
 
 def cmd_list_builds(args, osbs):
-    builds = osbs.list_builds()
+    builds = osbs.list_builds(namespace=args.namespace)
     format_str = "{name:48} {status:16} {image:64}"
     print(format_str.format(**{"name": "BUILD NAME", "status": "STATUS", "image": "IMAGE NAME"}), file=sys.stderr)
     for build in builds['items']:
@@ -48,7 +48,7 @@ def cmd_list_builds(args, osbs):
 
 
 def cmd_get_build(args, osbs):
-    build_json = osbs.get_build(args.BUILD_ID[0]).json
+    build_json = osbs.get_build(args.BUILD_ID[0], namespace=args.namespace).json
     # FIXME: pretty printing json could be a better idea
     template = """\
 BUILD ID: {build_id}
@@ -86,6 +86,7 @@ def cmd_prod_build(args, osbs):
         user=args.user,
         component=args.component,
         target=args.target,
+        namespace=args.namespace
     )
     build_id = build.build_id
     print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
@@ -98,15 +99,15 @@ def cmd_build_logs(args, osbs):
     follow = args.follow
 
     if follow:
-        for line in osbs.get_build_logs(build_id, follow=True):
+        for line in osbs.get_build_logs(build_id, follow=True, namespace=args.namespace):
             print(line)
     else:
-        logs = osbs.get_build_logs(build_id, follow=False)
+        logs = osbs.get_build_logs(build_id, follow=False, namespace=args.namespace)
         print(logs, end="")
 
 
 def cmd_watch_build(args, osbs):
-    build_json = osbs.wait_for_build_to_finish(args.BUILD_ID[0])
+    build_json = osbs.wait_for_build_to_finish(args.BUILD_ID[0], namespace=args.namespace)
 
 
 def cli():
@@ -175,6 +176,9 @@ def cli():
                         help="use kerberos for authentication")
     parser.add_argument("--verify-ssl", action='store_true', default=True,
                         help="verify CA on secure connections")
+    parser.add_argument("--namespace", help="list builds of specific namespace "
+                                            "(use --namespace=\"\" to list all builds)",
+                        metavar="NAMESPACE", action="store", default="default")
     args = parser.parse_args()
     return parser, args
 

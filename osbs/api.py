@@ -27,17 +27,17 @@ class OSBS(object):
             self._bm = BuildManager(build_json_store=self.os_conf.get_build_json_store())
         return self._bm
 
-    def list_builds(self):
+    def list_builds(self, namespace="default"):
         # FIXME: return list of BuildResponse objects
-        builds = self.os.list_builds().json()
+        builds = self.os.list_builds(namespace=namespace).json()
         return builds
 
-    def get_build(self, build_id):
-        response = self.os.get_build(build_id)
+    def get_build(self, build_id, namespace="default"):
+        response = self.os.get_build(build_id, namespace=namespace)
         build_response = BuildResponse(response)
         return build_response
 
-    def create_build(self, git_uri, git_ref, user, component, target):
+    def create_build(self, git_uri, git_ref, user, component, target, namespace="default"):
         build = self.bm.get_build(
             git_uri=git_uri,
             git_ref=git_ref,
@@ -50,15 +50,15 @@ class OSBS(object):
             sources_command=self.build_conf.get_sources_command(),
             koji_target=target,
         )
-        response = self.os.create_build(json.dumps(build.build_json))
+        response = self.os.create_build(json.dumps(build.build_json), namespace=namespace)
         build_response = BuildResponse(response)
         return build_response
 
-    def get_build_logs(self, build_id, follow=False):
+    def get_build_logs(self, build_id, follow=False, namespace="default"):
         if follow:
-            return self.os.logs(build_id, follow)
+            return self.os.logs(build_id, follow, namespace=namespace)
         try:
-            build = self.os.get_build(build_id)
+            build = self.os.get_build(build_id, namespace=namespace)
         except OpenshiftException as ex:
             if ex.status_code != 404:
                 raise
@@ -66,10 +66,10 @@ class OSBS(object):
             if build in ["Complete", "Failed"]:
                 return build["metadata"]["labels"]["logs"]
             else:
-                return self.os.logs(build_id, follow)
+                return self.os.logs(build_id, follow, namespace=namespace)
 
-    def wait_for_build_to_finish(self, build_id):
+    def wait_for_build_to_finish(self, build_id, namespace="default"):
         # FIXME: since OS returns whole build json in watch we could return
         #        instance of BuildResponse here
-        response = self.os.wait(build_id)
+        response = self.os.wait(build_id, namespace=namespace)
         return response

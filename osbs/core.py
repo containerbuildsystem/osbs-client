@@ -3,7 +3,7 @@ import json
 
 import logging
 import time
-from osbs.constants import POD_FINISHED_STATES
+from osbs.constants import POD_FINISHED_STATES, DEFAULT_NAMESPACE
 
 try:
     # py2
@@ -56,8 +56,12 @@ class Openshift(object):
     def os_oauth_url(self):
         return self._os_oauth_url
 
-    def _build_url(self, url):
-        return urlparse.urljoin(self.os_api_url, url)
+    def _build_url(self, url, namespace=None):
+        if namespace:
+            url += "?namespace=%s" % namespace
+            return urlparse.urljoin(self.os_api_url, url)
+        else:
+            return urlparse.urljoin(self.os_api_url, url)
 
     def _build_k8s_url(self, url):
         return urlparse.urljoin(self.kubelet_base, url)
@@ -97,44 +101,44 @@ class Openshift(object):
         self.token = parsed_fragment['access_token'][0]
         return self.token
 
-    def create_build(self, build_json):
+    def create_build(self, build_json, namespace=DEFAULT_NAMESPACE):
         """
         :return:
         """
-        url = self._build_url("builds/")
+        url = self._build_url("builds/", namespace=namespace)
         return self._post(url, data=build_json,
                           headers={"Content-Type": "application/json"})
 
-    def get_build_config(self, build_config_id):
-        url = self._build_url("buildConfigs/%s/" % build_config_id)
+    def get_build_config(self, build_config_id, namespace=DEFAULT_NAMESPACE):
+        url = self._build_url("buildConfigs/%s/" % build_config_id, namespace=namespace)
         response = self._get(url)
         build_config = response.json()
         return build_config
 
-    def create_build_config(self, build_config_json):
+    def create_build_config(self, build_config_json, namespace=DEFAULT_NAMESPACE):
         """
         :return:
         """
-        url = self._build_url("buildConfigs/")
+        url = self._build_url("buildConfigs/", namespace=namespace)
         return self._post(url, data=build_config_json,
                           headers={"Content-Type": "application/json"})
 
-    def start_build(self, build_config_id):
+    def start_build(self, build_config_id, namespace=DEFAULT_NAMESPACE):
         """
         :return:
         """
-        build_config = self.get_build_config(build_config_id)
+        build_config = self.get_build_config(build_config_id, namespace=namespace)
         assert build_config["Kind"] == "BuildConfig"
         build_config["Kind"] = "Build"
-        return self.create_build(build_config)
+        return self.create_build(build_config, namespace=namespace)
 
-    def logs(self, build_id, follow=False):
+    def logs(self, build_id, follow=False, namespace=DEFAULT_NAMESPACE):
         """
 
         :param follow:
         :return:
         """
-        redir_url = self._build_url("redirect/buildLogs/%s" % build_id)
+        redir_url = self._build_url("redirect/buildLogs/%s" % build_id, namespace=DEFAULT_NAMESPACE)
         bl = self._get(redir_url, allow_redirects=False)
         attempts = 10
         while bl.status_code not in (httplib.OK, httplib.TEMPORARY_REDIRECT, httplib.MOVED_PERMANENTLY):
@@ -152,32 +156,32 @@ class Openshift(object):
             return response.iter_lines()
         return response.content
 
-    def list_builds(self):
+    def list_builds(self, namespace=DEFAULT_NAMESPACE):
         """
 
         :return:
         """
-        url = self._build_url("builds")
+        url = self._build_url("builds", namespace=namespace)
         return self._get(url)
 
-    def get_build(self, build_id):
+    def get_build(self, build_id, namespace=DEFAULT_NAMESPACE):
         """
 
         :return:
         """
-        url = self._build_url("builds/%s/" % build_id)
+        url = self._build_url("builds/%s/" % build_id, namespace=namespace)
         response = self._get(url)
         check_response(response)
         return response
 
-    def wait(self, build_id):
+    def wait(self, build_id, namespace=DEFAULT_NAMESPACE):
         """
         :param build_id: wait for build to finish
 
         :return:
         """
         logger.info("watching build '%s'", build_id)
-        url = self._build_url("watch/builds/%s/" % build_id)
+        url = self._build_url("watch/builds/%s/" % build_id, namespace=DEFAULT_NAMESPACE)
         response = self._get(url, stream=True, headers={'Connection': 'close'})
         for line in response.iter_lines():
             j = json.loads(line)
