@@ -123,6 +123,8 @@ class Response(object):
             self.curl_multi.select(SELECT_TIMEOUT)
         self._check_status_code()
         self._check_curl_errors()
+        self.curl_multi.remove_handle(self.curl)
+        self.curl_multi.close()
 
     def _perform_on_curl(self):
         while True:
