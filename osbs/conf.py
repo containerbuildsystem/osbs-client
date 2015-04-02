@@ -44,7 +44,7 @@ class Configuration(object):
         self.args = cli_args
         self.kwargs = kwargs
 
-    def _get_value(self, args_key, conf_section, conf_key, can_miss=False, default=None):
+    def _get_value(self, args_key, conf_section, conf_key, can_miss=False, default=None, is_bool_val=False):
         # FIXME: this is too bloated: split it into separate classes
         # and implement it as mixins
         def get_value_from_kwargs():
@@ -70,13 +70,29 @@ class Configuration(object):
             get_value_from_cli_args,
             get_value_from_conf,
         ]
+
         for func in retrieval_order:
             value = func()
             if value is not None:
-                return value
-        if can_miss:
-            return default
-        raise RuntimeError("value '%s' not found" % args_key)
+                break
+        else:  # we didn't breaked
+            if can_miss:
+                return default
+            raise RuntimeError("value '%s' not found" % args_key)
+
+        if is_bool_val:
+            try:
+                int_val = int(value)
+            except ValueError:
+                if value.lower() == 'true':
+                    return True
+                return False
+            except TypeError:
+                return False
+            else:
+                return bool(int_val)
+        else:
+            return value
 
     def get_openshift_base_uri(self):
         """
@@ -108,17 +124,8 @@ class Configuration(object):
         return self._get_value("kubelet_uri", self.conf_section, "kubelet_uri")
 
     def get_verbosity(self):
-        val = self._get_value("verbose", GENERAL_CONFIGURATION_SECTION, "verbose", can_miss=True)
-        try:
-            int_val = int(val)
-        except ValueError:
-            if val.lower() == 'true':
-                return True
-            return False
-        except TypeError:
-            return False
-        else:
-            return bool(int_val)
+        val = self._get_value("verbose", GENERAL_CONFIGURATION_SECTION, "verbose", can_miss=True, is_bool_val=True)
+        return val
 
     def get_kojiroot(self):
         return self._get_value("koji_root", self.conf_section, "koji_root")
@@ -136,7 +143,7 @@ class Configuration(object):
         return self._get_value("password", self.conf_section, "password", can_miss=True)
 
     def get_use_kerberos(self):
-        return self._get_value("use_kerberos", self.conf_section, "use_kerberos", can_miss=True)
+        return self._get_value("use_kerberos", self.conf_section, "use_kerberos", can_miss=True, is_bool_val=True)
 
     def get_registry_uri(self):
         return self._get_value("registry_uri", self.conf_section, "registry_uri")
@@ -145,4 +152,4 @@ class Configuration(object):
         return self._get_value("build_json_dir", self.conf_section, "build_json_dir")
 
     def get_verify_ssl(self):
-        return self._get_value("verify_ssl", self.conf_section, "verify_ssl", default=True, can_miss=True)
+        return self._get_value("verify_ssl", self.conf_section, "verify_ssl", default=True, can_miss=True, is_bool_val=True)
