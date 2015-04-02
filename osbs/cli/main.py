@@ -203,14 +203,16 @@ def main():
             parser.print_help()
     except KeyboardInterrupt:
         print("Quitting on user request.")
-        pass
+        return -1
     except HTTPError as ex:
         logger.error("HTTP error: %d", ex.getcode())
+        return -1
     except Exception as ex:
         if args.verbose:
             raise
         else:
             logger.error("Exception caught: %s", repr(ex))
+            return -1
 
 if __name__ == '__main__':
     sys.exit(main())
