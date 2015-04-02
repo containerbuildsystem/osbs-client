@@ -5,6 +5,12 @@
     },
     {
       "args": {
+        "labels": "{{IMPLICIT_LABELS}}"
+      },
+      "name": "add_labels_in_dockerfile"
+    },
+    {
+      "args": {
         "command": "{{SOURCES_COMMAND}}"
       },
       "name": "distgit_fetch_artefacts"

@@ -190,6 +190,9 @@ class ProductionBuild(BuildRequest):
             BuildParam('kojiroot', True),
             BuildParam('kojihub', True),
             BuildParam('sources_command', True),
+            BuildParam('vendor', False),
+            BuildParam('build_host', False),
+            BuildParam('authoritative_registry', False),
         ])
 
     def _render(self, config, dj):
@@ -202,6 +205,17 @@ class ProductionBuild(BuildRequest):
         dj.dock_json_set_arg('prebuild_plugins', "koji", "hub", self.param['kojihub'])
         dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts", "command", self.param['sources_command'])
         dj.dock_json_set_arg('prebuild_plugins', "change_source_registry", "registry_uri", self.param['registry_uri'])
+
+        implicit_labels = {}
+        for (label, param) in [
+                ('Vendor', 'vendor'),
+                ('Build_Host', 'build_host'),
+                ('Authoritative_Registry', 'authoritative_registry')]:
+            if self.param[param]:
+                implicit_labels[label] = self.param[param]
+
+        dj.dock_json_merge_arg('prebuild_plugins', "add_labels_in_dockerfile", "labels", implicit_labels)
+
         dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url", self.param['openshift_uri'])
 
 @register_build_class
