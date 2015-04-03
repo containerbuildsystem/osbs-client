@@ -1,7 +1,7 @@
 from __future__ import print_function, unicode_literals, absolute_import
 import json
 from osbs.build import BuildManager, BuildResponse
-from osbs.constants import BUILD_JSON_STORE
+from osbs.constants import BUILD_JSON_STORE, DEFAULT_NAMESPACE
 from osbs.core import Openshift, OpenshiftException
 
 
@@ -27,17 +27,17 @@ class OSBS(object):
             self._bm = BuildManager(build_json_store=self.os_conf.get_build_json_store())
         return self._bm
 
-    def list_builds(self, namespace="default"):
+    def list_builds(self, namespace=DEFAULT_NAMESPACE):
         # FIXME: return list of BuildResponse objects
         builds = self.os.list_builds(namespace=namespace).json()
         return builds
 
-    def get_build(self, build_id, namespace="default"):
+    def get_build(self, build_id, namespace=DEFAULT_NAMESPACE):
         response = self.os.get_build(build_id, namespace=namespace)
         build_response = BuildResponse(response)
         return build_response
 
-    def create_build(self, git_uri, git_ref, user, component, target, namespace="default"):
+    def create_build(self, git_uri, git_ref, user, component, target, namespace=DEFAULT_NAMESPACE):
         build = self.bm.get_build(
             git_uri=git_uri,
             git_ref=git_ref,
@@ -54,7 +54,7 @@ class OSBS(object):
         build_response = BuildResponse(response)
         return build_response
 
-    def get_build_logs(self, build_id, follow=False, namespace="default"):
+    def get_build_logs(self, build_id, follow=False, namespace=DEFAULT_NAMESPACE):
         if follow:
             return self.os.logs(build_id, follow, namespace=namespace)
         try:
@@ -68,7 +68,7 @@ class OSBS(object):
             else:
                 return self.os.logs(build_id, follow, namespace=namespace)
 
-    def wait_for_build_to_finish(self, build_id, namespace="default"):
+    def wait_for_build_to_finish(self, build_id, namespace=DEFAULT_NAMESPACE):
         # FIXME: since OS returns whole build json in watch we could return
         #        instance of BuildResponse here
         response = self.os.wait(build_id, namespace=namespace)
