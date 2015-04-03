@@ -79,7 +79,7 @@ PACKAGES
     print(template.format(**context))
 
 
-def cmd_prod_build(args, osbs):
+def cmd_build(args, osbs):
     build = osbs.create_build(
         git_uri=args.git_url,
         git_ref=args.git_commit,
@@ -140,23 +140,21 @@ def cli():
     build_logs_parser.set_defaults(func=cmd_build_logs)
 
     build_parser = subparsers.add_parser('build', help='build an image in OSBS')
-    build_parser.add_argument("--build-json-dir", help="directory with build jsons",
-                              metavar="PATH", action="store")
-    build_subparsers = build_parser.add_subparsers(help="build subcommands")
-
-    prod_build_parser = build_subparsers.add_parser('prod', help='build an image in OSBS')
-
-    prod_build_parser.add_argument("-g", "--git-url", action='store', metavar="URL",
+    build_parser.add_argument("--build-type", "-T", action="store", metavar="BUILD_TYPE",
+                                   help="build type (prod, simple)")
+    build_parser.add_argument("--build-json-dir", action="store", metavar="PATH",
+                                   help="directory with build jsons")
+    build_parser.add_argument("-g", "--git-url", action='store', metavar="URL",
                                    required=True, help="URL to git repo")
-    prod_build_parser.add_argument("--git-commit", action='store', default="master",
+    build_parser.add_argument("--git-commit", action='store', default="master",
                                    help="checkout this commit")
-    prod_build_parser.add_argument("-c", "--component", action='store', required=True,
+    build_parser.add_argument("-c", "--component", action='store', required=True,
                                    help="name of component")
-    prod_build_parser.add_argument("-t", "--target", action='store', required=True,
+    build_parser.add_argument("-t", "--target", action='store', required=True,
                                    help="koji target name")
-    prod_build_parser.add_argument("-u", "--user", action='store', required=True,
+    build_parser.add_argument("-u", "--user", action='store', required=True,
                                    help="username (will be image prefix)")
-    prod_build_parser.set_defaults(func=cmd_prod_build)
+    build_parser.set_defaults(func=cmd_build)
 
     parser.add_argument("--openshift-uri", action='store', metavar="URL",
                         help="openshift URL to remote API")
@@ -166,7 +164,7 @@ def cli():
                         help="registry where images should be pushed")
     parser.add_argument("--config", action='store', metavar="PATH",
                         help="path to configuration file", default=DEFAULT_CONFIGURATION_FILE)
-    parser.add_argument("--config-section", action='store', metavar="SECTION_NAME",
+    parser.add_argument("--instance", "-i", action='store', metavar="SECTION_NAME",
                         help="section within config for requested instance", default=DEFAULT_CONFIGURATION_SECTION)
     parser.add_argument("--username", action='store',
                         help="username within OSBS")
@@ -185,8 +183,8 @@ def cli():
 
 def main():
     parser, args = cli()
-    os_conf = Configuration(conf_file=args.config, conf_section=args.config_section, cli_args=args)
-    build_conf = Configuration(conf_file=args.config, conf_section=args.config_section, cli_args=args)
+    os_conf = Configuration(conf_file=args.config, conf_section=args.instance, cli_args=args)
+    build_conf = Configuration(conf_file=args.config, conf_section=args.instance, cli_args=args)
 
     if os_conf.get_verbosity():
         set_logging(level=logging.DEBUG)

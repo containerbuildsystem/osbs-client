@@ -1,0 +1,29 @@
+{
+  "prebuild_plugins": [
+    {
+      "name": "change_from_in_dockerfile"
+    },
+    {
+      "name": "dockerfile_content"
+    }
+  ],
+  "postbuild_plugins": [
+    {
+      "args": {
+        "image_id": "BUILT_IMAGE_ID"
+      },
+      "name": "all_rpm_packages"
+    },
+    {
+      "args": {
+        "url": "{{OPENSHIFT_URI}}",
+        "verify_ssl": false
+      },
+      "name": "store_metadata_in_osv3"
+    },
+    {
+      "name": "remove_built_image"
+    }
+  ]
+}
+
