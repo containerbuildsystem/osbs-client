@@ -86,6 +86,10 @@ class Openshift(object):
         headers, kwargs = self._request_args(with_auth, **kwargs)
         return self._con.get(url, headers=headers, verify_ssl=self.verify_ssl, **kwargs)
 
+    def _put(self, url, with_auth=True, **kwargs):
+        headers, kwargs = self._request_args(with_auth, **kwargs)
+        return self._con.put(url, headers=headers, verify_ssl=self.verify_ssl, **kwargs)
+
     def get_oauth_token(self):
         url = self.os_oauth_url + "?response_type=token&client_id=openshift-challenging-client"
         if self.username and self.password:
@@ -189,6 +193,23 @@ class Openshift(object):
             if j['object']['status'].lower() in POD_FINISHED_STATES:
                 logger.info("build has finished")
                 return j['object']
+        check_response(response)
+        return response
+
+    def set_labels_on_build(self, build_id, labels, namespace=DEFAULT_NAMESPACE):
+        """
+        set labels on build object
+
+        :param build_id: str, id of build
+        :param labels: dict, labels to set
+        :param namespace: str
+        :return:
+        """
+        url = self._build_url("builds/%s" % build_id, namespace=namespace)
+        build_json = self._get(url).json()
+        build_json['metadata'].setdefault('labels', {})
+        build_json['metadata']['labels'].update(labels)
+        response = self._put(url, data=json.dumps(build_json), use_json=True)
         check_response(response)
         return response
 

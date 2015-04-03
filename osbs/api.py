@@ -73,3 +73,7 @@ class OSBS(object):
         #        instance of BuildResponse here
         response = self.os.wait(build_id, namespace=namespace)
         return response
+
+    def set_labels_on_build(self, build_id, labels, namespace=DEFAULT_NAMESPACE):
+        response = self.os.set_labels_on_build(build_id, labels, namespace=namespace)
+        return response
