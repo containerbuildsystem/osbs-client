@@ -37,7 +37,7 @@ def check_response(response):
 class Openshift(object):
 
     def __init__(self, openshift_api_url, openshift_oauth_url, kubelet_base, verbose=False,
-                 username=None, password=None, use_kerberos=False, verify_ssl=True):
+                 username=None, password=None, use_kerberos=False, verify_ssl=True, use_auth=None):
         self.os_api_url = openshift_api_url
         self._os_oauth_url = openshift_oauth_url
         self.kubelet_base = kubelet_base
@@ -49,7 +49,10 @@ class Openshift(object):
         self.use_kerberos = use_kerberos
         self.username = username
         self.password = password
-        self.use_auth = bool(use_kerberos or (username and password))
+        if use_auth is None:
+            self.use_auth = bool(use_kerberos or (username and password))
+        else:
+            self.use_auth = use_auth
         self.token = None
 
     @property
