@@ -181,7 +181,7 @@ class Openshift(object):
         :return:
         """
         logger.info("watching build '%s'", build_id)
-        url = self._build_url("watch/builds/%s/" % build_id, namespace=DEFAULT_NAMESPACE)
+        url = self._build_url("watch/builds/%s/" % build_id, namespace=namespace)
         response = self._get(url, stream=True, headers={'Connection': 'close'})
         for line in response.iter_lines():
             j = json.loads(line)
