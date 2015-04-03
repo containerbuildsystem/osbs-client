@@ -194,7 +194,7 @@ class PycurlAdapter(object):
         elif method == 'put':
             # self.c.setopt(pycurl.PUT, 1)
             self.c.setopt(pycurl.CUSTOMREQUEST, "PUT")
-            # headers["Expect"] = ""
+            headers["Expect"] = ""
         elif method == 'delete':
             self.c.setopt(pycurl.CUSTOMREQUEST, "DELETE")
         else:
