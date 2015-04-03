@@ -180,17 +180,21 @@ class PycurlAdapter(object):
         return self._c
 
     def request(self, url, method, data=None, kerberos_auth=False,
-                allow_redirects=True, verify_ssl=True,
+                allow_redirects=True, verify_ssl=True, use_json=False,
                 headers=None, stream=False, username=None, password=None):
         self.c.reset()
         self.url = url
+        headers = headers or {}
         method = method.lower()
+
         if method == 'post':
             self.c.setopt(pycurl.POST, 1)
         elif method == 'get':
             self.c.setopt(pycurl.HTTPGET, 1)
         elif method == 'put':
-            self.c.setopt(pycurl.PUT, 1)
+            # self.c.setopt(pycurl.PUT, 1)
+            self.c.setopt(pycurl.CUSTOMREQUEST, "PUT")
+            # headers["Expect"] = ""
         elif method == 'delete':
             self.c.setopt(pycurl.CUSTOMREQUEST, "DELETE")
         else:
@@ -210,6 +214,9 @@ class PycurlAdapter(object):
             # curl sets the method to post if one sets any POSTFIELDS (even '')
             self.c.setopt(pycurl.POSTFIELDS, data)
 
+        if use_json:
+            headers['Content-Type'] = 'application/json'
+
         if allow_redirects:
             self.c.setopt(pycurl.FOLLOWLOCATION, 1)
 
@@ -218,7 +225,6 @@ class PycurlAdapter(object):
             self.c.setopt(pycurl.USERPWD, ':')
 
         if stream:
-            headers = headers or {}
             headers['Cache-Control'] = 'no-cache'
             #self.curl.setopt(pycurl.CONNECTTIMEOUT, 5)
 
