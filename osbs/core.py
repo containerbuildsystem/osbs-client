@@ -78,7 +78,10 @@ class Openshift(object):
             # append token to URL, and set Authorization for httpd's basic auth
             if self.token is None:
                 self.get_oauth_token()
-            headers["Authorization"] = "Bearer %s" % self.token
+            if self.token:
+                headers["Authorization"] = "Bearer %s" % self.token
+            else:
+                raise ValueError("Token was not retrieved successfully.")
         return headers, kwargs
 
     def _post(self, url, with_auth=True, **kwargs):
@@ -100,8 +103,13 @@ class Openshift(object):
         elif self.use_kerberos:
             r = self._get(url, with_auth=False, allow_redirects=False, kerberos_auth=True)
         else:
-            raise ValueError("You need to specify an authentication type!")
-        redir_url = r.headers['location']
+            r = self._get(url, with_auth=False, allow_redirects=False)
+
+        try:
+            redir_url = r.headers['location']
+        except KeyError:
+            logger.error("[%s] 'Location' header is missing in response, cannot retrieve token", r.status_code)
+            return ""
         parsed_url = urlparse.urlparse(redir_url)
         fragment = parsed_url.fragment
         parsed_fragment = urlparse.parse_qs(fragment)
