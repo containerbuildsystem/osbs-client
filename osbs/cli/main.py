@@ -186,7 +186,9 @@ def main():
     os_conf = Configuration(conf_file=args.config, conf_section=args.instance, cli_args=args)
     build_conf = Configuration(conf_file=args.config, conf_section=args.instance, cli_args=args)
 
-    if os_conf.get_verbosity():
+    is_verbose = os_conf.get_verbosity()
+
+    if is_verbose:
         set_logging(level=logging.DEBUG)
         logger.debug("Logging level set to debug")
     elif args.quiet:
@@ -210,7 +212,7 @@ def main():
         logger.error("HTTP error: %d", ex.getcode())
         return -1
     except Exception as ex:
-        if args.verbose:
+        if is_verbose:
             raise
         else:
             logger.error("Exception caught: %s", repr(ex))
