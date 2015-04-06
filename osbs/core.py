@@ -23,14 +23,15 @@ logger = logging.getLogger(__name__)
 class OpenshiftException(Exception):
     """ OpenShift didn't respond with OK (200) status """
 
-    def __init__(self, status_code, *args, **kwargs):
-        super(OpenshiftException, self).__init__(*args, **kwargs)
+    def __init__(self, message, status_code, *args, **kwargs):
+        super(OpenshiftException, self).__init__(message, *args, **kwargs)
         self.status_code = status_code
 
 
 def check_response(response):
     if response.status_code not in (httplib.OK, httplib.CREATED):
-        raise OpenshiftException(response.status_code)
+        logger.error("[%s] %s", response.status_code, response.content)
+        raise OpenshiftException(message=response.content, status_code=response.status_code)
 
 
 # TODO: error handling: create function which handles errors in response object
