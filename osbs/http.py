@@ -193,14 +193,14 @@ class PycurlAdapter(object):
             self.c.setopt(pycurl.HTTPGET, 1)
         elif method == 'put':
             # self.c.setopt(pycurl.PUT, 1)
-            self.c.setopt(pycurl.CUSTOMREQUEST, "PUT")
+            self.c.setopt(pycurl.CUSTOMREQUEST, b"PUT")
             headers["Expect"] = ""
         elif method == 'delete':
-            self.c.setopt(pycurl.CUSTOMREQUEST, "DELETE")
+            self.c.setopt(pycurl.CUSTOMREQUEST, b"DELETE")
         else:
             raise RuntimeError("Unsupported method '%s' for curl call!" % method)
 
-        self.c.setopt(pycurl.COOKIEFILE, '')
+        self.c.setopt(pycurl.COOKIEFILE, b'')
         self.c.setopt(pycurl.URL, str(url))
         self.c.setopt(pycurl.WRITEFUNCTION, self.response.write)
         self.c.setopt(pycurl.HEADERFUNCTION, self.response_headers.write)
@@ -208,24 +208,24 @@ class PycurlAdapter(object):
         self.c.setopt(pycurl.VERBOSE, 1 if self.verbose else 0)
         self.c.setopt(pycurl.SSL_VERIFYPEER, 0)  # FIXME
         if username and password:
-            self.c.setopt(pycurl.USERPWD, "%s:%s" % (username, password))
+            self.c.setopt(pycurl.USERPWD, b"%s:%s" % (username, password))
 
         if data:
             # curl sets the method to post if one sets any POSTFIELDS (even '')
             self.c.setopt(pycurl.POSTFIELDS, data)
 
         if use_json:
-            headers['Content-Type'] = 'application/json'
+            headers['Content-Type'] = b'application/json'
 
         if allow_redirects:
             self.c.setopt(pycurl.FOLLOWLOCATION, 1)
 
         if kerberos_auth:
             self.c.setopt(pycurl.HTTPAUTH, pycurl.HTTPAUTH_GSSNEGOTIATE)
-            self.c.setopt(pycurl.USERPWD, ':')
+            self.c.setopt(pycurl.USERPWD, b':')
 
         if stream:
-            headers['Cache-Control'] = 'no-cache'
+            headers['Cache-Control'] = b'no-cache'
             #self.curl.setopt(pycurl.CONNECTTIMEOUT, 5)
 
         if headers:
