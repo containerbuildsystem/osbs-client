@@ -188,6 +188,7 @@ class Openshift(object):
         url = self._build_url("builds/%s/" % build_id, namespace=namespace)
         response = self._get(url)
         check_response(response)
+        logger.debug(response.json())
         return response
 
     def wait(self, build_id, namespace=DEFAULT_NAMESPACE):
