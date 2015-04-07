@@ -8,6 +8,8 @@ data_files = {
     "share/osbs": [
         "inputs/prod.json",
         "inputs/prod_inner.json",
+        "inputs/simple.json",
+        "inputs/simple_inner.json",
     ],
 }
 
