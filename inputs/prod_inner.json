@@ -22,6 +22,13 @@
     },
     {
       "name": "dockerfile_content"
+    },
+    {
+      "name": "change_source_registry",
+      "args": {
+        "registry_uri": "{{REGISTRY_URI}}",
+        "insecure_registry": true
+      }
     }
   ],
   "postbuild_plugins": [

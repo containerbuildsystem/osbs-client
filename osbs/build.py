@@ -183,6 +183,7 @@ class ProductionBuild(BuildRequest):
         dj.dock_json_set_arg('prebuild_plugins', "koji", "root", self.param['kojiroot'])
         dj.dock_json_set_arg('prebuild_plugins', "koji", "hub", self.param['kojihub'])
         dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts", "command", self.param['sources_command'])
+        dj.dock_json_set_arg('prebuild_plugins', "change_source_registry", "registry_uri", self.param['registry_uri'])
         dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url", self.param['openshift_uri'])
 
 @register_build_class
