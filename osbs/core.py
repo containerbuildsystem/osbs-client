@@ -3,7 +3,7 @@ import json
 
 import logging
 import time
-from osbs.constants import POD_FINISHED_STATES, DEFAULT_NAMESPACE
+from osbs.constants import DEFAULT_NAMESPACE, BUILD_FINISHED_STATES
 
 try:
     # py2
@@ -204,6 +204,7 @@ class Openshift(object):
             j = json.loads(line)
             logger.debug("got object change: '%s'", j['type'])
             if j['object']['status'].lower() in POD_FINISHED_STATES:
+            if j['object']['status'].lower() in BUILD_FINISHED_STATES:
                 logger.info("build has finished")
                 return j['object']
         check_response(response)

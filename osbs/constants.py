@@ -7,4 +7,13 @@ POD_FINISHED_STATES = ["failed", "succeeded"]
 POD_FAILED_STATES = ["failed"]
 POD_SUCCEEDED_STATES = ["succeeded"]
 POD_RUNNING_STATES = ["pending", "running"]
+# https://github.com/GoogleCloudPlatform/kubernetes/blob/master/pkg/api/types.go
+# type PodPhase string
+# fixme: what about "unknown" state?
+BUILD_FINISHED_STATES = ["failed", "complete", "error", "cancelled"]
+BUILD_FAILED_STATES = ["failed", "error", "cancelled"]  # meaning no image produced
+BUILD_SUCCEEDED_STATES = ["complete"]
+BUILD_RUNNING_STATES = ["pending", "running", "new"]
+# https://github.com/openshift/origin/blob/master/pkg/build/api/types.go
+# type BuildStatus string
 DEFAULT_NAMESPACE = "default"

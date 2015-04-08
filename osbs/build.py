@@ -5,8 +5,8 @@ import json
 import os
 import datetime
 import collections
-from osbs.constants import DEFAULT_GIT_REF, POD_FINISHED_STATES, POD_FAILED_STATES, POD_SUCCEEDED_STATES, \
-    POD_RUNNING_STATES
+from osbs.constants import DEFAULT_GIT_REF, BUILD_FINISHED_STATES, BUILD_RUNNING_STATES, \
+    BUILD_SUCCEEDED_STATES, BUILD_FAILED_STATES
 
 build_classes = {}
 
@@ -240,16 +240,16 @@ class BuildResponse(object):
         return self._build_id
 
     def is_finished(self):
-        return self.status in POD_FINISHED_STATES
+        return self.status in BUILD_FINISHED_STATES
 
     def is_failed(self):
-        return self.status in POD_FAILED_STATES
+        return self.status in BUILD_FAILED_STATES
 
     def is_succeeded(self):
-        return self.status in POD_SUCCEEDED_STATES
+        return self.status in BUILD_SUCCEEDED_STATES
 
     def is_running(self):
-        return self.status in POD_RUNNING_STATES
+        return self.status in BUILD_RUNNING_STATES
 
 
 class BuildManager(object):
