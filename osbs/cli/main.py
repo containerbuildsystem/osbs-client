@@ -172,7 +172,7 @@ def cli():
                         help="password within OSBS")
     parser.add_argument("--use-kerberos", action='store_true',
                         help="use kerberos for authentication")
-    parser.add_argument("--verify-ssl", action='store_true', default=True,
+    parser.add_argument("--verify-ssl", action='store_true', default=None,
                         help="verify CA on secure connections")
     parser.add_argument("--namespace", help="list builds of specific namespace "
                                             "(use --namespace=\"\" to list all builds)",
