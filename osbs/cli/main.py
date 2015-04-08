@@ -148,12 +148,12 @@ def cli():
                                    required=True, help="URL to git repo")
     build_parser.add_argument("--git-commit", action='store', default="master",
                                    help="checkout this commit")
-    build_parser.add_argument("-c", "--component", action='store', required=True,
-                                   help="name of component")
-    build_parser.add_argument("-t", "--target", action='store', required=True,
+    build_parser.add_argument("-t", "--target", action='store',
                                    help="koji target name")
     build_parser.add_argument("-u", "--user", action='store', required=True,
                                    help="username (will be image prefix)")
+    build_parser.add_argument("-c", "--component", action='store', required=True,
+                                   help="name of component")
     build_parser.set_defaults(func=cmd_build)
 
     parser.add_argument("--openshift-uri", action='store', metavar="URL",
