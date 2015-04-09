@@ -202,7 +202,7 @@ class Openshift(object):
         response = self._get(url, stream=True, headers={'Connection': 'close'})
         for line in response.iter_lines():
             j = json.loads(line)
-            logger.debug("got object change: '%s'", j['type'])
+            logger.info("got object change: '%s', status: '%s'", j['type'], j['object'].get('status', 'no-status'))
             if j['object']['status'].lower() in BUILD_FINISHED_STATES:
                 logger.info("build has finished")
                 return j['object']
