@@ -1,0 +1,15 @@
+* Server auth using Basic with user 'test'
+> GET /oauth/authorize?client_id=openshift-challenging-client&response_type=token HTTP/1.1
+> Authorization: Basic asdqwe
+> User-Agent: curl/7.41.0
+> Accept: */*
+> 
+< HTTP/1.1 302 Found
+< Date: Tue, 14 Apr 2015 07:26:21 GMT
+< Server: Apache/2.4.6 (Red Hat Enterprise Linux) OpenSSL/1.0.1e-fips
+< Cache-Control: no-store
+< Location: https://asdqqwe:8443/oauth/token/display#access_token=ZjRlNDM3OTAtN2Q3Ni00Y2UxLWEyNDMtM2ZjY2RiZjQyMzA1&expires_in=3600&token_type=bearer
+< Content-Length: 0
+< Content-Type: text/plain; charset=utf-8
+< Set-Cookie: ssn=MTQyODk5NjM4MXxEdi1CQkFFQ180SUFBUkFCRUFBQVFmLUNBQUlHYzNSeWFXNW5EQXNBQ1hWelpYSXVibUZ0WlFaemRISnBibWNNQWdBQUJuTjBjbWx1Wnd3S0FBaDFjMlZ5TG5WcFpBWnpkSEpwYm1jTUFnQUF8ixScn15dc3HlYffnvaFzXMK80pyJBD9YBVPS1qhVjPI=; Path=/; Expires=Tue, 14 Apr 2015 07:31:21 UTC; Max-Age=300
+< 
