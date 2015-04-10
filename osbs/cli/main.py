@@ -174,8 +174,8 @@ def cli():
                         help="use kerberos for authentication")
     parser.add_argument("--verify-ssl", action='store_true', default=None,
                         help="verify CA on secure connections")
-    parser.add_argument("--namespace", help="list builds of specific namespace "
-                                            "(use --namespace=\"\" to list all builds)",
+    parser.add_argument("--namespace", help="name of namespace to query against "
+                                            "(you may require blank namespace with --namespace=\"\")",
                         metavar="NAMESPACE", action="store", default="default")
     args = parser.parse_args()
     return parser, args
