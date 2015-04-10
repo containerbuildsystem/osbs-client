@@ -120,7 +120,9 @@ def cli():
 
     subparsers = parser.add_subparsers(help='commands')
 
-    list_builds_parser = subparsers.add_parser('list-builds', help='list builds in OSBS')
+    list_builds_parser = subparsers.add_parser('list-builds', help='list builds in OSBS',
+                                               description="list all builds in specified namespace "
+                                               "(to list all builds in all namespaces, use --namespace=\"\")")
     list_builds_parser.add_argument("USER", help="list builds only for specified username",
                                     nargs="?")
     list_builds_parser.set_defaults(func=cmd_list_builds)
