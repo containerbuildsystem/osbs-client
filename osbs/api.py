@@ -17,6 +17,7 @@ class OSBS(object):
                             verbose=self.os_conf.get_verbosity(),
                             username=self.os_conf.get_username(),
                             password=self.os_conf.get_password(),
+                            use_kerberos=self.os_conf.get_use_kerberos(),
                             verify_ssl=self.os_conf.get_verify_ssl())
         self._bm = None
 
