@@ -38,7 +38,7 @@ class OSBS(object):
         build_response = BuildResponse(response)
         return build_response
 
-    def create_build(self, git_uri, git_ref, user, component, target, namespace=DEFAULT_NAMESPACE):
+    def create_build(self, git_uri, git_ref, user, component, target, architecture, namespace=DEFAULT_NAMESPACE):
         build = self.bm.get_build(
             build_type=self.build_conf.get_build_type(),
             git_uri=git_uri,
@@ -51,6 +51,7 @@ class OSBS(object):
             kojihub=self.build_conf.get_kojihub(),
             sources_command=self.build_conf.get_sources_command(),
             koji_target=target,
+            architecture=architecture,
             vendor=self.build_conf.get_vendor(),
             build_host=self.build_conf.get_build_host(),
         )
