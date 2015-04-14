@@ -190,6 +190,7 @@ class ProductionBuild(BuildRequest):
             BuildParam('kojiroot', True),
             BuildParam('kojihub', True),
             BuildParam('sources_command', True),
+            BuildParam('architecture', True),
             BuildParam('vendor', False),
             BuildParam('build_host', False),
             BuildParam('authoritative_registry', False),
@@ -208,6 +209,7 @@ class ProductionBuild(BuildRequest):
 
         implicit_labels = {}
         for (label, param) in [
+                ('Architecture', 'architecture'),
                 ('Vendor', 'vendor'),
                 ('Build_Host', 'build_host'),
                 ('Authoritative_Registry', 'authoritative_registry')]:
