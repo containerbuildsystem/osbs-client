@@ -244,10 +244,17 @@ class PycurlAdapter(object):
             self.c.perform()
             response.status_code = self.c.getinfo(pycurl.HTTP_CODE)
             response.content = self.response.getvalue()
-            self.response_headers.seek(0)
-            response._raw_headers = self.response_headers
+
+            # self.response_headers contains headers from all responses - even
+            # without FOLLOWLOCATION there might be multiple sets of headers
+            # due to 401 Unauthorized. We only care about the last response.
+            allheaders = self.response_headers.getvalue()
+            last_response_headers = allheaders.split("\r\n\r\n")[-2]
+            response._raw_headers = BytesIO(last_response_headers)
+
             # clear buffer
             self.response.truncate(0)
+            self.response_headers.truncate(0)
         return response
 
     def get(self, url, **kwargs):
