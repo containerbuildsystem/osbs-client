@@ -100,10 +100,13 @@ class Openshift(object):
     def get_oauth_token(self):
         url = self.os_oauth_url + "?response_type=token&client_id=openshift-challenging-client"
         if self.username and self.password:
+            logger.info("using basic authentication")
             r = self._get(url, with_auth=False, allow_redirects=False, username=self.username, password=self.password)
         elif self.use_kerberos:
+            logger.info("using kerberos authentication")
             r = self._get(url, with_auth=False, allow_redirects=False, kerberos_auth=True)
         else:
+            logger.info("using identity authentication")
             r = self._get(url, with_auth=False, allow_redirects=False)
 
         try:
