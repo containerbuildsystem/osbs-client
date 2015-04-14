@@ -11,6 +11,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 
 import re
 import json
+import logging
 
 try:
     # py2
@@ -23,6 +24,8 @@ except ImportError:
     from urllib.error import HTTPError
     from io import BytesIO
 
+
+logger = logging.getLogger(__name__)
 
 # requests_imported = False
 # pycurl_imported = False
