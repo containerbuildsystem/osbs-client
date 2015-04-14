@@ -113,8 +113,9 @@ class Openshift(object):
             return ""
         parsed_url = urlparse.urlparse(redir_url)
         fragment = parsed_url.fragment
+        logger.debug("fragment is '%s'", fragment)
         parsed_fragment = urlparse.parse_qs(fragment)
-        self.token = parsed_fragment['access_token'][0]
+        self.token = parsed_fragment[b'access_token'][0]
         return self.token
 
     def create_build(self, build_json, namespace=DEFAULT_NAMESPACE):

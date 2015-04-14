@@ -18,10 +18,11 @@ except ImportError:
 
 
 def process_authorize(content):
-    match = re.findall(r"[Ll]ocation: (.+)", content)
+    match = re.findall(b"[Ll]ocation: (.+)", content)
     headers = {
         "location": match[0],
     }
+    logger.debug("headers: %s", headers)
     return {
         "headers": headers
     }
