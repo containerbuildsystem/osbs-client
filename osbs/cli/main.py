@@ -172,7 +172,7 @@ def cli():
                         help="username within OSBS")
     parser.add_argument("--password", action='store',
                         help="password within OSBS")
-    parser.add_argument("--use-kerberos", action='store_true',
+    parser.add_argument("--use-kerberos", action='store_true', default=None,
                         help="use kerberos for authentication")
     parser.add_argument("--verify-ssl", action='store_true', default=None,
                         help="verify CA on secure connections")
