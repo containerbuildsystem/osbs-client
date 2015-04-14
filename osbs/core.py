@@ -87,7 +87,7 @@ class Openshift(object):
 
     def _post(self, url, with_auth=True, **kwargs):
         headers, kwargs = self._request_args(with_auth, **kwargs)
-        return self._con.get(url, headers=headers, verify_ssl=self.verify_ssl, **kwargs)
+        return self._con.post(url, headers=headers, verify_ssl=self.verify_ssl, **kwargs)
 
     def _get(self, url, with_auth=True, **kwargs):
         headers, kwargs = self._request_args(with_auth, **kwargs)
