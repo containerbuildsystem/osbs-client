@@ -101,7 +101,7 @@ class ResponseMapping(object):
         this_dir = os.path.dirname(this_file)
         json_path = os.path.join(this_dir, "mock_jsons", self.version, file_name)
         with open(json_path, "r") as fd:
-            return fd.read()
+            return fd.read().encode("utf-8")
 
     def response_mapping(self, url_path, method):
         global DEFINITION
