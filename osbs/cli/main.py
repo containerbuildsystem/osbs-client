@@ -2,6 +2,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 import copy
 import logging
 
+from os import uname
 import sys
 import argparse
 from osbs import set_logging
@@ -86,6 +87,7 @@ def cmd_build(args, osbs):
         user=args.user,
         component=args.component,
         target=args.target,
+        architecture=args.arch,
         namespace=args.namespace
     )
     build_id = build.build_id
@@ -152,6 +154,8 @@ def cli():
                                    help="checkout this commit")
     build_parser.add_argument("-t", "--target", action='store',
                                    help="koji target name")
+    build_parser.add_argument("-a", "--arch", action='store', default=uname()[4],
+                                   help="build architecture")
     build_parser.add_argument("-u", "--user", action='store', required=True,
                                    help="username (will be image prefix)")
     build_parser.add_argument("-c", "--component", action='store', required=True,

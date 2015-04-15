@@ -34,15 +34,30 @@ class DockJsonManipulator(object):
         dock_json = json.loads(dock_json_str)
         return dock_json
 
-    def dock_json_set_arg(self, plugin_type, plugin_name, arg_key, arg_value):
+    def _dock_json_get_plugin_conf(self, plugin_type, plugin_name, arg_key):
         try:
             match = [x for x in self.dock_json[plugin_type] if x.get('name', None) == plugin_name]
         except KeyError:
             raise RuntimeError("Invalid dock json: plugin type '%s' misses" % plugin_type)
         if len(match) <= 0:
             raise RuntimeError("no such plugin in dock json: \"%s\"" % plugin_name)
-        plugin_conf = match[0]
+        return match[0]
+
+    def dock_json_set_arg(self, plugin_type, plugin_name, arg_key, arg_value):
+        plugin_conf = self._dock_json_get_plugin_conf (plugin_type, plugin_name, arg_key)
         plugin_conf['args'][arg_key] = arg_value
+
+    def dock_json_merge_arg(self, plugin_type, plugin_name, arg_key, arg_dict):
+        plugin_conf = self._dock_json_get_plugin_conf (plugin_type, plugin_name, arg_key)
+
+        # Values from the template JSON override our implicit values
+        template_value = plugin_conf['args'].get(arg_key, {})
+        if not isinstance(template_value, dict):
+            template_value = {}
+
+        value = copy.deepcopy(arg_dict)
+        value.update (template_value)
+        plugin_conf['args'][arg_key] = value
 
     def write_dock_json(self):
         env_json = self.build_json['parameters']['strategy']['customStrategy']['env']
@@ -175,6 +190,10 @@ class ProductionBuild(BuildRequest):
             BuildParam('kojiroot', True),
             BuildParam('kojihub', True),
             BuildParam('sources_command', True),
+            BuildParam('architecture', True),
+            BuildParam('vendor', False),
+            BuildParam('build_host', False),
+            BuildParam('authoritative_registry', False),
         ])
 
     def _render(self, config, dj):
@@ -187,6 +206,18 @@ class ProductionBuild(BuildRequest):
         dj.dock_json_set_arg('prebuild_plugins', "koji", "hub", self.param['kojihub'])
         dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts", "command", self.param['sources_command'])
         dj.dock_json_set_arg('prebuild_plugins', "change_source_registry", "registry_uri", self.param['registry_uri'])
+
+        implicit_labels = {}
+        for (label, param) in [
+                ('Architecture', 'architecture'),
+                ('Vendor', 'vendor'),
+                ('Build_Host', 'build_host'),
+                ('Authoritative_Registry', 'authoritative_registry')]:
+            if self.param[param]:
+                implicit_labels[label] = self.param[param]
+
+        dj.dock_json_merge_arg('prebuild_plugins', "add_labels_in_dockerfile", "labels", implicit_labels)
+
         dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url", self.param['openshift_uri'])
 
 @register_build_class
