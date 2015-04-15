@@ -50,13 +50,13 @@ class DockJsonManipulator(object):
     def dock_json_merge_arg(self, plugin_type, plugin_name, arg_key, arg_dict):
         plugin_conf = self._dock_json_get_plugin_conf (plugin_type, plugin_name, arg_key)
 
-        # Values from the template JSON override our implicit values
+        # Values supplied by the caller override those from the template JSON
         template_value = plugin_conf['args'].get(arg_key, {})
         if not isinstance(template_value, dict):
             template_value = {}
 
-        value = copy.deepcopy(arg_dict)
-        value.update (template_value)
+        value = copy.deepcopy(template_value)
+        value.update (arg_dict)
         plugin_conf['args'][arg_key] = value
 
     def write_dock_json(self):
