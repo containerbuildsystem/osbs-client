@@ -24,7 +24,10 @@ class DockJsonManipulator(object):
     def get_dock_json(self):
         """ return dock json from existing build json """
         env_json = self.build_json['parameters']['strategy']['customStrategy']['env']
-        p = [env for env in env_json if env["name"] == "DOCK_PLUGINS"]
+        try:
+            p = [env for env in env_json if env["name"] == "DOCK_PLUGINS"]
+        except TypeError:
+            raise RuntimeError("\"env\" is not iterable")
         if len(p) <= 0:
             raise RuntimeError("\"env\" misses key DOCK_PLUGINS")
         dock_json_str = p[0]['value']
