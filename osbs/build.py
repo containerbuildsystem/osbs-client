@@ -182,6 +182,10 @@ class ProductionBuild(BuildRequest):
         :param kojiroot: str, URL from which koji packages are fetched
         :param kojihub: str, URL of the koji hub
         :param sources_command: str, command used to fetch dist-git sources
+        :param architecture: str, architecture we are building for
+        :param vendor: str, vendor name
+        :param build_host: str, host the build will run on
+        :param authoritative_registry: str, the docker registry authoritative for this image
         """
         super(ProductionBuild, self).__init__(**kwargs)
 
