@@ -41,7 +41,7 @@
     {
       "name": "tag_by_labels",
       "args": {
-        "registry": "{{REGISTRY_URI}}",
+        "registry_uri": "{{REGISTRY_URI}}",
         "insecure": true
       }
     },
