@@ -39,6 +39,16 @@
   ],
   "postbuild_plugins": [
     {
+      "name": "tag_by_labels",
+      "args": {
+        "registry": "{{REGISTRY_URI}}",
+        "insecure": true
+      }
+    },
+    {
+      "name": "tag_and_push",
+    },
+    {
       "args": {
         "image_id": "BUILT_IMAGE_ID"
       },
