@@ -188,6 +188,10 @@ def cli():
                         help="use kerberos for authentication")
     parser.add_argument("--verify-ssl", action='store_true', default=None,
                         help="verify CA on secure connections")
+    parser.add_argument("--with-auth", action="store_true", dest="use_auth",
+                        help="get and supply oauth token with every request")
+    parser.add_argument("--without-auth", action="store_false", dest="use_auth",
+                        help="don't supply oauth tokens to requests")
     parser.add_argument("--namespace", help="name of namespace to query against "
                                             "(you may require blank namespace with --namespace=\"\")",
                         metavar="NAMESPACE", action="store", default="default")

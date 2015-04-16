@@ -73,10 +73,6 @@ class Openshift(object):
     def _request_args(self, with_auth=True, **kwargs):
         headers = kwargs.pop("headers", {})
         if with_auth and self.use_auth:
-            # TODO: this setup is not covered:
-            # httpd being used as an basic auth proxy: you need to pass Authorization to httpd
-            # and at the same time authenticate within openshift, therefore we would have to
-            # append token to URL, and set Authorization for httpd's basic auth
             if self.token is None:
                 self.get_oauth_token()
             if self.token:
@@ -99,14 +95,18 @@ class Openshift(object):
 
     def get_oauth_token(self):
         url = self.os_oauth_url + "?response_type=token&client_id=openshift-challenging-client"
-        if self.username and self.password:
-            logger.info("using basic authentication")
-            r = self._get(url, with_auth=False, allow_redirects=False, username=self.username, password=self.password)
-        elif self.use_kerberos:
-            logger.info("using kerberos authentication")
-            r = self._get(url, with_auth=False, allow_redirects=False, kerberos_auth=True)
+        if self.use_auth:
+            if self.username and self.password:
+                logger.info("using basic authentication")
+                r = self._get(url, with_auth=False, allow_redirects=False, username=self.username, password=self.password)
+            elif self.use_kerberos:
+                logger.info("using kerberos authentication")
+                r = self._get(url, with_auth=False, allow_redirects=False, kerberos_auth=True)
+            else:
+                logger.info("using identity authentication")
+                r = self._get(url, with_auth=False, allow_redirects=False)
         else:
-            logger.info("using identity authentication")
+            logger.info("getting token without any authentication (fingers crossed)")
             r = self._get(url, with_auth=False, allow_redirects=False)
 
         try:
