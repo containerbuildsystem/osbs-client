@@ -82,3 +82,6 @@ class OSBS(object):
     def set_labels_on_build(self, build_id, labels, namespace=DEFAULT_NAMESPACE):
         response = self.os.set_labels_on_build(build_id, labels, namespace=namespace)
         return response
+
+    def get_token(self):
+        return self.os.get_oauth_token()

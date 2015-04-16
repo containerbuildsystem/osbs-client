@@ -112,6 +112,11 @@ def cmd_watch_build(args, osbs):
     build_json = osbs.wait_for_build_to_finish(args.BUILD_ID[0], namespace=args.namespace)
 
 
+def cmd_get_token(args, osbs):
+    token = osbs.get_token()
+    print(token)
+
+
 def cli():
     parser = argparse.ArgumentParser(
         description="OpenShift Build Service client"
@@ -136,6 +141,9 @@ def cli():
     get_build_parser = subparsers.add_parser('get-build', help='get info about build')
     get_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
     get_build_parser.set_defaults(func=cmd_get_build)
+
+    get_token_parser = subparsers.add_parser('get-token', help='get authentication token')
+    get_token_parser.set_defaults(func=cmd_get_token)
 
     build_logs_parser = subparsers.add_parser('build-logs', help='get or follow build logs')
     build_logs_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
