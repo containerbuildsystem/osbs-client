@@ -121,6 +121,18 @@ class Openshift(object):
         self.token = parsed_fragment[b'access_token'][0]
         return self.token
 
+    def get_user(self, username="~"):
+        """
+        get info about user (if no user specified, use the one initiating request)
+
+        :param username: str, name of user to get info about, default="~"
+        :return: dict
+        """
+        url = self._build_url("users/%s" % username)
+        response = self._get(url)
+        check_response(response)
+        return response
+
     def create_build(self, build_json, namespace=DEFAULT_NAMESPACE):
         """
         :return:

@@ -154,3 +154,8 @@ def test_render_prod_request():
         'authoritative_registry': "registry.example.com",
     }
     build = bm.get_build("prod", **kwargs)
+
+
+def test_get_user(openshift):
+    l = openshift.get_user()
+    assert l.json() is not None

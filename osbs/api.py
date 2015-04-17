@@ -86,3 +86,6 @@ class OSBS(object):
 
     def get_token(self):
         return self.os.get_oauth_token()
+
+    def get_user(self, username="~"):
+        return self.os.get_user(username).json()

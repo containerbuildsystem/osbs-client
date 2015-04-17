@@ -117,6 +117,26 @@ def cmd_get_token(args, osbs):
     print(token)
 
 
+def cmd_get_user(args, osbs):
+    args_username = args.USERNAME
+    if args_username is None:
+        user_json = osbs.get_user()
+    else:
+        args_username = args_username[0]
+        user_json = osbs.get_user(args_username)
+    name = ""
+    full_name = ""
+    try:
+        name = user_json["metadata"]["name"]
+    except KeyError:
+        logger.error("\"name\" is not in response")
+    try:
+        full_name = user_json["fullName"]
+    except KeyError:
+        logger.error("\"full name\" is not in response")
+    print("Name: \"%s\"\nFull Name: \"%s\'" % (name, full_name))
+
+
 def cli():
     parser = argparse.ArgumentParser(
         description="OpenShift Build Service client"
@@ -144,6 +164,10 @@ def cli():
 
     get_token_parser = subparsers.add_parser('get-token', help='get authentication token')
     get_token_parser.set_defaults(func=cmd_get_token)
+
+    get_user_parser = subparsers.add_parser('get-user', help='get info about user')
+    get_user_parser.add_argument("USERNAME", nargs="?", default=None)
+    get_user_parser.set_defaults(func=cmd_get_user)
 
     build_logs_parser = subparsers.add_parser('build-logs', help='get or follow build logs')
     build_logs_parser.add_argument("BUILD_ID", help="build ID", nargs=1)

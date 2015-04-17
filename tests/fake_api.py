@@ -48,6 +48,11 @@ DEFINITION = {
             "custom_callback": process_authorize,
         }
     },
+    "/osapi/v1beta1/users/~": {
+        "get": {
+            "file": "get_user.json",
+        }
+    },
 }
 
 
