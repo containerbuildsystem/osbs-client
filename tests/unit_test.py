@@ -154,7 +154,27 @@ def test_render_prod_request():
         'authoritative_registry': "registry.example.com",
     }
     build = bm.get_build("prod", **kwargs)
+    build_json = build.render ()
+    strategy = build_json['parameters']['strategy']['customStrategy']['env']
+    plugins_json = None
+    for d in strategy:
+        if d['name'] == 'DOCK_PLUGINS':
+            plugins_json = d['value']
+            break
 
+    assert plugins_json is not None
+    plugins = json.loads(plugins_json)
+
+    labels = None
+    for d in plugins['prebuild_plugins']:
+        if d['name'] == 'add_labels_in_dockerfile':
+            labels = d['args']['labels']
+
+    assert labels is not None
+    assert 'Architecture' in labels
+    assert 'Authoritative_Registry' in labels
+    assert 'Build_Host' in labels
+    assert 'Vendor' in labels
 
 def test_get_user(openshift):
     l = openshift.get_user()
