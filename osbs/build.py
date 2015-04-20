@@ -168,8 +168,8 @@ class BuildRequest(object):
         if self._inner_template is None:
             path = os.path.join(self.build_json_store, "%s_inner.json" % self.key)
             with open(path, "r") as fp:
-                self._template = json.load(fp)
-        return copy.deepcopy(self._template)
+                self._inner_template = json.load(fp)
+        return copy.deepcopy(self._inner_template)
 
 
 @register_build_class
