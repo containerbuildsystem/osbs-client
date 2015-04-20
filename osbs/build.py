@@ -108,7 +108,7 @@ class BuildRequest(object):
     def add_params(self, kwargs, params):
         if "user" in kwargs:
             # pad user to length of 4: "asd" -> "asd_"
-            kwargs["user"] = kwargs["user"].ljust(4, "_")
+            kwargs["user"] = kwargs["user"].ljust(4, b"_")
         for p in params:
             if p.name in kwargs and kwargs[p.name] is not None:
                 self.param[p.name] = kwargs[p.name]
