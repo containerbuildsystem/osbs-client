@@ -124,11 +124,12 @@ class Response(object):
                 yield self._get_received_data()
             if remaining == 0:
                 break
-            self.curl_multi.select(SELECT_TIMEOUT)
+            sel = self.curl_multi.select(SELECT_TIMEOUT)
+            if sel == -1:
+                raise RuntimeError("error during select")
         self._check_status_code()
         self._check_curl_errors()
-        self.curl_multi.remove_handle(self.curl)
-        self.curl_multi.close()
+        self.close_multi()
 
     def _perform_on_curl(self):
         while True:
@@ -163,6 +164,11 @@ class Response(object):
 
         if pending is not None:
             yield pending
+
+    def close_multi(self):
+        logger.debug("closing curl multi: %s", id(self.curl_multi))
+        self.curl_multi.remove_handle(self.curl)
+        self.curl_multi.close()
 
 
 class PycurlAdapter(object):
@@ -241,6 +247,23 @@ class PycurlAdapter(object):
         if stream:
             curl_multi = pycurl.CurlMulti()
             curl_multi.add_handle(self.c)
+            while response.status_code == 0:
+                sel = curl_multi.select(SELECT_TIMEOUT)  # returns number
+                if sel == -1:
+                    raise RuntimeError("error during select")
+                ret, num_handles = curl_multi.perform()
+                if ret == pycurl.E_CALL_MULTI_PERFORM:
+                    raise RuntimeError("error during doing curl_multi")
+                response.status_code = self.c.getinfo(pycurl.HTTP_CODE)
+            response.content = self.response.getvalue()
+
+            # self.response_headers contains headers from all responses - even
+            # without FOLLOWLOCATION there might be multiple sets of headers
+            # due to 401 Unauthorized. We only care about the last response.
+            allheaders = self.response_headers.getvalue()
+            last_response_headers = allheaders.split("\r\n\r\n")[-2]
+            response._raw_headers = BytesIO(last_response_headers)
+
             response.curl = self.c
             response.curl_multi = curl_multi
             response.response_buffer = self.response
