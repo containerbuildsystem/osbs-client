@@ -107,7 +107,7 @@ class Response(object):
             self.status_code = self.curl.getinfo(pycurl.HTTP_CODE)
         if self.status_code not in (0, httplib.OK, httplib.CREATED):
             if self.curl:
-                url = self.curl.url
+                url = getattr(self.curl, "url", None)
             else:
                 url = None
             raise HTTPError(url, self.status_code, None, None, None)
