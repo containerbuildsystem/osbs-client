@@ -28,7 +28,7 @@ def _install_requirements():
 setup(
     name="osbs",
     description='Python module and command line client for OpenShift Build Service',
-    version="0.3",
+    version="0.4",
     author='Tomas Tomecek',
     author_email='ttomecek@redhat.com',
     url='https://github.com/DBuildService/osbs',

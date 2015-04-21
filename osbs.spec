@@ -4,7 +4,7 @@
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 
 Name:           osbs
-Version:        0.3
+Version:        0.4
 Release:        1%{?dist}
 
 Summary:        Python module and command line client for OpenShift Build Service
@@ -102,6 +102,9 @@ popd
 %endif # with_python3
 
 %changelog
+* Tue Apr 21 2015 Martin Milata <mmilata@redhat.com> - 0.4-1
+- new upstream release
+
 * Wed Apr 15 2015 Martin Milata <mmilata@redhat.com> - 0.3-1
 - new upstream release
 
