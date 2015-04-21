@@ -1,5 +1,6 @@
 from __future__ import print_function, absolute_import, unicode_literals
 import copy
+import json
 import logging
 
 from os import uname
@@ -51,6 +52,29 @@ def cmd_list_builds(args, osbs):
 def cmd_get_build(args, osbs):
     build_json = osbs.get_build(args.BUILD_ID[0], namespace=args.namespace).json
     # FIXME: pretty printing json could be a better idea
+    metadata = build_json.get("metadata", {})
+    md = metadata.get("annotations", metadata.get("labels", {}))
+    dockerfile = md.get("dockerfile", None)
+    packages = md.get("rpm-packages", None)
+    logs = md.get("logs", None)
+    repositories_json = md.get("repositories", None)
+    repositories_str = None
+    if repositories_json is not None:
+        repositories = json.loads(repositories_json)
+        repositories_template = """\
+Primary
+
+{primary}
+
+Unique
+
+{unique}"""
+        repositories_context = {
+            "primary": "\n".join(repositories["primary"]),
+            "unique": "\n".join(repositories["unique"]),
+        }
+        repositories_str = repositories_template.format(**repositories_context)
+
     template = """\
 BUILD ID: {build_id}
 STATUS: {status}
@@ -67,15 +91,20 @@ BUILD LOGS
 
 PACKAGES
 
-{packages}"""
+{packages}
+
+REPOSITORIES
+
+{repositories}"""
     context = {
         "build_id": build_json['metadata']['name'],
         "status": build_json['status'],
         "image": graceful_chain_get(build_json, 'parameters', 'output', 'imageTag'),
         "date": build_json['metadata']['creationTimestamp'],
-        "dockerfile": graceful_chain_get(build_json, 'metadata', 'labels', 'dockerfile'),
-        "logs": graceful_chain_get(build_json, 'metadata', 'labels', 'logs'),
-        "packages": graceful_chain_get(build_json, 'metadata', 'labels', 'rpm-packages'),
+        "dockerfile": dockerfile,
+        "logs": logs,
+        "packages": packages,
+        "repositories": repositories_str,
     }
     print(template.format(**context))
 
