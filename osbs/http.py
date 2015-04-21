@@ -276,7 +276,11 @@ class PycurlAdapter(object):
             # without FOLLOWLOCATION there might be multiple sets of headers
             # due to 401 Unauthorized. We only care about the last response.
             allheaders = self.response_headers.getvalue()
-            last_response_headers = allheaders.split("\r\n\r\n")[-2]
+            try:
+                last_response_headers = allheaders.split("\r\n\r\n")[-2]
+            except IndexError:
+                logger.warning('Incorrectly terminated http headers')
+                last_response_headers = allheaders
             response._raw_headers = BytesIO(last_response_headers)
 
             # clear buffer
