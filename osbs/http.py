@@ -88,8 +88,9 @@ class Response(object):
 
         return encoding
 
-    def json(self):
-        self._check_status_code()
+    def json(self, check=True):
+        if check:
+            self._check_status_code()
         return json.loads(self.content.decode(self.encoding))
 
     def _any_data_received(self):
