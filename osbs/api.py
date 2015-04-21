@@ -77,7 +77,7 @@ class OSBS(object):
     def wait_for_build_to_finish(self, build_id, namespace=DEFAULT_NAMESPACE):
         # FIXME: since OS returns whole build json in watch we could return
         #        instance of BuildResponse here
-        response = self.os.wait(build_id, namespace=namespace)
+        response = self.os.wait_for_build_to_finish(build_id, namespace=namespace)
         return response
 
     def set_labels_on_build(self, build_id, labels, namespace=DEFAULT_NAMESPACE):

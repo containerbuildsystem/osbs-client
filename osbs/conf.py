@@ -121,7 +121,7 @@ class Configuration(object):
         return urljoin(base_uri, "/oauth/authorize")  # MUST NOT END WITH SLASH
 
     def get_kubelet_uri(self):
-        return self._get_value("kubelet_uri", self.conf_section, "kubelet_uri")
+        return self._get_value("kubelet_uri", self.conf_section, "kubelet_uri", can_miss=True)
 
     def get_verbosity(self):
         val = self._get_value("verbose", GENERAL_CONFIGURATION_SECTION, "verbose", can_miss=True, is_bool_val=True)

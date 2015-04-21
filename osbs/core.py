@@ -2,8 +2,7 @@ from __future__ import print_function, unicode_literals, absolute_import
 import json
 
 import logging
-import time
-from osbs.constants import DEFAULT_NAMESPACE, BUILD_FINISHED_STATES
+from osbs.constants import DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNNING_STATES, BUILD_PENDING_STATES
 
 try:
     # py2
@@ -170,20 +169,22 @@ class Openshift(object):
         :param follow:
         :return:
         """
-        redir_url = self._build_url("redirect/buildLogs/%s" % build_id, namespace=DEFAULT_NAMESPACE)
-        bl = self._get(redir_url, allow_redirects=False)
-        attempts = 10
-        while bl.status_code not in (httplib.OK, httplib.TEMPORARY_REDIRECT, httplib.MOVED_PERMANENTLY):
-            bl = self._get(redir_url, allow_redirects=False)
-            time.sleep(5)  # 50 seconds got to be enough
-            if attempts <= 0:
-                break
-            attempts -= 1
-        buildlogs_url = self._build_k8s_url(
-            "containerLogs/default/build-%s/custom-build?follow=%d" % (
-                build_id, 1 if follow else 0))
-        time.sleep(15)  # container ***STILL*** may not be ready
-        response = self._get(buildlogs_url, stream=follow, headers={'Connection': 'close'})
+        build_json = self.get_build(build_id, namespace=namespace).json()
+        if build_json['status'].lower() in BUILD_PENDING_STATES:
+            self.wait_for_build_to_get_scheduled(build_id, namespace)
+
+        # 0.4.3+
+        proxy_url = self._build_url("proxy/buildLogs/%s?follow=%d" % (
+            build_id, 1 if follow else 0), namespace=namespace)
+        response = self._get(proxy_url, stream=follow, headers={'Connection': 'close'})
+        if response.status_code in (403, 404):
+            # 0.4.1
+            # FIXME: remove this once 0.4.3 is deployed everywhere
+            buildlogs_url = self._build_k8s_url(
+                "containerLogs/default/build-%s/custom-build?follow=%d" % (
+                    build_id, 1 if follow else 0))
+            response.close_multi()
+            response = self._get(buildlogs_url, stream=follow, headers={'Connection': 'close'})
         if follow:
             return response.iter_lines()
         return response.content
@@ -204,10 +205,10 @@ class Openshift(object):
         url = self._build_url("builds/%s/" % build_id, namespace=namespace)
         response = self._get(url)
         check_response(response)
-        logger.debug(response.json())
+        logger.debug(response.content)
         return response
 
-    def wait(self, build_id, namespace=DEFAULT_NAMESPACE):
+    def wait(self, build_id, states, namespace=DEFAULT_NAMESPACE):
         """
         :param build_id: wait for build to finish
 
@@ -218,12 +219,41 @@ class Openshift(object):
         response = self._get(url, stream=True, headers={'Connection': 'close'})
         for line in response.iter_lines():
             j = json.loads(line)
-            logger.info("got object change: '%s', status: '%s'", j['type'], j['object'].get('status', 'no-status'))
-            if j['object']['status'].lower() in BUILD_FINISHED_STATES:
-                logger.info("build has finished")
-                return j['object']
+            logger.debug(line)
+            obj = j.get("object", None)
+            if obj is None:
+                logger.error("'object' is None")
+                continue
+            try:
+                obj_name = obj["metadata"]["name"]
+            except KeyError:
+                logger.error("'object' doesn't have any name")
+                continue
+            try:
+                obj_status = obj["status"]
+            except KeyError:
+                logger.error("'object' doesn't have any status")
+                continue
+            logger.info("object has changed: '%s', status: '%s', name: '%s'",
+                        j['type'], obj_status, obj_name)
+            if obj_name == build_id:
+                logger.info("matching build found")
+                if obj_status.lower() in states:
+                    response.close_multi()
+                    return obj
         check_response(response)
         return response
+
+    def wait_for_build_to_finish(self, build_id, namespace=DEFAULT_NAMESPACE):
+        while True:
+            build_response = self.wait(build_id, BUILD_FINISHED_STATES, namespace)
+            return build_response
+
+    def wait_for_build_to_get_scheduled(self, build_id, namespace=DEFAULT_NAMESPACE):
+        while True:
+            build_response = self.wait(build_id, BUILD_FINISHED_STATES + BUILD_RUNNING_STATES,
+                                       namespace)
+            return build_response
 
     def set_labels_on_build(self, build_id, labels, namespace=DEFAULT_NAMESPACE):
         """
