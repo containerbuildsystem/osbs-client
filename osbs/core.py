@@ -259,6 +259,9 @@ class Openshift(object):
         """
         set labels on build object
 
+        labels have to match RE: (([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])? and
+        have at most 63 chars
+
         :param build_id: str, id of build
         :param labels: dict, labels to set
         :param namespace: str
@@ -268,6 +271,23 @@ class Openshift(object):
         build_json = self._get(url).json()
         build_json['metadata'].setdefault('labels', {})
         build_json['metadata']['labels'].update(labels)
+        response = self._put(url, data=json.dumps(build_json), use_json=True)
+        check_response(response)
+        return response
+
+    def set_annotations_on_build(self, build_id, annotations, namespace=DEFAULT_NAMESPACE):
+        """
+        set annotations on build object
+
+        :param build_id: str, id of build
+        :param annotations: dict, annotations to set
+        :param namespace: str
+        :return:
+        """
+        url = self._build_url("builds/%s" % build_id, namespace=namespace)
+        build_json = self._get(url).json()
+        build_json['metadata'].setdefault('annotations', {})
+        build_json['metadata']['annotations'].update(annotations)
         response = self._put(url, data=json.dumps(build_json), use_json=True)
         check_response(response)
         return response
