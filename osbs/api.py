@@ -55,6 +55,7 @@ class OSBS(object):
             architecture=architecture,
             vendor=self.build_conf.get_vendor(),
             build_host=self.build_conf.get_build_host(),
+            metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
         )
         response = self.os.create_build(json.dumps(build.build_json), namespace=namespace)
         build_response = BuildResponse(response)
