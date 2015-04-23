@@ -10,9 +10,11 @@ from osbs.constants import DEFAULT_GIT_REF, BUILD_FINISHED_STATES, BUILD_RUNNING
 
 build_classes = {}
 
+
 def register_build_class(cls):
     build_classes[cls.key] = cls
     return cls
+
 
 class DockJsonManipulator(object):
     """ """
@@ -44,11 +46,11 @@ class DockJsonManipulator(object):
         return match[0]
 
     def dock_json_set_arg(self, plugin_type, plugin_name, arg_key, arg_value):
-        plugin_conf = self._dock_json_get_plugin_conf (plugin_type, plugin_name)
+        plugin_conf = self._dock_json_get_plugin_conf(plugin_type, plugin_name)
         plugin_conf['args'][arg_key] = arg_value
 
     def dock_json_merge_arg(self, plugin_type, plugin_name, arg_key, arg_dict):
-        plugin_conf = self._dock_json_get_plugin_conf (plugin_type, plugin_name)
+        plugin_conf = self._dock_json_get_plugin_conf(plugin_type, plugin_name)
 
         # Values supplied by the caller override those from the template JSON
         template_value = plugin_conf['args'].get(arg_key, {})
@@ -56,7 +58,7 @@ class DockJsonManipulator(object):
             template_value = {}
 
         value = copy.deepcopy(template_value)
-        value.update (arg_dict)
+        value.update(arg_dict)
         plugin_conf['args'][arg_key] = value
 
     def write_dock_json(self):
@@ -230,6 +232,7 @@ class ProductionBuild(BuildRequest):
         dj.dock_json_merge_arg('prebuild_plugins', "add_labels_in_dockerfile", "labels", implicit_labels)
 
         dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url", self.param['openshift_uri'])
+
 
 @register_build_class
 class SimpleBuild(BuildRequest):

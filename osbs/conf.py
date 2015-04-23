@@ -60,10 +60,10 @@ class Configuration(object):
                 pass
 
         def get_value_from_conf():
-                try:
-                    return self.scp.get(conf_section, conf_key)
-                except configparser.Error:
-                    pass
+            try:
+                return self.scp.get(conf_section, conf_key)
+            except configparser.Error:
+                pass
 
         retrieval_order = [
             get_value_from_kwargs,
@@ -152,7 +152,8 @@ class Configuration(object):
         return self._get_value("build_json_dir", GENERAL_CONFIGURATION_SECTION, "build_json_dir")
 
     def get_verify_ssl(self):
-        return self._get_value("verify_ssl", self.conf_section, "verify_ssl", default=True, can_miss=True, is_bool_val=True)
+        return self._get_value("verify_ssl", self.conf_section, "verify_ssl",
+                               default=True, can_miss=True, is_bool_val=True)
 
     def get_build_type(self):
         return self._get_value("build_type", self.conf_section, "build_type")

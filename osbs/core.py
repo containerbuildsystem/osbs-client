@@ -97,7 +97,8 @@ class Openshift(object):
         if self.use_auth:
             if self.username and self.password:
                 logger.info("using basic authentication")
-                r = self._get(url, with_auth=False, allow_redirects=False, username=self.username, password=self.password)
+                r = self._get(url, with_auth=False, allow_redirects=False,
+                              username=self.username, password=self.password)
             elif self.use_kerberos:
                 logger.info("using kerberos authentication")
                 r = self._get(url, with_auth=False, allow_redirects=False, kerberos_auth=True)
