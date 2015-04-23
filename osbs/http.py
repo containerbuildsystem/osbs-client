@@ -215,7 +215,7 @@ class PycurlAdapter(object):
         self.c.setopt(pycurl.WRITEFUNCTION, self.response.write)
         self.c.setopt(pycurl.HEADERFUNCTION, self.response_headers.write)
         self.c.setopt(pycurl.SSL_VERIFYPEER, 1 if verify_ssl else 0)
-        self.c.setopt(pycurl.SSL_VERIFYHOST, 1 if verify_ssl else 0)
+        self.c.setopt(pycurl.SSL_VERIFYHOST, 2 if verify_ssl else 0)
         self.c.setopt(pycurl.VERBOSE, 1 if self.verbose else 0)
         if username and password:
             self.c.setopt(pycurl.USERPWD, b"%s:%s" % (username, password))
