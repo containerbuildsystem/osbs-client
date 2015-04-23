@@ -206,6 +206,7 @@ class ProductionBuild(BuildRequest):
             BuildParam('vendor', False),
             BuildParam('build_host', False),
             BuildParam('authoritative_registry', False),
+            BuildParam('metadata_plugin_use_auth', False),
         ])
 
     def _render(self, config, dj):
@@ -219,6 +220,9 @@ class ProductionBuild(BuildRequest):
         dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts", "command", self.param['sources_command'])
         dj.dock_json_set_arg('prebuild_plugins', "change_source_registry", "registry_uri", self.param['registry_uri'])
         dj.dock_json_set_arg('postbuild_plugins', "tag_by_labels", "registry_uri", self.param['registry_uri'])
+        if self.param["metadata_plugin_use_auth"] is not None:
+            dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
+                                 "use_auth", self.param['metadata_plugin_use_auth'])
 
         implicit_labels = {}
         for (label, param) in [

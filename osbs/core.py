@@ -138,6 +138,7 @@ class Openshift(object):
         :return:
         """
         url = self._build_url("builds/", namespace=namespace)
+        logger.debug(build_json)
         return self._post(url, data=build_json,
                           headers={"Content-Type": "application/json"})
 
