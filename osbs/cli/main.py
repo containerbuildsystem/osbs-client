@@ -9,7 +9,7 @@ import argparse
 from osbs import set_logging
 from osbs.api import OSBS
 from osbs.conf import Configuration
-from osbs.constants import BUILD_JSON_STORE, DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION
+from osbs.constants import DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION
 
 try:
     # py2
@@ -138,10 +138,10 @@ def cmd_build_logs(args, osbs):
 
 
 def cmd_watch_build(args, osbs):
-    build_json = osbs.wait_for_build_to_finish(args.BUILD_ID[0], namespace=args.namespace)
+    osbs.wait_for_build_to_finish(args.BUILD_ID[0], namespace=args.namespace)
 
 
-def cmd_get_token(args, osbs):
+def cmd_get_token(args, osbs):  # pylint: disable=W0613
     token = osbs.get_token()
     print(token)
 

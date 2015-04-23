@@ -1,7 +1,7 @@
 from __future__ import print_function, unicode_literals, absolute_import
 import json
 from osbs.build import BuildManager, BuildResponse
-from osbs.constants import BUILD_JSON_STORE, DEFAULT_NAMESPACE
+from osbs.constants import DEFAULT_NAMESPACE
 from osbs.core import Openshift, OpenshiftException
 
 
