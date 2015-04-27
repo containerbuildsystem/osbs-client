@@ -2,7 +2,8 @@ from __future__ import print_function, unicode_literals, absolute_import
 import json
 from osbs.build import BuildManager, BuildResponse
 from osbs.constants import DEFAULT_NAMESPACE
-from osbs.core import Openshift, OpenshiftException
+from osbs.core import Openshift
+from osbs.exceptions import OsbsResponseException
 
 
 class OSBS(object):
@@ -66,7 +67,7 @@ class OSBS(object):
             return self.os.logs(build_id, follow, namespace=namespace)
         try:
             build = self.os.get_build(build_id, namespace=namespace)
-        except OpenshiftException as ex:
+        except OsbsResponseException as ex:
             if ex.status_code != 404:
                 raise
         else:
