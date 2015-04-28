@@ -6,6 +6,8 @@ class OsbsException(Exception):
     pass
 
 class OsbsResponseException(OsbsException):
+    """ OpenShift didn't respond with OK (200) status """
+
     def __init__ (self, message, status_code, *args, **kwargs):
         super (OsbsResponseException, self).__init__ (message, *args, **kwargs)
         self.status_code = status_code
