@@ -39,36 +39,45 @@ def graceful_chain_get(d, *args):
     return t
 
 
+def print_json_nicely(decoded_json):
+    print(json.dumps(decoded_json, indent=2))
+
+
 def cmd_list_builds(args, osbs):
     builds = osbs.list_builds(namespace=args.namespace)
-    format_str = "{name:48} {status:16} {image:64}"
-    print(format_str.format(**{"name": "BUILD NAME", "status": "STATUS", "image": "IMAGE NAME"}), file=sys.stderr)
-    for build in builds['items']:
-        image = graceful_chain_get(build, 'parameters', 'output', 'imageTag')
-        if args.USER:
-            if not image.startswith(args.USER + "/"):
-                continue
-        b = {
-            "name": build['metadata']['name'],
-            "status": build['status'],
-            "image": image,
-        }
-        print(format_str.format(**b))
+    if args.output == 'json':
+        print_json_nicely(builds['items'])
+    elif args.output == 'text':
+        format_str = "{name:48} {status:16} {image:64}"
+        print(format_str.format(**{"name": "BUILD NAME", "status": "STATUS", "image": "IMAGE NAME"}), file=sys.stderr)
+        for build in builds['items']:
+            image = graceful_chain_get(build, 'parameters', 'output', 'imageTag')
+            if args.USER:
+                if not image.startswith(args.USER + "/"):
+                    continue
+            b = {
+                "name": build['metadata']['name'],
+                "status": build['status'],
+                "image": image,
+            }
+            print(format_str.format(**b))
 
 
 def cmd_get_build(args, osbs):
     build_json = osbs.get_build(args.BUILD_ID[0], namespace=args.namespace).json
-    # FIXME: pretty printing json could be a better idea
-    metadata = build_json.get("metadata", {})
-    md = metadata.get("annotations", metadata.get("labels", {}))
-    dockerfile = md.get("dockerfile", None)
-    packages = md.get("rpm-packages", None)
-    logs = md.get("logs", None)
-    repositories_json = md.get("repositories", None)
-    repositories_str = None
-    if repositories_json is not None:
-        repositories = json.loads(repositories_json)
-        repositories_template = """\
+    if args.output == 'json':
+        print_json_nicely(build_json)
+    elif args.output == 'text':
+        metadata = build_json.get("metadata", {})
+        md = metadata.get("annotations", metadata.get("labels", {}))
+        dockerfile = md.get("dockerfile", None)
+        packages = md.get("rpm-packages", None)
+        logs = md.get("logs", None)
+        repositories_json = md.get("repositories", None)
+        repositories_str = None
+        if repositories_json is not None:
+            repositories = json.loads(repositories_json)
+            repositories_template = """\
 Primary
 
 {primary}
@@ -76,13 +85,13 @@ Primary
 Unique
 
 {unique}"""
-        repositories_context = {
-            "primary": "\n".join(repositories["primary"]),
-            "unique": "\n".join(repositories["unique"]),
-        }
-        repositories_str = repositories_template.format(**repositories_context)
+            repositories_context = {
+                "primary": "\n".join(repositories["primary"]),
+                "unique": "\n".join(repositories["unique"]),
+            }
+            repositories_str = repositories_template.format(**repositories_context)
 
-    template = """\
+        template = """\
 BUILD ID: {build_id}
 STATUS: {status}
 IMAGE: {image}
@@ -103,17 +112,17 @@ PACKAGES
 REPOSITORIES
 
 {repositories}"""
-    context = {
-        "build_id": build_json['metadata']['name'],
-        "status": build_json['status'],
-        "image": graceful_chain_get(build_json, 'parameters', 'output', 'imageTag'),
-        "date": build_json['metadata']['creationTimestamp'],
-        "dockerfile": dockerfile,
-        "logs": logs,
-        "packages": packages,
-        "repositories": repositories_str,
-    }
-    print(template.format(**context))
+        context = {
+            "build_id": build_json['metadata']['name'],
+            "status": build_json['status'],
+            "image": graceful_chain_get(build_json, 'parameters', 'output', 'imageTag'),
+            "date": build_json['metadata']['creationTimestamp'],
+            "dockerfile": dockerfile,
+            "logs": logs,
+            "packages": packages,
+            "repositories": repositories_str,
+        }
+        print(template.format(**context))
 
 
 def cmd_build(args, osbs):
@@ -132,7 +141,10 @@ def cmd_build(args, osbs):
         for line in osbs.get_build_logs(build_id, follow=True):
             print(line)
     else:
-        print(build_id)
+        if args.output == 'json':
+            print_json_nicely(build.json)
+        elif args.output == 'text':
+            print(build_id)
 
 
 def cmd_build_logs(args, osbs):
@@ -148,7 +160,11 @@ def cmd_build_logs(args, osbs):
 
 
 def cmd_watch_build(args, osbs):
-    osbs.wait_for_build_to_finish(args.BUILD_ID[0], namespace=args.namespace)
+    response = osbs.wait_for_build_to_finish(args.BUILD_ID[0], namespace=args.namespace)
+    if args.output == 'text':
+        pass
+    elif args.output == 'json':
+        print_json_nicely(response)
 
 
 def cmd_get_token(args, osbs):  # pylint: disable=W0613
@@ -163,17 +179,20 @@ def cmd_get_user(args, osbs):
     else:
         args_username = args_username[0]
         user_json = osbs.get_user(args_username)
-    name = ""
-    full_name = ""
-    try:
-        name = user_json["metadata"]["name"]
-    except KeyError:
-        logger.error("\"name\" is not in response")
-    try:
-        full_name = user_json["fullName"]
-    except KeyError:
-        logger.error("\"full name\" is not in response")
-    print("Name: \"%s\"\nFull Name: \"%s\'" % (name, full_name))
+    if args.output == 'json':
+        print_json_nicely(user_json)
+    elif args.output == 'text':
+        name = ""
+        full_name = ""
+        try:
+            name = user_json["metadata"]["name"]
+        except KeyError:
+            logger.error("\"name\" is not in response")
+        try:
+            full_name = user_json["fullName"]
+        except KeyError:
+            logger.error("\"full name\" is not in response")
+        print("Name: \"%s\"\nFull Name: \"%s\'" % (name, full_name))
 
 
 def cli():
@@ -257,6 +276,8 @@ def cli():
                         help="get and supply oauth token with every request")
     parser.add_argument("--without-auth", action="store_false", dest="use_auth", default=None,
                         help="don't supply oauth tokens to requests")
+    parser.add_argument("--output", choices=["json", "text"], default="text",
+                        help="pick output type (default=text)")
     parser.add_argument("--namespace", help="name of namespace to query against "
                                             "(you may require blank namespace with --namespace=\"\")",
                         metavar="NAMESPACE", action="store", default="default")
