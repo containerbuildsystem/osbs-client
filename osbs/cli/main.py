@@ -120,9 +120,12 @@ def cmd_build(args, osbs):
         namespace=args.namespace
     )
     build_id = build.build_id
-    print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
-    for line in osbs.get_build_logs(build_id, follow=True):
-        print(line)
+    if not args.no_logs:
+        print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
+        for line in osbs.get_build_logs(build_id, follow=True):
+            print(line)
+    else:
+        print(build_id)
 
 
 def cmd_build_logs(args, osbs):
@@ -221,6 +224,8 @@ def cli():
                                    help="username (will be image prefix)")
     build_parser.add_argument("-c", "--component", action='store', required=True,
                                    help="name of component")
+    build_parser.add_argument("--no-logs", action='store_true', required=False, default=False,
+                              help="don't print logs after submitting build")
     build_parser.set_defaults(func=cmd_build)
 
     parser.add_argument("--openshift-uri", action='store', metavar="URL",
