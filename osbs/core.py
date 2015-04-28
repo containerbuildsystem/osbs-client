@@ -20,14 +20,6 @@ from .http import get_http_session
 logger = logging.getLogger(__name__)
 
 
-class OsbsResponseException(Exception):
-    """ OpenShift didn't respond with OK (200) status """
-
-    def __init__(self, message, status_code, *args, **kwargs):
-        super(OsbsResponseException, self).__init__(message, *args, **kwargs)
-        self.status_code = status_code
-
-
 def check_response(response):
     if response.status_code not in (httplib.OK, httplib.CREATED):
         logger.error("[%s] %s", response.status_code, response.content)
