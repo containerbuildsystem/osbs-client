@@ -75,6 +75,14 @@ class Response(object):
         self._headers = None
 
     @property
+    def raw_headers(self):
+        raise RuntimeError("Only settable")
+
+    @raw_headers.setter
+    def raw_headers(self, raw_headers):
+        self._raw_headers = raw_headers
+
+    @property
     def headers(self):
         if self._headers is None:
             ### FIXME: the API for this is different in Python3
@@ -273,7 +281,7 @@ class PycurlAdapter(object):
             # due to 401 Unauthorized. We only care about the last response.
             allheaders = self.response_headers.getvalue()
             last_response_headers = allheaders.split("\r\n\r\n")[-2]
-            response._raw_headers = BytesIO(last_response_headers)
+            response.raw_headers = BytesIO(last_response_headers)
 
             response.curl = self.c
             response.curl_multi = curl_multi
@@ -292,7 +300,7 @@ class PycurlAdapter(object):
             except IndexError:
                 logger.warning('Incorrectly terminated http headers')
                 last_response_headers = allheaders
-            response._raw_headers = BytesIO(last_response_headers)
+            response.raw_headers = BytesIO(last_response_headers)
 
             # clear buffer
             self.response.truncate(0)
