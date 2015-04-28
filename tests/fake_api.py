@@ -8,6 +8,7 @@ import inspect
 import logging
 from osbs.core import Openshift
 from osbs.http import Response
+from tests.constants import TEST_BUILD
 
 try:
     # py2
@@ -34,7 +35,7 @@ DEFINITION = {
             "file": "builds_list.json",
         },
     },
-    "/osapi/v1beta1/builds/test-build-123": {
+    "/osapi/v1beta1/builds/%s" % TEST_BUILD: {
         "get": {
             "file": "build_test-build-123.json",
         },
@@ -51,6 +52,11 @@ DEFINITION = {
     "/osapi/v1beta1/users/~": {
         "get": {
             "file": "get_user.json",
+        }
+    },
+    "/osapi/v1beta1/watch/builds/%s/" % TEST_BUILD: {
+        "get": {
+            "file": "watch_build_test-build-123.json",
         }
     },
 }
@@ -71,14 +77,24 @@ class Connection(object):
         self.version = version
         self.response_mapping = ResponseMapping(version)
 
-    def _request(self, url, method, *args, **kwargs):
+    def _request(self, url, method, stream=None, *args, **kwargs):
+        def iter_lines():
+            yield res.content.decode("utf-8")
+
+        def close_multi():
+            pass
+
         parsed_url = urlparse.urlparse(url)
         # fragment = parsed_url.fragment
         # parsed_fragment = urlparse.parse_qs(fragment)
         url_path = parsed_url.path
         logger.info("URL path is '%s'", url_path)
         kwargs = self.response_mapping.response_mapping(url_path, method)
-        return response(**kwargs)
+        res = response(**kwargs)
+        if stream:
+            res.iter_lines = iter_lines
+            res.close_multi = close_multi
+        return res
 
     def get(self, url, *args, **kwargs):
         return self._request(url, "get", *args, **kwargs)

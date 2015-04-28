@@ -8,6 +8,7 @@ import pytest
 import logging
 from .fake_api import openshift
 from osbs.build import DockJsonManipulator, BuildManager
+from osbs.constants import BUILD_FINISHED_STATES
 from tests.constants import TEST_BUILD, TEST_LABEL, TEST_LABEL_VALUE
 
 
@@ -179,3 +180,9 @@ def test_render_prod_request():
 def test_get_user(openshift):
     l = openshift.get_user()
     assert l.json() is not None
+
+
+def test_watch_build(openshift):
+    response = openshift.wait_for_build_to_finish(TEST_BUILD)
+    response["metadata"]["name"] == TEST_BUILD
+    response["status"].lower() in BUILD_FINISHED_STATES
