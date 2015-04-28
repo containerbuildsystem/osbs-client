@@ -3,6 +3,7 @@ import json
 
 import logging
 from osbs.constants import DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNNING_STATES, BUILD_PENDING_STATES
+from osbs.exceptions import OsbsResponseException
 
 try:
     # py2
@@ -19,18 +20,10 @@ from .http import get_http_session
 logger = logging.getLogger(__name__)
 
 
-class OpenshiftException(Exception):
-    """ OpenShift didn't respond with OK (200) status """
-
-    def __init__(self, message, status_code, *args, **kwargs):
-        super(OpenshiftException, self).__init__(message, *args, **kwargs)
-        self.status_code = status_code
-
-
 def check_response(response):
     if response.status_code not in (httplib.OK, httplib.CREATED):
         logger.error("[%s] %s", response.status_code, response.content)
-        raise OpenshiftException(message=response.content, status_code=response.status_code)
+        raise OsbsResponseException(message=response.content, status_code=response.status_code)
 
 
 # TODO: error handling: create function which handles errors in response object

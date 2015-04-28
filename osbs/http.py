@@ -12,6 +12,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 import re
 import json
 import logging
+from osbs.exceptions import OsbsException, OsbsNetworkException
 
 try:
     # py2
@@ -251,10 +252,12 @@ class PycurlAdapter(object):
             while response.status_code == 0:
                 sel = curl_multi.select(SELECT_TIMEOUT)  # returns number
                 if sel == -1:
-                    raise RuntimeError("error during select")
+                    raise OsbsException("error during select")
                 ret, num_handles = curl_multi.perform()
                 if ret == pycurl.E_CALL_MULTI_PERFORM:
-                    raise RuntimeError("error during doing curl_multi")
+                    raise OsbsNetworkException(url,
+                                               "error during doing curl_multi",
+                                               ret)
                 response.status_code = self.c.getinfo(pycurl.HTTP_CODE)
             response.content = self.response.getvalue()
 
@@ -289,17 +292,58 @@ class PycurlAdapter(object):
             self.response_headers.truncate(0)
         return response
 
+    def _do_request(self, url, method, **kwargs):
+        try:
+            return self.request(url, method, **kwargs)
+        except pycurl.error as e:
+            code = e.args[0]
+            message = e.args[1]
+            if code in [pycurl.E_BAD_CONTENT_ENCODING,
+                        pycurl.E_BAD_DOWNLOAD_RESUME,
+                        pycurl.E_CONV_FAILED,
+                        pycurl.E_CONV_REQD,
+                        pycurl.E_COULDNT_CONNECT,
+                        pycurl.E_COULDNT_RESOLVE_HOST,
+                        pycurl.E_COULDNT_RESOLVE_PROXY,
+                        pycurl.E_FILESIZE_EXCEEDED,
+                        pycurl.E_HTTP_POST_ERROR,
+                        pycurl.E_HTTP_RANGE_ERROR,
+                        pycurl.E_HTTP_RETURNED_ERROR,
+                        pycurl.E_LOGIN_DENIED,
+                        pycurl.E_OPERATION_TIMEDOUT,
+                        pycurl.E_PARTIAL_FILE,
+                        pycurl.E_READ_ERROR,
+                        pycurl.E_RECV_ERROR,
+                        pycurl.E_REMOTE_FILE_NOT_FOUND,
+                        pycurl.E_SEND_ERROR,
+                        pycurl.E_SSL_CACERT,
+                        pycurl.E_SSL_CERTPROBLEM,
+                        pycurl.E_SSL_CIPHER,
+                        pycurl.E_SSL_CONNECT_ERROR,
+                        pycurl.E_SSL_PEER_CERTIFICATE,
+                        pycurl.E_SSL_SHUTDOWN_FAILED,
+                        pycurl.E_TOO_MANY_REDIRECTS,
+                        pycurl.E_UNSUPPORTED_PROTOCOL,
+                        pycurl.E_WRITE_ERROR]:
+                raise OsbsNetworkException(url, message, code, *e.args[2:])
+
+            raise OsbsException(e)
+        except HTTPError as e:
+            raise OsbsNetworkException(e.geturl(), e.message, e.code)
+        except Exception as e:
+            raise OsbsException(e)
+
     def get(self, url, **kwargs):
-        return self.request(url, "get", **kwargs)
+        return self._do_request(url, "get", **kwargs)
 
     def post(self, url, **kwargs):
-        return self.request(url, "post", **kwargs)
+        return self._do_request(url, "post", **kwargs)
 
     def put(self, url, **kwargs):
-        return self.request(url, "put", **kwargs)
+        return self._do_request(url, "put", **kwargs)
 
     def delete(self, url, **kwargs):
-        return self.request(url, "delete", **kwargs)
+        return self._do_request(url, "delete", **kwargs)
 
 
 def get_http_session(verbose=None):
@@ -308,4 +352,4 @@ def get_http_session(verbose=None):
     #elif requests_imported:
     #    return requests.Session()
     else:
-        RuntimeError("no http library imported")
+        raise OsbsException("no http library imported")
