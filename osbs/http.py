@@ -76,7 +76,7 @@ class Response(object):
 
     @property
     def raw_headers(self):
-        raise RuntimeError("Only settable")
+        return self._raw_headers
 
     @raw_headers.setter
     def raw_headers(self, raw_headers):
