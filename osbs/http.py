@@ -86,7 +86,7 @@ class Response(object):
     def headers(self):
         if self._headers is None:
             ### FIXME: the API for this is different in Python3
-            m = httplib.HTTPMessage(self._raw_headers, False)
+            m = httplib.HTTPMessage(self.raw_headers, False)
             m.readheaders()
             self._headers = m.dict
         return self._headers
