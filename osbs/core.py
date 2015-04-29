@@ -176,7 +176,7 @@ class Openshift(object):
             self.wait_for_build_to_get_scheduled(build_id, namespace)
 
         # 0.4.3+
-        proxy_url = self._build_url("proxy/buildLogs/%s?follow=%d" % (
+        proxy_url = self._build_url("proxy/buildLogs/%s/?follow=%d" % (
             build_id, 1 if follow else 0), namespace=namespace)
         response = self._get(proxy_url, stream=follow, headers={'Connection': 'close'})
         if response.status_code in (403, 404):
