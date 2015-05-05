@@ -13,6 +13,7 @@ from osbs.core import Openshift
 from osbs.exceptions import OsbsException, OsbsResponseException
 
 
+# Decorator for API methods.
 def osbsapi(func):
     def catch_exceptions(*args, **kwargs):
         try:
@@ -20,11 +21,12 @@ def osbsapi(func):
         except OsbsException:
             # Re-raise OsbsExceptions
             raise
-        except Exception as e:
+        except Exception as ex:
             # Convert anything else to OsbsException
-            raise OsbsException(e)
+            raise OsbsException(repr(ex))
 
     return catch_exceptions
+
 
 class OSBS(object):
     """ """

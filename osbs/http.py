@@ -184,17 +184,17 @@ class Response(object):
         try:
             chunks = self._iter_chunks()
             return self._split_lines_from_chunks(chunks)
-        except pycurl.error as e:
-            code = e.args[0]
-            message = e.args[1]
+        except pycurl.error as ex:
+            code = ex.args[0]
+            message = ex.args[1]
             if code in PYCURL_NETWORK_CODES:
-                raise OsbsNetworkException("<?>", message, code, *e.args[2:])
+                raise OsbsNetworkException("<?>", message, code, *ex.args[2:])
 
-            raise OsbsException(e)
-        except HTTPError as e:
-            raise OsbsNetworkException(e.geturl(), e.message, e.code)
-        except Exception as e:
-            raise OsbsException(e)
+            raise OsbsException(repr(ex))
+        except HTTPError as ex:
+            raise OsbsNetworkException(ex.geturl(), ex.message, ex.code)
+        except Exception as ex:
+            raise OsbsException(repr(ex))
 
     @staticmethod
     def _split_lines_from_chunks(chunks):
@@ -348,17 +348,17 @@ class PycurlAdapter(object):
     def _do_request(self, url, method, **kwargs):
         try:
             return self.request(url, method, **kwargs)
-        except pycurl.error as e:
-            code = e.args[0]
-            message = e.args[1]
+        except pycurl.error as ex:
+            code = ex.args[0]
+            message = ex.args[1]
             if code in PYCURL_NETWORK_CODES:
-                raise OsbsNetworkException(url, message, code, *e.args[2:])
+                raise OsbsNetworkException(url, message, code, *ex.args[2:])
 
-            raise OsbsException(e)
-        except HTTPError as e:
-            raise OsbsNetworkException(e.geturl(), e.message, e.code)
-        except Exception as e:
-            raise OsbsException(e)
+            raise OsbsException(repr(ex))
+        except HTTPError as ex:
+            raise OsbsNetworkException(ex.geturl(), ex.message, ex.code)
+        except Exception as ex:
+            raise OsbsException(repr(ex))
 
     def get(self, url, **kwargs):
         return self._do_request(url, "get", **kwargs)

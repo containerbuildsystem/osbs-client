@@ -288,8 +288,8 @@ def main():
         build_conf = Configuration(conf_file=args.config,
                                    conf_section=args.instance,
                                    cli_args=args)
-    except OsbsException as e:
-        logger.error("Configuration error: %s", e.message)
+    except OsbsException as ex:
+        logger.error("Configuration error: %s", ex.message)
         return -1
 
     is_verbose = os_conf.get_verbosity()
