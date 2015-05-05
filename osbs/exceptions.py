@@ -27,3 +27,7 @@ class OsbsNetworkException(OsbsException):
         super(OsbsNetworkException, self).__init__(message, *args, **kwargs)
         self.url = url
         self.status_code = status_code
+
+
+class OsbsValidationException(OsbsException):
+    pass

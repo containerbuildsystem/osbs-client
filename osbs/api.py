@@ -6,12 +6,17 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, unicode_literals, absolute_import
+
 import json
+import logging
 from functools import wraps
-from osbs.build import BuildManager, BuildResponse
-from osbs.constants import DEFAULT_NAMESPACE
+
+from .constants import SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
+from osbs.build.build_request import BuildManager
+from osbs.build.build_response import BuildResponse
+from osbs.constants import DEFAULT_NAMESPACE, PROD_BUILD_TYPE
 from osbs.core import Openshift
-from osbs.exceptions import OsbsException, OsbsResponseException
+from osbs.exceptions import OsbsResponseException, OsbsException
 
 
 # Decorator for API methods.
@@ -28,6 +33,9 @@ def osbsapi(func):
             raise OsbsException(repr(ex))
 
     return catch_exceptions
+
+
+logger = logging.getLogger(__name__)
 
 
 class OSBS(object):
@@ -68,9 +76,34 @@ class OSBS(object):
         return build_response
 
     @osbsapi
-    def create_build(self, git_uri, git_ref, user, component, target, architecture, namespace=DEFAULT_NAMESPACE):
-        build = self.bm.get_build(
-            build_type=self.build_conf.get_build_type(),
+    def get_build_request(self, build_type=None):
+        """
+        return instance of BuildRequest according to specified build type
+
+        :param build_type: str, name of build type
+        :return: instance of BuildRequest
+        """
+        build_type = build_type or self.build_conf.get_build_type()
+        return self.bm.get_build_request_by_type(build_type=build_type)
+
+    @osbsapi
+    def create_build_from_buildrequest(self, build_request, namespace=DEFAULT_NAMESPACE):
+        """
+        render provided build_request and submit build from it
+
+        :param build_request: instance of build.build_request.BuildRequest
+        :param namespace: str, place/context where the build should be executed
+        :return: instance of build.build_response.BuildResponse
+        """
+        build = build_request.render()
+        response = self.os.create_build(json.dumps(build.build_json), namespace=namespace)
+        build_response = BuildResponse(response)
+        return build_response
+
+    @osbsapi
+    def create_prod_build(self, git_uri, git_ref, user, component, target, architecture, namespace=DEFAULT_NAMESPACE):
+        build_request = self.get_build_request(PROD_BUILD_TYPE)
+        build_request.set_params(
             git_uri=git_uri,
             git_ref=git_ref,
             user=user,
@@ -84,11 +117,73 @@ class OSBS(object):
             architecture=architecture,
             vendor=self.build_conf.get_vendor(),
             build_host=self.build_conf.get_build_host(),
+            authoritative_registry=self.build_conf.get_authoritative_registry(),
             metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
         )
-        response = self.os.create_build(json.dumps(build.build_json), namespace=namespace)
+        build_json = build_request.render()
+        response = self.os.create_build(json.dumps(build_json), namespace=namespace)
+        build_response = BuildResponse(response)
+        logger.debug(build_response.json)
+        return build_response
+
+    @osbsapi
+    def create_prod_without_koji_build(self, git_uri, git_ref, user, component, architecture,
+                                       namespace=DEFAULT_NAMESPACE):
+        build_request = self.get_build_request(PROD_WITHOUT_KOJI_BUILD_TYPE)
+        build_request.set_params(
+            git_uri=git_uri,
+            git_ref=git_ref,
+            user=user,
+            component=component,
+            registry_uri=self.build_conf.get_registry_uri(),
+            openshift_uri=self.os_conf.get_openshift_api_uri(),
+            sources_command=self.build_conf.get_sources_command(),
+            architecture=architecture,
+            vendor=self.build_conf.get_vendor(),
+            build_host=self.build_conf.get_build_host(),
+            authoritative_registry=self.build_conf.get_authoritative_registry(),
+            metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
+        )
+        build_json = build_request.render()
+        response = self.os.create_build(json.dumps(build_json), namespace=namespace)
         build_response = BuildResponse(response)
         return build_response
+
+    @osbsapi
+    def create_simple_build(self, git_uri, git_ref, user, component, namespace=DEFAULT_NAMESPACE):
+        build_request = self.get_build_request(SIMPLE_BUILD_TYPE)
+        build_request.set_params(
+            git_uri=git_uri,
+            git_ref=git_ref,
+            user=user,
+            component=component,
+            registry_uri=self.build_conf.get_registry_uri(),
+            openshift_uri=self.os_conf.get_openshift_api_uri(),
+        )
+        build_json = build_request.render()
+        response = self.os.create_build(json.dumps(build_json), namespace=namespace)
+        build_response = BuildResponse(response)
+        logger.debug(build_response.json)
+        return build_response
+
+    @osbsapi
+    def create_build(self, namespace=DEFAULT_NAMESPACE, **kwargs):
+        """
+        take input args, create build request from provided build type and submit the build
+
+        :param namespace: str, place/context where the build should be executed
+        :param kwargs: keyword args for build
+        :return: instance of BuildRequest
+        """
+        build_type = self.build_conf.get_build_type()
+        if build_type == PROD_BUILD_TYPE:
+            return self.create_prod_build(namespace=namespace, **kwargs)
+        elif build_type == SIMPLE_BUILD_TYPE:
+            return self.create_simple_build(namespace=namespace, **kwargs)
+        elif build_type == PROD_WITHOUT_KOJI_BUILD_TYPE:
+            return self.create_prod_without_koji_build(namespace=namespace, **kwargs)
+        else:
+            raise OsbsException("Unknown build type: '%s'" % build_type)
 
     @osbsapi
     def get_build_logs(self, build_id, follow=False, namespace=DEFAULT_NAMESPACE):

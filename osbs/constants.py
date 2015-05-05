@@ -25,3 +25,7 @@ BUILD_RUNNING_STATES = ["running"]
 # https://github.com/openshift/origin/blob/master/pkg/build/api/types.go
 # type BuildStatus string
 DEFAULT_NAMESPACE = "default"
+
+PROD_BUILD_TYPE = "prod"
+PROD_WITHOUT_KOJI_BUILD_TYPE = "prod-without-koji"
+SIMPLE_BUILD_TYPE = "simple"

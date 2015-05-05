@@ -41,6 +41,9 @@ DEFINITION = {
         "get": {
             "file": "builds_list.json",
         },
+        "post": {
+            "file": "build_test-build-123.json",
+        },
     },
     "/osapi/v1beta1/builds/%s" % TEST_BUILD: {
         "get": {
