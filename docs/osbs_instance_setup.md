@@ -78,13 +78,18 @@ $ export OPENSHIFTCONFIG=/var/lib/openshift/openshift.local.certificates/admin/.
 
 ### Authentication and Authorization
 
-You can setup OpenShift with a proxy in front of it. This proxy may have an authentication, e.g. kerberos or basic auth. The proxy should then forward username to openshift via `X-Remote-User` http header. Communication between proxy and openshift needs to be secure. Proxy needs to use specific SSL certificate signed by CA which is know (and preconfigured) in openshift. Here's how to do it:
+You can setup OpenShift with a proxy in front of it. This proxy may have an authentication, e.g. kerberos or basic auth. The proxy should then forward username to openshift via `X-Remote-User` http header.
+
+Communication between proxy and openshift needs to be secure. Proxy needs to use specific SSL certificate signed by CA which is known (and preconfigured) in openshift. We can use self-signed certificate for this because it won't be exposed to the outside world.
+
+Here's how to do it:
 
 ```
 $ cd /var/lib/openshift
-$ openshift admin create-api-client-config --client-dir='./openshift.local.certificates/proxy/' --user="auth-proxy"
-$ cp openshift.local.certificates/ca/cert.crt /etc/pki/CA/certs/ca.crt
-$ cat openshift.local.certificates/proxy/{cert.crt,key.key} > /etc/pki/tls/certs/openshift-proxy.pem
+$ openssl req -new -nodes -x509 -days 3650 -extensions v3_ca -keyout proxy_auth.key -out proxy_auth.crt
+$ openssl rsa -in proxy_auth.key -out proxy_auth.key
+$ cp openshift.local.certificates/ca/cert.crt /etc/pki/tls/certs/openshift_ca.crt
+$ cat proxy_auth.{crt,key} > /etc/pki/tls/private/openshift_certkey.crt
 ```
 
 OpenShift conf snippet (it uses [RequestHeaderIdentityProvider](http://docs.openshift.org/latest/admin_guide/configuring_authentication.html#RequestHeaderIdentityProvider)):
@@ -98,18 +103,20 @@ OpenShift conf snippet (it uses [RequestHeaderIdentityProvider](http://docs.open
        provider:
          apiVersion: v1
          kind: RequestHeaderIdentityProvider
-         clientCA: openshift.local.certificates/proxy/ca.crt
+         clientCA: proxy_auth.crt
          headers:
          - X-Remote-User
 ```
+
+Note that the certificate we generated can be used as a CA here because it is self-signed and is thus its own CA.
 
 httpd conf snippet:
 
 ```
 <VirtualHost *:9443>
     SSLProxyEngine On
-    SSLProxyCACertificateFile /etc/pki/CA/certs/ca.crt
-    SSLProxyMachineCertificateFile /etc/pki/tls/certs/openshift-proxy.pem
+    SSLProxyCACertificateFile /etc/pki/tls/certs/openshift_ca.crt
+    SSLProxyMachineCertificateFile /etc/pki/tls/private/openshift_certkey.crt
 
     <Location "/">
         ProxyPass https://127.0.0.1:8443/ connectiontimeout=30 timeout=300
