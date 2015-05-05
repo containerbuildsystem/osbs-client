@@ -196,7 +196,7 @@ class Openshift(object):
 
         :return:
         """
-        url = self._build_url("builds", namespace=namespace)
+        url = self._build_url("builds/", namespace=namespace)
         return self._get(url)
 
     def get_build(self, build_id, namespace=DEFAULT_NAMESPACE):

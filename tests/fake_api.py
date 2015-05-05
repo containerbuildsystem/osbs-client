@@ -37,7 +37,7 @@ def process_authorize(content):
 
 
 DEFINITION = {
-    "/osapi/v1beta1/builds": {
+    "/osapi/v1beta1/builds/": {
         "get": {
             "file": "builds_list.json",
         },
