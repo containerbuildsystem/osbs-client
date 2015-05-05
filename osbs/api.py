@@ -7,6 +7,7 @@ of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, unicode_literals, absolute_import
 import json
+from functools import wraps
 from osbs.build import BuildManager, BuildResponse
 from osbs.constants import DEFAULT_NAMESPACE
 from osbs.core import Openshift
@@ -15,6 +16,7 @@ from osbs.exceptions import OsbsException, OsbsResponseException
 
 # Decorator for API methods.
 def osbsapi(func):
+    @wraps(func)
     def catch_exceptions(*args, **kwargs):
         try:
             return func(*args, **kwargs)
