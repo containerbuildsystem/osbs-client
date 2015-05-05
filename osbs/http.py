@@ -60,7 +60,33 @@ pycurl_imported = True
 
 
 SELECT_TIMEOUT = 9999
-
+PYCURL_NETWORK_CODES = [pycurl.E_BAD_CONTENT_ENCODING,
+                        pycurl.E_BAD_DOWNLOAD_RESUME,
+                        pycurl.E_CONV_FAILED,
+                        pycurl.E_CONV_REQD,
+                        pycurl.E_COULDNT_CONNECT,
+                        pycurl.E_COULDNT_RESOLVE_HOST,
+                        pycurl.E_COULDNT_RESOLVE_PROXY,
+                        pycurl.E_FILESIZE_EXCEEDED,
+                        pycurl.E_HTTP_POST_ERROR,
+                        pycurl.E_HTTP_RANGE_ERROR,
+                        pycurl.E_HTTP_RETURNED_ERROR,
+                        pycurl.E_LOGIN_DENIED,
+                        pycurl.E_OPERATION_TIMEDOUT,
+                        pycurl.E_PARTIAL_FILE,
+                        pycurl.E_READ_ERROR,
+                        pycurl.E_RECV_ERROR,
+                        pycurl.E_REMOTE_FILE_NOT_FOUND,
+                        pycurl.E_SEND_ERROR,
+                        pycurl.E_SSL_CACERT,
+                        pycurl.E_SSL_CERTPROBLEM,
+                        pycurl.E_SSL_CIPHER,
+                        pycurl.E_SSL_CONNECT_ERROR,
+                        pycurl.E_SSL_PEER_CERTIFICATE,
+                        pycurl.E_SSL_SHUTDOWN_FAILED,
+                        pycurl.E_TOO_MANY_REDIRECTS,
+                        pycurl.E_UNSUPPORTED_PROTOCOL,
+                        pycurl.E_WRITE_ERROR]
 
 class Response(object):
     """ let's mock Response object of requests """
@@ -155,8 +181,20 @@ class Response(object):
         return num_handles
 
     def iter_lines(self):
-        chunks = self._iter_chunks()
-        return self._split_lines_from_chunks(chunks)
+        try:
+            chunks = self._iter_chunks()
+            return self._split_lines_from_chunks(chunks)
+        except pycurl.error as e:
+            code = e.args[0]
+            message = e.args[1]
+            if code in PYCURL_NETWORK_CODES:
+                raise OsbsNetworkException("<?>", message, code, *e.args[2:])
+
+            raise OsbsException(e)
+        except HTTPError as e:
+            raise OsbsNetworkException(e.geturl(), e.message, e.code)
+        except Exception as e:
+            raise OsbsException(e)
 
     @staticmethod
     def _split_lines_from_chunks(chunks):
@@ -313,33 +351,7 @@ class PycurlAdapter(object):
         except pycurl.error as e:
             code = e.args[0]
             message = e.args[1]
-            if code in [pycurl.E_BAD_CONTENT_ENCODING,
-                        pycurl.E_BAD_DOWNLOAD_RESUME,
-                        pycurl.E_CONV_FAILED,
-                        pycurl.E_CONV_REQD,
-                        pycurl.E_COULDNT_CONNECT,
-                        pycurl.E_COULDNT_RESOLVE_HOST,
-                        pycurl.E_COULDNT_RESOLVE_PROXY,
-                        pycurl.E_FILESIZE_EXCEEDED,
-                        pycurl.E_HTTP_POST_ERROR,
-                        pycurl.E_HTTP_RANGE_ERROR,
-                        pycurl.E_HTTP_RETURNED_ERROR,
-                        pycurl.E_LOGIN_DENIED,
-                        pycurl.E_OPERATION_TIMEDOUT,
-                        pycurl.E_PARTIAL_FILE,
-                        pycurl.E_READ_ERROR,
-                        pycurl.E_RECV_ERROR,
-                        pycurl.E_REMOTE_FILE_NOT_FOUND,
-                        pycurl.E_SEND_ERROR,
-                        pycurl.E_SSL_CACERT,
-                        pycurl.E_SSL_CERTPROBLEM,
-                        pycurl.E_SSL_CIPHER,
-                        pycurl.E_SSL_CONNECT_ERROR,
-                        pycurl.E_SSL_PEER_CERTIFICATE,
-                        pycurl.E_SSL_SHUTDOWN_FAILED,
-                        pycurl.E_TOO_MANY_REDIRECTS,
-                        pycurl.E_UNSUPPORTED_PROTOCOL,
-                        pycurl.E_WRITE_ERROR]:
+            if code in PYCURL_NETWORK_CODES:
                 raise OsbsNetworkException(url, message, code, *e.args[2:])
 
             raise OsbsException(e)
