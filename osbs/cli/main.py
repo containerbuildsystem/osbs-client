@@ -17,13 +17,7 @@ from osbs import set_logging
 from osbs.api import OSBS
 from osbs.conf import Configuration
 from osbs.constants import DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION
-
-try:
-    # py2
-    from urllib2 import HTTPError
-except ImportError:
-    # py3
-    from urllib.error import HTTPError
+from osbs.exceptions import OsbsNetworkException, OsbsException
 
 
 logger = logging.getLogger('osbs')
@@ -287,8 +281,16 @@ def cli():
 
 def main():
     parser, args = cli()
-    os_conf = Configuration(conf_file=args.config, conf_section=args.instance, cli_args=args)
-    build_conf = Configuration(conf_file=args.config, conf_section=args.instance, cli_args=args)
+    try:
+        os_conf = Configuration(conf_file=args.config,
+                                conf_section=args.instance,
+                                cli_args=args)
+        build_conf = Configuration(conf_file=args.config,
+                                   conf_section=args.instance,
+                                   cli_args=args)
+    except OsbsException as ex:
+        logger.error("Configuration error: %s", ex.message)
+        return -1
 
     is_verbose = os_conf.get_verbosity()
 
@@ -312,9 +314,13 @@ def main():
     except KeyboardInterrupt:
         print("Quitting on user request.")
         return -1
-    except HTTPError as ex:
-        logger.error("HTTP error: %d", ex.getcode())
-        return -1
+    except OsbsNetworkException as ex:
+        if is_verbose:
+            raise
+        else:
+            logger.error("Network error at %s (%d): %s",
+                         ex.url, ex.status_code, ex.message)
+            return -1
     except Exception as ex:
         if is_verbose:
             raise

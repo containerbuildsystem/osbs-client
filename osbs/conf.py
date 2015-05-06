@@ -15,6 +15,7 @@ except ImportError:
     from urllib.parse import urljoin
 
 from osbs.constants import DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION, GENERAL_CONFIGURATION_SECTION
+from osbs.exceptions import OsbsException
 
 
 class Configuration(object):
@@ -46,7 +47,8 @@ class Configuration(object):
             pass
         else:
             if not self.scp.has_section(conf_section):
-                raise RuntimeError("Specified section '%s' not found in '%s'" % (conf_section, conf_file))
+                raise OsbsException("Specified section '%s' not found in '%s'" %
+                                    (conf_section, conf_file))
         self.conf_section = conf_section
         self.args = cli_args
         self.kwargs = kwargs
@@ -85,7 +87,7 @@ class Configuration(object):
         else:  # we didn't breaked
             if can_miss:
                 return default
-            raise RuntimeError("value '%s' not found" % args_key)
+            raise OsbsException("value '%s' not found" % args_key)
 
         if is_bool_val:
             try:

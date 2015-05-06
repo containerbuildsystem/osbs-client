@@ -7,14 +7,32 @@ of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, unicode_literals, absolute_import
 import json
+from functools import wraps
 from osbs.build import BuildManager, BuildResponse
 from osbs.constants import DEFAULT_NAMESPACE
 from osbs.core import Openshift
-from osbs.exceptions import OsbsResponseException
+from osbs.exceptions import OsbsException, OsbsResponseException
+
+
+# Decorator for API methods.
+def osbsapi(func):
+    @wraps(func)
+    def catch_exceptions(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except OsbsException:
+            # Re-raise OsbsExceptions
+            raise
+        except Exception as ex:
+            # Convert anything else to OsbsException
+            raise OsbsException(repr(ex))
+
+    return catch_exceptions
 
 
 class OSBS(object):
     """ """
+    @osbsapi
     def __init__(self, openshift_configuration, build_configuration):
         """ """
         self.os_conf = openshift_configuration
@@ -37,16 +55,19 @@ class OSBS(object):
             self._bm = BuildManager(build_json_store=self.os_conf.get_build_json_store())
         return self._bm
 
+    @osbsapi
     def list_builds(self, namespace=DEFAULT_NAMESPACE):
         # FIXME: return list of BuildResponse objects
         builds = self.os.list_builds(namespace=namespace).json()
         return builds
 
+    @osbsapi
     def get_build(self, build_id, namespace=DEFAULT_NAMESPACE):
         response = self.os.get_build(build_id, namespace=namespace)
         build_response = BuildResponse(response)
         return build_response
 
+    @osbsapi
     def create_build(self, git_uri, git_ref, user, component, target, architecture, namespace=DEFAULT_NAMESPACE):
         build = self.bm.get_build(
             build_type=self.build_conf.get_build_type(),
@@ -69,6 +90,7 @@ class OSBS(object):
         build_response = BuildResponse(response)
         return build_response
 
+    @osbsapi
     def get_build_logs(self, build_id, follow=False, namespace=DEFAULT_NAMESPACE):
         if follow:
             return self.os.logs(build_id, follow, namespace=namespace)
@@ -83,18 +105,22 @@ class OSBS(object):
             else:
                 return self.os.logs(build_id, follow, namespace=namespace)
 
+    @osbsapi
     def wait_for_build_to_finish(self, build_id, namespace=DEFAULT_NAMESPACE):
         # FIXME: since OS returns whole build json in watch we could return
         #        instance of BuildResponse here
         response = self.os.wait_for_build_to_finish(build_id, namespace=namespace)
         return response
 
+    @osbsapi
     def set_labels_on_build(self, build_id, labels, namespace=DEFAULT_NAMESPACE):
         response = self.os.set_labels_on_build(build_id, labels, namespace=namespace)
         return response
 
+    @osbsapi
     def get_token(self):
         return self.os.get_oauth_token()
 
+    @osbsapi
     def get_user(self, username="~"):
         return self.os.get_user(username).json()
