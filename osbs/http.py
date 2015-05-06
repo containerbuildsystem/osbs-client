@@ -25,7 +25,7 @@ try:
     # py2
     import httplib
     from urllib2 import HTTPError
-    from cStringIO import StringIO as BytesIO
+    from StringIO import StringIO as BytesIO
 except ImportError:
     # py3
     import http.client as httplib
