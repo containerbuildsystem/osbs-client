@@ -39,3 +39,7 @@ This is how simple build could look:
 ```
 $ osbs build -g http://path.to.gitrepo.with.dockerfile/ -c image-name -u your-nick
 ```
+
+## Deploying OpenShift Build System
+
+We have [a documentation](https://github.com/DBuildService/osbs/blob/master/docs/osbs_instance_setup.md) how you can setup your own instance.
