@@ -307,7 +307,7 @@ class PycurlAdapter(object):
                 sel = curl_multi.select(SELECT_TIMEOUT)  # returns number
                 if sel == -1:
                     raise OsbsException("error during select")
-                ret, _num_handles = curl_multi.perform()
+                ret, _ = curl_multi.perform()
                 if ret == pycurl.E_CALL_MULTI_PERFORM:
                     raise OsbsNetworkException(url,
                                                "error during doing curl_multi",
