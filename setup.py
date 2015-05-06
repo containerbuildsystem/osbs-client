@@ -26,7 +26,7 @@ def _get_requirements(path):
             packages = f.read().splitlines()
     except (IOError, OSError) as ex:
         raise RuntimeError("Can't open file with requirements: %s", repr(ex))
-    return [p.strip() for p in packages if not re.match("^\s*#", p)]
+    return [p.strip() for p in packages if not re.match(r"^\s*#", p)]
 
 def _install_requirements():
     requirements = _get_requirements('requirements.txt')

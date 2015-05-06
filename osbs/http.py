@@ -123,7 +123,7 @@ class Response(object):
         encoding = None
         if 'content-type' in self.headers:
             content_type = self.headers['content-type'].lower()
-            match = re.search('charset=(\S+)', content_type)
+            match = re.search(r'charset=(\S+)', content_type)
             if match:
                 encoding = match.group(1)
         if encoding is None:
@@ -307,7 +307,7 @@ class PycurlAdapter(object):
                 sel = curl_multi.select(SELECT_TIMEOUT)  # returns number
                 if sel == -1:
                     raise OsbsException("error during select")
-                ret, num_handles = curl_multi.perform()
+                ret, _num_handles = curl_multi.perform()
                 if ret == pycurl.E_CALL_MULTI_PERFORM:
                     raise OsbsNetworkException(url,
                                                "error during doing curl_multi",
