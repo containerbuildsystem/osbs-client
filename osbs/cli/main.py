@@ -127,7 +127,8 @@ def cmd_build(args, osbs):
         component=args.component,
         target=args.target,
         architecture=args.arch,
-        namespace=args.namespace
+        yum_repourls=args.add_yum_repo,
+        namespace=args.namespace,
     )
     build_id = build.build_id
     if not args.no_logs:
@@ -246,6 +247,8 @@ def cli():
                               help="name of component")
     build_parser.add_argument("--no-logs", action='store_true', required=False, default=False,
                               help="don't print logs after submitting build")
+    build_parser.add_argument("--add-yum-repo", action='append', metavar="URL",
+                              help="URL of yum repo file")
     build_parser.set_defaults(func=cmd_build)
 
     parser.add_argument("--openshift-uri", action='store', metavar="URL",

@@ -101,7 +101,8 @@ class OSBS(object):
         return build_response
 
     @osbsapi
-    def create_prod_build(self, git_uri, git_ref, user, component, target, architecture, namespace=DEFAULT_NAMESPACE):
+    def create_prod_build(self, git_uri, git_ref, user, component, target, architecture, yum_repourls=None,
+                          namespace=DEFAULT_NAMESPACE):
         build_request = self.get_build_request(PROD_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
@@ -118,6 +119,7 @@ class OSBS(object):
             vendor=self.build_conf.get_vendor(),
             build_host=self.build_conf.get_build_host(),
             authoritative_registry=self.build_conf.get_authoritative_registry(),
+            yum_repourls=yum_repourls,
             metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
         )
         build_json = build_request.render()
@@ -127,7 +129,7 @@ class OSBS(object):
         return build_response
 
     @osbsapi
-    def create_prod_without_koji_build(self, git_uri, git_ref, user, component, architecture,
+    def create_prod_without_koji_build(self, git_uri, git_ref, user, component, architecture, yum_repourls=None,
                                        namespace=DEFAULT_NAMESPACE):
         build_request = self.get_build_request(PROD_WITHOUT_KOJI_BUILD_TYPE)
         build_request.set_params(
@@ -142,6 +144,7 @@ class OSBS(object):
             vendor=self.build_conf.get_vendor(),
             build_host=self.build_conf.get_build_host(),
             authoritative_registry=self.build_conf.get_authoritative_registry(),
+            yum_repourls=yum_repourls,
             metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
         )
         build_json = build_request.render()
@@ -150,7 +153,8 @@ class OSBS(object):
         return build_response
 
     @osbsapi
-    def create_simple_build(self, git_uri, git_ref, user, component, namespace=DEFAULT_NAMESPACE):
+    def create_simple_build(self, git_uri, git_ref, user, component, yum_repourls=None,
+                            namespace=DEFAULT_NAMESPACE):
         build_request = self.get_build_request(SIMPLE_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
@@ -159,6 +163,7 @@ class OSBS(object):
             component=component,
             registry_uri=self.build_conf.get_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_api_uri(),
+            yum_repourls=yum_repourls,
         )
         build_json = build_request.render()
         response = self.os.create_build(json.dumps(build_json), namespace=namespace)

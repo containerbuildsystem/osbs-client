@@ -30,21 +30,42 @@ class DockJsonManipulator(object):
         dock_json = json.loads(dock_json_str)
         return dock_json
 
-    def _dock_json_get_plugin_conf(self, plugin_type, plugin_name):
-        try:
-            match = [x for x in self.dock_json[plugin_type] if x.get('name', None) == plugin_name]
-        except KeyError:
-            raise RuntimeError("Invalid dock json: plugin type '%s' misses" % plugin_type)
-        if len(match) <= 0:
-            raise RuntimeError("no such plugin in dock json: \"%s\"" % plugin_name)
+    def dock_json_get_plugin_conf(self, plugin_type, plugin_name):
+        """
+        Return the configuration for a plugin.
+
+        Raises KeyError if there are no plugins of that type.
+        Raises IndexError if the named plugin is not listed.
+        """
+        match = [x for x in self.dock_json[plugin_type] if x.get('name', None) == plugin_name]
         return match[0]
 
+    def dock_json_has_plugin_conf(self, plugin_type, plugin_name):
+        """
+        Check whether a plugin is configured.
+        """
+
+        try:
+            self.dock_json_get_plugin_conf(plugin_type, plugin_name)
+            return True
+        except (KeyError, IndexError):
+            return False
+
+    def _dock_json_get_plugin_conf_or_fail(self, plugin_type, plugin_name):
+        try:
+            conf = self.dock_json_get_plugin_conf(plugin_type, plugin_name)
+        except KeyError:
+            raise RuntimeError("Invalid dock json: plugin type '%s' misses" % plugin_type)
+        except IndexError:
+            raise RuntimeError("no such plugin in dock json: \"%s\"" % plugin_name)
+        return conf
+
     def dock_json_set_arg(self, plugin_type, plugin_name, arg_key, arg_value):
-        plugin_conf = self._dock_json_get_plugin_conf(plugin_type, plugin_name)
+        plugin_conf = self._dock_json_get_plugin_conf_or_fail(plugin_type, plugin_name)
         plugin_conf['args'][arg_key] = arg_value
 
     def dock_json_merge_arg(self, plugin_type, plugin_name, arg_key, arg_dict):
-        plugin_conf = self._dock_json_get_plugin_conf(plugin_type, plugin_name)
+        plugin_conf = self._dock_json_get_plugin_conf_or_fail(plugin_type, plugin_name)
 
         # Values supplied by the caller override those from the template JSON
         template_value = plugin_conf['args'].get(arg_key, {})
@@ -61,4 +82,3 @@ class DockJsonManipulator(object):
         if len(p) <= 0:
             raise RuntimeError("\"env\" misses key DOCK_PLUGINS")
         p[0]['value'] = json.dumps(self.dock_json)
-

@@ -17,6 +17,7 @@ from .fake_api import openshift
 from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.build_request import BuildManager
 from osbs.constants import BUILD_FINISHED_STATES, PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
+from osbs.exceptions import OsbsValidationException
 from tests.constants import TEST_BUILD, TEST_LABEL, TEST_LABEL_VALUE
 
 
@@ -314,6 +315,60 @@ def test_render_prod_without_koji_request():
     assert labels['Vendor'] is not None
 
 
+def test_render_with_yum_repourls():
+    this_file = inspect.getfile(test_render_prod_request)
+    this_dir = os.path.dirname(this_file)
+    parent_dir = os.path.dirname(this_dir)
+    inputs_path = os.path.join(parent_dir, "inputs")
+    bm = BuildManager(inputs_path)
+    kwargs = {
+        'git_uri': "http://git/",
+        'git_ref': "master",
+        'user': "john-foo",
+        'component': "component",
+        'registry_uri': "registry.example.com",
+        'openshift_uri': "http://openshift/",
+        'koji_target': "koji-target",
+        'kojiroot': "http://root/",
+        'kojihub': "http://hub/",
+        'sources_command': "make",
+        'architecture': "x86_64",
+        'vendor': "Foo Vendor",
+        'build_host': "our.build.host.example.com",
+        'authoritative_registry': "registry.example.com",
+    }
+    build_request = bm.get_build_request_by_type("prod")
+
+    # Test validation for yum_repourls parameter
+    kwargs['yum_repourls'] = 'should be a list'
+    with pytest.raises(OsbsValidationException):
+        build_request.set_params(**kwargs)
+
+    # Use a valid yum_repourls parameter and check the result
+    kwargs['yum_repourls'] = ['http://example.com/repo1.repo',
+                              'http://example.com/repo2.repo']
+    build_request.set_params(**kwargs)
+    build_json = build_request.render()
+    strategy = build_json['parameters']['strategy']['customStrategy']['env']
+    plugins_json = None
+    for d in strategy:
+        if d['name'] == 'DOCK_PLUGINS':
+            plugins_json = d['value']
+            break
+
+    assert plugins_json is not None
+    plugins = json.loads(plugins_json)
+
+    repourls = None
+    for d in plugins['prebuild_plugins']:
+        if d['name'] == 'add_yum_repo_by_url':
+            repourls = d['args']['repourls']
+
+    assert repourls is not None
+    assert len(repourls) == 2
+    assert 'http://example.com/repo1.repo' in repourls
+    assert 'http://example.com/repo2.repo' in repourls
+
 def test_get_user(openshift):
     l = openshift.get_user()
     assert l.json() is not None
@@ -328,3 +383,5 @@ def test_watch_build(openshift):
 def test_create_build(openshift):
     response = openshift.create_build({})
     assert response is not None
+    assert response.json()["metadata"]["name"] == TEST_BUILD
+    assert response.json()["status"].lower() in BUILD_FINISHED_STATES

@@ -42,6 +42,7 @@ class BuildRequest(object):
         self.build_json = None       # rendered template
         self._template = None        # template loaded from filesystem
         self._inner_template = None  # dock json
+        self._dj = None
 
     def set_params(self, **kwargs):
         """
@@ -96,6 +97,12 @@ class BuildRequest(object):
                 self._inner_template = json.load(fp)
         return self._inner_template
 
+    @property
+    def dj(self):
+        if self._dj is None:
+            self._dj = DockJsonManipulator(self.template, self.inner_template)
+        return self._dj
+
 
 class CommonBuild(BuildRequest):
     def __init__(self, build_json_store):
@@ -117,6 +124,7 @@ class CommonBuild(BuildRequest):
         :param user: str, user part of resulting image name
         :param component: str, component part of the image name
         :param openshift_uri: str, URL of openshift instance for the build
+        :param yum_repourls: list of str, URLs to yum repo files to include
         """
         logger.debug("setting params '%s' for %s", kwargs, self.spec)
         self.spec.set_params(**kwargs)
@@ -127,6 +135,10 @@ class CommonBuild(BuildRequest):
         self.template['parameters']['source']['git']['uri'] = self.spec.git_uri.value
         self.template['parameters']['source']['git']['ref'] = self.spec.git_ref.value
         self.template['parameters']['output']['registry'] = self.spec.registry_uri.value
+        if (self.spec.yum_repourls.value is not None and
+                self.dj.dock_json_has_plugin_conf('prebuild_plugins', "add_yum_repo_by_url")):
+            self.dj.dock_json_set_arg('prebuild_plugins', "add_yum_repo_by_url", "repourls",
+                                      self.spec.yum_repourls.value)
 
     def validate_input(self):
         self.spec.validate()

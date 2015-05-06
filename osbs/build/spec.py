@@ -81,6 +81,7 @@ class CommonSpec(BuildTypeSpec):
     registry_uri = BuildParam('registry_uri')
     openshift_uri = BuildParam('openshift_uri')
     name = BuildParam("name")
+    yum_repourls = BuildParam("yum_repourls")
 
     def __init__(self):
         self.required_params = [
@@ -93,13 +94,16 @@ class CommonSpec(BuildTypeSpec):
         ]
 
     def set_params(self, git_uri=None, git_ref=None, registry_uri=None, user=None,
-                   component=None, openshift_uri=None, **kwargs):
+                   component=None, openshift_uri=None, yum_repourls=None, **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
         self.user.value = user
         self.component.value = component
         self.registry_uri.value = registry_uri
         self.openshift_uri.value = openshift_uri
+        if not (yum_repourls is None or isinstance(yum_repourls, list)):
+            raise OsbsValidationException("yum_repourls must be a list")
+        self.yum_repourls.value = yum_repourls or []
         d = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         self.name.value = "%s-%s" % (self.component.value, d)
 
