@@ -1,0 +1,18 @@
+doc-warnings: no
+test-warnings: no
+strictness: veryhigh
+max-line-length: 120
+autodetect: yes
+requirements:
+  - requirements.txt
+ignore-paths:
+  - docs
+mccabe:
+  run: false
+pep8:
+  disable:
+    - C0103
+pylint:
+  disable:
+    - R0903
+    - C0103
