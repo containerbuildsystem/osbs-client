@@ -57,22 +57,16 @@ class Configuration(object):
         # FIXME: this is too bloated: split it into separate classes
         # and implement it as mixins
         def get_value_from_kwargs():
-            try:
-                return self.kwargs[args_key]
-            except KeyError:
-                pass
+            return self.kwargs.get(args_key, None)
 
         def get_value_from_cli_args():
-            try:
-                return getattr(self.args, args_key, None)
-            except AttributeError:
-                pass
+            return getattr(self.args, args_key, None)
 
         def get_value_from_conf():
             try:
                 return self.scp.get(conf_section, conf_key)
             except configparser.Error:
-                pass
+                return None
 
         retrieval_order = [
             get_value_from_kwargs,

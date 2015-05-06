@@ -88,6 +88,7 @@ PYCURL_NETWORK_CODES = [pycurl.E_BAD_CONTENT_ENCODING,
                         pycurl.E_UNSUPPORTED_PROTOCOL,
                         pycurl.E_WRITE_ERROR]
 
+
 class Response(object):
     """ let's mock Response object of requests """
 
@@ -122,11 +123,11 @@ class Response(object):
         encoding = None
         if 'content-type' in self.headers:
             content_type = self.headers['content-type'].lower()
-            match = re.search('charset=(\S+)', content_type)
+            match = re.search(r'charset=(\S+)', content_type)
             if match:
                 encoding = match.group(1)
         if encoding is None:
-            encoding = 'utf-8' # assume utf-8
+            encoding = 'utf-8'  # assume utf-8
 
         return encoding
 
@@ -198,7 +199,7 @@ class Response(object):
 
     @staticmethod
     def _split_lines_from_chunks(chunks):
-        #same behaviour as requests' Response.iter_lines(...)
+        # same behaviour as requests' Response.iter_lines(...)
 
         pending = None
         for chunk in chunks:
@@ -306,7 +307,7 @@ class PycurlAdapter(object):
                 sel = curl_multi.select(SELECT_TIMEOUT)  # returns number
                 if sel == -1:
                     raise OsbsException("error during select")
-                ret, num_handles = curl_multi.perform()
+                ret, _ = curl_multi.perform()
                 if ret == pycurl.E_CALL_MULTI_PERFORM:
                     raise OsbsNetworkException(url,
                                                "error during doing curl_multi",

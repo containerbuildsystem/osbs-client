@@ -229,21 +229,21 @@ def cli():
 
     build_parser = subparsers.add_parser('build', help='build an image in OSBS')
     build_parser.add_argument("--build-type", "-T", action="store", metavar="BUILD_TYPE",
-                                   help="build type (prod, simple)")
+                              help="build type (prod, simple)")
     build_parser.add_argument("--build-json-dir", action="store", metavar="PATH",
-                                   help="directory with build jsons")
+                              help="directory with build jsons")
     build_parser.add_argument("-g", "--git-url", action='store', metavar="URL",
-                                   required=True, help="URL to git repo")
+                              required=True, help="URL to git repo")
     build_parser.add_argument("--git-commit", action='store', default="master",
-                                   help="checkout this commit")
+                              help="checkout this commit")
     build_parser.add_argument("-t", "--target", action='store',
-                                   help="koji target name")
+                              help="koji target name")
     build_parser.add_argument("-a", "--arch", action='store', default=uname()[4],
-                                   help="build architecture")
+                              help="build architecture")
     build_parser.add_argument("-u", "--user", action='store', required=True,
-                                   help="username (will be image prefix)")
+                              help="username (will be image prefix)")
     build_parser.add_argument("-c", "--component", action='store', required=True,
-                                   help="name of component")
+                              help="name of component")
     build_parser.add_argument("--no-logs", action='store_true', required=False, default=False,
                               help="don't print logs after submitting build")
     build_parser.set_defaults(func=cmd_build)
@@ -321,7 +321,7 @@ def main():
             logger.error("Network error at %s (%d): %s",
                          ex.url, ex.status_code, ex.message)
             return -1
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         if is_verbose:
             raise
         else:
