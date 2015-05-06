@@ -19,6 +19,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 import re
 import json
 import logging
+import email.parser
 from osbs.exceptions import OsbsException, OsbsNetworkException
 
 try:
@@ -103,6 +104,9 @@ class Response(object):
 
     @property
     def raw_headers(self):
+        """
+        Headers of request (bytes)
+        """
         return self._raw_headers
 
     @raw_headers.setter
@@ -112,10 +116,10 @@ class Response(object):
     @property
     def headers(self):
         if self._headers is None:
-            ### FIXME: the API for this is different in Python3
-            m = httplib.HTTPMessage(self.raw_headers, False)
-            m.readheaders()
-            self._headers = m.dict
+            parser = email.parser.Parser()
+            m = parser.parsestr(self.raw_headers.decode('iso-8859-1'))
+            self._headers = dict(m.items())
+
         return self._headers
 
     @property
@@ -204,7 +208,6 @@ class Response(object):
         pending = None
         for chunk in chunks:
 
-            ### FIXME: how to handle decoding Python3's BytesIO here?
             if pending is not None:
                 chunk = pending + chunk
             lines = chunk.splitlines()
@@ -319,8 +322,7 @@ class PycurlAdapter(object):
             # without FOLLOWLOCATION there might be multiple sets of headers
             # due to 401 Unauthorized. We only care about the last response.
             allheaders = self.response_headers.getvalue()
-            last_response_headers = allheaders.split("\r\n\r\n")[-2]
-            response.raw_headers = BytesIO(last_response_headers)
+            response.raw_headers = allheaders.split("\r\n\r\n")[-2]
 
             response.curl = self.c
             response.curl_multi = curl_multi
@@ -335,11 +337,10 @@ class PycurlAdapter(object):
             # due to 401 Unauthorized. We only care about the last response.
             allheaders = self.response_headers.getvalue()
             try:
-                last_response_headers = allheaders.split("\r\n\r\n")[-2]
+                response.raw_headers = allheaders.split("\r\n\r\n")[-2]
             except IndexError:
                 logger.warning('Incorrectly terminated http headers')
-                last_response_headers = allheaders
-            response.raw_headers = BytesIO(last_response_headers)
+                response.raw_headers = allheaders
 
             # clear buffer
             self.response.truncate(0)
