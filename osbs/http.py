@@ -321,7 +321,7 @@ class PycurlAdapter(object):
             # self.response_headers contains headers from all responses - even
             # without FOLLOWLOCATION there might be multiple sets of headers
             # due to 401 Unauthorized. We only care about the last response.
-            allheaders = self.response_headers.getvalue().decode('iso-8859-1')
+            allheaders = self.response_headers.getvalue().decode(errors='replace')
             response.raw_headers = allheaders.split("\r\n\r\n")[-2]
 
             response.curl = self.c
@@ -335,7 +335,7 @@ class PycurlAdapter(object):
             # self.response_headers contains headers from all responses - even
             # without FOLLOWLOCATION there might be multiple sets of headers
             # due to 401 Unauthorized. We only care about the last response.
-            allheaders = self.response_headers.getvalue().decode('iso-8859-1')
+            allheaders = self.response_headers.getvalue().decode(errors='replace')
             try:
                 response.raw_headers = allheaders.split("\r\n\r\n")[-2]
             except IndexError:
