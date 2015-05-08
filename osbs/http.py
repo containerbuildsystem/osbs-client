@@ -105,7 +105,7 @@ class Response(object):
     @property
     def raw_headers(self):
         """
-        Headers of request (bytes)
+        Headers of request (str)
         """
         return self._raw_headers
 
@@ -117,7 +117,7 @@ class Response(object):
     def headers(self):
         if self._headers is None:
             parser = email.parser.Parser()
-            m = parser.parsestr(self.raw_headers.decode('iso-8859-1'))
+            m = parser.parsestr(self.raw_headers)
             self._headers = dict(m.items())
 
         return self._headers
@@ -321,7 +321,7 @@ class PycurlAdapter(object):
             # self.response_headers contains headers from all responses - even
             # without FOLLOWLOCATION there might be multiple sets of headers
             # due to 401 Unauthorized. We only care about the last response.
-            allheaders = self.response_headers.getvalue()
+            allheaders = self.response_headers.getvalue().decode(errors='replace')
             response.raw_headers = allheaders.split("\r\n\r\n")[-2]
 
             response.curl = self.c
@@ -335,7 +335,7 @@ class PycurlAdapter(object):
             # self.response_headers contains headers from all responses - even
             # without FOLLOWLOCATION there might be multiple sets of headers
             # due to 401 Unauthorized. We only care about the last response.
-            allheaders = self.response_headers.getvalue()
+            allheaders = self.response_headers.getvalue().decode(errors='replace')
             try:
                 response.raw_headers = allheaders.split("\r\n\r\n")[-2]
             except IndexError:
