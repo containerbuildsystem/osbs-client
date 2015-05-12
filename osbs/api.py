@@ -200,8 +200,10 @@ class OSBS(object):
             if ex.status_code != 404:
                 raise
         else:
-            if build["status"] in ["Complete", "Failed"]:
-                return build["metadata"]["labels"]["logs"]
+            build_response = BuildResponse(build)
+            # Should this be 'build_response.is_finished()'?
+            if build_response.json["status"] in ["Complete", "Failed"]:
+                return build_response.json["metadata"]["labels"]["logs"]
             else:
                 return self.os.logs(build_id, follow=False, namespace=namespace)
 
