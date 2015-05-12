@@ -13,7 +13,7 @@ import os
 
 import pytest
 import logging
-from .fake_api import openshift
+from .fake_api import openshift, osbs
 from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.build_request import BuildManager
 from osbs.constants import BUILD_FINISHED_STATES, PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
@@ -385,3 +385,11 @@ def test_create_build(openshift):
     assert response is not None
     assert response.json()["metadata"]["name"] == TEST_BUILD
     assert response.json()["status"].lower() in BUILD_FINISHED_STATES
+
+
+def test_build_logs_api(osbs):
+    response = osbs.get_build_logs(TEST_BUILD)
+    # We should get a response.
+    assert response is not None
+    # The first line of the logs should be 'Step 0 : FROM ...'
+    assert response.split('\n')[0].find("Step ") != -1

@@ -15,7 +15,10 @@ import inspect
 import logging
 from osbs.core import Openshift
 from osbs.http import Response
+from osbs.conf import Configuration
+from osbs.api import OSBS
 from tests.constants import TEST_BUILD
+from tempfile import NamedTemporaryFile
 
 try:
     # py2
@@ -45,6 +48,8 @@ DEFINITION = {
             "file": "build_test-build-123.json",
         },
     },
+
+    # Some 'builds' requests are with a trailing slash, some without:
     "/osapi/v1beta1/builds/%s" % TEST_BUILD: {
         "get": {
             "file": "build_test-build-123.json",
@@ -53,6 +58,15 @@ DEFINITION = {
             "file": "build_test-build-123.json",
         }
     },
+    "/osapi/v1beta1/builds/%s/" % TEST_BUILD: {
+        "get": {
+            "file": "build_test-build-123.json",
+        },
+        "put": {
+            "file": "build_test-build-123.json",
+        }
+    },
+
     "/oauth/authorize": {
         "get": {
             "file": "authorize.txt",
@@ -121,6 +135,21 @@ def openshift():
     os_inst = Openshift("/osapi/v1beta1/", "/oauth/authorize", "")
     os_inst._con = Connection()
     return os_inst
+
+
+@pytest.fixture
+def osbs():
+    with NamedTemporaryFile(mode="wt") as fp:
+        fp.write("""
+[default]
+openshift_uri = https://0.0.0.0/
+""")
+        fp.flush()
+        dummy_config = Configuration(fp.name)
+        osbs = OSBS(dummy_config, dummy_config)
+
+    osbs.os = openshift()
+    return osbs
 
 
 class ResponseMapping(object):
