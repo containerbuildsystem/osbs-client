@@ -35,6 +35,7 @@ Summary:        Python 2 module for OpenShift Build Service
 Group:          Development/Tools
 License:        BSD
 Requires:       python-pycurl
+Requires:       python-setuptools
 #Requires:       python-requests
 
 %description -n python-osbs
@@ -48,6 +49,7 @@ Summary:        Python 3 module for OpenShift Build Service
 Group:          Development/Tools
 License:        BSD
 Requires:       python3-pycurl
+Requires:       python3-setuptools
 #Requires:       python3-requests
 
 %description -n python3-osbs
@@ -122,6 +124,7 @@ ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 * Tue May 12 2015 Slavek Kabrda <bkabrda@redhat.com> - 0.4-2
 - Introduce python-osbs subpackage
 - move /usr/bin/osbs to /usr/bin/osbs2, /usr/bin/osbs is now a symlink
+- depend on python[3]-setuptools because of entrypoints usage
 
 * Tue Apr 21 2015 Martin Milata <mmilata@redhat.com> - 0.4-1
 - new upstream release
