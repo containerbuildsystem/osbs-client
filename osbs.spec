@@ -5,15 +5,17 @@
 
 Name:           osbs
 Version:        0.4
-Release:        1%{?dist}
+Release:        2%{?dist}
 
-Summary:        Python module and command line client for OpenShift Build Service
+Summary:        Python command line client for OpenShift Build Service
 Group:          Development/Tools
 License:        BSD
 URL:            https://github.com/DBuildService/osbs
 Source0:        https://github.com/DBuildService/osbs/archive/%{commit}/osbs-%{commit}.tar.gz
 
 BuildArch:      noarch
+
+Requires:       python-osbs
 
 BuildRequires:  python2-devel
 BuildRequires:  python-setuptools
@@ -23,26 +25,37 @@ BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
 %endif
 
-Requires:       python-pycurl
-#Requires:       python-requests
-
 %description
 It is able to query OpenShift v3 for various stuff related to building images.
 It can initiate builds, list builds, get info about builds, get build logs...
-All of this can be done from command line and from python.
+This package contains osbs command line client.
+
+%package -n python-osbs
+Summary:        Python 2 module for OpenShift Build Service
+Group:          Development/Tools
+License:        BSD
+Requires:       python-pycurl
+Requires:       python-setuptools
+#Requires:       python-requests
+
+%description -n python-osbs
+It is able to query OpenShift v3 for various stuff related to building images.
+It can initiate builds, list builds, get info about builds, get build logs...
+This package contains osbs Python 2 bindings.
 
 %if 0%{?with_python3}
 %package -n python3-osbs
-Summary:        Python module and command line client for OpenShift Build Service
+Summary:        Python 3 module for OpenShift Build Service
 Group:          Development/Tools
 License:        BSD
 Requires:       python3-pycurl
+Requires:       python3-setuptools
 #Requires:       python3-requests
 
 %description -n python3-osbs
 It is able to query OpenShift v3 for various stuff related to building images.
 It can initiate builds, list builds, get info about builds, get build logs...
-All of this can be done from command line and from python.
+This package contains osbs Python 3 bindings.
 %endif # with_python3
 
 
@@ -72,18 +85,24 @@ popd
 pushd %{py3dir}
 %{__python3} setup.py install --skip-build --root %{buildroot}
 popd
-pushd %{buildroot}%{_bindir}
-mv osbs osbs3
-popd
+mv %{buildroot}%{_bindir}/osbs %{buildroot}%{_bindir}/osbs3
 %endif # with_python3
 
 %{__python} setup.py install --skip-build --root %{buildroot}
+mv %{buildroot}%{_bindir}/osbs %{buildroot}%{_bindir}/osbs2
+ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 
 
 %files
 %doc README.md
 %license LICENSE
 %{_bindir}/osbs
+
+
+%files -n python-osbs
+%doc README.md
+%license LICENSE
+%{_bindir}/osbs2
 %{python2_sitelib}/osbs/
 %{python2_sitelib}/osbs-%{version}-py2.*.egg-info/
 %dir %{_datadir}/osbs
@@ -102,6 +121,11 @@ popd
 %endif # with_python3
 
 %changelog
+* Tue May 12 2015 Slavek Kabrda <bkabrda@redhat.com> - 0.4-2
+- Introduce python-osbs subpackage
+- move /usr/bin/osbs to /usr/bin/osbs2, /usr/bin/osbs is now a symlink
+- depend on python[3]-setuptools because of entrypoints usage
+
 * Tue Apr 21 2015 Martin Milata <mmilata@redhat.com> - 0.4-1
 - new upstream release
 
