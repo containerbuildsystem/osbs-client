@@ -73,7 +73,7 @@ PYCURL_NETWORK_CODES = [pycurl.E_BAD_CONTENT_ENCODING,
                         pycurl.E_HTTP_RANGE_ERROR,
                         pycurl.E_HTTP_RETURNED_ERROR,
                         pycurl.E_LOGIN_DENIED,
-                        pycurl.E_OPERATION_TIMEDOUT,
+                        getattr(pycurl, "E_OPERATION_TIMEDOUT", None),  # not in el7 pycurl
                         pycurl.E_PARTIAL_FILE,
                         pycurl.E_READ_ERROR,
                         pycurl.E_RECV_ERROR,
@@ -88,6 +88,8 @@ PYCURL_NETWORK_CODES = [pycurl.E_BAD_CONTENT_ENCODING,
                         pycurl.E_TOO_MANY_REDIRECTS,
                         pycurl.E_UNSUPPORTED_PROTOCOL,
                         pycurl.E_WRITE_ERROR]
+
+PYCURL_NETWORK_CODES = [x for x in PYCURL_NETWORK_CODES if x is not None]
 
 
 class Response(object):
