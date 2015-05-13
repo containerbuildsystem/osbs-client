@@ -18,7 +18,9 @@ from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.build_request import BuildManager
 from osbs.constants import BUILD_FINISHED_STATES, PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
 from osbs.exceptions import OsbsValidationException
+from osbs.http import Response
 from tests.constants import TEST_BUILD, TEST_LABEL, TEST_LABEL_VALUE
+from tests.fake_api import ResponseMapping, DEFINITION
 
 
 logger = logging.getLogger("osbs.tests")
@@ -393,3 +395,16 @@ def test_build_logs_api(osbs):
     assert response is not None
     # The first line of the logs should be 'Step 0 : FROM ...'
     assert response.split('\n')[0].find("Step ") != -1
+
+
+def test_parse_headers():
+    rm = ResponseMapping("0.4.1")
+
+    file_name = DEFINITION["/oauth/authorize"]["get"]["file"]
+    raw_headers = rm.get_response_content(file_name)
+
+    r = Response(raw_headers=raw_headers)
+
+    assert r.headers is not None
+    assert len(r.headers.items()) > 0
+    assert r.headers["location"]
