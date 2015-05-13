@@ -130,11 +130,40 @@ class Configuration(object):
         val = self._get_value("verbose", GENERAL_CONFIGURATION_SECTION, "verbose", can_miss=True, is_bool_val=True)
         return val
 
+    def get_git_uri(self):
+        val = self._get_value("git_url", self.conf_section, "git_url", can_miss=True)
+        return val
+
+    def get_git_ref(self):
+        val = self._get_value("git_commit", self.conf_section, "git_commit", can_miss=True)
+        return val
+
+    def get_user(self):
+        """ user namespace when tagging and pushing image """
+        val = self._get_value("user", self.conf_section, "user", can_miss=True)
+        return val
+
+    def get_component(self):
+        val = self._get_value("component", self.conf_section, "component", can_miss=True)
+        return val
+
+    def get_yum_repourls(self):
+        val = self._get_value("yum_repourls", self.conf_section, "yum_repourls", can_miss=True)
+        return val
+
+    def get_namespace(self):
+        val = self._get_value("namespace", self.conf_section, "namespace", can_miss=True)
+        return val
+
     def get_kojiroot(self):
         return self._get_value("koji_root", self.conf_section, "koji_root", can_miss=True)
 
     def get_kojihub(self):
         return self._get_value("koji_hub", self.conf_section, "koji_hub", can_miss=True)
+
+    def get_koji_target(self):
+        val = self._get_value("target", self.conf_section, "target", can_miss=True)
+        return val
 
     def get_sources_command(self):
         return self._get_value("sources_command", self.conf_section, "sources_command", can_miss=True)
@@ -169,6 +198,9 @@ class Configuration(object):
 
     def get_authoritative_registry(self):
         return self._get_value("authoritative_registry", self.conf_section, "authoritative_registry", can_miss=True)
+
+    def get_architecture(self):
+        return self._get_value("architecture", self.conf_section, "architecture", can_miss=True)
 
     def get_use_auth(self):
         return self._get_value("use_auth", self.conf_section, "use_auth", can_miss=True, is_bool_val=True)

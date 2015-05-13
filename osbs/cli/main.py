@@ -121,14 +121,14 @@ REPOSITORIES
 
 def cmd_build(args, osbs):
     build = osbs.create_build(
-        git_uri=args.git_url,
-        git_ref=args.git_commit,
-        user=args.user,
-        component=args.component,
-        target=args.target,
-        architecture=args.arch,
-        yum_repourls=args.add_yum_repo,
-        namespace=args.namespace,
+        git_uri=osbs.build_conf.get_git_uri(),
+        git_ref=osbs.build_conf.get_git_ref(),
+        user=osbs.build_conf.get_user(),
+        component=osbs.build_conf.get_component(),
+        target=osbs.build_conf.get_koji_target(),
+        architecture=osbs.build_conf.get_architecture(),
+        yum_repourls=osbs.build_conf.get_yum_repourls(),
+        namespace=osbs.build_conf.get_namespace(),
     )
     build_id = build.build_id
     if not args.no_logs:
