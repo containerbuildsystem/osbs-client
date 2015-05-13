@@ -200,10 +200,18 @@ class OSBS(object):
             if ex.status_code != 404:
                 raise
         else:
-            if build["status"] in ["Complete", "Failed"]:
-                return build["metadata"]["labels"]["logs"]
-            else:
-                return self.os.logs(build_id, follow=False, namespace=namespace)
+            build_response = BuildResponse(build)
+            # Should this be 'build_response.is_finished()'?
+            logs = None
+            if build_response.json["status"] in ["Complete", "Failed"]:
+                metadata = build_response.json.get("metadata", {})
+                md = metadata.get("annotations", metadata.get("labels", {}))
+                logs = md.get("logs", None)
+
+            if logs:
+                return logs
+
+            return self.os.logs(build_id, follow=False, namespace=namespace)
 
     @osbsapi
     def wait_for_build_to_finish(self, build_id, namespace=DEFAULT_NAMESPACE):
