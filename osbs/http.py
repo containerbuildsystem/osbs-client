@@ -73,7 +73,8 @@ PYCURL_NETWORK_CODES = [pycurl.E_BAD_CONTENT_ENCODING,
                         pycurl.E_HTTP_RANGE_ERROR,
                         pycurl.E_HTTP_RETURNED_ERROR,
                         pycurl.E_LOGIN_DENIED,
-                        getattr(pycurl, "E_OPERATION_TIMEDOUT", None),  # not in el7 pycurl
+                        # old pycurl: E_OPERATION_TIMEOUTED, new pycurl: E_OPERATION_TIMEDOUT
+                        getattr(pycurl, "E_OPERATION_TIMEDOUT", "E_OPERATION_TIMEOUTED"),
                         pycurl.E_PARTIAL_FILE,
                         pycurl.E_READ_ERROR,
                         pycurl.E_RECV_ERROR,
