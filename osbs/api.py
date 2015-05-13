@@ -9,6 +9,7 @@ from __future__ import print_function, unicode_literals, absolute_import
 
 import json
 import logging
+import sys
 from functools import wraps
 
 from .constants import SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
@@ -30,7 +31,12 @@ def osbsapi(func):
             raise
         except Exception as ex:
             # Convert anything else to OsbsException
-            raise OsbsException(repr(ex))
+
+            # Python 3 has implicit exception chaining and enhanced
+            # reporting, so you get the original traceback as well as
+            # the one originating here.
+            # For Python 2, let's do that explicitly.
+            raise OsbsException(cause=ex, traceback=sys.exc_info()[2])
 
     return catch_exceptions
 

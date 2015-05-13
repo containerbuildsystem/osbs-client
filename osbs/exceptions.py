@@ -9,9 +9,33 @@ of the BSD license. See the LICENSE file for details.
 Exceptions raised by OSBS
 """
 
+from traceback import format_tb
+
 
 class OsbsException(Exception):
-    pass
+    def __init__(self, message=None, cause=None, traceback=None):
+        if message is None and cause is not None:
+            message = repr(cause)
+
+        super(OsbsException, self).__init__(message)
+        self.message = message
+        self.cause = cause
+        self.traceback = traceback
+
+    def __str__(self):
+        if self.cause and self.traceback and not hasattr(self, '__context__'):
+            return ("%s\n\n" % self.message +
+                    "Original traceback (most recent call last):\n" +
+                    "".join(format_tb(self.traceback)) +
+                    "%r" % self.cause)
+        else:
+            return super(OsbsException, self).__str__()
+
+    def __repr__(self):
+        if self.cause and not hasattr(self, '__context__'):
+            return "OsbsException caused by %r" % self.cause
+        else:
+            return super(OsbsException, self).__repr__()
 
 
 class OsbsResponseException(OsbsException):
