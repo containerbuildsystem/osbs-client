@@ -118,10 +118,22 @@ class Response(object):
     @property
     def headers(self):
         if self._headers is None:
-            parser = email.parser.Parser()
-            m = parser.parsestr(self.raw_headers)
-            self._headers = dict(m.items())
-
+            logger.debug("raw headers: " + repr(self.raw_headers))
+            headers_buffer = BytesIO(self.raw_headers)
+            try:
+                # py 2
+                # seekable has to be 0, otherwise it won't parse anything
+                m = httplib.HTTPMessage(headers_buffer, seekable=0)
+                m.readheaders()
+                self._headers = m.dict
+            except TypeError as ex:
+                # py 3
+                if ex.args[0] == "__init__() got an unexpected keyword argument 'seekable'":
+                    parser = email.parser.Parser()
+                    m = parser.parsestr(self.raw_headers.decode('iso-8859-1'))
+                    self._headers = dict(m.items())
+                else:
+                    raise
         return self._headers
 
     @property
