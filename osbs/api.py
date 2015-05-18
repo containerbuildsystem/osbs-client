@@ -53,7 +53,6 @@ class OSBS(object):
         self.build_conf = build_configuration
         self.os = Openshift(openshift_api_url=self.os_conf.get_openshift_api_uri(),
                             openshift_oauth_url=self.os_conf.get_openshift_oauth_api_uri(),
-                            kubelet_base=self.os_conf.get_kubelet_uri(),
                             verbose=self.os_conf.get_verbosity(),
                             username=self.os_conf.get_username(),
                             password=self.os_conf.get_password(),

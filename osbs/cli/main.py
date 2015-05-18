@@ -253,8 +253,6 @@ def cli():
 
     parser.add_argument("--openshift-uri", action='store', metavar="URL",
                         help="openshift URL to remote API")
-    parser.add_argument("--kubelet-uri", action='store', metavar="URL",
-                        help="kubelet URL to remote API")
     parser.add_argument("--registry-uri", action='store', metavar="URL",
                         help="registry where images should be pushed")
     parser.add_argument("--config", action='store', metavar="PATH",

@@ -17,8 +17,6 @@ build_json_dir = /usr/share/osbs/
 
 [default]
 openshift_uri = https://host:8443/
-# with openshift 0.4.3+ this will no longer be needed
-kubelet_uri = http://host:10250/
 # if you want to get packages from koji (koji plugin in dock)
 # you need to setup koji hub and root
 # this sample is for fedora
