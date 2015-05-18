@@ -141,9 +141,12 @@ def openshift():
 def osbs():
     with NamedTemporaryFile(mode="wt") as fp:
         fp.write("""
+[general]
+build_json_dir = {build_json_dir}
 [default]
 openshift_uri = https://0.0.0.0/
-""")
+build_type = simple
+""".format (build_json_dir="inputs"))
         fp.flush()
         dummy_config = Configuration(fp.name)
         osbs = OSBS(dummy_config, dummy_config)

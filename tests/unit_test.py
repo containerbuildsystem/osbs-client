@@ -16,8 +16,11 @@ import pytest
 import logging
 from .fake_api import openshift, osbs
 from osbs.build.manipulate import DockJsonManipulator
-from osbs.build.build_request import BuildManager
-from osbs.constants import BUILD_FINISHED_STATES, PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
+from osbs.build.build_response import BuildResponse
+from osbs.build.build_request import BuildManager, BuildRequest
+from osbs.build.build_request import SimpleBuild, ProductionBuild, ProductionWithoutKojiBuild
+from osbs.constants import BUILD_FINISHED_STATES
+from osbs.constants import SIMPLE_BUILD_TYPE, PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
 from osbs.exceptions import OsbsValidationException
 from osbs.http import Response
 from tests.constants import TEST_BUILD, TEST_LABEL, TEST_LABEL_VALUE
@@ -388,6 +391,47 @@ def test_create_build(openshift):
     assert response is not None
     assert response.json()["metadata"]["name"] == TEST_BUILD
     assert response.json()["status"].lower() in BUILD_FINISHED_STATES
+
+
+## API tests (osbs.api.OSBS)
+
+def test_list_builds_api(osbs):
+    response = osbs.list_builds()
+    # We should get a response
+    assert response is not None
+    # Response should have an 'items' key
+    assert 'items' in response
+
+
+def test_get_build_api(osbs):
+    response = osbs.get_build(TEST_BUILD)
+    # We should get a BuildResponse
+    assert isinstance(response, BuildResponse)
+
+
+def test_get_build_request_api(osbs):
+    build = osbs.get_build_request()
+    assert isinstance(build, BuildRequest)
+    simple = osbs.get_build_request(SIMPLE_BUILD_TYPE)
+    assert isinstance(simple, SimpleBuild)
+    prod = osbs.get_build_request(PROD_BUILD_TYPE)
+    assert isinstance(prod, ProductionBuild)
+    prodwithoutkoji = osbs.get_build_request(PROD_WITHOUT_KOJI_BUILD_TYPE)
+    assert isinstance(prodwithoutkoji, ProductionWithoutKojiBuild)
+
+
+def test_set_labels_on_build_api(osbs):
+    labels = {'label1': 'value1', 'label2': 'value2'}
+    response = osbs.set_labels_on_build(TEST_BUILD, labels)
+    assert isinstance(response, Response)
+
+
+def test_get_token_api(osbs):
+    assert isinstance(osbs.get_token(), bytes)
+
+
+def test_get_user_api(osbs):
+    assert 'fullName' in osbs.get_user()
 
 
 def test_build_logs_api(osbs):
