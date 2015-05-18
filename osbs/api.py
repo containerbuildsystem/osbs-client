@@ -207,9 +207,8 @@ class OSBS(object):
                 raise
         else:
             build_response = BuildResponse(build)
-            # Should this be 'build_response.is_finished()'?
             logs = None
-            if build_response.json["status"] in ["Complete", "Failed"]:
+            if build_response.is_finished():
                 metadata = build_response.json.get("metadata", {})
                 md = metadata.get("annotations", metadata.get("labels", {}))
                 logs = md.get("logs", None)
