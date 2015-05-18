@@ -16,10 +16,12 @@ try:
     # py2
     import httplib
     import urlparse
+    from urllib import urlencode
 except ImportError:
     # py3
     import http.client as httplib
     import urllib.parse as urlparse
+    from urllib.parse import urlencode
 
 from .http import get_http_session
 
@@ -58,12 +60,10 @@ class Openshift(object):
     def os_oauth_url(self):
         return self._os_oauth_url
 
-    def _build_url(self, url, namespace=None):
-        if namespace:
-            url += "?namespace=%s" % namespace
-            return urlparse.urljoin(self.os_api_url, url)
-        else:
-            return urlparse.urljoin(self.os_api_url, url)
+    def _build_url(self, url, **query):
+        if query:
+            url += ("?" + urlencode(query))
+        return urlparse.urljoin(self.os_api_url, url)
 
     def _request_args(self, with_auth=True, **kwargs):
         headers = kwargs.pop("headers", {})
@@ -172,14 +172,16 @@ class Openshift(object):
             self.wait_for_build_to_get_scheduled(build_id, namespace)
 
         # 0.5+
-        buildlogs_url = self._build_url("buildLogs/%s/?follow=%d" % (
-            build_id, 1 if follow else 0), namespace=namespace)
+        buildlogs_url = self._build_url("buildLogs/%s/" % build_id,
+                                        follow=(1 if follow else 0),
+                                        namespace=namespace)
         response = self._get(buildlogs_url, stream=follow, headers={'Connection': 'close'})
         if response.status_code in (403, 404):
             # 0.4.3
             # FIXME: remove this once 0.5.? is deployed everywhere
-            buildlogs_url = self._build_url("proxy/buildLogs/%s/?follow=%d" % (
-                    build_id, 1 if follow else 0), namespace=namespace)
+            buildlogs_url = self._build_url("proxy/buildLogs/%s/" % build_id,
+                                            follow=(1 if follow else 0),
+                                            namespace=namespace)
             response.close_multi()
             response = self._get(buildlogs_url, stream=follow, headers={'Connection': 'close'})
         if follow:
