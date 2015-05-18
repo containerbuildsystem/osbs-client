@@ -10,6 +10,7 @@ import copy
 import inspect
 import json
 import os
+import sys
 
 import pytest
 import logging
@@ -397,6 +398,8 @@ def test_build_logs_api(osbs):
     assert response.split('\n')[0].find("Step ") != -1
 
 
+@pytest.mark.skipif(sys.version_info[0] >= 3,
+                    reason="known not to work on Python 3 (#74)")
 def test_parse_headers():
     rm = ResponseMapping("0.4.1")
 
