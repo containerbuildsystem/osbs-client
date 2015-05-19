@@ -265,7 +265,10 @@ class PycurlAdapter(object):
     def request(self, url, method, data=None, kerberos_auth=False,
                 allow_redirects=True, verify_ssl=True, use_json=False,
                 headers=None, stream=False, username=None, password=None):
-        self.c.reset()
+        # FIXME: workaround for pycurl bug
+        # self.c.reset()
+        self._c = pycurl.Curl()
+
         self.url = url
         headers = headers or {}
         method = method.lower()
