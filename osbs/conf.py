@@ -197,7 +197,7 @@ class Configuration(object):
         return self._get_value("authoritative_registry", self.conf_section, "authoritative_registry", can_miss=True)
 
     def get_architecture(self):
-        return self._get_value("architecture", self.conf_section, "architecture", can_miss=True)
+        return self._get_value("arch", self.conf_section, "architecture", can_miss=True)
 
     def get_use_auth(self):
         return self._get_value("use_auth", self.conf_section, "use_auth", can_miss=True, is_bool_val=True)
