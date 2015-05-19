@@ -1,5 +1,8 @@
 %global with_python3 0
 
+%global commit a3021e7500edeb9b38a8f22092e65b06b92edc7b
+%global shortcommit %(c=%{commit}; echo ${c:0:7})
+
 Name:           osbs
 Version:        0.5
 Release:        1%{?dist}
@@ -8,7 +11,7 @@ Summary:        Python command line client for OpenShift Build Service
 Group:          Development/Tools
 License:        BSD
 URL:            https://github.com/DBuildService/osbs
-Source0:        https://github.com/DBuildService/osbs/archive/%{version}.tar.gz
+Source0:        https://github.com/DBuildService/osbs/archive/%{commit}/osbs-%{commit}.tar.gz  
 
 BuildArch:      noarch
 
