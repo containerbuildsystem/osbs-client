@@ -1,17 +1,14 @@
 %global with_python3 0
 
-%global commit 758648c85e1eed2bbd233183dcc65e9950c06100
-%global shortcommit %(c=%{commit}; echo ${c:0:7})
-
 Name:           osbs
-Version:        0.4
-Release:        2%{?dist}
+Version:        0.5
+Release:        1%{?dist}
 
 Summary:        Python command line client for OpenShift Build Service
 Group:          Development/Tools
 License:        BSD
 URL:            https://github.com/DBuildService/osbs
-Source0:        https://github.com/DBuildService/osbs/archive/%{commit}/osbs-%{commit}.tar.gz
+Source0:        https://github.com/DBuildService/osbs/archive/%{version}.tar.gz
 
 BuildArch:      noarch
 
@@ -121,6 +118,9 @@ ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 %endif # with_python3
 
 %changelog
+* Tue May 19 2015 Tomas Tomecek <ttomecek@redhat.com> - 0.5-1
+- new upstream release: 0.5
+
 * Tue May 12 2015 Slavek Kabrda <bkabrda@redhat.com> - 0.4-2
 - Introduce python-osbs subpackage
 - move /usr/bin/osbs to /usr/bin/osbs2, /usr/bin/osbs is now a symlink
