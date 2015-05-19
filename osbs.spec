@@ -11,7 +11,7 @@ Summary:        Python command line client for OpenShift Build Service
 Group:          Development/Tools
 License:        BSD
 URL:            https://github.com/DBuildService/osbs
-Source0:        https://github.com/DBuildService/osbs/archive/%{commit}/osbs-%{commit}.tar.gz  
+Source0:        https://github.com/DBuildService/osbs/archive/%{commit}/osbs-%{commit}.tar.gz
 
 BuildArch:      noarch
 
@@ -95,16 +95,29 @@ ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 
 %files
 %doc README.md
+%if 0%{?rhel} || 0%{?fedora} < 21
+%doc LICENSE
+%else
 %license LICENSE
+%endif
 %{_bindir}/osbs
 
 
 %files -n python-osbs
 %doc README.md
+%if 0%{?rhel} || 0%{?fedora} < 21
+%doc LICENSE
+%else
 %license LICENSE
+%endif
 %{_bindir}/osbs2
+%if 0%{?rhel}
+%{python_sitelib}/osbs/
+%{python_sitelib}/osbs-%{version}-py2.*.egg-info/
+%else
 %{python2_sitelib}/osbs/
 %{python2_sitelib}/osbs-%{version}-py2.*.egg-info/
+%endif
 %dir %{_datadir}/osbs
 %{_datadir}/osbs/*.json
 
@@ -112,7 +125,11 @@ ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 %if 0%{?with_python3}
 %files -n python3-osbs
 %doc README.md
+%if 0%{?rhel} || 0%{?fedora} < 21
+%doc LICENSE
+%else
 %license LICENSE
+%endif
 %{_bindir}/osbs3
 %{python3_sitelib}/osbs/
 %{python3_sitelib}/osbs-%{version}-py3.*.egg-info/
