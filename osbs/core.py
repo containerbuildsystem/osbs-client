@@ -16,10 +16,12 @@ try:
     # py2
     import httplib
     import urlparse
+    from urllib import urlencode
 except ImportError:
     # py3
     import http.client as httplib
     import urllib.parse as urlparse
+    from urllib.parse import urlencode
 
 from .http import get_http_session
 
@@ -36,11 +38,10 @@ def check_response(response):
 # TODO: error handling: create function which handles errors in response object
 class Openshift(object):
 
-    def __init__(self, openshift_api_url, openshift_oauth_url, kubelet_base, verbose=False,
+    def __init__(self, openshift_api_url, openshift_oauth_url, verbose=False,
                  username=None, password=None, use_kerberos=False, verify_ssl=True, use_auth=None):
         self.os_api_url = openshift_api_url
         self._os_oauth_url = openshift_oauth_url
-        self.kubelet_base = kubelet_base
         self.verbose = verbose
         self.verify_ssl = verify_ssl
         self._con = get_http_session(verbose=self.verbose)
@@ -59,15 +60,10 @@ class Openshift(object):
     def os_oauth_url(self):
         return self._os_oauth_url
 
-    def _build_url(self, url, namespace=None):
-        if namespace:
-            url += "?namespace=%s" % namespace
-            return urlparse.urljoin(self.os_api_url, url)
-        else:
-            return urlparse.urljoin(self.os_api_url, url)
-
-    def _build_k8s_url(self, url):
-        return urlparse.urljoin(self.kubelet_base, url)
+    def _build_url(self, url, **query):
+        if query:
+            url += ("?" + urlencode(query))
+        return urlparse.urljoin(self.os_api_url, url)
 
     def _request_args(self, with_auth=True, **kwargs):
         headers = kwargs.pop("headers", {})
@@ -175,16 +171,17 @@ class Openshift(object):
         if build_json['status'].lower() in BUILD_PENDING_STATES:
             self.wait_for_build_to_get_scheduled(build_id, namespace)
 
-        # 0.4.3+
-        proxy_url = self._build_url("proxy/buildLogs/%s/?follow=%d" % (
-            build_id, 1 if follow else 0), namespace=namespace)
-        response = self._get(proxy_url, stream=follow, headers={'Connection': 'close'})
+        # 0.5+
+        buildlogs_url = self._build_url("buildLogs/%s/" % build_id,
+                                        follow=(1 if follow else 0),
+                                        namespace=namespace)
+        response = self._get(buildlogs_url, stream=follow, headers={'Connection': 'close'})
         if response.status_code in (403, 404):
-            # 0.4.1
-            # FIXME: remove this once 0.4.3 is deployed everywhere
-            buildlogs_url = self._build_k8s_url(
-                "containerLogs/default/build-%s/custom-build?follow=%d" % (
-                    build_id, 1 if follow else 0))
+            # 0.4.3
+            # FIXME: remove this once 0.5.? is deployed everywhere
+            buildlogs_url = self._build_url("proxy/buildLogs/%s/" % build_id,
+                                            follow=(1 if follow else 0),
+                                            namespace=namespace)
             response.close_multi()
             response = self._get(buildlogs_url, stream=follow, headers={'Connection': 'close'})
         if follow:
@@ -298,5 +295,5 @@ class Openshift(object):
 if __name__ == '__main__':
     o = Openshift(openshift_api_url="https://localhost:8443/osapi/v1beta1/",
                   openshift_oauth_url="https://localhost:8443/oauth/authorize",
-                  kubelet_base=None, verbose=True)
+                  verbose=True)
     print(o.get_oauth_token())
