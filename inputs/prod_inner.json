@@ -4,6 +4,9 @@
       "name": "change_from_in_dockerfile"
     },
     {
+      "name": "add_dockerfile"
+    },
+    {
       "args": {
         "labels": "{{IMPLICIT_LABELS}}"
       },
@@ -41,6 +44,11 @@
         "registry_uri": "{{REGISTRY_URI}}",
         "insecure_registry": true
       }
+    }
+  ],
+  "prepublish_plugins": [
+    {
+      "name": "squash"
     }
   ],
   "postbuild_plugins": [

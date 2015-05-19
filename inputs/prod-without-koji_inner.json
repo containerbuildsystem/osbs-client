@@ -4,6 +4,9 @@
       "name": "change_from_in_dockerfile"
     },
     {
+      "name": "add_dockerfile"
+    },
+    {
       "args": {
         "labels": "{{IMPLICIT_LABELS}}"
       },
@@ -22,9 +25,6 @@
       "name": "add_yum_repo_by_url"
     },
     {
-      "name": "inject_yum_repo"
-    },
-    {
       "name": "dockerfile_content"
     },
     {
@@ -33,6 +33,11 @@
         "registry_uri": "{{REGISTRY_URI}}",
         "insecure_registry": true
       }
+    }
+  ],
+  "prepublish_plugins": [
+    {
+      "name": "squash"
     }
   ],
   "postbuild_plugins": [
