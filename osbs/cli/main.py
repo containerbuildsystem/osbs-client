@@ -187,7 +187,7 @@ def cmd_get_user(args, osbs):
             full_name = user_json["fullName"]
         except KeyError:
             logger.error("\"full name\" is not in response")
-        print("Name: \"%s\"\nFull Name: \"%s\'" % (name, full_name))
+        print("Name: \"%s\"\nFull Name: \"%s\"" % (name, full_name))
 
 
 def cli():
