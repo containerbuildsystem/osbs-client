@@ -85,7 +85,7 @@ class BuildRequest(object):
                     self._template = json.load(fp)
             except (IOError, OSError) as ex:
                 raise OsbsException("Can't open template '%s': %s" %
-                                    path, repr(ex))
+                                    (path, repr(ex)))
         return self._template
 
     @property
