@@ -1,13 +1,11 @@
-%{!?_licensedir:%global license %%doc}
-
 %global with_python3 0
 
-%global commit a3021e7500edeb9b38a8f22092e65b06b92edc7b
+%global commit 947bcdf9a53b871735084627fe1720a14240ec10
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 
 Name:           osbs
 Version:        0.6
-Release:        1%{?dist}
+Release:        2%{?dist}
 
 Summary:        Python command line client for OpenShift Build Service
 Group:          Development/Tools
@@ -102,6 +100,7 @@ ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 
 %files -n python-osbs
 %doc README.md
+%{!?_licensedir:%global license %%doc}
 %license LICENSE
 %{_bindir}/osbs2
 %if 0%{?rhel}
@@ -118,6 +117,7 @@ ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 %if 0%{?with_python3}
 %files -n python3-osbs
 %doc README.md
+%{!?_licensedir:%global license %%doc}
 %license LICENSE
 %{_bindir}/osbs3
 %{python3_sitelib}/osbs/
@@ -127,6 +127,9 @@ ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 %endif # with_python3
 
 %changelog
+* Thu May 21 2015 Jiri Popelka <jpopelka@redhat.com> - 0.6-2
+- fix %%license handling
+
 * Thu May 21 2015 Tomas Tomecek <ttomecek@redhat.com> - 0.6-1
 - new upstream release: 0.6
 
@@ -143,6 +146,9 @@ ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 
 * Wed Apr 15 2015 Martin Milata <mmilata@redhat.com> - 0.3-1
 - new upstream release
+
+* Wed Apr 08 2015 Martin Milata <mmilata@redhat.com> - 0.2-2.c1216ba
+- update to c1216ba
 
 * Tue Apr 07 2015 Tomas Tomecek <ttomecek@redhat.com> - 0.2-1
 - new upstream release
