@@ -1,3 +1,5 @@
+%{!?_licensedir:%global license %%doc}
+
 %global with_python3 0
 
 %global commit a3021e7500edeb9b38a8f22092e65b06b92edc7b
@@ -95,21 +97,12 @@ ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 
 %files
 %doc README.md
-%if 0%{?rhel} || 0%{?fedora} < 21
-%doc LICENSE
-%else
-%license LICENSE
-%endif
 %{_bindir}/osbs
 
 
 %files -n python-osbs
 %doc README.md
-%if 0%{?rhel} || 0%{?fedora} < 21
-%doc LICENSE
-%else
 %license LICENSE
-%endif
 %{_bindir}/osbs2
 %if 0%{?rhel}
 %{python_sitelib}/osbs/
@@ -125,11 +118,7 @@ ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 %if 0%{?with_python3}
 %files -n python3-osbs
 %doc README.md
-%if 0%{?rhel} || 0%{?fedora} < 21
-%doc LICENSE
-%else
 %license LICENSE
-%endif
 %{_bindir}/osbs3
 %{python3_sitelib}/osbs/
 %{python3_sitelib}/osbs-%{version}-py3.*.egg-info/
