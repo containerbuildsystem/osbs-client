@@ -6,7 +6,7 @@
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 
 Name:           osbs
-Version:        0.5
+Version:        0.6
 Release:        1%{?dist}
 
 Summary:        Python command line client for OpenShift Build Service
@@ -127,6 +127,9 @@ ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 %endif # with_python3
 
 %changelog
+* Thu May 21 2015 Tomas Tomecek <ttomecek@redhat.com> - 0.6-1
+- new upstream release: 0.6
+
 * Tue May 19 2015 Tomas Tomecek <ttomecek@redhat.com> - 0.5-1
 - new upstream release: 0.5
 
