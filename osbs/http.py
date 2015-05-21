@@ -275,6 +275,7 @@ class PycurlAdapter(object):
 
         if method == 'post':
             self.c.setopt(pycurl.POST, 1)
+            headers["Expect"] = ""  # openshift can't handle Expect
         elif method == 'get':
             self.c.setopt(pycurl.HTTPGET, 1)
         elif method == 'put':
