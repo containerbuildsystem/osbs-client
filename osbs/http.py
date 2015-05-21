@@ -240,8 +240,16 @@ class Response(object):
 
     def close_multi(self):
         logger.debug("closing curl multi: %s", id(self.curl_multi))
-        self.curl_multi.remove_handle(self.curl)
-        self.curl_multi.close()
+        if self.curl_multi is None:
+            logger.warning("curl_multi object is not specified")
+            return
+        # returns (0, [<pycurl.Curl object at 0x27eb9e0>], [])
+        read_info = self.curl_multi.info_read()
+        num_handles = len(read_info[1])
+        logger.debug("%d handles in curl_multi object", num_handles)
+        if num_handles > 0:
+            self.curl_multi.remove_handle(self.curl)
+            self.curl_multi.close()
 
 
 class PycurlAdapter(object):
