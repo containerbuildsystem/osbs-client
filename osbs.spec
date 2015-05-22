@@ -2,10 +2,17 @@
 
 %global commit 947bcdf9a53b871735084627fe1720a14240ec10
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
+# set to 0 to create a normal release
+%global postrelease 1
+%global release 2
 
 Name:           osbs
 Version:        0.6
-Release:        2%{?dist}
+%if "x%{postrelease}" != "x0"
+Release:        %{release}.%{postrelease}.git.%{shortcommit}%{?dist}
+%else
+Release:        %{release}%{?dist}
+%endif
 
 Summary:        Python command line client for OpenShift Build Service
 Group:          Development/Tools

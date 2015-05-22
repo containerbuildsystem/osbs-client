@@ -51,3 +51,7 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# RPMs, tars
+*.rpm
+*.tar.gz
