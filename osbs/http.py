@@ -339,9 +339,10 @@ class PycurlAdapter(object):
                     raise OsbsException("error during select")
                 ret, _ = curl_multi.perform()
                 if ret == pycurl.E_CALL_MULTI_PERFORM:
-                    raise OsbsNetworkException(url,
-                                               "error during doing curl_multi",
-                                               ret)
+                    # on RHEL 6, pycurl is raising this multiple times -- no idea what that means
+                    # so, let's log it and ignore it
+                    logger.warning("curl multi returned pycurl.E_CALL_MULTI_PERFORM -- "
+                                   "this might be an error; or not")
                 response.status_code = self.c.getinfo(pycurl.HTTP_CODE)
             response.content = self.response.getvalue()
 
