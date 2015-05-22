@@ -240,8 +240,14 @@ class Openshift(object):
                 if obj_status.lower() in states:
                     response.close_multi()
                     return obj
+        # I'm not sure how we can end up here since there are two possible scenarios:
+        #   1. our object was found and we are returning in the loop
+        #   2. our object was not found and we keep waiting (in the loop)
+        # Therefore, let's raise here
+        logger.error("build '%s' was not found during wait", build_id)
         check_response(response)
-        return response
+        raise OsbsResponseException("build '%s' was not found and response stream ended" % build_id,
+                                    status_code=response.status_code)
 
     def wait_for_build_to_finish(self, build_id, namespace=DEFAULT_NAMESPACE):
         build_response = self.wait(build_id, BUILD_FINISHED_STATES, namespace)
