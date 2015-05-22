@@ -382,7 +382,11 @@ class PycurlAdapter(object):
             return self.request(url, method, **kwargs)
         except pycurl.error as ex:
             code = ex.args[0]
-            message = ex.args[1]
+            try:
+                message = ex.args[1]
+            except IndexError:
+                # happened on rhel 6
+                message = ""
             if code in PYCURL_NETWORK_CODES:
                 raise OsbsNetworkException(url, message, code, *ex.args[2:])
 
