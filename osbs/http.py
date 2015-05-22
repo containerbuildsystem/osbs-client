@@ -373,6 +373,8 @@ class PycurlAdapter(object):
             # clear buffer
             self.response.truncate(0)
             self.response_headers.truncate(0)
+            # FIXME: don't close when we start reusing connection!
+            self.c.close()
         return response
 
     def _do_request(self, url, method, **kwargs):
