@@ -3,11 +3,11 @@
 %global commit 947bcdf9a53b871735084627fe1720a14240ec10
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 # set to 0 to create a normal release
-%global postrelease 1
-%global release 2
+%global postrelease 0
+%global release 1
 
 Name:           osbs
-Version:        0.6
+Version:        0.7
 %if "x%{postrelease}" != "x0"
 Release:        %{release}.%{postrelease}.git.%{shortcommit}%{?dist}
 %else
@@ -134,6 +134,9 @@ ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 %endif # with_python3
 
 %changelog
+* Fri May 22 2015 Tomas Tomecek <ttomecek@redhat.com> - 0.7-1
+- new upstream release: 0.7
+
 * Thu May 21 2015 Jiri Popelka <jpopelka@redhat.com> - 0.6-2
 - fix %%license handling
 
