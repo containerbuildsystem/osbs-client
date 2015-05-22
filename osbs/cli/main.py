@@ -6,7 +6,7 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, absolute_import, unicode_literals
-import copy
+
 import json
 import logging
 
@@ -23,16 +23,6 @@ from osbs.exceptions import OsbsNetworkException, OsbsException
 logger = logging.getLogger('osbs')
 
 
-def graceful_chain_get(d, *args):
-    t = copy.deepcopy(d)
-    for arg in args:
-        try:
-            t = t[arg]
-        except (AttributeError, KeyError):
-            return None
-    return t
-
-
 def print_json_nicely(decoded_json):
     print(json.dumps(decoded_json, indent=2))
 
@@ -40,34 +30,37 @@ def print_json_nicely(decoded_json):
 def cmd_list_builds(args, osbs):
     builds = osbs.list_builds(namespace=args.namespace)
     if args.output == 'json':
-        print_json_nicely(builds['items'])
+        json_output = []
+        for build in builds:
+            json_output.append(build.json)
+        print_json_nicely(json_output)
     elif args.output == 'text':
         format_str = "{name:48} {status:16} {image:64}"
         print(format_str.format(**{"name": "BUILD NAME", "status": "STATUS", "image": "IMAGE NAME"}), file=sys.stderr)
-        for build in builds['items']:
-            image = graceful_chain_get(build, 'parameters', 'output', 'imageTag')
+        for build in builds:
+            image = build.get_image_tag()
             if args.USER:
                 if not image.startswith(args.USER + "/"):
                     continue
             b = {
-                "name": build['metadata']['name'],
-                "status": build['status'],
-                "image": image,
+                "name": build.get_build_name(),
+                "status": build.status,
+                "image": image
             }
             print(format_str.format(**b))
 
 
 def cmd_get_build(args, osbs):
-    build_json = osbs.get_build(args.BUILD_ID[0], namespace=args.namespace).json
+    build = osbs.get_build(args.BUILD_ID[0], namespace=args.namespace)
+    build_json = build.json
     if args.output == 'json':
         print_json_nicely(build_json)
     elif args.output == 'text':
         metadata = build_json.get("metadata", {})
-        md = metadata.get("annotations", metadata.get("labels", {}))
-        dockerfile = md.get("dockerfile", None)
-        packages = md.get("rpm-packages", None)
-        logs = md.get("logs", None)
-        repositories_json = md.get("repositories", None)
+        dockerfile = build.get_dockerfile()
+        packages = build.get_rpm_packages()
+        logs = build.get_logs()
+        repositories_json = build.get_repositories()
         repositories_str = None
         if repositories_json is not None:
             repositories = json.loads(repositories_json)
@@ -107,9 +100,9 @@ REPOSITORIES
 
 {repositories}"""
         context = {
-            "build_id": build_json['metadata']['name'],
-            "status": build_json['status'],
-            "image": graceful_chain_get(build_json, 'parameters', 'output', 'imageTag'),
+            "build_id": build.get_build_name(),
+            "status": build.status,
+            "image": build.get_image_tag(),
             "date": build_json['metadata']['creationTimestamp'],
             "dockerfile": dockerfile,
             "logs": logs,
@@ -155,11 +148,11 @@ def cmd_build_logs(args, osbs):
 
 
 def cmd_watch_build(args, osbs):
-    response = osbs.wait_for_build_to_finish(args.BUILD_ID[0], namespace=args.namespace)
+    build_response = osbs.wait_for_build_to_finish(args.BUILD_ID[0], namespace=args.namespace)
     if args.output == 'text':
         pass
     elif args.output == 'json':
-        print_json_nicely(response)
+        print_json_nicely(build_response.json)
 
 
 def cmd_get_token(args, osbs):  # pylint: disable=W0613

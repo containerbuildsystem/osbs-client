@@ -244,15 +244,13 @@ class Openshift(object):
         return response
 
     def wait_for_build_to_finish(self, build_id, namespace=DEFAULT_NAMESPACE):
-        while True:
-            build_response = self.wait(build_id, BUILD_FINISHED_STATES, namespace)
-            return build_response
+        build_response = self.wait(build_id, BUILD_FINISHED_STATES, namespace)
+        return build_response
 
     def wait_for_build_to_get_scheduled(self, build_id, namespace=DEFAULT_NAMESPACE):
-        while True:
-            build_response = self.wait(build_id, BUILD_FINISHED_STATES + BUILD_RUNNING_STATES,
-                                       namespace)
-            return build_response
+        build_response = self.wait(build_id, BUILD_FINISHED_STATES + BUILD_RUNNING_STATES,
+                                   namespace)
+        return build_response
 
     def set_labels_on_build(self, build_id, labels, namespace=DEFAULT_NAMESPACE):
         """

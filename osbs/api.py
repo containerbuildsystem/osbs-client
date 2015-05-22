@@ -70,9 +70,12 @@ class OSBS(object):
 
     @osbsapi
     def list_builds(self, namespace=DEFAULT_NAMESPACE):
-        # FIXME: return list of BuildResponse objects
-        builds = self.os.list_builds(namespace=namespace).json()
-        return builds
+        response = self.os.list_builds(namespace=namespace)
+        serialized_response = response.json()
+        build_list = []
+        for build in serialized_response["items"]:
+            build_list.append(BuildResponse(response, build))
+        return build_list
 
     @osbsapi
     def get_build(self, build_id, namespace=DEFAULT_NAMESPACE):
@@ -219,10 +222,9 @@ class OSBS(object):
 
     @osbsapi
     def wait_for_build_to_finish(self, build_id, namespace=DEFAULT_NAMESPACE):
-        # FIXME: since OS returns whole build json in watch we could return
-        #        instance of BuildResponse here
         response = self.os.wait_for_build_to_finish(build_id, namespace=namespace)
-        return response
+        build_response = BuildResponse(None, response)
+        return build_response
 
     @osbsapi
     def set_labels_on_build(self, build_id, labels, namespace=DEFAULT_NAMESPACE):

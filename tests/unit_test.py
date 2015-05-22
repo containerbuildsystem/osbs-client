@@ -396,11 +396,17 @@ def test_create_build(openshift):
 ## API tests (osbs.api.OSBS)
 
 def test_list_builds_api(osbs):
-    response = osbs.list_builds()
+    response_list = osbs.list_builds()
     # We should get a response
-    assert response is not None
-    # Response should have an 'items' key
-    assert 'items' in response
+    assert response_list is not None
+    assert len(response_list) > 0
+    # response_list is a list of BuildResponse objects
+    assert isinstance(response_list[0], BuildResponse)
+
+
+def test_wait_for_build_to_finish(osbs):
+    build_response = osbs.wait_for_build_to_finish(TEST_BUILD)
+    assert isinstance(build_response, BuildResponse)
 
 
 def test_get_build_api(osbs):
