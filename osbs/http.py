@@ -120,8 +120,8 @@ class Response(object):
     def headers(self):
         if self._headers is None:
             logger.debug("raw headers: " + repr(self.raw_headers))
-            decoded_raw_headers = self.raw_headers.decode('iso-8859-1')
-            headers_buffer = BytesIO(decoded_raw_headers)
+            encoded_raw_headers = self.raw_headers.encode('iso-8859-1')
+            headers_buffer = BytesIO(encoded_raw_headers)
             try:
                 # py 2
                 # seekable has to be 0, otherwise it won't parse anything
@@ -132,7 +132,7 @@ class Response(object):
                 # py 3
                 if ex.args[0] == "__init__() got an unexpected keyword argument 'seekable'":
                     parser = email.parser.Parser()
-                    m = parser.parsestr(self.raw_headers.decode('iso-8859-1'))
+                    m = parser.parsestr(encoded_raw_headers)
                     self._headers = dict(m.items())
                 else:
                     raise
