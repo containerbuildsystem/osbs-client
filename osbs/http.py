@@ -120,7 +120,8 @@ class Response(object):
     def headers(self):
         if self._headers is None:
             logger.debug("raw headers: " + repr(self.raw_headers))
-            headers_buffer = BytesIO(self.raw_headers)
+            decoded_raw_headers = self.raw_headers.decode('iso-8859-1')
+            headers_buffer = BytesIO(decoded_raw_headers)
             try:
                 # py 2
                 # seekable has to be 0, otherwise it won't parse anything
