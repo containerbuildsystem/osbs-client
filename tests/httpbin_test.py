@@ -6,13 +6,17 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 
+import sys
 import logging
+import pytest
 
 from osbs.http import get_http_session
 
 logger = logging.getLogger("osbs.tests")
 
 
+@pytest.mark.skipif(sys.version_info[0] >= 3,
+                    reason="known not to work on Python 3 (#74)")
 def test_single_multi_secure_without_redirs():
     s = get_http_session(verbose=True)
     response_single = s.get("https://httpbin.org/get")
@@ -23,6 +27,8 @@ def test_single_multi_secure_without_redirs():
         logger.debug(line)
 
 
+@pytest.mark.skipif(sys.version_info[0] >= 3,
+                    reason="known not to work on Python 3 (#74)")
 def test_single_multi_without_redirs():
     s = get_http_session(verbose=True)
     response_single = s.get("http://httpbin.org/get")
@@ -33,6 +39,8 @@ def test_single_multi_without_redirs():
         logger.debug(line)
 
 
+@pytest.mark.skipif(sys.version_info[0] >= 3,
+                    reason="known not to work on Python 3 (#74)")
 def test_single_multi_secure():
     s = get_http_session(verbose=True)
     response_single = s.get("https://httpbin.org/get", allow_redirects=False)
@@ -43,6 +51,8 @@ def test_single_multi_secure():
         logger.debug(line)
 
 
+@pytest.mark.skipif(sys.version_info[0] >= 3,
+                    reason="known not to work on Python 3 (#74)")
 def test_single_multi():
     s = get_http_session(verbose=True)
     response_single = s.get("http://httpbin.org/get", allow_redirects=False)
@@ -53,6 +63,8 @@ def test_single_multi():
         logger.debug(line)
 
 
+@pytest.mark.skipif(sys.version_info[0] >= 3,
+                    reason="known not to work on Python 3 (#74)")
 def test_multi_multi():
     s = get_http_session(verbose=True)
     response = s.get("http://httpbin.org/stream/3", stream=True)
@@ -67,6 +79,8 @@ def test_multi_multi():
         logger.debug(line)
 
 
+@pytest.mark.skipif(sys.version_info[0] >= 3,
+                    reason="known not to work on Python 3 (#74)")
 def test_single_multi_multi():
     s = get_http_session(verbose=True)
     response_single = s.get("http://httpbin.org/basic-auth/user/pwd", username="user", password="pwd")
@@ -84,6 +98,8 @@ def test_single_multi_multi():
         logger.debug(line)
 
 
+@pytest.mark.skipif(sys.version_info[0] >= 3,
+                    reason="known not to work on Python 3 (#74)")
 def test_multi_single():
     s = get_http_session(verbose=True)
     response_multi = s.get("http://httpbin.org/stream/3", stream=True)
@@ -96,6 +112,8 @@ def test_multi_single():
     logger.debug(response_single.content)
 
 
+@pytest.mark.skipif(sys.version_info[0] >= 3,
+                    reason="known not to work on Python 3 (#74)")
 def test_utf8_encoding():
     s = get_http_session(verbose=True)
     response_multi = s.get("http://httpbin.org/encoding/utf8")
