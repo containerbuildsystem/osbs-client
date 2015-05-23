@@ -197,7 +197,13 @@ class Response(object):
     def _perform_on_curl(self):
         while True:
             ret, num_handles = self.curl_multi.perform()
-            if ret != pycurl.E_CALL_MULTI_PERFORM:
+            if ret == pycurl.E_CALL_MULTI_PERFORM:
+                # on RHEL 6, pycurl is raising this multiple times -- no idea what that means
+                # so, let's log it and ignore it
+                logger.debug("curl multi returned pycurl.E_CALL_MULTI_PERFORM -- "
+                             "this might be an error; or not")
+            if num_handles == 0:
+                logger.debug("num_handles = %d", num_handles)
                 break
         return num_handles
 
