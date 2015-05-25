@@ -10,7 +10,7 @@ import logging
 
 from osbs.utils import graceful_chain_get
 from osbs.constants import BUILD_FINISHED_STATES, BUILD_RUNNING_STATES, \
-    BUILD_SUCCEEDED_STATES, BUILD_FAILED_STATES
+    BUILD_SUCCEEDED_STATES, BUILD_FAILED_STATES, BUILD_PENDING_STATES
 
 
 logger = logging.getLogger(__name__)
@@ -58,6 +58,9 @@ class BuildResponse(object):
 
     def is_running(self):
         return self.status in BUILD_RUNNING_STATES
+
+    def is_pending(self):
+        return self.status in BUILD_PENDING_STATES
 
     def get_build_name(self):
         return graceful_chain_get(self.json, "metadata", "name")
