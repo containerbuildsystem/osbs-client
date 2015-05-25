@@ -38,7 +38,7 @@ class BuildResponse(object):
     @property
     def status(self):
         if self._status is None:
-            self._status = self.json['status'].lower()
+            self._status = unicode(self.json['status'].lower())
         return self._status
 
     @property
