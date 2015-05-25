@@ -32,6 +32,11 @@ I suggest using Docker engine 1.6+
 $ dnf install docker
 ```
 
+#### Setting Up Storage for Docker
+
+I advise you to follow [this guide](http://developerblog.redhat.com/2014/09/30/overview-storage-scalability-docker/).
+
+
 ### docker-registry
 
 Docker Registry where buildsystem pushes built packages and pulls base images.
@@ -39,6 +44,20 @@ Docker Registry where buildsystem pushes built packages and pulls base images.
 ```
 $ dnf install docker-registry
 ```
+
+#### Storage for Registry (direct-lvm)
+
+```
+$ lvcreate --wipesignatures y -n registry direct-lvm -l 50%VG
+$ mkfs.xfs /dev/direct-lvm/registry
+```
+
+Add this line to `/etc/fstab` and you are all set:
+
+```
+/dev/direct-lvm/registry /var/lib/docker-registry xfs defaults 1 1
+```
+
 
 ## OpenShift
 
