@@ -232,7 +232,7 @@ def cli():
                               help="checkout this commit")
     build_parser.add_argument("-t", "--target", action='store',
                               help="koji target name")
-    build_parser.add_argument("-a", "--arch", action='store', default=uname()[4],
+    build_parser.add_argument("-a", "--arch", dest='architecture', action='store', default=uname()[4],
                               help="build architecture")
     build_parser.add_argument("-u", "--user", action='store', required=True,
                               help="username (will be image prefix)")
