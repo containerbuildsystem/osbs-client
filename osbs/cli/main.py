@@ -60,10 +60,9 @@ def cmd_get_build(args, osbs):
         dockerfile = build.get_dockerfile()
         packages = build.get_rpm_packages()
         logs = build.get_logs()
-        repositories_json = build.get_repositories()
+        repositories_dict = build.get_repositories()
         repositories_str = None
-        if repositories_json is not None:
-            repositories = json.loads(repositories_json)
+        if repositories_dict is not None:
             repositories_template = """\
 Primary
 
@@ -73,8 +72,8 @@ Unique
 
 {unique}"""
             repositories_context = {
-                "primary": "\n".join(repositories["primary"]),
-                "unique": "\n".join(repositories["unique"]),
+                "primary": "\n".join(repositories_dict["primary"]),
+                "unique": "\n".join(repositories_dict["unique"]),
             }
             repositories_str = repositories_template.format(**repositories_context)
 
