@@ -248,7 +248,7 @@ class Openshift(object):
                     logger.debug("No, build is not in the state I'm "
                                  "waiting for.")
             else:
-                logger.info("The build %r isn't me %r" % (obj_name, build_id))
+                logger.info("The build %r isn't me %r", obj_name, build_id)
 
         # I'm not sure how we can end up here since there are two possible scenarios:
         #   1. our object was found and we are returning in the loop
@@ -269,7 +269,7 @@ class Openshift(object):
                 # this is woraround for https://github.com/openshift/origin/issues/2348
                 if 'was not found' in error.message:
                     logger.error(error)
-                    logger.error("I'm going to wait again. Retry #%d.")
+                    logger.error("I'm going to wait again. Retry #%d.", retry)
                     continue
                 raise
         raise OsbsException("Failed to wait for a build: %s" % build_id)
