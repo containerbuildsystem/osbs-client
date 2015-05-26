@@ -241,8 +241,15 @@ class Openshift(object):
                 logger.info("matching build found")
                 logger.debug("is %s in %s?", repr(obj_status_lower), states)
                 if obj_status_lower in states:
+                    logger.debug("Yes, build is in the state I waiting for.")
                     response.close_multi()
                     return obj
+                else:
+                    logger.debug("No, build is not in the state I'm "
+                                 "waiting for.")
+            else:
+                logger.info("The build %r isn't me %r" % (obj_name, build_id))
+
         # I'm not sure how we can end up here since there are two possible scenarios:
         #   1. our object was found and we are returning in the loop
         #   2. our object was not found and we keep waiting (in the loop)
