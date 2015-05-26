@@ -85,6 +85,9 @@ class BuildResponse(object):
     def get_logs(self):
         return graceful_chain_get(self.get_annotations_or_labels(), "logs")
 
+    def get_commit_id(self):
+        return graceful_chain_get(self.get_annotations_or_labels(), "commit_id")
+
     def get_repositories(self):
         repositories_json = graceful_chain_get(self.get_annotations_or_labels(), "repositories")
         if repositories_json:

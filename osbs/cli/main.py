@@ -60,6 +60,7 @@ def cmd_get_build(args, osbs):
         dockerfile = build.get_dockerfile()
         packages = build.get_rpm_packages()
         logs = build.get_logs()
+        commit_id = build.get_commit_id()
         repositories_dict = build.get_repositories()
         repositories_str = None
         if repositories_dict is not None:
@@ -95,6 +96,10 @@ PACKAGES
 
 {packages}
 
+COMMIT ID
+
+{commit_id}
+
 REPOSITORIES
 
 {repositories}"""
@@ -107,6 +112,7 @@ REPOSITORIES
             "logs": logs,
             "packages": packages,
             "repositories": repositories_str,
+            "commit_id": commit_id,
         }
         print(template.format(**context))
 
