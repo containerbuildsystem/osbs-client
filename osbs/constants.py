@@ -30,4 +30,5 @@ DEFAULT_NAMESPACE = "default"
 
 PROD_BUILD_TYPE = "prod"
 PROD_WITHOUT_KOJI_BUILD_TYPE = "prod-without-koji"
+PROD_WITH_SECRET_BUILD_TYPE = "prod-with-secret"
 SIMPLE_BUILD_TYPE = "simple"

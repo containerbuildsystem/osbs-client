@@ -13,7 +13,9 @@ import os
 
 from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.spec import CommonSpec, ProdSpec, SimpleSpec, ProdWithoutKojiSpec, CommonProdSpec
+from osbs.build.spec import ProdWithSecretSpec
 from osbs.constants import PROD_BUILD_TYPE, SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
+from osbs.constants import PROD_WITH_SECRET_BUILD_TYPE
 from osbs.exceptions import OsbsException
 
 
@@ -278,6 +280,46 @@ class ProductionWithoutKojiBuild(CommonProductionBuild):
         self.template['parameters']['output']['imageTag'] = self.spec.image_tag.value
 
         dj.write_dock_json()
+        self.build_json = self.template
+        logger.debug(self.build_json)
+        return self.build_json
+
+
+@register_build_class
+class ProductionWithSecretBuild(ProductionBuild):
+    key = PROD_WITH_SECRET_BUILD_TYPE
+
+    def __init__(self, build_json_store, **kwargs):
+        super(ProductionWithSecretBuild, self).__init__(build_json_store, **kwargs)
+        self.spec = ProdWithSecretSpec()
+
+    def set_params(self, **kwargs):
+        """
+        set parameters according to specification
+
+        these parameters are accepted:
+
+        :param koji_target: str, koji tag with packages used to build the image
+        :param kojiroot: str, URL from which koji packages are fetched
+        :param kojihub: str, URL of the koji hub
+        :param sources_command: str, command used to fetch dist-git sources
+        :param architecture: str, architecture we are building for
+        :param vendor: str, vendor name
+        :param build_host: str, host the build will run on
+        :param authoritative_registry: str, the docker registry authoritative for this image
+        :param metadata_plugin_use_auth: bool, use auth when posting metadata from dock?
+        :param source_secret: str, resource name of source secret
+        """
+        logger.debug("setting params '%s' for %s", kwargs, self.spec)
+        self.spec.set_params(**kwargs)
+
+    def render(self, validate=True):
+        if validate:
+            self.spec.validate()
+        super(ProductionWithSecretBuild, self).render()
+
+        self.template['parameters']['source']['sourceSecret']['name'] = self.spec.source_secret.value
+
         self.build_json = self.template
         logger.debug(self.build_json)
         return self.build_json

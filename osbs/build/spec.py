@@ -216,6 +216,20 @@ class ProdWithoutKojiSpec(CommonProdSpec):
         )
 
 
+class ProdWithSecretSpec(ProdSpec):
+    source_secret = BuildParam("source_secret")
+
+    def __init__(self):
+        super(ProdWithSecretSpec, self).__init__()
+        self.required_params += [
+            self.source_secret,
+        ]
+
+    def set_params(self, source_secret=None, **kwargs):
+        super(ProdWithSecretSpec, self).set_params(**kwargs)
+        self.source_secret.value = source_secret
+
+
 class SimpleSpec(CommonSpec):
     image_tag = BuildParam("image_tag")
 

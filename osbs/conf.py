@@ -207,3 +207,7 @@ class Configuration(object):
     def get_metadata_plugin_use_auth(self):
         return self._get_value("metadata_plugin_use_auth", self.conf_section, "metadata_plugin_use_auth",
                                can_miss=True, is_bool_val=True)
+
+    def get_source_secret(self):
+        return self._get_value("source_secret", self.conf_section,
+                               "source_secret", can_miss=True)

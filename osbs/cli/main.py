@@ -128,6 +128,7 @@ def cmd_build(args, osbs):
         architecture=osbs.build_conf.get_architecture(),
         yum_repourls=osbs.build_conf.get_yum_repourls(),
         namespace=osbs.build_conf.get_namespace(),
+        source_secret=osbs.build_conf.get_source_secret(),
     )
     build_id = build.build_id
     # we need to wait for kubelet to schedule the build, otherwise it's 500

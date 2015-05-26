@@ -23,6 +23,7 @@ from osbs.build.build_request import SimpleBuild, ProductionBuild, ProductionWit
 from osbs.build.spec import BuildIDParam
 from osbs.constants import BUILD_FINISHED_STATES
 from osbs.constants import SIMPLE_BUILD_TYPE, PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
+from osbs.constants import PROD_WITH_SECRET_BUILD_TYPE
 from osbs.exceptions import OsbsValidationException
 from osbs.http import Response
 from tests.constants import TEST_BUILD, TEST_LABEL, TEST_LABEL_VALUE
@@ -407,6 +408,36 @@ def test_render_prod_without_koji_request():
     assert labels['Authoritative_Registry'] is not None
     assert labels['Build_Host'] is not None
     assert labels['Vendor'] is not None
+
+
+def test_render_prod_with_secret_request():
+    this_file = inspect.getfile(test_render_prod_request)
+    this_dir = os.path.dirname(this_file)
+    parent_dir = os.path.dirname(this_dir)
+    inputs_path = os.path.join(parent_dir, "inputs")
+    bm = BuildManager(inputs_path)
+    build_request = bm.get_build_request_by_type(PROD_WITH_SECRET_BUILD_TYPE)
+    kwargs = {
+        'git_uri': "http://git/",
+        'git_ref': "master",
+        'user': "john-foo",
+        'component': "component",
+        'registry_uri': "registry.example.com",
+        'openshift_uri': "http://openshift/",
+        'koji_target': "koji-target",
+        'kojiroot': "http://root/",
+        'kojihub': "http://hub/",
+        'sources_command': "make",
+        'architecture': "x86_64",
+        'vendor': "Foo Vendor",
+        'build_host': "our.build.host.example.com",
+        'authoritative_registry': "registry.example.com",
+        'source_secret': 'mysecret',
+    }
+    build_request.set_params(**kwargs)
+    build_json = build_request.render()
+
+    assert build_json["parameters"]["source"]["sourceSecret"]["name"] == "mysecret"
 
 
 def test_render_with_yum_repourls():
