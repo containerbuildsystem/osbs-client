@@ -40,13 +40,13 @@ class BuildResponse(object):
     @property
     def status(self):
         if self._status is None:
-            self._status = self.json['status'].lower()
+            self._status = unicode(self.json['status'].lower())
         return self._status
 
     @property
     def build_id(self):
         if self._build_id is None:
-            self._build_id = self.json['metadata']['name']
+            self._build_id = unicode(self.json['metadata']['name'])
         return self._build_id
 
     def is_finished(self):
