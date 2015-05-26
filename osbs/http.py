@@ -173,7 +173,8 @@ class Response(object):
                 url = getattr(self.curl, "url", None)
             else:
                 url = None
-            raise HTTPError(url, self.status_code, None, None, None)
+            message = self._get_received_data()
+            raise HTTPError(url, self.status_code, message, None, None)
 
     def _check_curl_errors(self):
         for f in self.curl_multi.info_read()[2]:
