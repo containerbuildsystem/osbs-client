@@ -8,6 +8,7 @@ of the BSD license. See the LICENSE file for details.
 
 Exceptions raised by OSBS
 """
+from __future__ import print_function, absolute_import, unicode_literals
 
 from traceback import format_tb
 

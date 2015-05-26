@@ -233,11 +233,14 @@ class Openshift(object):
             except KeyError:
                 logger.error("'object' doesn't have any status")
                 continue
+            else:
+                obj_status_lower = obj_status.lower()
             logger.info("object has changed: '%s', status: '%s', name: '%s'",
                         j['type'], obj_status, obj_name)
             if obj_name == build_id:
                 logger.info("matching build found")
-                if obj_status.lower() in states:
+                logger.debug("is %s in %s?", repr(obj_status_lower), states)
+                if obj_status_lower in states:
                     response.close_multi()
                     return obj
         # I'm not sure how we can end up here since there are two possible scenarios:

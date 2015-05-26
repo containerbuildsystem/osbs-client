@@ -14,6 +14,7 @@ import sys
 
 import pytest
 import logging
+import six
 from .fake_api import openshift, osbs
 from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.build_response import BuildResponse
@@ -382,8 +383,11 @@ def test_get_user(openshift):
 
 def test_watch_build(openshift):
     response = openshift.wait_for_build_to_finish(TEST_BUILD)
+    status_lower = response["status"].lower()
     assert response["metadata"]["name"] == TEST_BUILD
-    assert response["status"].lower() in BUILD_FINISHED_STATES
+    assert status_lower in BUILD_FINISHED_STATES
+    assert isinstance(TEST_BUILD, six.text_type)
+    assert isinstance(status_lower, six.text_type)
 
 
 def test_create_build(openshift):

@@ -8,6 +8,7 @@ of the BSD license. See the LICENSE file for details.
 
 Specifications of build types.
 """
+from __future__ import print_function, absolute_import, unicode_literals
 
 import logging
 import datetime
