@@ -10,7 +10,7 @@ import json
 
 import logging
 from osbs.constants import DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNNING_STATES, BUILD_PENDING_STATES
-from osbs.exceptions import OsbsResponseException
+from osbs.exceptions import OsbsResponseException, OsbsException
 
 try:
     # py2
@@ -241,8 +241,15 @@ class Openshift(object):
                 logger.info("matching build found")
                 logger.debug("is %s in %s?", repr(obj_status_lower), states)
                 if obj_status_lower in states:
+                    logger.debug("Yes, build is in the state I waiting for.")
                     response.close_multi()
                     return obj
+                else:
+                    logger.debug("No, build is not in the state I'm "
+                                 "waiting for.")
+            else:
+                logger.info("The build %r isn't me %r" % (obj_name, build_id))
+
         # I'm not sure how we can end up here since there are two possible scenarios:
         #   1. our object was found and we are returning in the loop
         #   2. our object was not found and we keep waiting (in the loop)
@@ -253,8 +260,20 @@ class Openshift(object):
                                     status_code=response.status_code)
 
     def wait_for_build_to_finish(self, build_id, namespace=DEFAULT_NAMESPACE):
-        build_response = self.wait(build_id, BUILD_FINISHED_STATES, namespace)
-        return build_response
+        for retry in xrange(1, 10):
+            try:
+                build_response = self.wait(build_id, BUILD_FINISHED_STATES,
+                                           namespace)
+                return build_response
+            except OsbsResponseException as error:
+                if 'was not found' in str(error):
+                    logger.error(error)
+                    logger.error("I'm going to wait again. Retry #%d.")
+                    continue
+                raise
+            else:
+                break
+        raise OsbsException("Failed to wait for a build: %s" % build_id)
 
     def wait_for_build_to_get_scheduled(self, build_id, namespace=DEFAULT_NAMESPACE):
         build_response = self.wait(build_id, BUILD_FINISHED_STATES + BUILD_RUNNING_STATES,
