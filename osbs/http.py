@@ -186,6 +186,7 @@ class Response(object):
                 self._check_status_code()
                 yield self._get_received_data()
             if remaining == 0:
+                logger.debug("no more handles, quiting curl multi")
                 break
             sel = self.curl_multi.select(SELECT_TIMEOUT)
             if sel == -1:
@@ -195,16 +196,12 @@ class Response(object):
         self.close_multi()
 
     def _perform_on_curl(self):
-        while True:
-            ret, num_handles = self.curl_multi.perform()
-            if ret == pycurl.E_CALL_MULTI_PERFORM:
-                # on RHEL 6, pycurl is raising this multiple times -- no idea what that means
-                # so, let's log it and ignore it
-                logger.debug("curl multi returned pycurl.E_CALL_MULTI_PERFORM -- "
-                             "this might be an error; or not")
-            if num_handles == 0:
-                logger.debug("num_handles = %d", num_handles)
-                break
+        ret, num_handles = self.curl_multi.perform()
+        if ret == pycurl.E_CALL_MULTI_PERFORM:
+            # on RHEL 6, pycurl is raising this multiple times -- no idea what that means
+            # so, let's log it and ignore it
+            logger.debug("curl multi returned pycurl.E_CALL_MULTI_PERFORM -- "
+                         "this might be an error; or not")
         return num_handles
 
     def iter_lines(self):
