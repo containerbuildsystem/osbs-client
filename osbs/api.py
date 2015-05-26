@@ -199,9 +199,10 @@ class OSBS(object):
             raise OsbsException("Unknown build type: '%s'" % build_type)
 
     @osbsapi
-    def get_build_logs(self, build_id, follow=False, namespace=DEFAULT_NAMESPACE):
+    def get_build_logs(self, build_id, follow=False, build_json=None, namespace=DEFAULT_NAMESPACE):
         if follow:
-            return self.os.logs(build_id, follow, namespace=namespace)
+            return self.os.logs(build_id, follow=follow, build_json=build_json,
+                                namespace=namespace)
         try:
             build = self.os.get_build(build_id, namespace=namespace)
         except OsbsResponseException as ex:
@@ -218,11 +219,17 @@ class OSBS(object):
             if logs:
                 return logs
 
-            return self.os.logs(build_id, follow=False, namespace=namespace)
+            return self.os.logs(build_id, follow=False, build_json=build_json, namespace=namespace)
 
     @osbsapi
     def wait_for_build_to_finish(self, build_id, namespace=DEFAULT_NAMESPACE):
         response = self.os.wait_for_build_to_finish(build_id, namespace=namespace)
+        build_response = BuildResponse(None, response)
+        return build_response
+
+    @osbsapi
+    def wait_for_build_to_get_scheduled(self, build_id, namespace=DEFAULT_NAMESPACE):
+        response = self.os.wait_for_build_to_get_scheduled(build_id, namespace=namespace)
         build_response = BuildResponse(None, response)
         return build_response
 

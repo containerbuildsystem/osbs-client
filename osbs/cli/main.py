@@ -6,6 +6,7 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, absolute_import, unicode_literals
+import collections
 
 import json
 import logging
@@ -129,9 +130,15 @@ def cmd_build(args, osbs):
         namespace=osbs.build_conf.get_namespace(),
     )
     build_id = build.build_id
+    # we need to wait for kubelet to schedule the build, otherwise it's 500
+    build = osbs.wait_for_build_to_get_scheduled(build_id, namespace=osbs.build_conf.get_namespace())
     if not args.no_logs:
+        build_logs = osbs.get_build_logs(build_id, follow=True)
+        if not isinstance(build_logs, collections.Iterable):
+            logger.error("'%s' is not iterable; can't display logs", build_logs)
+            return
         print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
-        for line in osbs.get_build_logs(build_id, follow=True):
+        for line in build_logs:
             print(line)
     else:
         if args.output == 'json':
