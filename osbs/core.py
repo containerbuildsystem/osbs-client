@@ -241,7 +241,7 @@ class Openshift(object):
                 logger.info("matching build found")
                 logger.debug("is %s in %s?", repr(obj_status_lower), states)
                 if obj_status_lower in states:
-                    logger.debug("Yes, build is in the state I waiting for.")
+                    logger.debug("Yes, build is in the state I'm waiting for.")
                     response.close_multi()
                     return obj
                 else:
@@ -260,19 +260,18 @@ class Openshift(object):
                                     status_code=response.status_code)
 
     def wait_for_build_to_finish(self, build_id, namespace=DEFAULT_NAMESPACE):
-        for retry in xrange(1, 10):
+        for retry in range(1, 10):
             try:
                 build_response = self.wait(build_id, BUILD_FINISHED_STATES,
                                            namespace)
                 return build_response
             except OsbsResponseException as error:
-                if 'was not found' in str(error):
+                # this is woraround for https://github.com/openshift/origin/issues/2348
+                if 'was not found' in error.message:
                     logger.error(error)
                     logger.error("I'm going to wait again. Retry #%d.")
                     continue
                 raise
-            else:
-                break
         raise OsbsException("Failed to wait for a build: %s" % build_id)
 
     def wait_for_build_to_get_scheduled(self, build_id, namespace=DEFAULT_NAMESPACE):
