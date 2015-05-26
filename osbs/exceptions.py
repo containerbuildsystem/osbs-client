@@ -56,3 +56,7 @@ class OsbsNetworkException(OsbsException):
 
 class OsbsValidationException(OsbsException):
     pass
+
+
+class OsbsWatchBuildNotFound(OsbsException):
+    """ watch stream ended and build was not found """

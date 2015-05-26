@@ -10,7 +10,7 @@ import json
 
 import logging
 from osbs.constants import DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNNING_STATES, BUILD_PENDING_STATES
-from osbs.exceptions import OsbsResponseException, OsbsException
+from osbs.exceptions import OsbsResponseException, OsbsException, OsbsWatchBuildNotFound
 
 try:
     # py2
@@ -256,8 +256,7 @@ class Openshift(object):
         # Therefore, let's raise here
         logger.error("build '%s' was not found during wait", build_id)
         check_response(response)
-        raise OsbsResponseException("build '%s' was not found and response stream ended" % build_id,
-                                    status_code=response.status_code)
+        raise OsbsWatchBuildNotFound("build '%s' was not found and response stream ended" % build_id)
 
     def wait_for_build_to_finish(self, build_id, namespace=DEFAULT_NAMESPACE):
         for retry in range(1, 10):
@@ -265,13 +264,10 @@ class Openshift(object):
                 build_response = self.wait(build_id, BUILD_FINISHED_STATES,
                                            namespace)
                 return build_response
-            except OsbsResponseException as error:
+            except OsbsWatchBuildNotFound:
                 # this is woraround for https://github.com/openshift/origin/issues/2348
-                if 'was not found' in error.message:
-                    logger.error(error)
-                    logger.error("I'm going to wait again. Retry #%d.", retry)
-                    continue
-                raise
+                logger.error("I'm going to wait again. Retry #%d.", retry)
+                continue
         raise OsbsException("Failed to wait for a build: %s" % build_id)
 
     def wait_for_build_to_get_scheduled(self, build_id, namespace=DEFAULT_NAMESPACE):
