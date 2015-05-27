@@ -12,7 +12,7 @@ import logging
 import sys
 from functools import wraps
 
-from .constants import SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
+from .constants import SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE, PROD_WITH_SECRET_BUILD_TYPE
 from osbs.build.build_request import BuildManager
 from osbs.build.build_response import BuildResponse
 from osbs.constants import DEFAULT_NAMESPACE, PROD_BUILD_TYPE
@@ -137,6 +137,35 @@ class OSBS(object):
         return build_response
 
     @osbsapi
+    def create_prod_with_secret_build(self, git_uri, git_ref, user, component, target, architecture, source_secret,
+                                      yum_repourls=None, namespace=DEFAULT_NAMESPACE, **kwargs):
+        build_request = self.get_build_request(PROD_WITH_SECRET_BUILD_TYPE)
+        build_request.set_params(
+            git_uri=git_uri,
+            git_ref=git_ref,
+            user=user,
+            component=component,
+            registry_uri=self.build_conf.get_registry_uri(),
+            openshift_uri=self.os_conf.get_openshift_api_uri(),
+            kojiroot=self.build_conf.get_kojiroot(),
+            kojihub=self.build_conf.get_kojihub(),
+            sources_command=self.build_conf.get_sources_command(),
+            koji_target=target,
+            architecture=architecture,
+            vendor=self.build_conf.get_vendor(),
+            build_host=self.build_conf.get_build_host(),
+            authoritative_registry=self.build_conf.get_authoritative_registry(),
+            yum_repourls=yum_repourls,
+            source_secret=source_secret,
+            metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
+        )
+        build_json = build_request.render()
+        response = self.os.create_build(json.dumps(build_json), namespace=namespace)
+        build_response = BuildResponse(response)
+        logger.debug(build_response.json)
+        return build_response
+
+    @osbsapi
     def create_prod_without_koji_build(self, git_uri, git_ref, user, component, architecture, yum_repourls=None,
                                        namespace=DEFAULT_NAMESPACE, **kwargs):
         build_request = self.get_build_request(PROD_WITHOUT_KOJI_BUILD_TYPE)
@@ -195,6 +224,8 @@ class OSBS(object):
             return self.create_simple_build(namespace=namespace, **kwargs)
         elif build_type == PROD_WITHOUT_KOJI_BUILD_TYPE:
             return self.create_prod_without_koji_build(namespace=namespace, **kwargs)
+        elif build_type == PROD_WITH_SECRET_BUILD_TYPE:
+            return self.create_prod_with_secret_build(namespace=namespace, **kwargs)
         else:
             raise OsbsException("Unknown build type: '%s'" % build_type)
 
