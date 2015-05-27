@@ -92,6 +92,16 @@ PYCURL_NETWORK_CODES = [pycurl.E_BAD_CONTENT_ENCODING,
 
 PYCURL_NETWORK_CODES = [x for x in PYCURL_NETWORK_CODES if x is not None]
 
+PYCURL_DEBUG_PREFIX = [
+    '*',  # TEXT
+    '<',  # HEADER_IN
+    '>',  # HEADER_OUT
+    '{',  # DATA_IN
+    '}',  # DATA_OUT
+    '{',  # SSL_DATA_IN
+    '}',  # SSL_DATA_OUT
+]
+
 
 class Response(object):
     """ let's mock Response object of requests """
@@ -275,6 +285,13 @@ class PycurlAdapter(object):
             self._c = pycurl.Curl()
         return self._c
 
+    def debug_function(self, debug_type, debug_msg):
+        try:
+            debug_type = PYCURL_DEBUG_PREFIX[debug_type]
+        except IndexError:
+            debug_type = '%s' % debug_type
+        logger.debug("pycurl %s: '%s'", debug_type, debug_msg)
+
     def request(self, url, method, data=None, kerberos_auth=False,
                 allow_redirects=True, verify_ssl=True, use_json=False,
                 headers=None, stream=False, username=None, password=None):
@@ -307,6 +324,7 @@ class PycurlAdapter(object):
         self.c.setopt(pycurl.SSL_VERIFYPEER, 1 if verify_ssl else 0)
         self.c.setopt(pycurl.SSL_VERIFYHOST, 2 if verify_ssl else 0)
         self.c.setopt(pycurl.VERBOSE, 1 if self.verbose else 0)
+        self.c.setopt(pycurl.DEBUGFUNCTION, self.debug_function)
         if username and password:
             self.c.setopt(pycurl.USERPWD, b"%s:%s" % (username, password))
 
