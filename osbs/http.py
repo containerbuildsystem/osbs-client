@@ -102,6 +102,8 @@ PYCURL_DEBUG_PREFIX = [
     '}',  # SSL_DATA_OUT
 ]
 
+PYCURL_DEBUG_NOT_STRIPPED = ' !\\n'
+
 
 class Response(object):
     """ let's mock Response object of requests """
@@ -289,8 +291,13 @@ class PycurlAdapter(object):
         try:
             debug_type = PYCURL_DEBUG_PREFIX[debug_type]
         except IndexError:
-            debug_type = '%s' % debug_type
-        logger.debug("pycurl %s: '%s'", debug_type, debug_msg)
+            pass
+        not_stripped = ''
+        if debug_msg.endswith('\n'):
+            debug_msg = debug_msg[:-1]
+        else:
+            not_stripped = PYCURL_DEBUG_NOT_STRIPPED
+        logger.debug("pycurl %s%s: '%s'", debug_type, not_stripped, debug_msg)
 
     def request(self, url, method, data=None, kerberos_auth=False,
                 allow_redirects=True, verify_ssl=True, use_json=False,
