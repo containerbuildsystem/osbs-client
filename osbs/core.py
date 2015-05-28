@@ -167,10 +167,13 @@ class Openshift(object):
         :param follow:
         :return:
         """
-        # When build is in new or pending state, openshift responds with 500
-        build_json = build_json or self.get_build(build_id, namespace=namespace).json()
-        if build_json['status'].lower() in BUILD_PENDING_STATES:
-            return
+        if follow:
+            self.wait_for_build_to_get_scheduled(build_id, namespace=namespace)
+        else:
+            # When build is in new or pending state, openshift responds with 500
+            build_json = build_json or self.get_build(build_id, namespace=namespace).json()
+            if build_json['status'].lower() in BUILD_PENDING_STATES:
+                return
 
         # 0.5+
         buildlogs_url = self._build_url("buildLogs/%s/" % build_id,
