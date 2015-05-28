@@ -160,6 +160,8 @@ class Response(object):
         return self.response_buffer.tell() != 0
 
     def _get_received_data(self):
+        if self.response_buffer is None:
+            return ""
         result = self.response_buffer.getvalue()
         self.response_buffer.truncate(0)
         self.response_buffer.seek(0)
