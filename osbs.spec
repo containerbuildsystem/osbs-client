@@ -7,7 +7,7 @@
 %global release 1
 
 Name:           osbs
-Version:        0.8
+Version:        0.9
 %if "x%{postrelease}" != "x0"
 Release:        %{release}.%{postrelease}.git.%{shortcommit}%{?dist}
 %else
@@ -134,6 +134,9 @@ ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 %endif # with_python3
 
 %changelog
+* Thu May 28 2015 Tomas Tomecek <ttomecek@redhat.com> - 0.9-1
+- new upstream release: 0.9
+
 * Mon May 25 2015 Jiri Popelka <jpopelka@redhat.com> - 0.8-1
 - new upstream release: 0.8
 
