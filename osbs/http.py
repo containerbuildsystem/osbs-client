@@ -288,6 +288,22 @@ class PycurlAdapter(object):
         return self._c
 
     def debug_function(self, debug_type, debug_msg):
+        """
+        pycurl's debugfunction callback
+
+        Format pycurl debug messages, prefix it with debug type, strip newlines
+        and log it through python logging module with debug level.
+
+        Messages are prefixed in similar way how curl's TRACE_PLAIN works. See
+        PYCURL_DEBUG_PREFIX for description of prefixes.
+
+        By default all newlines ('\\n') are removed from the debug messages. If
+        new line wasn't found in the message it is prefixed with
+        string PYCURL_DEBUG_NOT_STRIPPED.
+
+        :param debug_type: int, defined by pycurl's API for debugfunction.
+        :param debug_msg: str, defined by pycurl's API for debugfunction.
+        """
         try:
             debug_type = PYCURL_DEBUG_PREFIX[debug_type]
         except IndexError:
