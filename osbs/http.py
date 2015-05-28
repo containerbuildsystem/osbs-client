@@ -456,7 +456,7 @@ def pycurl_debug_callback(debug_type, debug_msg):
     try:
         debug_type = PYCURL_DEBUG_PREFIX[debug_type]
     except IndexError:
-        pass
+        debug_type = '#%s' % debug_type
     not_stripped = ''
     if debug_msg.endswith('\n'):
         debug_msg = debug_msg[:-1]
