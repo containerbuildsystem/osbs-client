@@ -437,7 +437,7 @@ def test_render_prod_with_secret_request():
     build_request.set_params(**kwargs)
     build_json = build_request.render()
 
-    assert build_json["parameters"]["source"]["sourceSecret"]["name"] == "mysecret"
+    assert build_json["parameters"]["source"]["sourceSecretName"] == "mysecret"
 
 
 def test_render_with_yum_repourls():

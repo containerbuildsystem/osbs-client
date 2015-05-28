@@ -318,7 +318,7 @@ class ProductionWithSecretBuild(ProductionBuild):
             self.spec.validate()
         super(ProductionWithSecretBuild, self).render()
 
-        self.template['parameters']['source']['sourceSecret']['name'] = self.spec.source_secret.value
+        self.template['parameters']['source']['sourceSecretName'] = self.spec.source_secret.value
 
         self.build_json = self.template
         logger.debug(self.build_json)
