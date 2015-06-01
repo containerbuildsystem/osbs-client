@@ -1,6 +1,6 @@
 %global with_python3 0
 
-%global commit e52e756028d2b6acd1ef3d2ce15c73d585db06d4
+%global commit 91cb1388eee892d41c043f77f4dfb2d07bdbc784
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 # set to 0 to create a normal release
 %global postrelease 0
