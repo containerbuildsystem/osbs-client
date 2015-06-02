@@ -12,6 +12,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 
 import logging
 import datetime
+import re
 from osbs.constants import DEFAULT_GIT_REF
 from osbs.exceptions import OsbsValidationException
 
@@ -56,6 +57,39 @@ class UserParam(BuildParam):
         BuildParam.value.fset(self, val)
 
 
+class BuildIDParam(BuildParam):
+    """ validate build ID """
+    name = "name"
+
+    def __init__(self):
+        super(BuildIDParam, self).__init__(self.name)
+
+    @BuildParam.value.setter
+    def value(self, val):  # pylint: disable=W0221
+        d = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+        # build ID has to conform to:
+        #  * 63 chars at most
+        #  * (([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?
+        build_id = "%s-%s" % (val, d)
+
+        if len(build_id) > 63:
+            # component + timestamp > 63
+            d_len = len(d)
+            new_prefix = val[:63 - d_len - 1]
+            new_name = "%s-%s" % (new_prefix, d)
+            logger.warning("'%s' is too long, changing to '%s'", build_id, new_name)
+            build_id = new_name
+
+        build_id_re = re.compile(r"^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$")
+        match = build_id_re.match(build_id)
+        if not match:
+            logger.error("'%s' is not valid build ID", build_id)
+            raise OsbsValidationException("Build ID '%s', doesn't match regex '%s'" %
+                                          (build_id, build_id_re))
+        BuildParam.value.fset(self, build_id)
+
+
 class BuildTypeSpec(object):
     """ Abstract baseclass for specification of a buildtype """
     required_params = None
@@ -81,7 +115,7 @@ class CommonSpec(BuildTypeSpec):
     component = BuildParam('component')
     registry_uri = BuildParam('registry_uri')
     openshift_uri = BuildParam('openshift_uri')
-    name = BuildParam("name")
+    name = BuildIDParam()
     yum_repourls = BuildParam("yum_repourls")
 
     def __init__(self):
@@ -105,8 +139,7 @@ class CommonSpec(BuildTypeSpec):
         if not (yum_repourls is None or isinstance(yum_repourls, list)):
             raise OsbsValidationException("yum_repourls must be a list")
         self.yum_repourls.value = yum_repourls or []
-        d = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        self.name.value = "%s-%s" % (self.component.value, d)
+        self.name.value = self.component.value
 
 
 class CommonProdSpec(CommonSpec):

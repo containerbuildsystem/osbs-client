@@ -20,6 +20,7 @@ from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.build_response import BuildResponse
 from osbs.build.build_request import BuildManager, BuildRequest
 from osbs.build.build_request import SimpleBuild, ProductionBuild, ProductionWithoutKojiBuild
+from osbs.build.spec import BuildIDParam
 from osbs.constants import BUILD_FINISHED_STATES
 from osbs.constants import SIMPLE_BUILD_TYPE, PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
 from osbs.exceptions import OsbsValidationException
@@ -465,3 +466,18 @@ def test_parse_headers():
     assert r.headers is not None
     assert len(r.headers.items()) > 0
     assert r.headers["location"]
+
+
+def test_build_id_param_shorten_id():
+    p = BuildIDParam()
+    p.value = "x" * 63
+
+    val = p.value
+
+    assert len(val) == 63
+
+
+def test_build_id_param_raise_exc():
+    p = BuildIDParam()
+    with pytest.raises(OsbsValidationException):
+        p.value = r"\\\\@@@@||||"
