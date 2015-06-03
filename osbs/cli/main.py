@@ -254,7 +254,7 @@ def cli():
     build_parser.add_argument("--no-logs", action='store_true', required=False, default=False,
                               help="don't print logs after submitting build")
     build_parser.add_argument("--add-yum-repo", action='append', metavar="URL",
-                              help="URL of yum repo file")
+                              dest="yum_repourls", help="URL of yum repo file")
     build_parser.add_argument("--source-secret", action='store', required=False,
                               help="resource name of source secret")
     build_parser.set_defaults(func=cmd_build)
