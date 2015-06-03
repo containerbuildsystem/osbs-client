@@ -25,6 +25,9 @@
       "name": "add_yum_repo_by_url"
     },
     {
+      "name": "inject_yum_repo"
+    },
+    {
       "name": "dockerfile_content"
     },
     {

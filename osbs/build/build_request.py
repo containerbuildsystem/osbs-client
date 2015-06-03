@@ -230,9 +230,14 @@ class ProductionBuild(CommonProductionBuild):
 
         self.template['parameters']['output']['imageTag'] = self.spec.image_tag.value
 
-        dj.dock_json_set_arg('prebuild_plugins', "koji", "target", self.spec.koji_target.value)
-        dj.dock_json_set_arg('prebuild_plugins', "koji", "root", self.spec.kojiroot.value)
-        dj.dock_json_set_arg('prebuild_plugins', "koji", "hub", self.spec.kojihub.value)
+        # if there is yum repo specified, don't pick stuff from koji
+        if self.spec.yum_repourls.value:
+            logger.info("removing koji from request, because there is yum repo specified")
+            dj.remove_plugin("prebuild_plugins", "koji")
+        else:
+            dj.dock_json_set_arg('prebuild_plugins', "koji", "target", self.spec.koji_target.value)
+            dj.dock_json_set_arg('prebuild_plugins', "koji", "root", self.spec.kojiroot.value)
+            dj.dock_json_set_arg('prebuild_plugins', "koji", "hub", self.spec.kojihub.value)
 
         dj.write_dock_json()
         self.build_json = self.template

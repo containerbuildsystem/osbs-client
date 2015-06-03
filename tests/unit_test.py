@@ -32,14 +32,21 @@ from tests.fake_api import ResponseMapping, DEFINITION
 logger = logging.getLogger("osbs.tests")
 
 
-def plugin_value_get(plugins, plugin_type, plugin_name, *args):
+class NoSuchPluginException(Exception):
+    pass
+
+
+def get_plugin(plugins, plugin_type, plugin_name):
     plugins = plugins[plugin_type]
     for plugin in plugins:
         if plugin["name"] == plugin_name:
-            break
+            return plugin
     else:
-        raise RuntimeError("no such plugin")
-    result = plugin
+        raise NoSuchPluginException()
+
+
+def plugin_value_get(plugins, plugin_type, plugin_name, *args):
+    result = get_plugin(plugins, plugin_type, plugin_name)
     for arg in args:
         result = result[arg]
     return result
@@ -130,7 +137,20 @@ def test_manipulator():
     m = DockJsonManipulator(BUILD_JSON, INNER_DOCK_JSON)
     assert m is not None
 
-    
+
+def test_manipulator_remove_plugin():
+    inner = copy.deepcopy(INNER_DOCK_JSON)
+    m = DockJsonManipulator(BUILD_JSON, inner)
+    m.remove_plugin("postbuild_plugins", "all_rpm_packages")
+    assert len([x for x in inner["postbuild_plugins"] if x.get("all_rpm_packages", None)]) == 0
+
+
+def test_manipulator_remove_nonexisting_plugin():
+    inner = copy.deepcopy(INNER_DOCK_JSON)
+    m = DockJsonManipulator(BUILD_JSON, inner)
+    m.remove_plugin("postbuild_plugins", "this-doesnt-exist")
+
+
 def test_manipulator_get_dock_json():
     build_json = copy.deepcopy(BUILD_JSON)
     env_json = build_json['parameters']['strategy']['customStrategy']['env']
@@ -199,6 +219,72 @@ def test_render_simple_request():
     plugins = json.loads(plugins_json)
     assert plugin_value_get(plugins, "postbuild_plugins", "store_metadata_in_osv3", "args", "url") == \
            "http://openshift/"
+
+
+def test_render_prod_request_with_repo():
+    this_file = inspect.getfile(test_render_prod_request)
+    this_dir = os.path.dirname(this_file)
+    parent_dir = os.path.dirname(this_dir)
+    inputs_path = os.path.join(parent_dir, "inputs")
+    bm = BuildManager(inputs_path)
+    build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+    kwargs = {
+        'git_uri': "http://git/",
+        'git_ref': "master",
+        'user': "john-foo",
+        'component': "component",
+        'registry_uri': "registry.example.com",
+        'openshift_uri': "http://openshift/",
+        'koji_target': "koji-target",
+        'kojiroot': "http://root/",
+        'kojihub': "http://hub/",
+        'sources_command': "make",
+        'architecture': "x86_64",
+        'vendor': "Foo Vendor",
+        'build_host': "our.build.host.example.com",
+        'authoritative_registry': "registry.example.com",
+        'yum_repourls': ["http://example.com/my.repo"],
+    }
+    build_request.set_params(**kwargs)
+    build_json = build_request.render()
+
+    assert build_json["metadata"]["name"].startswith("component-")
+    assert build_json["parameters"]["source"]['git']['uri'] == "http://git/"
+    assert build_json["parameters"]["source"]['git']['ref'] == "master"
+    assert build_json["parameters"]["output"]['registry'] == "registry.example.com"
+    assert build_json["parameters"]["output"]['imageTag'].startswith(
+        "john-foo/component:"
+    )
+
+    env_vars = build_json['parameters']['strategy']['customStrategy']['env']
+    plugins_json = None
+    for d in env_vars:
+        if d['name'] == 'DOCK_PLUGINS':
+            plugins_json = d['value']
+            break
+
+    assert plugins_json is not None
+    plugins = json.loads(plugins_json)
+
+    assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts", "args", "command") == "make"
+    assert plugin_value_get(plugins, "prebuild_plugins", "change_source_registry", "args", "registry_uri") == \
+           "registry.example.com"
+    assert plugin_value_get(plugins, "postbuild_plugins", "tag_by_labels", "args", "registry_uri") == \
+           "registry.example.com"
+    assert plugin_value_get(plugins, "postbuild_plugins", "store_metadata_in_osv3", "args", "url") == \
+           "http://openshift/"
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "prebuild_plugins", "koji")
+    plugin_value_get(plugins, "prebuild_plugins", "add_yum_repo_by_url", "args", "repourls") == \
+        ["http://example.com/my.repo"]
+
+    labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile", "args", "labels")
+
+    assert labels is not None
+    assert labels['Architecture'] is not None
+    assert labels['Authoritative_Registry'] is not None
+    assert labels['Build_Host'] is not None
+    assert labels['Vendor'] is not None
 
 
 def test_render_prod_request():
