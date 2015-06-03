@@ -41,6 +41,15 @@ class DockJsonManipulator(object):
         match = [x for x in self.dock_json[plugin_type] if x.get('name', None) == plugin_name]
         return match[0]
 
+    def remove_plugin(self, plugin_type, plugin_name):
+        """
+        if config contains plugin, remove it
+        """
+        for p in self.dock_json[plugin_type]:
+            if p.get('name', None) == plugin_name:
+                self.dock_json[plugin_type].remove(p)
+                break
+
     def dock_json_has_plugin_conf(self, plugin_type, plugin_name):
         """
         Check whether a plugin is configured.
