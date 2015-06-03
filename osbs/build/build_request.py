@@ -304,6 +304,8 @@ class SimpleBuild(CommonBuild):
         super(SimpleBuild, self).render()
         dj = DockJsonManipulator(self.template, self.inner_template)
         self.template['parameters']['output']['imageTag'] = self.spec.image_tag.value
+        dj.dock_json_set_arg('prebuild_plugins', "change_source_registry", "registry_uri",
+                             self.spec.registry_uri.value)
         dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url",
                              self.spec.openshift_uri.value)
         dj.write_dock_json()
