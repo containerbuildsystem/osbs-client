@@ -92,3 +92,15 @@ class BuildResponse(object):
         repositories_json = graceful_chain_get(self.get_annotations_or_labels(), "repositories")
         if repositories_json:
             return json.loads(repositories_json)
+
+    def get_tar_metadata(self):
+        return graceful_chain_get(self.get_annotations_or_labels(), "tar_metadata")
+
+    def get_tar_metadata_size(self):
+        return graceful_chain_get(self.get_tar_metadata(), "size")
+
+    def get_tar_metadata_md5sum(self):
+        return graceful_chain_get(self.get_tar_metadata(), "md5sum")
+
+    def get_tar_metadata_sha256sum(self):
+        return graceful_chain_get(self.get_tar_metadata(), "sha256sum")
