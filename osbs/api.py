@@ -201,6 +201,7 @@ class OSBS(object):
             registry_uri=self.build_conf.get_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_api_uri(),
             yum_repourls=yum_repourls,
+            metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
         )
         build_json = build_request.render()
         response = self.os.create_build(json.dumps(build_json), namespace=namespace)

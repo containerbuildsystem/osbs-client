@@ -117,6 +117,7 @@ class CommonSpec(BuildTypeSpec):
     openshift_uri = BuildParam('openshift_uri')
     name = BuildIDParam()
     yum_repourls = BuildParam("yum_repourls")
+    metadata_plugin_use_auth = BuildParam("metadata_plugin_use_auth", allow_none=True)  # for debugging
 
     def __init__(self):
         self.required_params = [
@@ -129,7 +130,8 @@ class CommonSpec(BuildTypeSpec):
         ]
 
     def set_params(self, git_uri=None, git_ref=None, registry_uri=None, user=None,
-                   component=None, openshift_uri=None, yum_repourls=None, **kwargs):
+                   component=None, openshift_uri=None, yum_repourls=None,
+                   metadata_plugin_use_auth=None, **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
         self.user.value = user
@@ -139,6 +141,7 @@ class CommonSpec(BuildTypeSpec):
         if not (yum_repourls is None or isinstance(yum_repourls, list)):
             raise OsbsValidationException("yum_repourls must be a list")
         self.yum_repourls.value = yum_repourls or []
+        self.metadata_plugin_use_auth.value = metadata_plugin_use_auth
         self.name.value = self.component.value
 
 
@@ -148,7 +151,6 @@ class CommonProdSpec(CommonSpec):
     vendor = BuildParam("vendor")
     build_host = BuildParam("build_host")
     authoritative_registry = BuildParam("authoritative_registry ")
-    metadata_plugin_use_auth = BuildParam("metadata_plugin_use_auth", allow_none=True)  # for debugging
 
     def __init__(self):
         super(CommonProdSpec, self).__init__()
@@ -161,15 +163,13 @@ class CommonProdSpec(CommonSpec):
         ]
 
     def set_params(self, sources_command=None, architecture=None, vendor=None,
-                   build_host=None, authoritative_registry=None,
-                   metadata_plugin_use_auth=None, **kwargs):
+                   build_host=None, authoritative_registry=None, **kwargs):
         super(CommonProdSpec, self).set_params(**kwargs)
         self.sources_command.value = sources_command
         self.architecture.value = architecture
         self.vendor.value = vendor
         self.build_host.value = build_host
         self.authoritative_registry.value = authoritative_registry
-        self.metadata_plugin_use_auth.value = metadata_plugin_use_auth
 
 
 class ProdSpec(CommonProdSpec):
