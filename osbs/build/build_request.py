@@ -317,8 +317,13 @@ class ProductionWithSecretBuild(ProductionBuild):
         if validate:
             self.spec.validate()
         super(ProductionWithSecretBuild, self).render()
+        dj = DockJsonManipulator(self.template, self.inner_template)
 
         self.template['parameters']['source']['sourceSecretName'] = self.spec.source_secret.value
+        self.template['parameters']['output']['registry'] = ""
+        dj.dock_json_set_arg('postbuild_plugins', "pulp_push", "pulp_registry_name",
+                             self.spec.pulp_registry.value)
+        dj.write_dock_json()
 
         self.build_json = self.template
         logger.debug(self.build_json)

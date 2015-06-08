@@ -218,16 +218,19 @@ class ProdWithoutKojiSpec(CommonProdSpec):
 
 class ProdWithSecretSpec(ProdSpec):
     source_secret = BuildParam("source_secret")
+    pulp_registry = BuildParam("pulp_registry")
 
     def __init__(self):
         super(ProdWithSecretSpec, self).__init__()
         self.required_params += [
             self.source_secret,
+            self.pulp_registry,
         ]
 
-    def set_params(self, source_secret=None, **kwargs):
+    def set_params(self, source_secret=None, pulp_registry=None, **kwargs):
         super(ProdWithSecretSpec, self).set_params(**kwargs)
         self.source_secret.value = source_secret
+        self.pulp_registry.value = pulp_registry
 
 
 class SimpleSpec(CommonSpec):

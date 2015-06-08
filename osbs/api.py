@@ -158,6 +158,7 @@ class OSBS(object):
             yum_repourls=yum_repourls,
             source_secret=source_secret,
             metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
+            pulp_registry=self.build_conf.get_pulp_registry(),
         )
         build_json = build_request.render()
         response = self.os.create_build(json.dumps(build_json), namespace=namespace)

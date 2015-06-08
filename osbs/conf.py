@@ -177,7 +177,10 @@ class Configuration(object):
         return self._get_value("use_kerberos", self.conf_section, "use_kerberos", can_miss=True, is_bool_val=True)
 
     def get_registry_uri(self):
-        return self._get_value("registry_uri", self.conf_section, "registry_uri")
+        return self._get_value("registry_uri", self.conf_section, "registry_uri", can_miss=True)
+
+    def get_pulp_registry(self):
+        return self._get_value("pulp_registry_name", self.conf_section, "pulp_registry_name", can_miss=True)
 
     def get_build_json_store(self):
         return self._get_value("build_json_dir", GENERAL_CONFIGURATION_SECTION, "build_json_dir")
