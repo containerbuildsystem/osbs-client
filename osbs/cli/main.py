@@ -139,8 +139,11 @@ def cmd_build(args, osbs):
             logger.error("'%s' is not iterable; can't display logs", build_logs)
             return
         print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
-        for line in build_logs:
-            print(line)
+        try:
+            for line in build_logs:
+                print(line)
+        except Exception as ex:
+            logger.error("Error during fetching logs for build %s: %s", build_id, repr(ex))
     else:
         if args.output == 'json':
             print_json_nicely(build.json)
