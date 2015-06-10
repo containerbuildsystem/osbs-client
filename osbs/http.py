@@ -153,7 +153,12 @@ class Response(object):
 
     def json(self, check=True):
         if check:
-            self._check_status_code()
+            try:
+                self._check_status_code()
+            except HTTPError:
+                logger.exception("Original content with failed response: %s",
+                                 self.content)
+                raise
         return json.loads(self.content.decode(self.encoding))
 
     def _any_data_received(self):
