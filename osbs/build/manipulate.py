@@ -72,6 +72,7 @@ class DockJsonManipulator(object):
 
     def dock_json_set_arg(self, plugin_type, plugin_name, arg_key, arg_value):
         plugin_conf = self._dock_json_get_plugin_conf_or_fail(plugin_type, plugin_name)
+        plugin_conf.setdefault("args", {})
         plugin_conf['args'][arg_key] = arg_value
 
     def dock_json_merge_arg(self, plugin_type, plugin_name, arg_key, arg_dict):
