@@ -106,3 +106,6 @@ class BuildResponse(object):
 
     def get_tar_metadata_sha256sum(self):
         return graceful_chain_get(self.get_tar_metadata(), "sha256sum")
+
+    def get_tar_metadata_filename(self):
+        return graceful_chain_get(self.get_tar_metadata(), "filename")
