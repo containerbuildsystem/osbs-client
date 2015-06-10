@@ -219,18 +219,24 @@ class ProdWithoutKojiSpec(CommonProdSpec):
 class ProdWithSecretSpec(ProdSpec):
     source_secret = BuildParam("source_secret")
     pulp_registry = BuildParam("pulp_registry")
+    nfs_server_path = BuildParam("nfs_server_path")
+    nfs_dest_dir = BuildParam("nfs_dest_dir")
 
     def __init__(self):
         super(ProdWithSecretSpec, self).__init__()
         self.required_params += [
             self.source_secret,
             self.pulp_registry,
+            self.nfs_server_path,
         ]
 
-    def set_params(self, source_secret=None, pulp_registry=None, **kwargs):
+    def set_params(self, source_secret=None, pulp_registry=None, nfs_server_path=None,
+                   nfs_dest_dir=None, **kwargs):
         super(ProdWithSecretSpec, self).set_params(**kwargs)
         self.source_secret.value = source_secret
         self.pulp_registry.value = pulp_registry
+        self.nfs_server_path.value = nfs_server_path
+        self.nfs_dest_dir.value = nfs_dest_dir
 
 
 class SimpleSpec(CommonSpec):

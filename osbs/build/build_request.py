@@ -320,9 +320,15 @@ class ProductionWithSecretBuild(ProductionBuild):
         dj = DockJsonManipulator(self.template, self.inner_template)
 
         self.template['parameters']['source']['sourceSecretName'] = self.spec.source_secret.value
+        # don't push to docker registry, we're using pulp here
         self.template['parameters']['output']['registry'] = ""
         dj.dock_json_set_arg('postbuild_plugins', "pulp_push", "pulp_registry_name",
                              self.spec.pulp_registry.value)
+        dj.dock_json_set_arg('postbuild_plugins', "cp_built_image_to_nfs", "nfs_server_path",
+                             self.spec.nfs_server_path.value)
+        if self.spec.nfs_dest_dir.value:
+            dj.dock_json_set_arg('postbuild_plugins', "cp_built_image_to_nfs", "dest_dir",
+                                 self.spec.nfs_dest_dir.value)
         dj.write_dock_json()
 
         self.build_json = self.template

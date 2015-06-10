@@ -214,3 +214,11 @@ class Configuration(object):
     def get_source_secret(self):
         return self._get_value("source_secret", self.conf_section,
                                "source_secret", can_miss=True)
+
+    def get_nfs_server_path(self):
+        return self._get_value("nfs_server_path", self.conf_section,
+                               "nfs_server_path", can_miss=True)
+
+    def get_nfs_destination_dir(self):
+        return self._get_value("nfs_dest_dir", self.conf_section,
+                               "nfs_dest_dir", can_miss=True)
