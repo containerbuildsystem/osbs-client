@@ -127,6 +127,7 @@ class CommonBuild(BuildRequest):
         :param component: str, component part of the image name
         :param openshift_uri: str, URL of openshift instance for the build
         :param yum_repourls: list of str, URLs to yum repo files to include
+        :param metadata_plugin_use_auth: bool, use auth when posting metadata from dock?
         """
         logger.debug("setting params '%s' for %s", kwargs, self.spec)
         self.spec.set_params(**kwargs)
@@ -141,6 +142,10 @@ class CommonBuild(BuildRequest):
                 self.dj.dock_json_has_plugin_conf('prebuild_plugins', "add_yum_repo_by_url")):
             self.dj.dock_json_set_arg('prebuild_plugins', "add_yum_repo_by_url", "repourls",
                                       self.spec.yum_repourls.value)
+
+        if self.spec.metadata_plugin_use_auth.value is not None:
+            self.dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
+                                      "use_auth", self.spec.metadata_plugin_use_auth.value)
 
     def validate_input(self):
         self.spec.validate()
@@ -179,9 +184,6 @@ class CommonProductionBuild(CommonBuild):
                              self.spec.registry_uri.value)
         dj.dock_json_set_arg('postbuild_plugins', "tag_by_labels", "registry_uri",
                              self.spec.registry_uri.value)
-        if self.spec.metadata_plugin_use_auth.value is not None:
-            dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
-                                 "use_auth", self.spec.metadata_plugin_use_auth.value)
 
         implicit_labels = {
             'Architecture': self.spec.architecture.value,
