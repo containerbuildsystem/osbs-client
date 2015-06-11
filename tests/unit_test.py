@@ -11,6 +11,7 @@ import inspect
 import json
 import os
 import sys
+from types import GeneratorType
 
 import pytest
 import logging
@@ -565,11 +566,24 @@ def test_get_user_api(osbs):
 
 
 def test_build_logs_api(osbs):
-    response = osbs.get_build_logs(TEST_BUILD)
-    # We should get a response.
-    assert response is not None
-    # The first line of the logs should be 'Step 0 : FROM ...'
-    assert response.split('\n')[0].find("Step ") != -1
+    logs = osbs.get_build_logs(TEST_BUILD)
+    assert isinstance(logs, tuple(list(six.string_types) + [bytes]))
+    assert logs == b"line 1"
+
+
+def test_build_logs_api_follow(osbs):
+    logs = osbs.get_build_logs(TEST_BUILD, follow=True)
+    assert isinstance(logs, GeneratorType)
+    assert next(logs) == "line 1"
+    with pytest.raises(StopIteration):
+        assert next(logs)
+
+
+@pytest.mark.parametrize('decode_docker_logs', [True, False])
+def test_build_logs_api_from_docker(osbs, decode_docker_logs):
+    logs = osbs.get_docker_build_logs(TEST_BUILD, decode_logs=decode_docker_logs)
+    assert isinstance(logs, tuple(list(six.string_types) + [bytes]))
+    assert logs.split('\n')[0].find("Step ") != -1
 
 
 @pytest.mark.skipif(sys.version_info[0] >= 3,
