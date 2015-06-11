@@ -137,7 +137,7 @@ class OSBS(object):
         return build_response
 
     @osbsapi
-    def create_prod_with_secret_build(self, git_uri, git_ref, user, component, target, architecture, source_secret,
+    def create_prod_with_secret_build(self, git_uri, git_ref, user, component, target, architecture,
                                       yum_repourls=None, namespace=DEFAULT_NAMESPACE, **kwargs):
         build_request = self.get_build_request(PROD_WITH_SECRET_BUILD_TYPE)
         build_request.set_params(
@@ -156,7 +156,7 @@ class OSBS(object):
             build_host=self.build_conf.get_build_host(),
             authoritative_registry=self.build_conf.get_authoritative_registry(),
             yum_repourls=yum_repourls,
-            source_secret=source_secret,
+            source_secret=self.build_conf.get_source_secret(),
             metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
             pulp_registry=self.os_conf.get_pulp_registry(),
             nfs_server_path=self.os_conf.get_nfs_server_path(),
