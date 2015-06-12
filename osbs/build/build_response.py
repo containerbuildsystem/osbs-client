@@ -70,6 +70,9 @@ class BuildResponse(object):
     def get_image_tag(self):
         return graceful_chain_get(self.json, "spec", "output", "to", "name")
 
+    def get_time_created(self):
+        return graceful_chain_get(self.json, "metadata", "creationTimestamp")
+
     def get_annotations_or_labels(self):
         r = graceful_chain_get(self.json, "metadata", "annotations")
         if r is None:

@@ -59,11 +59,6 @@ def cmd_get_build(args, osbs):
     if args.output == 'json':
         print_json_nicely(build_json)
     elif args.output == 'text':
-        metadata = build_json.get("metadata", {})
-        dockerfile = build.get_dockerfile()
-        packages = build.get_rpm_packages()
-        logs = build.get_logs()
-        commit_id = build.get_commit_id()
         repositories_dict = build.get_repositories()
         repositories_str = None
         if repositories_dict is not None:
@@ -110,12 +105,12 @@ REPOSITORIES
             "build_id": build.get_build_name(),
             "status": build.status,
             "image": build.get_image_tag(),
-            "date": build_json['metadata']['creationTimestamp'],
-            "dockerfile": dockerfile,
-            "logs": logs,
-            "packages": packages,
+            "date": build.get_time_created(),
+            "dockerfile": build.get_dockerfile(),
+            "logs": build.get_logs(),
+            "packages": build.get_rpm_packages(),
             "repositories": repositories_str,
-            "commit_id": commit_id,
+            "commit_id": build.get_commit_id(),
         }
         print(template.format(**context))
 
