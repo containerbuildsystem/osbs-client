@@ -20,7 +20,7 @@ class DockJsonManipulator(object):
 
     def get_dock_json(self):
         """ return dock json from existing build json """
-        env_json = self.build_json['parameters']['strategy']['customStrategy']['env']
+        env_json = self.build_json['spec']['strategy']['customStrategy']['env']
         try:
             p = [env for env in env_json if env["name"] == "DOCK_PLUGINS"]
         except TypeError:
@@ -88,7 +88,7 @@ class DockJsonManipulator(object):
         plugin_conf['args'][arg_key] = value
 
     def write_dock_json(self):
-        env_json = self.build_json['parameters']['strategy']['customStrategy']['env']
+        env_json = self.build_json['spec']['strategy']['customStrategy']['env']
         p = [env for env in env_json if env["name"] == "DOCK_PLUGINS"]
         if len(p) <= 0:
             raise RuntimeError("\"env\" misses key DOCK_PLUGINS")

@@ -504,7 +504,7 @@ def test_get_user(openshift):
 
 def test_watch_build(openshift):
     response = openshift.wait_for_build_to_finish(TEST_BUILD)
-    status_lower = response["status"].lower()
+    status_lower = response["status"]["phase"].lower()
     assert response["metadata"]["name"] == TEST_BUILD
     assert status_lower in BUILD_FINISHED_STATES
     assert isinstance(TEST_BUILD, six.text_type)
@@ -515,7 +515,7 @@ def test_create_build(openshift):
     response = openshift.create_build({})
     assert response is not None
     assert response.json()["metadata"]["name"] == TEST_BUILD
-    assert response.json()["status"].lower() in BUILD_FINISHED_STATES
+    assert response.json()["status"]["phase"].lower() in BUILD_FINISHED_STATES
 
 
 ## API tests (osbs.api.OSBS)

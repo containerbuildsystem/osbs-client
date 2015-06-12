@@ -41,7 +41,9 @@ def cmd_list_builds(args, osbs):
         for build in builds:
             image = build.get_image_tag()
             if args.USER:
-                if not image.startswith(args.USER + "/"):
+                # image can contain registry - we may have to parse it more intelligently
+                registry_and_namespace = image.split("/")[:-1]
+                if args.USER not in registry_and_namespace:
                     continue
             b = {
                 "name": build.get_build_name(),

@@ -40,7 +40,7 @@ class BuildResponse(object):
     @property
     def status(self):
         if self._status is None:
-            self._status = self.json['status'].lower()
+            self._status = self.json['status']['phase'].lower()
         return self._status
 
     @property
@@ -68,7 +68,7 @@ class BuildResponse(object):
         return graceful_chain_get(self.json, "metadata", "name")
 
     def get_image_tag(self):
-        return graceful_chain_get(self.json, 'parameters', 'output', 'imageTag')
+        return graceful_chain_get(self.json, "spec", "output", "to", "name")
 
     def get_annotations_or_labels(self):
         r = graceful_chain_get(self.json, "metadata", "annotations")
