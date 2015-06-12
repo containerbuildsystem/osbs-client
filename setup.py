@@ -17,6 +17,8 @@ data_files = {
         "inputs/prod_inner.json",
         "inputs/prod-without-koji.json",
         "inputs/prod-without-koji_inner.json",
+        "inputs/prod-with-secret.json",
+        "inputs/prod-with-secret_inner.json",
         "inputs/simple.json",
         "inputs/simple_inner.json",
     ],
