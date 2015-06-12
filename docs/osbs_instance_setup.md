@@ -72,8 +72,8 @@ It will create whole runtime configuration:
  * SSL certificates
  * policies
  * master and node configs
-  * `/car/lib/openshift/master.yaml`
-  * `/car/lib/openshift/node.yaml`
+  * `/var/lib/openshift/master.yaml`
+  * `/var/lib/openshift/node.yaml`
 
 Everything will be stored in `/var/lib/openshift`. Inspect the configs and change them accordingly.
 
