@@ -82,8 +82,8 @@ BUILD_JSON = {
         "name": "{{NAME}}"
     },
     "kind": "Build",
-    "apiVersion": "v1beta1",
-    "parameters": {
+    "apiVersion": "v1beta3",
+    "spec": {
         "source": {
             "type": "Git",
             "git": {
@@ -93,7 +93,10 @@ BUILD_JSON = {
         "strategy": {
             "type": "Custom",
             "customStrategy": {
-                "image": "buildroot",
+                "from": {
+                    "kind": "ImageStreamTag",
+                    "name": "buildroot:latest"
+                },
                 "exposeDockerSocket": True,
                 "env": [{
                     "name": "DOCK_PLUGINS",
@@ -102,8 +105,10 @@ BUILD_JSON = {
             }
         },
         "output": {
-            "imageTag": "{{OUTPUT_IMAGE_TAG}}",
-            "registry": "{{REGISTRY_URI}}"
+            "to": {
+                "kind": "DockerImage",
+                "name": "{{REGISTRY_URI}}/{{OUTPUT_IMAGE_TAG}}"
+            }
         }
     }
 }
@@ -155,7 +160,7 @@ def test_manipulator_remove_nonexisting_plugin():
 
 def test_manipulator_get_dock_json():
     build_json = copy.deepcopy(BUILD_JSON)
-    env_json = build_json['parameters']['strategy']['customStrategy']['env']
+    env_json = build_json['spec']['strategy']['customStrategy']['env']
     p = [env for env in env_json if env["name"] == "DOCK_PLUGINS"]
     inner = {
         "a": "b"
@@ -168,7 +173,7 @@ def test_manipulator_get_dock_json():
 
 def test_manipulator_get_dock_json_missing_input():
     build_json = copy.deepcopy(BUILD_JSON)
-    build_json['parameters']['strategy']['customStrategy']['env'] = None
+    build_json['spec']['strategy']['customStrategy']['env'] = None
     m = DockJsonManipulator(build_json, None)
     with pytest.raises(RuntimeError):
         m.get_dock_json()
@@ -203,14 +208,13 @@ def test_render_simple_request():
     build_json = build_request.render()
 
     assert build_json["metadata"]["name"].startswith("component-")
-    assert build_json["parameters"]["source"]['git']['uri'] == "http://git/"
-    assert build_json["parameters"]["source"]['git']['ref'] == "master"
-    assert build_json["parameters"]["output"]['registry'] == "registry.example.com"
-    assert build_json["parameters"]["output"]['imageTag'].startswith(
-        "john-foo/component:"
+    assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
+    assert build_json["spec"]["source"]["git"]["ref"] == "master"
+    assert build_json["spec"]["output"]["to"]["name"].startswith(
+        "registry.example.com/john-foo/component:"
     )
 
-    env_vars = build_json['parameters']['strategy']['customStrategy']['env']
+    env_vars = build_json['spec']['strategy']['customStrategy']['env']
     plugins_json = None
     for d in env_vars:
         if d['name'] == 'DOCK_PLUGINS':
@@ -251,14 +255,13 @@ def test_render_prod_request_with_repo():
     build_json = build_request.render()
 
     assert build_json["metadata"]["name"].startswith("component-")
-    assert build_json["parameters"]["source"]['git']['uri'] == "http://git/"
-    assert build_json["parameters"]["source"]['git']['ref'] == "master"
-    assert build_json["parameters"]["output"]['registry'] == "registry.example.com"
-    assert build_json["parameters"]["output"]['imageTag'].startswith(
-        "john-foo/component:"
+    assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
+    assert build_json["spec"]["source"]["git"]["ref"] == "master"
+    assert build_json["spec"]["output"]["to"]["name"].startswith(
+        "registry.example.com/john-foo/component:"
     )
 
-    env_vars = build_json['parameters']['strategy']['customStrategy']['env']
+    env_vars = build_json['spec']['strategy']['customStrategy']['env']
     plugins_json = None
     for d in env_vars:
         if d['name'] == 'DOCK_PLUGINS':
@@ -316,14 +319,13 @@ def test_render_prod_request():
     build_json = build_request.render()
 
     assert build_json["metadata"]["name"].startswith("component-")
-    assert build_json["parameters"]["source"]['git']['uri'] == "http://git/"
-    assert build_json["parameters"]["source"]['git']['ref'] == "master"
-    assert build_json["parameters"]["output"]['registry'] == "registry.example.com"
-    assert build_json["parameters"]["output"]['imageTag'].startswith(
-        "john-foo/component:"
+    assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
+    assert build_json["spec"]["source"]["git"]["ref"] == "master"
+    assert build_json["spec"]["output"]["to"]["name"].startswith(
+        "registry.example.com/john-foo/component:"
     )
 
-    env_vars = build_json['parameters']['strategy']['customStrategy']['env']
+    env_vars = build_json['spec']['strategy']['customStrategy']['env']
     plugins_json = None
     for d in env_vars:
         if d['name'] == 'DOCK_PLUGINS':
@@ -377,14 +379,13 @@ def test_render_prod_without_koji_request():
     build_json = build_request.render()
 
     assert build_json["metadata"]["name"].startswith("component-")
-    assert build_json["parameters"]["source"]['git']['uri'] == "http://git/"
-    assert build_json["parameters"]["source"]['git']['ref'] == "master"
-    assert build_json["parameters"]["output"]['registry'] == "registry.example.com"
-    assert build_json["parameters"]["output"]['imageTag'].startswith(
-        "john-foo/component:"
+    assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
+    assert build_json["spec"]["source"]["git"]["ref"] == "master"
+    assert build_json["spec"]["output"]["to"]["name"].startswith(
+        "registry.example.com/john-foo/component:"
     )
 
-    env_vars = build_json['parameters']['strategy']['customStrategy']['env']
+    env_vars = build_json['spec']['strategy']['customStrategy']['env']
     plugins_json = None
     for d in env_vars:
         if d['name'] == 'DOCK_PLUGINS':
@@ -440,7 +441,8 @@ def test_render_prod_with_secret_request():
     build_request.set_params(**kwargs)
     build_json = build_request.render()
 
-    assert build_json["parameters"]["source"]["sourceSecretName"] == "mysecret"
+    assert build_json["spec"]["source"]["sourceSecret"]["name"] == "mysecret"
+    assert build_json["spec"]["source"]["sourceSecretName"] == "mysecret"
 
 
 def test_render_with_yum_repourls():
@@ -477,7 +479,7 @@ def test_render_with_yum_repourls():
                               'http://example.com/repo2.repo']
     build_request.set_params(**kwargs)
     build_json = build_request.render()
-    strategy = build_json['parameters']['strategy']['customStrategy']['env']
+    strategy = build_json['spec']['strategy']['customStrategy']['env']
     plugins_json = None
     for d in strategy:
         if d['name'] == 'DOCK_PLUGINS':
@@ -562,7 +564,7 @@ def test_get_token_api(osbs):
 
 
 def test_get_user_api(osbs):
-    assert 'fullName' in osbs.get_user()
+    assert 'name' in osbs.get_user()['metadata']
 
 
 def test_build_logs_api(osbs):
@@ -589,7 +591,7 @@ def test_build_logs_api_from_docker(osbs, decode_docker_logs):
 @pytest.mark.skipif(sys.version_info[0] >= 3,
                     reason="known not to work on Python 3 (#74)")
 def test_parse_headers():
-    rm = ResponseMapping("0.4.1")
+    rm = ResponseMapping("0.5.4")
 
     file_name = DEFINITION["/oauth/authorize"]["get"]["file"]
     raw_headers = rm.get_response_content(file_name)

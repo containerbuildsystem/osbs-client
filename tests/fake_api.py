@@ -39,7 +39,7 @@ def process_authorize(content):
 
 
 DEFINITION = {
-    "/osapi/v1beta1/builds/": {
+    "/osapi/v1beta3/namespaces/default/builds/": {
         "get": {
             "file": "builds_list.json",
         },
@@ -49,7 +49,7 @@ DEFINITION = {
     },
 
     # Some 'builds' requests are with a trailing slash, some without:
-    "/osapi/v1beta1/builds/%s" % TEST_BUILD: {
+    "/osapi/v1beta3/namespaces/default/builds/%s" % TEST_BUILD: {
         "get": {
             "file": "build_test-build-123.json",
         },
@@ -57,7 +57,7 @@ DEFINITION = {
             "file": "build_test-build-123.json",
         }
     },
-    "/osapi/v1beta1/builds/%s/" % TEST_BUILD: {
+    "/osapi/v1beta3/namespaces/default/builds/%s/" % TEST_BUILD: {
         "get": {
             "file": "build_test-build-123.json",
         },
@@ -65,7 +65,7 @@ DEFINITION = {
             "file": "build_test-build-123.json",
         }
     },
-    "/osapi/v1beta1/buildLogs/%s/" % TEST_BUILD: {
+    "/osapi/v1beta3/namespaces/default/builds/%s/log/" % TEST_BUILD: {
         "get": {
             "file": "build_test-build-123_logs.txt",
         },
@@ -77,12 +77,12 @@ DEFINITION = {
             "custom_callback": process_authorize,
         }
     },
-    "/osapi/v1beta1/users/~": {
+    "/osapi/v1beta3/users/~/": {
         "get": {
             "file": "get_user.json",
         }
     },
-    "/osapi/v1beta1/watch/builds/%s/" % TEST_BUILD: {
+    "/osapi/v1beta3/watch/namespaces/default/builds/%s/" % TEST_BUILD: {
         "get": {
             "file": "watch_build_test-build-123.json",
         }
@@ -101,7 +101,7 @@ def response(status_code=200, content='', headers=None):
 
 
 class Connection(object):
-    def __init__(self, version="0.4.1"):
+    def __init__(self, version="0.5.2"):
         self.version = version
         self.response_mapping = ResponseMapping(version)
 
@@ -134,15 +134,15 @@ class Connection(object):
         return self._request(url, "put", *args, **kwargs)
 
 
-@pytest.fixture
-def openshift():
-    os_inst = Openshift("/osapi/v1beta1/", "/oauth/authorize", "")
-    os_inst._con = Connection()
+@pytest.fixture(params=["0.5.2", "0.5.4"])
+def openshift(request):
+    os_inst = Openshift("/osapi/v1beta3/", "/oauth/authorize")
+    os_inst._con = Connection(request.param)
     return os_inst
 
 
 @pytest.fixture
-def osbs():
+def osbs(openshift):
     with NamedTemporaryFile(mode="wt") as fp:
         fp.write("""
 [general]
@@ -155,7 +155,7 @@ build_type = simple
         dummy_config = Configuration(fp.name)
         osbs = OSBS(dummy_config, dummy_config)
 
-    osbs.os = openshift()
+    osbs.os = openshift
     return osbs
 
 
