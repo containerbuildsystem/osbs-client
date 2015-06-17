@@ -131,9 +131,10 @@ def cmd_build(args, osbs):
     )
     build_id = build.build_id
     # we need to wait for kubelet to schedule the build, otherwise it's 500
-    build = osbs.wait_for_build_to_get_scheduled(build_id, namespace=osbs.build_conf.get_namespace())
+    namespace = osbs.build_conf.get_namespace()
+    build = osbs.wait_for_build_to_get_scheduled(build_id, namespace=namespace)
     if not args.no_logs:
-        build_logs = osbs.get_build_logs(build_id, follow=True)
+        build_logs = osbs.get_build_logs(build_id, follow=True, namespace=namespace)
         if not isinstance(build_logs, collections.Iterable):
             logger.error("'%s' is not iterable; can't display logs", build_logs)
             return
