@@ -92,7 +92,20 @@ class OSBS(object):
         :return: instance of BuildRequest
         """
         build_type = build_type or self.build_conf.get_build_type()
-        return self.bm.get_build_request_by_type(build_type=build_type)
+        build_request = self.bm.get_build_request_by_type(build_type=build_type)
+
+        # Apply configured resource limits.
+        cpu_limit = self.build_conf.get_cpu_limit()
+        memory_limit = self.build_conf.get_memory_limit()
+        storage_limit = self.build_conf.get_storage_limit()
+        if (cpu_limit is not None or
+            memory_limit is not None or
+            storage_limit is not None):
+            build_request.set_resource_limits(cpu=cpu_limit,
+                                              memory=memory_limit,
+                                              storage=storage_limit)
+
+        return build_request
 
     @osbsapi
     def create_build_from_buildrequest(self, build_request, namespace=DEFAULT_NAMESPACE):

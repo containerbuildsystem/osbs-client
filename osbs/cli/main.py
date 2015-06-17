@@ -259,6 +259,12 @@ def cli():
                               dest="yum_repourls", help="URL of yum repo file")
     build_parser.add_argument("--source-secret", action='store', required=False,
                               help="resource name of source secret")
+    build_parser.add_argument("--cpu-limit", action='store', required=False,
+                              help="CPU limit (KCU)")
+    build_parser.add_argument("--memory-limit", action='store', required=False,
+                              help="memory limit")
+    build_parser.add_argument("--storage-limit", action='store', required=False,
+                              help="storage limit")
     build_parser.set_defaults(func=cmd_build)
 
     parser.add_argument("--openshift-uri", action='store', metavar="URL",
