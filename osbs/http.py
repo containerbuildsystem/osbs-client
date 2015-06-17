@@ -176,7 +176,7 @@ class Response(object):
             else:
                 url = None
             message = self._get_received_data()
-            raise HTTPError(url, self.status_code, message, None, None)
+            raise OsbsNetworkException(url, message, self.status_code)
 
     def _check_curl_errors(self):
         for f in self.curl_multi.info_read()[2]:
