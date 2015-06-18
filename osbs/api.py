@@ -99,8 +99,8 @@ class OSBS(object):
         memory_limit = self.build_conf.get_memory_limit()
         storage_limit = self.build_conf.get_storage_limit()
         if (cpu_limit is not None or
-            memory_limit is not None or
-            storage_limit is not None):
+                memory_limit is not None or
+                storage_limit is not None):
             build_request.set_resource_limits(cpu=cpu_limit,
                                               memory=memory_limit,
                                               storage=storage_limit)
