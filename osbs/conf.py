@@ -222,3 +222,15 @@ class Configuration(object):
     def get_nfs_destination_dir(self):
         return self._get_value("nfs_dest_dir", self.conf_section,
                                "nfs_dest_dir", can_miss=True)
+
+    def get_cpu_limit(self):
+        return self._get_value("cpu_limit", self.conf_section,
+                               "cpu_limit", can_miss=True)
+
+    def get_memory_limit(self):
+        return self._get_value("memory_limit", self.conf_section,
+                               "memory_limit", can_miss=True)
+
+    def get_storage_limit(self):
+        return self._get_value("storage_limit", self.conf_section,
+                               "storage_limit", can_miss=True)

@@ -45,6 +45,7 @@ class BuildRequest(object):
         self._template = None        # template loaded from filesystem
         self._inner_template = None  # dock json
         self._dj = None
+        self._resource_limits = None
 
     def set_params(self, **kwargs):
         """
@@ -54,6 +55,19 @@ class BuildRequest(object):
         :return:
         """
         raise NotImplementedError()
+
+    def set_resource_limits(self, cpu=None, memory=None, storage=None):
+        if self._resource_limits is None:
+            self._resource_limits = {}
+
+        if cpu is not None:
+            self._resource_limits['cpu'] = cpu
+
+        if memory is not None:
+            self._resource_limits['memory'] = memory
+
+        if storage is not None:
+            self._resource_limits['storage'] = storage
 
     @staticmethod
     def new_by_type(build_name, *args, **kwargs):
@@ -135,6 +149,14 @@ class CommonBuild(BuildRequest):
     def render(self):
         # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
         self.template['metadata']['name'] = self.spec.name.value
+
+        if self._resource_limits is not None:
+            resources = self.template['parameters'].get('resources', {})
+            limits = resources.get('limits', {})
+            limits.update(self._resource_limits)
+            resources['limits'] = limits
+            self.template['parameters']['resources'] = resources
+
         self.template['parameters']['source']['git']['uri'] = self.spec.git_uri.value
         self.template['parameters']['source']['git']['ref'] = self.spec.git_ref.value
         self.template['parameters']['output']['registry'] = self.spec.registry_uri.value
