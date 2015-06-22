@@ -9,7 +9,8 @@ from __future__ import print_function, unicode_literals, absolute_import
 import json
 
 import logging
-from osbs.constants import DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNNING_STATES, BUILD_PENDING_STATES
+from osbs.build.build_response import BuildResponse
+from osbs.constants import DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNNING_STATES
 from osbs.exceptions import OsbsResponseException, OsbsException, OsbsWatchBuildNotFound
 
 try:
@@ -161,19 +162,36 @@ class Openshift(object):
         build_config["Kind"] = "Build"
         return self.create_build(build_config, namespace=namespace)
 
-    def logs(self, build_id, follow=False, build_json=None, namespace=DEFAULT_NAMESPACE):
+    def logs(self, build_id, follow=False, build_json=None, wait_if_missing=False,
+             namespace=DEFAULT_NAMESPACE):
         """
+        provide logs from build
 
-        :param follow:
-        :return:
+        :param build_id: str
+        :param follow: bool, fetch logs as they come?
+        :param build_json: dict, to save one get-build query
+        :param wait_if_missing: bool, if build doesn't exist, wait
+        :param namespace: str
+        :return: None, str or iterator
         """
-        if follow:
-            self.wait_for_build_to_get_scheduled(build_id, namespace=namespace)
-        else:
-            # When build is in new or pending state, openshift responds with 500
+        # does build exist?
+        try:
             build_json = build_json or self.get_build(build_id, namespace=namespace).json()
-            if build_json['status'].lower() in BUILD_PENDING_STATES:
-                return
+        except OsbsResponseException as ex:
+            if ex.status_code == 404:
+                if not wait_if_missing:
+                    raise OsbsException("Build '%s' doesn't exist." % build_id)
+            else:
+                raise
+
+        if follow or wait_if_missing:
+            build_json = self.wait_for_build_to_get_scheduled(build_id, namespace=namespace)
+
+        br = BuildResponse(None, build_json=build_json)
+
+        # When build is in new or pending state, openshift responds with 500
+        if br.is_pending():
+            return
 
         # 0.5+
         buildlogs_url = self._build_url("buildLogs/%s/" % build_id,

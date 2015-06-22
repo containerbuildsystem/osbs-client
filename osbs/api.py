@@ -247,27 +247,45 @@ class OSBS(object):
             raise OsbsException("Unknown build type: '%s'" % build_type)
 
     @osbsapi
-    def get_build_logs(self, build_id, follow=False, build_json=None, namespace=DEFAULT_NAMESPACE):
-        if follow:
-            return self.os.logs(build_id, follow=follow, build_json=build_json,
-                                namespace=namespace)
-        try:
+    def get_build_logs(self, build_id, follow=False, build_json=None, wait_if_missing=False,
+                       namespace=DEFAULT_NAMESPACE):
+        """
+        provide logs from build
+
+        :param build_id: str
+        :param follow: bool, fetch logs as they come?
+        :param build_json: dict, to save one get-build query
+        :param wait_if_missing: bool, if build doesn't exist, wait
+        :param namespace: str
+        :return: None, str or iterator
+        """
+        return self.os.logs(build_id, follow=follow, build_json=build_json,
+                            wait_if_missing=wait_if_missing, namespace=namespace)
+
+    @osbsapi
+    def get_docker_build_logs(self, build_id, decode_logs=True, build_json=None,
+                              namespace=DEFAULT_NAMESPACE):
+        """
+        get logs provided by "docker build"
+
+        :param build_id: str
+        :param decode_logs: bool, docker by default output logs in simple json structure:
+            { "stream": "line" }
+            if this arg is set to True, it decodes logs to human readable form
+        :param build_json: dict, to save one get-build query
+        :param namespace: str
+        :return: str
+        """
+        if not build_json:
             build = self.os.get_build(build_id, namespace=namespace)
-        except OsbsResponseException as ex:
-            if ex.status_code != 404:
-                raise
-        else:
             build_response = BuildResponse(build)
-            logs = None
-            if build_response.is_finished():
-                metadata = build_response.json.get("metadata", {})
-                md = metadata.get("annotations", metadata.get("labels", {}))
-                logs = md.get("logs", None)
+        else:
+            build_response = BuildResponse(None, build_json)
 
-            if logs:
-                return logs
-
-            return self.os.logs(build_id, follow=False, build_json=build_json, namespace=namespace)
+        if build_response.is_finished():
+            logs = build_response.get_logs(decode_logs=decode_logs)
+            return logs
+        logger.warning("build haven't finished yet")
 
     @osbsapi
     def wait_for_build_to_finish(self, build_id, namespace=DEFAULT_NAMESPACE):

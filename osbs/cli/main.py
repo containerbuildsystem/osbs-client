@@ -155,12 +155,22 @@ def cmd_build_logs(args, osbs):
     build_id = args.BUILD_ID[0]
     follow = args.follow
 
-    if follow:
-        for line in osbs.get_build_logs(build_id, follow=True, namespace=args.namespace):
-            print(line)
+    if follow and args.from_docker_build:
+        print("Can't use --follow and --from-docker-build. "
+              "Logs from docker build are part of metadata of a already built image.")
+        return
+
+    if args.from_docker_build:
+        logs = osbs.get_docker_build_logs(build_id)
     else:
-        logs = osbs.get_build_logs(build_id, follow=False, namespace=args.namespace)
-        print(logs, end="")
+        logs = osbs.get_build_logs(build_id, follow=follow,
+                                   wait_if_missing=args.wait_if_missing,
+                                   namespace=args.namespace)
+        if follow:
+            for line in logs:
+                print(line)
+            return
+    print(logs, end="")
 
 
 def cmd_watch_build(args, osbs):
@@ -235,6 +245,10 @@ def cli():
     build_logs_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
     build_logs_parser.add_argument("-f", "--follow", help="follow logs as they come", action="store_true",
                                    default=False)
+    build_logs_parser.add_argument("--wait-if-missing", help="if build is not created yet, wait", action="store_true",
+                                   default=False)
+    build_logs_parser.add_argument("--from-docker-build", help="return logs from `docker build` instead",
+                                   action="store_true", default=False)
     build_logs_parser.set_defaults(func=cmd_build_logs)
 
     build_parser = subparsers.add_parser('build', help='build an image in OSBS')

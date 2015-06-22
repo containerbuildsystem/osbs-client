@@ -7,7 +7,6 @@ of the BSD license. See the LICENSE file for details.
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-import json
 import os
 import re
 import pytest
@@ -65,6 +64,11 @@ DEFINITION = {
         "put": {
             "file": "build_test-build-123.json",
         }
+    },
+    "/osapi/v1beta1/buildLogs/%s/" % TEST_BUILD: {
+        "get": {
+            "file": "build_test-build-123_logs.txt",
+        },
     },
 
     "/oauth/authorize": {
