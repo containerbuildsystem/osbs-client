@@ -161,7 +161,7 @@ def cmd_build_logs(args, osbs):
         return
 
     if args.from_docker_build:
-        logs = osbs.get_docker_build_logs(build_id)
+        logs = osbs.get_docker_build_logs(build_id, namespace=args.namespace)
     else:
         logs = osbs.get_build_logs(build_id, follow=follow,
                                    wait_if_missing=args.wait_if_missing,
