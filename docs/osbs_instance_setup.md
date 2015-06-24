@@ -21,7 +21,7 @@ As a source for the RPM package of OpenShift, we can use @mmilata's [copr](https
 
 ```
 $ dnf copr enable mmilata/openshift
-$ dnf install openshift
+$ dnf install openshift-master openshift-node
 ```
 
 ### docker
@@ -61,10 +61,12 @@ Add this line to `/etc/fstab` and you are all set:
 
 ## OpenShift
 
-Since OpenShift 0.4.3, you should have config file for master and node. There is a helper systemd unit file for that. You can run it with
+OpenShift has config file for master and node. You can generate them with the following commands:
 
 ```
-$ systemctl start openshift-generate-conf.service
+$ cd /var/lib/openshift
+$ openshift start --write-config=/etc/openshift
+$ ln -s /etc/openshift/node-* /etc/openshift/node
 ```
 
 It will create whole runtime configuration:
@@ -72,22 +74,14 @@ It will create whole runtime configuration:
  * SSL certificates
  * policies
  * master and node configs
-  * `/var/lib/openshift/master.yaml`
-  * `/var/lib/openshift/node.yaml`
+  * `/etc/openshift/master/master-config.yaml`
+  * `/etc/openshift/node-$hostname/node-config.yaml`
 
-Everything will be stored in `/var/lib/openshift`. Inspect the configs and change them accordingly.
-
+Data will be stored in `/var/lib/openshift`. Inspect the configs and change them accordingly.
 
 ### CLI
 
 All the communication with the daemon is performed via executable `osc`. The binary needs to authenticate, otherwise all the requests will be denied. Authentication is handled via configuration file for `osc`. You need to set an environment variable to point `osc` to the config:
-
-*0.4.3-*
-
-```
-$ export KUBECONFIG=/var/lib/openshift/openshift.local.certificates/admin/.kubeconfig
-$ export CURL_CA_BUNDLE=/var/lib/openshift/openshift.local.certificates/ca/cert.crt
-```
 
 *0.4.4+*
 
@@ -95,11 +89,17 @@ $ export CURL_CA_BUNDLE=/var/lib/openshift/openshift.local.certificates/ca/cert.
 $ export OPENSHIFTCONFIG=/var/lib/openshift/openshift.local.certificates/admin/.kubeconfig
 ```
 
+*0.6.1+*
+
+```
+$ export KUBECONFIG=/etc/openshift/master/admin.kubeconfig
+```
+
 ### Authentication and Authorization
 
 You can setup OpenShift with a proxy in front of it. This proxy may have an authentication, e.g. kerberos or basic auth. The proxy should then forward username to openshift via `X-Remote-User` http header.
 
-Communication between proxy and openshift needs to be secure. Proxy needs to use specific SSL certificate signed by CA which is known (and preconfigured) in openshift. We can use self-signed certificate for this because it won't be exposed to the outside world.
+Communication between proxy and openshift needs to be secure. Proxy needs to use specific SSL client certificate signed by CA which is known (and preconfigured) in openshift. We can use self-signed certificate for this because it won't be exposed to the outside world.
 
 Here's how to do it:
 
@@ -107,7 +107,7 @@ Here's how to do it:
 $ cd /var/lib/openshift
 $ openssl req -new -nodes -x509 -days 3650 -extensions v3_ca -keyout proxy_auth.key -out proxy_auth.crt
 $ openssl rsa -in proxy_auth.key -out proxy_auth.key
-$ cp openshift.local.certificates/ca/cert.crt /etc/pki/tls/certs/openshift_ca.crt
+$ cp /etc/openshift/master/ca.crt /etc/pki/tls/certs/openshift_ca.crt
 $ cat proxy_auth.{crt,key} > /etc/pki/tls/private/openshift_certkey.crt
 ```
 
@@ -122,7 +122,7 @@ OpenShift conf snippet (it uses [RequestHeaderIdentityProvider](http://docs.open
        provider:
          apiVersion: v1
          kind: RequestHeaderIdentityProvider
-         clientCA: proxy_auth.crt
+         clientCA: /var/lib/openshift/proxy_auth.crt
          headers:
          - X-Remote-User
 ```
@@ -204,13 +204,15 @@ OpenShift is capable of [processing htpasswd](http://docs.openshift.org/latest/a
 Starting OpenShift:
 
 ```
-$ systemctl start openshift
+$ systemctl start openshift-master && systemctl start openshift-node
 ```
 
 Wiping all runtime configuration:
 
 ```
-$ systemctl stop openshift && rm -rf /var/lib/openshift/openshift.local.{etcd,volumes} && systemctl start openshift
+$ systemctl stop openshift-master && systemctl stop openshift-node
+$ rm -rf /var/lib/openshift/*
+$ systemctl start openshift-master && systemctl start openshift-node
 ```
 
 
@@ -219,14 +221,14 @@ $ systemctl stop openshift && rm -rf /var/lib/openshift/openshift.local.{etcd,vo
 In case you would like to turn the authentication off (which is not recommended, but should fine for testing):
 
 ```
-$ openshift ex policy add-role-to-group cluster-admin system:unauthenticated system:authenticated -n master
+$ osadm policy add-role-to-group edit system:unauthenticated system:authenticated
 ```
 
 #### Useful Commands
 
 * `osc get builds` — list builds
 * `osc get pods` — list pods
-* `osc describe --namespace=master policyBinding master` — show authorization setup
+* `osc describe policyBindings :default` — show authorization setup
 * `osc describe build <build>` — get info about build
 * `osc build-logs <build>` — get build logs (or `docker logs <container>`), -f to follow
 
