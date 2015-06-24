@@ -33,6 +33,11 @@ secrets/mysecret
 
 When you need to change the data, you can use `update` instead of `create`.
 
+In OpenShift 0.5.4 or newer, you also have to allow the build pod service account to [access the secret](https://docs.openshift.org/latest/dev_guide/service_accounts.html#managing-allowed-secrets).
+```
+$ oc secrets add serviceaccount/default secrets/mysecret --for=mount
+```
+
 ## Configuring OSBS
 
 In your OSBS build instance configuration, use the following values:
