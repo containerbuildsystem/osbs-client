@@ -81,7 +81,7 @@ Data will be stored in `/var/lib/openshift`. Inspect the configs and change them
 
 ### CLI
 
-All the communication with the daemon is performed via executable `osc`. The binary needs to authenticate, otherwise all the requests will be denied. Authentication is handled via configuration file for `osc`. You need to set an environment variable to point `osc` to the config:
+All the communication with the daemon is performed via executable `oc` (or `osc` if you are using OpenShift 0.x). The binary needs to authenticate, otherwise all the requests will be denied. Authentication is handled via configuration file for `oc`. You need to set an environment variable to point `oc` to the config:
 
 *0.4.4+*
 
@@ -221,16 +221,17 @@ $ systemctl start openshift-master && systemctl start openshift-node
 In case you would like to turn the authentication off (which is not recommended, but should fine for testing):
 
 ```
-$ osadm policy add-role-to-group edit system:unauthenticated system:authenticated
+$ oadm policy add-role-to-group edit system:unauthenticated system:authenticated
 ```
+(`osadm` for OpenShift < 1.0)
 
 #### Useful Commands
 
-* `osc get builds` — list builds
-* `osc get pods` — list pods
-* `osc describe policyBindings :default` — show authorization setup
-* `osc describe build <build>` — get info about build
-* `osc build-logs <build>` — get build logs (or `docker logs <container>`), -f to follow
+* `oc get builds` — list builds
+* `oc get pods` — list pods
+* `oc describe policyBindings :default` — show authorization setup
+* `oc describe build <build>` — get info about build
+* `oc build-logs <build>` — get build logs (or `docker logs <container>`), -f to follow
 
 
 For more information see [openshift's documentation](http://docs.openshift.org/latest/welcome/index.html). Good starting point is also [this guide](https://github.com/openshift/origin/blob/master/examples/sample-app/README.md).
