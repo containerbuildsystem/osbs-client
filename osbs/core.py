@@ -125,7 +125,7 @@ class Openshift(object):
         :param username: str, name of user to get info about, default="~"
         :return: dict
         """
-        url = self._build_url("users/%s" % username)
+        url = self._build_url("users/%s/" % username)
         response = self._get(url)
         check_response(response)
         return response
@@ -134,13 +134,13 @@ class Openshift(object):
         """
         :return:
         """
-        url = self._build_url("builds/", namespace=namespace)
+        url = self._build_url("namespaces/%s/builds/" % namespace)
         logger.debug(build_json)
         return self._post(url, data=build_json,
                           headers={"Content-Type": "application/json"})
 
     def get_build_config(self, build_config_id, namespace=DEFAULT_NAMESPACE):
-        url = self._build_url("buildConfigs/%s/" % build_config_id, namespace=namespace)
+        url = self._build_url("namespaces/%s/buildconfigs/%s/" % (namespace, build_config_id))
         response = self._get(url)
         build_config = response.json()
         return build_config
@@ -149,7 +149,7 @@ class Openshift(object):
         """
         :return:
         """
-        url = self._build_url("buildConfigs/", namespace=namespace)
+        url = self._build_url("namespaces/%s/buildconfigs/" % namespace)
         return self._post(url, data=build_config_json,
                           headers={"Content-Type": "application/json"})
 
@@ -158,8 +158,8 @@ class Openshift(object):
         :return:
         """
         build_config = self.get_build_config(build_config_id, namespace=namespace)
-        assert build_config["Kind"] == "BuildConfig"
-        build_config["Kind"] = "Build"
+        assert build_config["kind"] == "BuildConfig"
+        build_config["kind"] = "Build"
         return self.create_build(build_config, namespace=namespace)
 
     def logs(self, build_id, follow=False, build_json=None, wait_if_missing=False,
@@ -193,19 +193,10 @@ class Openshift(object):
         if br.is_pending():
             return
 
-        # 0.5+
-        buildlogs_url = self._build_url("buildLogs/%s/" % build_id,
-                                        follow=(1 if follow else 0),
-                                        namespace=namespace)
+        buildlogs_url = self._build_url("namespaces/%s/builds/%s/log/" % (namespace, build_id),
+                                        follow=(1 if follow else 0))
         response = self._get(buildlogs_url, stream=follow, headers={'Connection': 'close'})
-        if response.status_code in (403, 404):
-            # 0.4.3
-            # FIXME: remove this once 0.5.? is deployed everywhere
-            buildlogs_url = self._build_url("proxy/buildLogs/%s/" % build_id,
-                                            follow=(1 if follow else 0),
-                                            namespace=namespace)
-            response.close_multi()
-            response = self._get(buildlogs_url, stream=follow, headers={'Connection': 'close'})
+
         if follow:
             return response.iter_lines()
         return response.content
@@ -215,7 +206,7 @@ class Openshift(object):
 
         :return:
         """
-        url = self._build_url("builds/", namespace=namespace)
+        url = self._build_url("namespaces/%s/builds/" % namespace)
         return self._get(url)
 
     def get_build(self, build_id, namespace=DEFAULT_NAMESPACE):
@@ -223,10 +214,9 @@ class Openshift(object):
 
         :return:
         """
-        url = self._build_url("builds/%s/" % build_id, namespace=namespace)
+        url = self._build_url("namespaces/%s/builds/%s/" % (namespace, build_id))
         response = self._get(url)
         check_response(response)
-        logger.debug("response content: %s", response.content)
         return response
 
     def wait(self, build_id, states, namespace=DEFAULT_NAMESPACE):
@@ -236,7 +226,7 @@ class Openshift(object):
         :return:
         """
         logger.info("watching build '%s'", build_id)
-        url = self._build_url("watch/builds/%s/" % build_id, namespace=namespace)
+        url = self._build_url("watch/namespaces/%s/builds/%s/" % (namespace, build_id))
         response = self._get(url, stream=True, headers={'Connection': 'close'})
         for line in response.iter_lines():
             j = json.loads(line)
@@ -251,7 +241,7 @@ class Openshift(object):
                 logger.error("'object' doesn't have any name")
                 continue
             try:
-                obj_status = obj["status"]
+                obj_status = obj["status"]["phase"]
             except KeyError:
                 logger.error("'object' doesn't have any status")
                 continue
@@ -309,7 +299,7 @@ class Openshift(object):
         :param namespace: str
         :return:
         """
-        url = self._build_url("builds/%s" % build_id, namespace=namespace)
+        url = self._build_url("namespaces/%s/builds/%s" % (namespace, build_id))
         build_json = self._get(url).json()
         build_json['metadata'].setdefault('labels', {})
         build_json['metadata']['labels'].update(labels)
@@ -326,7 +316,7 @@ class Openshift(object):
         :param namespace: str
         :return:
         """
-        url = self._build_url("builds/%s" % build_id, namespace=namespace)
+        url = self._build_url("namespaces/%s/builds/%s/" % (namespace, build_id))
         build_json = self._get(url).json()
         build_json['metadata'].setdefault('annotations', {})
         build_json['metadata']['annotations'].update(annotations)
@@ -336,7 +326,7 @@ class Openshift(object):
 
 
 if __name__ == '__main__':
-    o = Openshift(openshift_api_url="https://localhost:8443/osapi/v1beta1/",
+    o = Openshift(openshift_api_url="https://localhost:8443/osapi/v1beta3/",
                   openshift_oauth_url="https://localhost:8443/oauth/authorize",
                   verbose=True)
     print(o.get_oauth_token())

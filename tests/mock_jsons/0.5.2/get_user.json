@@ -1,0 +1,15 @@
+{
+    "apiVersion": "v1beta3",
+    "groups": null,
+    "identities": [
+        "my_request_header_provider:test@EXAMPLE.COM"
+    ],
+    "kind": "User",
+    "metadata": {
+        "creationTimestamp": "2015-05-26T17:21:45Z",
+        "name": "test@EXAMPLE.COM",
+        "resourceVersion": "82",
+        "selfLink": "/osapi/v1beta3/users/test@EXAMPLE.COM",
+        "uid": "aeff97b6-03cb-11e5-a537-0001a4ac32b5"
+    }
+}

@@ -114,7 +114,7 @@ class Configuration(object):
         :return: str
         """
         base_uri = self.get_openshift_base_uri()
-        return urljoin(base_uri, "/osapi/v1beta1/")
+        return urljoin(base_uri, "/osapi/v1beta3/")
 
     def get_openshift_oauth_api_uri(self):
         """

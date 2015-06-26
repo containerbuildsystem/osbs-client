@@ -74,7 +74,7 @@ class OSBS(object):
         serialized_response = response.json()
         build_list = []
         for build in serialized_response["items"]:
-            build_list.append(BuildResponse(response, build))
+            build_list.append(BuildResponse(None, build))
         return build_list
 
     @osbsapi

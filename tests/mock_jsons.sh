@@ -19,14 +19,14 @@ set -ex
 #    export CURL_AUTH_OPTS="-u test_user:password"
 #    export OS_BUILD="name-of-build-within-openshift"
 
-OS_VERSION="${OS_VERSION:-0.4.1}"
+OS_VERSION="${OS_VERSION:-0.5.4}"
 
 if [ -n "$OS_PROXY_URL" ] ; then
-  HTTPD_OSAPI_URL="${OS_PROXY_URL}/osapi/v1beta1"
+  HTTPD_OSAPI_URL="${OS_PROXY_URL}/osapi/v1beta3"
   HTTPD_AUTH_URL="${OS_PROXY_URL}/oauth/authorize?client_id=openshift-challenging-client&response_type=token"
 fi
 if [ -n "$OS_URL" ] ; then
-  OS_OSAPI_URL="${OS_URL}/osapi/v1beta1"
+  OS_OSAPI_URL="${OS_URL}/osapi/v1beta3"
   OS_AUTH_URL="${OS_URL}/oauth/authorize?client_id=openshift-challenging-client&response_type=token"
 fi
 
@@ -66,7 +66,7 @@ set_access_token
 
 if [ -n "$OS_OSAPI_URL" ] ; then
   $CURL "${OS_OSAPI_URL}/users/~?${ACCESS_TOKEN}" | save_output_to "get_user"
-  $CURL $OS_OSAPI_URL/builds | save_output_to "builds_list"
-  $CURL $OS_OSAPI_URL/builds/${OS_BUILD} | save_output_to "build_${OS_BUILD}"
-  $CURL -X PUT -H "Expect:" -H "Content-Type: application/json" -d @${STORE_PATH}/build_${OS_BUILD}.json $OS_OSAPI_URL/builds/${OS_BUILD} | save_output_to "build_put"
+  $CURL $OS_OSAPI_URL/namespaces/default/builds/ | save_output_to "builds_list"
+  $CURL $OS_OSAPI_URL/namespaces/default/builds/${OS_BUILD}/ | save_output_to "build_${OS_BUILD}"
+  $CURL -X PUT -H "Expect:" -H "Content-Type: application/json" -d @${STORE_PATH}/build_${OS_BUILD}.json $OS_OSAPI_URL/namespaces/default/builds/${OS_BUILD} | save_output_to "build_put"
 fi

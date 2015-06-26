@@ -151,15 +151,18 @@ class CommonBuild(BuildRequest):
         self.template['metadata']['name'] = self.spec.name.value
 
         if self._resource_limits is not None:
-            resources = self.template['parameters'].get('resources', {})
+            resources = self.template['spec'].get('resources', {})
             limits = resources.get('limits', {})
             limits.update(self._resource_limits)
             resources['limits'] = limits
-            self.template['parameters']['resources'] = resources
+            self.template['spec']['resources'] = resources
 
-        self.template['parameters']['source']['git']['uri'] = self.spec.git_uri.value
-        self.template['parameters']['source']['git']['ref'] = self.spec.git_ref.value
-        self.template['parameters']['output']['registry'] = self.spec.registry_uri.value
+        self.template['spec']['source']['git']['uri'] = self.spec.git_uri.value
+        self.template['spec']['source']['git']['ref'] = self.spec.git_ref.value
+
+        tag_with_registry = self.spec.registry_uri.value + "/" + self.spec.image_tag.value
+        self.template['spec']['output']['to']['name'] = tag_with_registry
+
         if (self.spec.yum_repourls.value is not None and
                 self.dj.dock_json_has_plugin_conf('prebuild_plugins', "add_yum_repo_by_url")):
             self.dj.dock_json_set_arg('prebuild_plugins', "add_yum_repo_by_url", "repourls",
@@ -254,8 +257,6 @@ class ProductionBuild(CommonProductionBuild):
         super(ProductionBuild, self).render()
         dj = DockJsonManipulator(self.template, self.inner_template)
 
-        self.template['parameters']['output']['imageTag'] = self.spec.image_tag.value
-
         # if there is yum repo specified, don't pick stuff from koji
         if self.spec.yum_repourls.value:
             logger.info("removing koji from request, because there is yum repo specified")
@@ -301,8 +302,6 @@ class ProductionWithoutKojiBuild(CommonProductionBuild):
         super(ProductionWithoutKojiBuild, self).render()
         dj = DockJsonManipulator(self.template, self.inner_template)
 
-        self.template['parameters']['output']['imageTag'] = self.spec.image_tag.value
-
         dj.write_dock_json()
         self.build_json = self.template
         logger.debug(self.build_json)
@@ -343,9 +342,13 @@ class ProductionWithSecretBuild(ProductionBuild):
         super(ProductionWithSecretBuild, self).render()
         dj = DockJsonManipulator(self.template, self.inner_template)
 
-        self.template['parameters']['source']['sourceSecretName'] = self.spec.source_secret.value
+        self.template['spec']['source']['sourceSecret']['name'] = self.spec.source_secret.value
+        # XXX workaround for openshift-0.5.2 compatibility - remove it (and the
+        # corresponding build json part) once we migrate to the v1 api
+        self.template['spec']['source']['sourceSecretName'] = self.spec.source_secret.value
+
         # don't push to docker registry, we're using pulp here
-        self.template['parameters']['output']['registry'] = ""
+        self.template['spec']['output']['to']['name'] = "osbs/fixme"
         dj.dock_json_set_arg('postbuild_plugins', "pulp_push", "pulp_registry_name",
                              self.spec.pulp_registry.value)
         dj.dock_json_set_arg('postbuild_plugins', "cp_built_image_to_nfs", "nfs_server_path",
@@ -385,7 +388,6 @@ class SimpleBuild(CommonBuild):
             self.spec.validate()
         super(SimpleBuild, self).render()
         dj = DockJsonManipulator(self.template, self.inner_template)
-        self.template['parameters']['output']['imageTag'] = self.spec.image_tag.value
         dj.dock_json_set_arg('prebuild_plugins', "change_source_registry", "registry_uri",
                              self.spec.registry_uri.value)
         dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url",

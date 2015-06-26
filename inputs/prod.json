@@ -1,30 +1,36 @@
 {
-      "metadata":{
-        "name": "{{NAME}}"
-      },
-      "kind": "Build",
-      "apiVersion": "v1beta1",
-      "parameters": {
-        "source" : {
-          "type" : "Git",
-          "git" : {
-            "uri": "{{GIT_URI}}"
-          }
-        },
-        "strategy": {
-          "type": "Custom",
-          "customStrategy": {
-            "image": "buildroot",
-            "exposeDockerSocket": true,
-            "env": [{
-              "name": "DOCK_PLUGINS",
-              "value": "TBD"
-            }]
-          }
-        },
-        "output": {
-          "imageTag": "{{OUTPUT_IMAGE_TAG}}",
-          "registry": "{{REGISTRY_URI}}"
-        }
+  "apiVersion": "v1beta3",
+  "kind": "Build",
+  "metadata":{
+    "name": "{{NAME}}"
+  },
+  "spec": {
+    "source": {
+      "type": "Git",
+      "git": {
+        "uri": "{{GIT_URI}}",
+        "ref": "{{GIT_REF}}"
       }
+    },
+    "output": {
+      "to": {
+        "kind": "DockerImage",
+        "name": "{{REGISTRY_URI}}/{{OUTPUT_IMAGE_TAG}}"
+      }
+    },
+    "strategy": {
+      "type": "Custom",
+      "customStrategy": {
+        "from": {
+          "kind": "ImageStreamTag",
+          "name": "buildroot:latest"
+        },
+        "exposeDockerSocket": true,
+        "env": [{
+          "name": "DOCK_PLUGINS",
+          "value": "TBD"
+        }]
+      }
+    }
+  }
 }
