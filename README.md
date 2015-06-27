@@ -1,7 +1,7 @@
 # OSBS
 
 [![Code Health](https://landscape.io/github/DBuildService/osbs/master/landscape.svg?style=flat)](https://landscape.io/github/DBuildService/osbs/master)
-[![Build Status](https://travis-ci.org/DBuildService/osbs.svg?branch=master)](https://travis-ci.org/DBuildService/osbs)
+[![Build Status](https://travis-ci.org/DBuildService/osbs-client.svg?branch=master)](https://travis-ci.org/DBuildService/osbs-client)
 
 Python module and command line client for OpenShift Build Service.
 
@@ -40,4 +40,4 @@ $ osbs build -g http://path.to.gitrepo.with.dockerfile/ -c image-name -u your-ni
 
 ## Deploying OpenShift Build System
 
-We have [a documentation](https://github.com/DBuildService/osbs/blob/master/docs/osbs_instance_setup.md) how you can setup your own instance.
+We have [documentation](https://github.com/DBuildService/osbs-client/blob/master/docs/osbs_instance_setup.md) how you can setup your own instance.
