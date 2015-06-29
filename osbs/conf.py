@@ -37,7 +37,7 @@ class Configuration(object):
             Configuration("./osbs.conf", "fedora", openshift_uri="https://localhost:8443/",
                           username="admin", password="something")
 
-        :param conf_file: str, path to configuration file
+        :param conf_file: str, path to configuration file, or None for no configuration file
         :param conf_section: str, name of section with configuration for requested instance
         :param cli_args: instance of argument parser of argparse
         :param kwargs: keyword arguments, which have highest priority: key is cli argument name
@@ -45,7 +45,7 @@ class Configuration(object):
         self.scp = configparser.SafeConfigParser()
         try:
             self.scp.read(conf_file)
-        except IOError:
+        except (IOError, TypeError):
             pass
         else:
             if not self.scp.has_section(conf_section):

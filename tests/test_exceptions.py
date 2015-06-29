@@ -18,10 +18,16 @@ from tempfile import NamedTemporaryFile
 logger = logging.getLogger("osbs.tests")
 
 
-def test_no_config():
+def test_missing_config():
     with pytest.raises(OsbsException):
         os_conf = Configuration(conf_file="/nonexistent/path",
                                 conf_section="default")
+
+def test_no_config():
+    os_conf = Configuration(conf_file=None,
+                            openshift_uri='https://example:8443')
+    assert os_conf.get_openshift_oauth_api_uri() == \
+            'https://example:8443/oauth/authorize'
 
 def test_missing_section():
     with NamedTemporaryFile() as f:
