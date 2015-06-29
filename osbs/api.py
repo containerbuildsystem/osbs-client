@@ -305,6 +305,10 @@ class OSBS(object):
         return response
 
     @osbsapi
+    def set_annotations_on_build(self, build_id, annotations, namespace=DEFAULT_NAMESPACE):
+        return self.os.set_annotations_on_build(build_id, annotations, namespace=namespace)
+
+    @osbsapi
     def get_token(self):
         return self.os.get_oauth_token()
 

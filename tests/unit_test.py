@@ -559,6 +559,12 @@ def test_set_labels_on_build_api(osbs):
     assert isinstance(response, Response)
 
 
+def test_set_annotations_on_build_api(osbs):
+    annotations = {'ann1': 'value1', 'ann2': 'value2'}
+    response = osbs.set_annotations_on_build(TEST_BUILD, annotations)
+    assert isinstance(response, Response)
+
+
 def test_get_token_api(osbs):
     assert isinstance(osbs.get_token(), bytes)
 
