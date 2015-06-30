@@ -115,6 +115,10 @@ REPOSITORIES
         print(template.format(**context))
 
 
+def cmd_cancel_build(args, osbs):
+    osbs.cancel_build(args.BUILD_ID[0], namespace=args.namespace)
+
+
 def cmd_build(args, osbs):
     build = osbs.create_build(
         git_uri=osbs.build_conf.get_git_uri(),
@@ -230,6 +234,10 @@ def cli():
     get_build_parser = subparsers.add_parser('get-build', help='get info about build')
     get_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
     get_build_parser.set_defaults(func=cmd_get_build)
+
+    cancel_build_parser = subparsers.add_parser('cancel-build', help='cancel build specified by ID')
+    cancel_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
+    cancel_build_parser.set_defaults(func=cmd_cancel_build)
 
     get_token_parser = subparsers.add_parser('get-token', help='get authentication token')
     get_token_parser.set_defaults(func=cmd_get_token)

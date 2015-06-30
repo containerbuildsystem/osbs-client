@@ -10,7 +10,7 @@ import json
 
 import logging
 from osbs.build.build_response import BuildResponse
-from osbs.constants import DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNNING_STATES
+from osbs.constants import DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNNING_STATES, BUILD_CANCELLED_STATE
 from osbs.exceptions import OsbsResponseException, OsbsException, OsbsWatchBuildNotFound
 
 try:
@@ -138,6 +138,14 @@ class Openshift(object):
         logger.debug(build_json)
         return self._post(url, data=build_json,
                           headers={"Content-Type": "application/json"})
+
+    def cancel_build(self, build_id, namespace=DEFAULT_NAMESPACE):
+        response = self.get_build(build_id, namespace=namespace)
+        br = BuildResponse(response)
+        br.status = BUILD_CANCELLED_STATE
+        url = self._build_url("namespaces/%s/builds/%s/" % (namespace, build_id))
+        return self._put(url, data=json.dumps(br.json),
+                         headers={"Content-Type": "application/json"})
 
     def get_build_config(self, build_config_id, namespace=DEFAULT_NAMESPACE):
         url = self._build_url("namespaces/%s/buildconfigs/%s/" % (namespace, build_config_id))

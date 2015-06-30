@@ -43,6 +43,12 @@ class BuildResponse(object):
             self._status = self.json['status']['phase'].lower()
         return self._status
 
+    @status.setter
+    def status(self, value):
+        cap_value = value.capitalize()
+        logger.info("changing status from %s to %s", self.status, cap_value)
+        self.json['status']['phase'] = cap_value
+
     @property
     def build_id(self):
         if self._build_id is None:

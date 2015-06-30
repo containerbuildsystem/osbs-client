@@ -84,6 +84,12 @@ class OSBS(object):
         return build_response
 
     @osbsapi
+    def cancel_build(self, build_id, namespace=DEFAULT_NAMESPACE):
+        response = self.os.cancel_build(build_id, namespace=namespace)
+        build_response = BuildResponse(response)
+        return build_response
+
+    @osbsapi
     def get_build_request(self, build_type=None):
         """
         return instance of BuildRequest according to specified build type
