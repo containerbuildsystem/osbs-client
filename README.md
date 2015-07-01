@@ -1,6 +1,6 @@
 # OSBS
 
-[![Code Health](https://landscape.io/github/DBuildService/osbs/master/landscape.svg?style=flat)](https://landscape.io/github/DBuildService/osbs/master)
+[![Code Health](https://landscape.io/github/DBuildService/osbs-client/master/landscape.svg?style=flat)](https://landscape.io/github/DBuildService/osbs-client/master)
 [![Build Status](https://travis-ci.org/DBuildService/osbs-client.svg?branch=master)](https://travis-ci.org/DBuildService/osbs-client)
 
 Python module and command line client for OpenShift Build Service.
