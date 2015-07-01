@@ -348,7 +348,8 @@ class ProductionWithSecretBuild(ProductionBuild):
         self.template['spec']['source']['sourceSecretName'] = self.spec.source_secret.value
 
         # don't push to docker registry, we're using pulp here
-        self.template['spec']['output']['to']['name'] = "osbs/fixme"
+        # but still construct the unique tag
+        self.template['spec']['output']['to']['name'] = self.spec.image_tag.value
         dj.dock_json_set_arg('postbuild_plugins', "pulp_push", "pulp_registry_name",
                              self.spec.pulp_registry.value)
         dj.dock_json_set_arg('postbuild_plugins', "cp_built_image_to_nfs", "nfs_server_path",
