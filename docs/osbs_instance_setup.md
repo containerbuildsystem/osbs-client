@@ -101,6 +101,8 @@ You can setup OpenShift with a proxy in front of it. This proxy may have an auth
 
 Communication between proxy and openshift needs to be secure. Proxy needs to use specific SSL client certificate signed by CA which is known (and preconfigured) in openshift. We can use self-signed certificate for this because it won't be exposed to the outside world.
 
+For more information, see the [upstream guide](https://docs.openshift.org/latest/admin_guide/configuring_authentication.html).
+
 Here's how to do it:
 
 ```
@@ -237,9 +239,11 @@ $ oadm policy add-role-to-group edit system:unauthenticated system:authenticated
 For more information see [openshift's documentation](http://docs.openshift.org/latest/welcome/index.html). Good starting point is also [this guide](https://github.com/openshift/origin/blob/master/examples/sample-app/README.md).
 
 
-## dock
+## atomic-reactor
 
-In order to build images, you need to have a build image. It is the image where OpenShift performs builds. The image has installed component called dock, which performs the build itself.
+Right now we are in process of changing name from `dock` to `atomic-reactor`.
+
+In order to build images, you need to have a build image. It is the image where OpenShift performs builds. The image has installed component called atomic-reactor, which performs the build itself.
 
 
 ### Getting build image
