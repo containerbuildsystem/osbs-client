@@ -168,7 +168,7 @@ class Openshift(object):
         build_config = self.get_build_config(build_config_id, namespace=namespace)
         assert build_config["kind"] == "BuildConfig"
         build_config["kind"] = "Build"
-        return self.create_build(build_config, namespace=namespace)
+        return self.create_build(json.dumps(build_config), namespace=namespace)
 
     def logs(self, build_id, follow=False, build_json=None, wait_if_missing=False,
              namespace=DEFAULT_NAMESPACE):
