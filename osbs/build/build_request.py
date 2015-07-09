@@ -192,7 +192,7 @@ class CommonProductionBuild(CommonBuild):
         :param vendor: str, vendor name
         :param build_host: str, host the build will run on
         :param authoritative_registry: str, the docker registry authoritative for this image
-        :param metadata_plugin_use_auth: bool, use auth when posting metadata from dock?
+        :param scratch_build: bool, use tags appropriate for scratch build?
         """
         logger.debug("setting params '%s' for %s", kwargs, self.spec)
         self.spec.set_params(**kwargs)
@@ -207,6 +207,8 @@ class CommonProductionBuild(CommonBuild):
                              self.spec.sources_command.value)
         dj.dock_json_set_arg('prebuild_plugins', "change_source_registry", "registry_uri",
                              self.spec.registry_uri.value)
+        dj.dock_json_set_arg('postbuild_plugins', "tag_by_labels", "scratch_build",
+                             self.spec.scratch_build.value)
 
         implicit_labels = {
             'Architecture': self.spec.architecture.value,
@@ -214,6 +216,9 @@ class CommonProductionBuild(CommonBuild):
             'Build_Host': self.spec.build_host.value,
             'Authoritative_Registry': self.spec.authoritative_registry.value,
         }
+
+        if self.spec.scratch_build.value == True:
+            implicit_labels['Scratch'] = "True"
 
         dj.dock_json_merge_arg('prebuild_plugins', "add_labels_in_dockerfile", "labels",
                                implicit_labels)
@@ -244,7 +249,6 @@ class ProductionBuild(CommonProductionBuild):
         :param vendor: str, vendor name
         :param build_host: str, host the build will run on
         :param authoritative_registry: str, the docker registry authoritative for this image
-        :param metadata_plugin_use_auth: bool, use auth when posting metadata from dock?
         """
         logger.debug("setting params '%s' for %s", kwargs, self.spec)
         self.spec.set_params(**kwargs)
@@ -289,7 +293,6 @@ class ProductionWithoutKojiBuild(CommonProductionBuild):
         :param vendor: str, vendor name
         :param build_host: str, host the build will run on
         :param authoritative_registry: str, the docker registry authoritative for this image
-        :param metadata_plugin_use_auth: bool, use auth when posting metadata from dock?
         """
         logger.debug("setting params '%s' for %s", kwargs, self.spec)
         self.spec.set_params(**kwargs)
@@ -328,7 +331,6 @@ class ProductionWithSecretBuild(ProductionBuild):
         :param vendor: str, vendor name
         :param build_host: str, host the build will run on
         :param authoritative_registry: str, the docker registry authoritative for this image
-        :param metadata_plugin_use_auth: bool, use auth when posting metadata from dock?
         :param source_secret: str, resource name of source secret
         """
         logger.debug("setting params '%s' for %s", kwargs, self.spec)
@@ -355,6 +357,8 @@ class ProductionWithSecretBuild(ProductionBuild):
         if self.spec.nfs_dest_dir.value:
             dj.dock_json_set_arg('postbuild_plugins', "cp_built_image_to_nfs", "dest_dir",
                                  self.spec.nfs_dest_dir.value)
+        dj.dock_json_set_arg('postbuild_plugins', "pulp_push", "scratch_build",
+                             self.spec.scratch_build.value)
         dj.write_dock_json()
 
         self.build_json = self.template

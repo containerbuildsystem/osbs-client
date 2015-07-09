@@ -148,6 +148,7 @@ class OSBS(object):
             authoritative_registry=self.build_conf.get_authoritative_registry(),
             yum_repourls=yum_repourls,
             metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
+            scratch_build=self.build_conf.get_scratch_build(),
         )
         build_json = build_request.render()
         response = self.os.create_build(json.dumps(build_json), namespace=namespace)
@@ -180,6 +181,7 @@ class OSBS(object):
             pulp_registry=self.os_conf.get_pulp_registry(),
             nfs_server_path=self.os_conf.get_nfs_server_path(),
             nfs_dest_dir=self.build_conf.get_nfs_destination_dir(),
+            scratch_build=self.build_conf.get_scratch_build(),
         )
         build_json = build_request.render()
         response = self.os.create_build(json.dumps(build_json), namespace=namespace)
@@ -205,6 +207,7 @@ class OSBS(object):
             authoritative_registry=self.build_conf.get_authoritative_registry(),
             yum_repourls=yum_repourls,
             metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
+            scratch_build=self.build_conf.get_scratch_build(),
         )
         build_json = build_request.render()
         response = self.os.create_build(json.dumps(build_json), namespace=namespace)

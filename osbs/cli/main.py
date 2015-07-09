@@ -293,6 +293,8 @@ def cli():
                               help="memory limit")
     build_parser.add_argument("--storage-limit", action='store', required=False,
                               help="storage limit")
+    build_parser.add_argument("--scratch", action='store_true', required=False,
+                              help="perform a scratch build", default=False)
     build_parser.set_defaults(func=cmd_build)
 
     parser.add_argument("--openshift-uri", action='store', metavar="URL",

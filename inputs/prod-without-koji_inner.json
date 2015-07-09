@@ -45,7 +45,10 @@
   ],
   "postbuild_plugins": [
     {
-      "name": "tag_by_labels"
+      "name": "tag_by_labels",
+      "args": {
+        "scratch_build": "{{SCRATCH_BUILD}}"
+      }
     },
     {
       "name": "tag_and_push"

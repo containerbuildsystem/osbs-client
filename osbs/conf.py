@@ -234,3 +234,7 @@ class Configuration(object):
     def get_storage_limit(self):
         return self._get_value("storage_limit", self.conf_section,
                                "storage_limit", can_miss=True)
+
+    def get_scratch_build(self):
+        return self._get_value("scratch", self.conf_section,
+                               "scratch_build", can_miss=True, is_bool_val=True)
