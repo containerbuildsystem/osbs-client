@@ -17,6 +17,7 @@ chunked implementation for pycurl taken from:
 from __future__ import print_function, absolute_import, unicode_literals
 
 import re
+import sys
 import json
 import logging
 import email.parser
@@ -222,11 +223,12 @@ class Response(object):
             if code in PYCURL_NETWORK_CODES:
                 raise OsbsNetworkException("<?>", message, code, *ex.args[2:])
 
-            raise OsbsException(repr(ex))
+            raise OsbsException(cause=ex, traceback=sys.exc_info()[2])
         except HTTPError as ex:
-            raise OsbsNetworkException(ex.geturl(), ex.message, ex.code)
+            raise OsbsNetworkException(ex.geturl(), ex.message, ex.code,
+                                       cause=ex, traceback=sys.exc_info()[2])
         except Exception as ex:
-            raise OsbsException(repr(ex))
+            raise OsbsException(cause=ex, traceback=sys.exc_info()[2])
 
     @staticmethod
     def _split_lines_from_chunks(chunks):
@@ -400,13 +402,16 @@ class PycurlAdapter(object):
                 # happened on rhel 6
                 message = ""
             if code in PYCURL_NETWORK_CODES:
-                raise OsbsNetworkException(url, message, code, *ex.args[2:])
+                raise OsbsNetworkException(url, message, code, *ex.args[2:],
+                                           cause=ex,
+                                           traceback=sys.exc_info()[2])
 
-            raise OsbsException(repr(ex))
+            raise OsbsException(cause=ex, traceback=sys.exc_info()[2])
         except HTTPError as ex:
-            raise OsbsNetworkException(ex.geturl(), ex.message, ex.code)
+            raise OsbsNetworkException(ex.geturl(), ex.message, ex.code,
+                                       cause=ex, traceback=sys.exc_info()[2])
         except Exception as ex:
-            raise OsbsException(repr(ex))
+            raise OsbsException(cause=ex, traceback=sys.exc_info()[2])
 
     def get(self, url, **kwargs):
         return self._do_request(url, "get", **kwargs)
