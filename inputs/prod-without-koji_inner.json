@@ -45,11 +45,7 @@
   ],
   "postbuild_plugins": [
     {
-      "name": "tag_by_labels",
-      "args": {
-        "registry_uri": "{{REGISTRY_URI}}",
-        "insecure": true
-      }
+      "name": "tag_by_labels"
     },
     {
       "name": "tag_and_push"

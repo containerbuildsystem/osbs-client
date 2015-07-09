@@ -207,8 +207,6 @@ class CommonProductionBuild(CommonBuild):
                              self.spec.sources_command.value)
         dj.dock_json_set_arg('prebuild_plugins', "change_source_registry", "registry_uri",
                              self.spec.registry_uri.value)
-        dj.dock_json_set_arg('postbuild_plugins', "tag_by_labels", "registry_uri",
-                             self.spec.registry_uri.value)
 
         implicit_labels = {
             'Architecture': self.spec.architecture.value,

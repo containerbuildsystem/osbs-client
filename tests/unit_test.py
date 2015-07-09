@@ -274,8 +274,6 @@ def test_render_prod_request_with_repo():
     assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts", "args", "command") == "make"
     assert plugin_value_get(plugins, "prebuild_plugins", "change_source_registry", "args", "registry_uri") == \
            "registry.example.com"
-    assert plugin_value_get(plugins, "postbuild_plugins", "tag_by_labels", "args", "registry_uri") == \
-           "registry.example.com"
     assert plugin_value_get(plugins, "postbuild_plugins", "store_metadata_in_osv3", "args", "url") == \
            "http://openshift/"
     with pytest.raises(NoSuchPluginException):
@@ -338,8 +336,6 @@ def test_render_prod_request():
     assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts", "args", "command") == "make"
     assert plugin_value_get(plugins, "prebuild_plugins", "change_source_registry", "args", "registry_uri") == \
         "registry.example.com"
-    assert plugin_value_get(plugins, "postbuild_plugins", "tag_by_labels", "args", "registry_uri") == \
-        "registry.example.com"
     assert plugin_value_get(plugins, "postbuild_plugins", "store_metadata_in_osv3", "args", "url") == \
         "http://openshift/"
     assert plugin_value_get(plugins, "prebuild_plugins", "koji", "args", "root") == "http://root/"
@@ -397,8 +393,6 @@ def test_render_prod_without_koji_request():
 
     assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts", "args", "command") == "make"
     assert plugin_value_get(plugins, "prebuild_plugins", "change_source_registry", "args", "registry_uri") == \
-        "registry.example.com"
-    assert plugin_value_get(plugins, "postbuild_plugins", "tag_by_labels", "args", "registry_uri") == \
         "registry.example.com"
     assert plugin_value_get(plugins, "postbuild_plugins", "store_metadata_in_osv3", "args", "url") == \
         "http://openshift/"
