@@ -29,7 +29,6 @@ class BuildResponse(object):
         self._json = build_json
         self.request = request
         self._status = None
-        self._build_id = None
 
     @property
     def json(self):
@@ -48,12 +47,6 @@ class BuildResponse(object):
         cap_value = value.capitalize()
         logger.info("changing status from %s to %s", self.status, cap_value)
         self.json['status']['phase'] = cap_value
-
-    @property
-    def build_id(self):
-        if self._build_id is None:
-            self._build_id = self.json['metadata']['name']
-        return self._build_id
 
     def is_finished(self):
         return self.status in BUILD_FINISHED_STATES
