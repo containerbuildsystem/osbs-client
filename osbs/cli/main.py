@@ -130,7 +130,7 @@ def cmd_build(args, osbs):
         yum_repourls=osbs.build_conf.get_yum_repourls(),
         namespace=osbs.build_conf.get_namespace(),
     )
-    build_id = build.build_id
+    build_id = build.get_build_name()
     # we need to wait for kubelet to schedule the build, otherwise it's 500
     namespace = osbs.build_conf.get_namespace()
     build = osbs.wait_for_build_to_get_scheduled(build_id, namespace=namespace)
