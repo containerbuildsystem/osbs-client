@@ -209,7 +209,7 @@ Starting OpenShift:
 $ systemctl start openshift-master && systemctl start openshift-node
 ```
 
-Wiping all runtime configuration:
+Wiping all runtime data:
 
 ```
 $ systemctl stop openshift-master && systemctl stop openshift-node
@@ -220,7 +220,7 @@ $ systemctl start openshift-master && systemctl start openshift-node
 
 #### Authentication Setup
 
-In case you would like to turn the authentication off (which is not recommended, but should fine for testing):
+In case you would like to turn the authentication off (which is not recommended, but should be fine for testing):
 
 ```
 $ oadm policy add-role-to-group edit system:unauthenticated system:authenticated
