@@ -239,11 +239,86 @@ $ oadm policy add-role-to-group edit system:unauthenticated system:authenticated
 For more information see [openshift's documentation](http://docs.openshift.org/latest/welcome/index.html). Good starting point is also [this guide](https://github.com/openshift/origin/blob/master/examples/sample-app/README.md).
 
 
+#### Namespaces and projects
+
+OpenShift and kubernetes use namespaces for isolation. OpenShift extends [namespace](https://docs.openshift.org/latest/architecture/core_concepts/projects_and_users.html#namespaces) concept to [project](https://docs.openshift.org/latest/architecture/core_concepts/projects_and_users.html#projects).
+
+In order to build images in OpenShift, you don't need to create new project/namespace. There is namespace called `default` and it's present after installation.
+
+### Certificates based OpenShift setup
+
+In order to be able to submit builds, your user needs to have at least `edit` role on the `default` namespace.
+
+The easiest way to access OpenShift is to create a dedicated user and set just enough rights for the user:
+
+```
+$ oadm create-api-client-config \
+  --certificate-authority='/etc/openshift/master/ca.crt' \
+  --client-dir='/etc/openshift/master/user-builder' \
+  --signer-cert='/etc/openshift/master/ca.crt' \
+  --signer-key='/etc/openshift/master/ca.key' \
+  --signer-serial='/etc/openshift/master/ca.serial.txt' \
+  --user='system:builder'
+```
+
+This will create `kubeconfig` and certificates at `/etc/openshift/master/user-builder`. All we need now is to set proper permissions for the user:
+
+```
+$ oadm policy add-role-to-user -n default edit system:builder
+```
+
+### htpasswd based OpenShift setup
+
+This is very well [documented](https://docs.openshift.org/latest/admin_guide/configuring_authentication.html#HTPasswdPasswordIdentityProvider) in OpenShift's documentation.
+
+
+1. create `htpasswd` file:
+
+ ```
+ htpasswd -c /etc/openshift/htpasswd builder
+ ```
+
+2. update master config at `/etc/openshift/master/master-config.yaml`:
+
+ ```
+ oauthConfig:
+   ...
+   identityProviders:
+   - name: htpasswd_provider
+     challenge: true
+     login: true
+     provider:
+       apiVersion: v1
+       kind: HTPasswdPasswordIdentityProvider
+       file: /etc/openshift/htpasswd
+ ```
+
+3. set correct permissions for the builder user:
+
+ ```
+ $ oadm policy add-role-to-user -n default edit htpasswd_provider:builder
+ ```
+
+4. put username and password to config of osbs-client:
+
+ ```
+ [the-instance]
+ openshift_uri = https://localhost:8443/
+ username = builder
+ password = ...
+ ```
+
+
+#### Sharing environment
+
+If your OpenShift instance is being used by other people, make sure that everyone is using their own project/namespace. Do not ever share your namespace with others.
+
+
 ## atomic-reactor
 
 Right now we are in process of changing name from `dock` to `atomic-reactor`.
 
-In order to build images, you need to have a build image. It is the image where OpenShift performs builds. The image has installed component called atomic-reactor, which performs the build itself.
+In order to build images, you need to have a build image. It is the image where OpenShift performs builds. The image has installed component called [atomic-reactor](https://github.com/projectatomic/atomic-reactor), which performs the build itself.
 
 
 ### Getting build image
