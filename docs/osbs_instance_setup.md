@@ -330,24 +330,19 @@ In order to build images, you need to have a build image. It is the image where 
 FROM fedora
 
 RUN yum -y update && \
-    yum -y install python-setuptools docker docker-python dock dock-koji dock-metadata osbs && \
+    yum -y install atomic-reactor* && \
     yum clean all
 
-CMD ["dock", "--verbose", "inside-build", "--input", "osv3"]
+CMD ["atomic-reactor", "--verbose", "inside-build", "--input", "osv3"]
 ```
 
-*Required packages*
-
- * **python-setuptools** — needed for pkg_resources
- * **docker** — we use docker within the container
- * **docker-python** — dock's dependency (alternative name may be `python-docker-py`)
- * **dock** — component to perform the build itself
+Please note that previous name of atomic-reactor was dock and right now we are in a process of doing the rename.
 
 *Optional packages*
 
- * **osbs** — if you would like to submit results back to OpenShift (requires `dock-metadata`)
- * **dock-koji** — [dock plugin](https://github.com/DBuildService/dock/blob/master/dock/plugins/pre_koji.py) for getting packages from koji targets
- * **fedpkg** — dock can fetch artifacts from lookaside cache of dist-git
+ * **osbs** — if you would like to submit results back to OpenShift (requires `atomic-reactor-metadata`)
+ * **dock-koji** — [atomic-reactor plugin](https://github.com/DBuildService/dock/blob/master/dock/plugins/pre_koji.py) for getting packages from koji targets
+ * **fedpkg** — atomic-reactor can fetch artifacts from lookaside cache of dist-git
 
 
 Time to build it:
