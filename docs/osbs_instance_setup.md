@@ -101,6 +101,8 @@ You can setup OpenShift with a proxy in front of it. This proxy may have an auth
 
 Communication between proxy and openshift needs to be secure. Proxy needs to use specific SSL client certificate signed by CA which is known (and preconfigured) in openshift. We can use self-signed certificate for this because it won't be exposed to the outside world.
 
+For more information, see the [upstream guide](https://docs.openshift.org/latest/admin_guide/configuring_authentication.html).
+
 Here's how to do it:
 
 ```
@@ -237,9 +239,11 @@ $ oadm policy add-role-to-group edit system:unauthenticated system:authenticated
 For more information see [openshift's documentation](http://docs.openshift.org/latest/welcome/index.html). Good starting point is also [this guide](https://github.com/openshift/origin/blob/master/examples/sample-app/README.md).
 
 
-## dock
+## atomic-reactor
 
-In order to build images, you need to have a build image. It is the image where OpenShift performs builds. The image has installed component called dock, which performs the build itself.
+Right now we are in process of changing name from `dock` to `atomic-reactor`.
+
+In order to build images, you need to have a build image. It is the image where OpenShift performs builds. The image has installed component called atomic-reactor, which performs the build itself.
 
 
 ### Getting build image
@@ -276,3 +280,74 @@ Time to build it:
 ```
 $ docker build --no-cache=true --tag=buildroot ${BUILDROOT_DOCKERFILE_PATH}
 ```
+
+
+## NFS share for koji container build plugin
+
+Create directory where the images (tarballs) will be stored.
+
+```
+$ mkdir -p /mnt/registry/image-export
+$ chown apache /mnt/registry/image-export
+```
+
+Open NFS port in firewall (I'm not sure if this is needed).
+
+```
+$ firewall-cmd --permanent --add-service=nfs
+```
+
+### Create/modify `/etc/exports`
+
+* `builder.example.com` is hostname of the builder
+* `my.devel.machine.example.com` is just for testing and can be removed later
+* `172.17.42.1/16` is docker's internal network
+
+```
+$ cat /etc/exports
+
+/mnt/registry/image-export 172.17.42.1/16(rw,all_squash,anonuid=48,anongid=48) builder.example.com(rw,all_squash,anonuid=48,anongid=48) my.devel.machine.example.com(rw,all_squash,anonuid=48,anongid=48)
+```
+
+You should see all exports here:
+
+```
+$ exportfs -avr
+```
+
+Test NFS writability (e.g. from that `my.devel.machine.example.com`)
+
+```
+$ mkdir -p /mnt/img-export
+$ mount builder.example.com:/mnt/registry/image-export /mnt/img-export
+$ touch /mnt/img-export/test_img.tar
+```
+
+Modify httpd config
+
+```
+$ cat /etc/httpd/conf.d/img.nfs.conf
+
+# atomic-reactor copies tarballs to this directory (via NFS share) and koji
+# downloads it from this place. Garbage collection needs to be done on this
+# directory.
+
+Alias /image-export /mnt/registry/image-export
+
+<Location /image-export>
+    Options +Indexes
+    Require all granted
+</Location>
+
+$ systemctl reload httpd
+```
+
+### Test the setup
+
+You should see that `test_img.tar` there.
+
+```
+$ curl https://builder.example.com/image-export/
+```
+
+TODO: garbage collection of the old files
