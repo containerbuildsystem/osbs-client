@@ -225,8 +225,8 @@ class ProductionBuild(CommonBuild):
 
         dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts",
                              "command", self.spec.sources_command.value)
-        dj.dock_json_set_arg('prebuild_plugins', "change_source_registry",
-                             "registry_uri", self.spec.registry_uri.value)
+        dj.dock_json_set_arg('prebuild_plugins', "pull_base_image",
+                             "parent_registry", self.spec.registry_uri.value)
 
         implicit_labels = {
             'Architecture': self.spec.architecture.value,
@@ -336,7 +336,7 @@ class SimpleBuild(CommonBuild):
             self.spec.validate()
         super(SimpleBuild, self).render()
         dj = DockJsonManipulator(self.template, self.inner_template)
-        dj.dock_json_set_arg('prebuild_plugins', "change_source_registry", "registry_uri",
+        dj.dock_json_set_arg('prebuild_plugins', "pull_base_image", "parent_registry",
                              self.spec.registry_uri.value)
         try:
             dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3", "url",
