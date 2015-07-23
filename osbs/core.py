@@ -11,6 +11,7 @@ import json
 import logging
 from osbs.build.build_response import BuildResponse
 from osbs.constants import DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNNING_STATES, BUILD_CANCELLED_STATE
+from osbs.constants import WATCH_MODIFIED, WATCH_DELETED, WATCH_ERROR
 from osbs.exceptions import OsbsResponseException, OsbsException, OsbsWatchBuildNotFound
 
 try:
@@ -331,6 +332,65 @@ class Openshift(object):
         response = self._put(url, data=json.dumps(build_json), use_json=True)
         check_response(response)
         return response
+
+    def import_image(self, name, namespace=DEFAULT_NAMESPACE):
+        """
+        Import image tags from a Docker registry into an ImageStream
+        """
+
+        # Get the JSON for the ImageStream
+        url = self._build_url("namespaces/%s/imagestreams/%s" % (namespace,
+                                                                 name))
+        imagestream_json = self._get(url).json()
+        logger.debug("imagestream: %r" % imagestream_json)
+        spec = imagestream_json.get('spec', {})
+        if 'dockerImageRepository' not in spec:
+            raise OsbsException('No dockerImageRepository for image import')
+
+        # Mark it as needing import
+        imagestream_json['metadata'].setdefault('annotations', {})
+        check_annotation = "openshift.io/image.dockerRepositoryCheck"
+        imagestream_json['metadata']['annotations'][check_annotation] = ''
+        response = self._put(url, data=json.dumps(imagestream_json),
+                             use_json=True)
+        check_response(response)
+
+        # Watch for it to be updated
+        resourceVersion = imagestream_json['metadata']['resourceVersion']
+        url = self._build_url("watch/namespaces/%s/imagestreams/%s/" % (namespace, name),
+                              resourceVersion=resourceVersion)
+        response = self._get(url, stream=True, headers={'Connection': 'close'})
+        for line in response.iter_lines():
+            j = json.loads(line)
+            logger.debug(line)
+            if 'object' not in j:
+                logger.error("no 'object'")
+                continue
+
+            if 'type' not in j:
+                logger.error("no 'type'")
+                continue
+
+            changetype = j['type']
+            logger.info("Change type: %r", changetype)
+            changetype = changetype.lower()
+            if changetype == WATCH_DELETED:
+                logger.info("Watched ImageStream was deleted")
+                break
+
+            if changetype == WATCH_ERROR:
+                logger.error("Error watching ImageStream")
+                break
+
+            if changetype == WATCH_MODIFIED:
+                logger.info("ImageStream modified")
+                obj = j['object']
+                metadata = obj.get('metadata', {})
+                annotations = metadata.get('annotations', {})
+                logger.info("ImageStream annotations: %r", annotations)
+                if annotations.get(check_annotation, False):
+                    logger.info("ImageStream updated")
+                    break
 
 
 if __name__ == '__main__':

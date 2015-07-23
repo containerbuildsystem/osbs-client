@@ -25,6 +25,13 @@ BUILD_FAILED_STATES = ["failed", "error", "cancelled"]  # meaning no image produ
 BUILD_SUCCEEDED_STATES = ["complete"]
 BUILD_PENDING_STATES = ["pending", "new"]
 BUILD_RUNNING_STATES = ["running"]
+
+# Watch response types
+WATCH_ADDED = 'added'
+WATCH_DELETED = 'deleted'
+WATCH_MODIFIED = 'modified'
+WATCH_ERROR = 'error'
+
 # https://github.com/openshift/origin/blob/master/pkg/build/api/types.go
 # type BuildStatus string
 DEFAULT_NAMESPACE = "default"

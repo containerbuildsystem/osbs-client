@@ -182,6 +182,10 @@ def cmd_watch_build(args, osbs):
         print_json_nicely(build_response.json)
 
 
+def cmd_import_image(args, osbs):
+    osbs.import_image(args.NAME[0])
+
+
 def cmd_get_token(args, osbs):  # pylint: disable=W0613
     token = osbs.get_token()
     print(token)
@@ -238,6 +242,10 @@ def cli():
     cancel_build_parser = subparsers.add_parser('cancel-build', help='cancel build specified by ID')
     cancel_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
     cancel_build_parser.set_defaults(func=cmd_cancel_build)
+
+    import_image_parser = subparsers.add_parser('import-image', help='import tags for ImageStream')
+    import_image_parser.add_argument("NAME", help="ImageStream name", nargs=1)
+    import_image_parser.set_defaults(func=cmd_import_image)
 
     get_token_parser = subparsers.add_parser('get-token', help='get authentication token')
     get_token_parser.set_defaults(func=cmd_get_token)

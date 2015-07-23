@@ -315,6 +315,10 @@ class OSBS(object):
         return self.os.set_annotations_on_build(build_id, annotations, namespace=namespace)
 
     @osbsapi
+    def import_image(self, name, namespace=DEFAULT_NAMESPACE):
+        return self.os.import_image(name, namespace=namespace)
+
+    @osbsapi
     def get_token(self):
         return self.os.get_oauth_token()
 
