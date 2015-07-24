@@ -1,6 +1,6 @@
 # Resource limiting
 
-To set resource quota, use `osc create -f quota.yaml` on a file like this:
+To set resource quota, use `oc create -f quota.yaml` on a file like this:
 
 ```yaml
 apiVersion: v1
@@ -19,7 +19,7 @@ spec:
     storage: 20Gi
 ```
 
-Now `osc describe quota myquota` will show the used and total amount of each resource type.
+Now `oc describe quota myquota` will show the used and total amount of each resource type.
 
 You can set default per-build limits either by setting them in the OSBS build configuration file (`cpu_limit`, `memory_limit`, `storage_limit`), or by setting defaults that OpenShift will apply to builds that do not specify their limits:
 
