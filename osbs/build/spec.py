@@ -136,7 +136,10 @@ class CommonSpec(BuildTypeSpec):
         self.git_ref.value = git_ref
         self.user.value = user
         self.component.value = component
-        self.registry_uri.value = registry_uri
+        # We only want the hostname[:port]
+        self.registry_uri.value = re.sub(r'^https?://([^/]*)/?.*',
+                                         lambda m: m.groups()[0],
+                                         registry_uri)
         self.openshift_uri.value = openshift_uri
         if not (yum_repourls is None or isinstance(yum_repourls, list)):
             raise OsbsValidationException("yum_repourls must be a list")
