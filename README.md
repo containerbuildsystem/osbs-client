@@ -2,6 +2,8 @@
 
 [![Code Health](https://landscape.io/github/projectatomic/osbs-client/master/landscape.svg?style=flat)](https://landscape.io/github/projectatomic/osbs-client/master)
 [![Build Status](https://travis-ci.org/projectatomic/osbs-client.svg?branch=master)](https://travis-ci.org/projectatomic/osbs-client)
+[![Coverage
+Status](https://coveralls.io/repos/projectatomic/osbs-client/badge.svg?branch=master&service=github)](https://coveralls.io/github/projectatomic/osbs-client?branch=master)
 
 Python module and command line client for OpenShift Build Service.
 
