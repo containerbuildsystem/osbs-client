@@ -145,52 +145,55 @@ class CommonSpec(BuildTypeSpec):
         self.name.value = self.component.value
 
 
-class CommonProdSpec(CommonSpec):
+class ProdSpec(CommonSpec):
     sources_command = BuildParam("sources_command")
     architecture = BuildParam("architecture")
     vendor = BuildParam("vendor")
     build_host = BuildParam("build_host")
     authoritative_registry = BuildParam("authoritative_registry ")
+    koji_target = BuildParam("koji_target", allow_none=True)
+    kojiroot = BuildParam("kojiroot", allow_none=True)
+    kojihub = BuildParam("kojihub", allow_none=True)
+    image_tag = BuildParam("image_tag")
+    source_secret = BuildParam("source_secret", allow_none=True)
+    pulp_registry = BuildParam("pulp_registry", allow_none=True)
+    nfs_server_path = BuildParam("nfs_server_path", allow_none=True)
+    nfs_dest_dir = BuildParam("nfs_dest_dir", allow_none=True)
 
     def __init__(self):
-        super(CommonProdSpec, self).__init__()
+        super(ProdSpec, self).__init__()
         self.required_params += [
             self.sources_command,
             self.architecture,
             self.vendor,
             self.build_host,
             self.authoritative_registry,
+            self.koji_target,
+            self.kojiroot,
+            self.kojihub,
+            self.source_secret,
+            self.pulp_registry,
+            self.nfs_server_path,
         ]
 
     def set_params(self, sources_command=None, architecture=None, vendor=None,
-                   build_host=None, authoritative_registry=None, **kwargs):
-        super(CommonProdSpec, self).set_params(**kwargs)
+                   build_host=None, authoritative_registry=None,
+                   koji_target=None, kojiroot=None, kojihub=None,
+                   source_secret=None, pulp_registry=None, nfs_server_path=None,
+                   nfs_dest_dir=None, **kwargs):
+        super(ProdSpec, self).set_params(**kwargs)
         self.sources_command.value = sources_command
         self.architecture.value = architecture
         self.vendor.value = vendor
         self.build_host.value = build_host
         self.authoritative_registry.value = authoritative_registry
-
-
-class ProdSpec(CommonProdSpec):
-    koji_target = BuildParam("koji_target")
-    kojiroot = BuildParam("kojiroot")
-    kojihub = BuildParam("kojihub")
-    image_tag = BuildParam("image_tag")
-
-    def __init__(self):
-        super(ProdSpec, self).__init__()
-        self.required_params += [
-            self.koji_target,
-            self.kojiroot,
-            self.kojihub,
-        ]
-
-    def set_params(self, koji_target=None, kojiroot=None, kojihub=None, **kwargs):
-        super(ProdSpec, self).set_params(**kwargs)
         self.koji_target.value = koji_target
         self.kojiroot.value = kojiroot
         self.kojihub.value = kojihub
+        self.source_secret.value = source_secret
+        self.pulp_registry.value = pulp_registry
+        self.nfs_server_path.value = nfs_server_path
+        self.nfs_dest_dir.value = nfs_dest_dir
         timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         self.image_tag.value = "%s/%s:%s-%s" % (
             self.user.value,
@@ -198,45 +201,6 @@ class ProdSpec(CommonProdSpec):
             self.koji_target.value,
             timestamp
         )
-
-
-class ProdWithoutKojiSpec(CommonProdSpec):
-    image_tag = BuildParam("image_tag")
-
-    def __init__(self):
-        super(ProdWithoutKojiSpec, self).__init__()
-
-    def set_params(self, **kwargs):
-        super(ProdWithoutKojiSpec, self).set_params(**kwargs)
-        timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-        self.image_tag.value = "%s/%s:%s" % (  # FIXME: improve tag
-            self.user.value,
-            self.component.value,
-            timestamp
-        )
-
-
-class ProdWithSecretSpec(ProdSpec):
-    source_secret = BuildParam("source_secret")
-    pulp_registry = BuildParam("pulp_registry")
-    nfs_server_path = BuildParam("nfs_server_path")
-    nfs_dest_dir = BuildParam("nfs_dest_dir")
-
-    def __init__(self):
-        super(ProdWithSecretSpec, self).__init__()
-        self.required_params += [
-            self.source_secret,
-            self.pulp_registry,
-            self.nfs_server_path,
-        ]
-
-    def set_params(self, source_secret=None, pulp_registry=None, nfs_server_path=None,
-                   nfs_dest_dir=None, **kwargs):
-        super(ProdWithSecretSpec, self).set_params(**kwargs)
-        self.source_secret.value = source_secret
-        self.pulp_registry.value = pulp_registry
-        self.nfs_server_path.value = nfs_server_path
-        self.nfs_dest_dir.value = nfs_dest_dir
 
 
 class SimpleSpec(CommonSpec):

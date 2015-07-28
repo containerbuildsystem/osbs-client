@@ -20,7 +20,7 @@ from .fake_api import openshift, osbs
 from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.build_response import BuildResponse
 from osbs.build.build_request import BuildManager, BuildRequest
-from osbs.build.build_request import SimpleBuild, ProductionBuild, ProductionWithoutKojiBuild
+from osbs.build.build_request import SimpleBuild, ProductionBuild
 from osbs.build.spec import BuildIDParam
 from osbs.constants import BUILD_FINISHED_STATES
 from osbs.constants import SIMPLE_BUILD_TYPE, PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
@@ -234,6 +234,7 @@ def test_render_prod_request_with_repo():
     inputs_path = os.path.join(parent_dir, "inputs")
     bm = BuildManager(inputs_path)
     build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+    assert isinstance(build_request, ProductionBuild)
     kwargs = {
         'git_uri': "http://git/",
         'git_ref': "master",
@@ -278,6 +279,12 @@ def test_render_prod_request_with_repo():
            "http://openshift/"
     with pytest.raises(NoSuchPluginException):
         assert get_plugin(plugins, "prebuild_plugins", "koji")
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
+    assert 'sourceSecret' not in build_json["spec"]["source"]
+    assert 'sourceSecretName' not in build_json["spec"]["source"]
     plugin_value_get(plugins, "prebuild_plugins", "add_yum_repo_by_url", "args", "repourls") == \
         ["http://example.com/my.repo"]
 
@@ -341,6 +348,12 @@ def test_render_prod_request():
     assert plugin_value_get(plugins, "prebuild_plugins", "koji", "args", "root") == "http://root/"
     assert plugin_value_get(plugins, "prebuild_plugins", "koji", "args", "target") == "koji-target"
     assert plugin_value_get(plugins, "prebuild_plugins", "koji", "args", "hub") == "http://hub/"
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
+    assert 'sourceSecret' not in build_json["spec"]["source"]
+    assert 'sourceSecretName' not in build_json["spec"]["source"]
 
     labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile", "args", "labels")
 
@@ -358,6 +371,7 @@ def test_render_prod_without_koji_request():
     inputs_path = os.path.join(parent_dir, "inputs")
     bm = BuildManager(inputs_path)
     build_request = bm.get_build_request_by_type(PROD_WITHOUT_KOJI_BUILD_TYPE)
+    assert isinstance(build_request, ProductionBuild)
     kwargs = {
         'git_uri': "http://git/",
         'git_ref': "master",
@@ -397,6 +411,15 @@ def test_render_prod_without_koji_request():
     assert plugin_value_get(plugins, "postbuild_plugins", "store_metadata_in_osv3", "args", "url") == \
         "http://openshift/"
 
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "prebuild_plugins", "koji")
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
+    assert 'sourceSecret' not in build_json["spec"]["source"]
+    assert 'sourceSecretName' not in build_json["spec"]["source"]
+
     labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile", "args", "labels")
 
     assert labels is not None
@@ -413,6 +436,7 @@ def test_render_prod_with_secret_request():
     inputs_path = os.path.join(parent_dir, "inputs")
     bm = BuildManager(inputs_path)
     build_request = bm.get_build_request_by_type(PROD_WITH_SECRET_BUILD_TYPE)
+    assert isinstance(build_request, ProductionBuild)
     kwargs = {
         'git_uri': "http://git/",
         'git_ref': "master",
@@ -437,6 +461,20 @@ def test_render_prod_with_secret_request():
 
     assert build_json["spec"]["source"]["sourceSecret"]["name"] == "mysecret"
     assert build_json["spec"]["source"]["sourceSecretName"] == "mysecret"
+
+    strategy = build_json['spec']['strategy']['customStrategy']['env']
+    plugins_json = None
+    for d in strategy:
+        if d['name'] == 'DOCK_PLUGINS':
+            plugins_json = d['value']
+            break
+
+    assert plugins_json is not None
+    plugins = json.loads(plugins_json)
+
+    assert get_plugin(plugins, "prebuild_plugins", "koji")
+    assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
+    assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
 
 
 def test_render_with_yum_repourls():
@@ -493,6 +531,43 @@ def test_render_with_yum_repourls():
     assert 'http://example.com/repo1.repo' in repourls
     assert 'http://example.com/repo2.repo' in repourls
 
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "prebuild_plugins", "koji")
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
+
+
+def test_render_prod_with_pulp_no_auth():
+    """
+    Rendering should fail if pulp is specified but auth config isn't
+    """
+    this_file = inspect.getfile(test_render_prod_request)
+    this_dir = os.path.dirname(this_file)
+    parent_dir = os.path.dirname(this_dir)
+    inputs_path = os.path.join(parent_dir, "inputs")
+    bm = BuildManager(inputs_path)
+    build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+    kwargs = {
+        'git_uri': "http://git/",
+        'git_ref': "master",
+        'user': "john-foo",
+        'component': "component",
+        'registry_uri': "registry.example.com",
+        'openshift_uri': "http://openshift/",
+        'sources_command': "make",
+        'architecture': "x86_64",
+        'vendor': "Foo Vendor",
+        'build_host': "our.build.host.example.com",
+        'authoritative_registry': "registry.example.com",
+        'pulp_registry': "foo",
+    }
+    build_request.set_params(**kwargs)
+    with pytest.raises(OsbsValidationException):
+        build_json = build_request.render()
+
+
 def test_get_user(openshift):
     l = openshift.get_user()
     assert l.json() is not None
@@ -544,7 +619,7 @@ def test_get_build_request_api(osbs):
     prod = osbs.get_build_request(PROD_BUILD_TYPE)
     assert isinstance(prod, ProductionBuild)
     prodwithoutkoji = osbs.get_build_request(PROD_WITHOUT_KOJI_BUILD_TYPE)
-    assert isinstance(prodwithoutkoji, ProductionWithoutKojiBuild)
+    assert isinstance(prodwithoutkoji, ProductionBuild)
 
 
 def test_set_labels_on_build_api(osbs):

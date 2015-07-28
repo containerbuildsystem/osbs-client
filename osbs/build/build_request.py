@@ -12,11 +12,10 @@ import logging
 import os
 
 from osbs.build.manipulate import DockJsonManipulator
-from osbs.build.spec import CommonSpec, ProdSpec, SimpleSpec, ProdWithoutKojiSpec, CommonProdSpec
-from osbs.build.spec import ProdWithSecretSpec
+from osbs.build.spec import CommonSpec, ProdSpec, SimpleSpec
 from osbs.constants import PROD_BUILD_TYPE, SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
 from osbs.constants import PROD_WITH_SECRET_BUILD_TYPE
-from osbs.exceptions import OsbsException
+from osbs.exceptions import OsbsValidationException
 
 
 build_classes = {}
@@ -72,6 +71,12 @@ class BuildRequest(object):
     @staticmethod
     def new_by_type(build_name, *args, **kwargs):
         """Find BuildRequest with the given name."""
+
+        # Compatibility
+        if build_name in (PROD_WITHOUT_KOJI_BUILD_TYPE,
+                          PROD_WITH_SECRET_BUILD_TYPE):
+            build_name = PROD_BUILD_TYPE
+
         try:
             build_class = build_classes[build_name]
             logger.debug("Instantiating: %s(%s, %s)", build_class.__name__, args, kwargs)
@@ -176,54 +181,8 @@ class CommonBuild(BuildRequest):
         self.spec.validate()
 
 
-class CommonProductionBuild(CommonBuild):
-    def __init__(self, build_json_store, **kwargs):
-        super(CommonProductionBuild, self).__init__(build_json_store, **kwargs)
-        self.spec = CommonProdSpec()
-
-    def set_params(self, **kwargs):
-        """
-        set parameters according to specification
-
-        these parameters are accepted:
-
-        :param sources_command: str, command used to fetch dist-git sources
-        :param architecture: str, architecture we are building for
-        :param vendor: str, vendor name
-        :param build_host: str, host the build will run on
-        :param authoritative_registry: str, the docker registry authoritative for this image
-        :param metadata_plugin_use_auth: bool, use auth when posting metadata from dock?
-        """
-        logger.debug("setting params '%s' for %s", kwargs, self.spec)
-        self.spec.set_params(**kwargs)
-
-    def render(self, validate=True):
-        if validate:
-            self.spec.validate()
-        super(CommonProductionBuild, self).render()
-        dj = DockJsonManipulator(self.template, self.inner_template)
-
-        dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts", "command",
-                             self.spec.sources_command.value)
-        dj.dock_json_set_arg('prebuild_plugins', "change_source_registry", "registry_uri",
-                             self.spec.registry_uri.value)
-
-        implicit_labels = {
-            'Architecture': self.spec.architecture.value,
-            'Vendor': self.spec.vendor.value,
-            'Build_Host': self.spec.build_host.value,
-            'Authoritative_Registry': self.spec.authoritative_registry.value,
-        }
-
-        dj.dock_json_merge_arg('prebuild_plugins', "add_labels_in_dockerfile", "labels",
-                               implicit_labels)
-
-        dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url",
-                             self.spec.openshift_uri.value)
-
-
 @register_build_class
-class ProductionBuild(CommonProductionBuild):
+class ProductionBuild(CommonBuild):
     key = PROD_BUILD_TYPE
 
     def __init__(self, build_json_store, **kwargs):
@@ -236,9 +195,13 @@ class ProductionBuild(CommonProductionBuild):
 
         these parameters are accepted:
 
+        :param source_secret: str, resource name of source secret
         :param koji_target: str, koji tag with packages used to build the image
         :param kojiroot: str, URL from which koji packages are fetched
         :param kojihub: str, URL of the koji hub
+        :param pulp_registry: str, name of pulp registry in dockpulp.conf
+        :param nfs_server_path: str, NFS server and path
+        :param nfs_dest_dir: str, directory to create on NFS server
         :param sources_command: str, command used to fetch dist-git sources
         :param architecture: str, architecture we are building for
         :param vendor: str, vendor name
@@ -255,108 +218,84 @@ class ProductionBuild(CommonProductionBuild):
         super(ProductionBuild, self).render()
         dj = DockJsonManipulator(self.template, self.inner_template)
 
+        dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts",
+                             "command", self.spec.sources_command.value)
+        dj.dock_json_set_arg('prebuild_plugins', "change_source_registry",
+                             "registry_uri", self.spec.registry_uri.value)
+
+        implicit_labels = {
+            'Architecture': self.spec.architecture.value,
+            'Vendor': self.spec.vendor.value,
+            'Build_Host': self.spec.build_host.value,
+            'Authoritative_Registry': self.spec.authoritative_registry.value,
+        }
+
+        dj.dock_json_merge_arg('prebuild_plugins', "add_labels_in_dockerfile",
+                               "labels", implicit_labels)
+
+        dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
+                             "url", self.spec.openshift_uri.value)
+
         # if there is yum repo specified, don't pick stuff from koji
         if self.spec.yum_repourls.value:
             logger.info("removing koji from request, because there is yum repo specified")
+            dj.remove_plugin("prebuild_plugins", "koji")
+        elif not (self.spec.koji_target.value and
+                  self.spec.kojiroot.value and
+                  self.spec.kojihub.value):
+            logger.info("removing koji from request as not specified")
             dj.remove_plugin("prebuild_plugins", "koji")
         else:
             dj.dock_json_set_arg('prebuild_plugins', "koji", "target", self.spec.koji_target.value)
             dj.dock_json_set_arg('prebuild_plugins', "koji", "root", self.spec.kojiroot.value)
             dj.dock_json_set_arg('prebuild_plugins', "koji", "hub", self.spec.kojihub.value)
 
+        # If there is a pulp secret, use it
+        if self.spec.source_secret.value:
+            name = self.spec.source_secret.value
+            self.template['spec']['source']['sourceSecret']['name'] = name
+            # OpenShift 0.5.2 compatibility, remove once we migrate to v1 api
+            self.template['spec']['source']['sourceSecretName'] = name
+
+            # Don't push to docker registry, we're using pulp here
+            # but still construct the unique tag
+            self.template['spec']['output']['to']['name'] = self.spec.image_tag.value
+        else:
+            # Otherwise remove references to the secret
+            del self.template['spec']['source']['sourceSecret']
+            # Openshift 0.5.2 compatibility, remove once we migrate to v1 api
+            del self.template['spec']['source']['sourceSecretName']
+
+        # If NFS destination set, use it
+        nfs_server_path = self.spec.nfs_server_path.value
+        if nfs_server_path:
+            dj.dock_json_set_arg('postbuild_plugins', 'cp_built_image_to_nfs',
+                                 'nfs_server_path', nfs_server_path)
+            dj.dock_json_set_arg('postbuild_plugins', 'cp_built_image_to_nfs',
+                                 'nfs_dest_dir', self.spec.nfs_dest_dir.value)
+        else:
+            # Otherwise, don't run the NFS plugin
+            dj.remove_plugin("postbuild_plugins", "cp_built_image_to_nfs")
+
+        # If a pulp registry is specified, use the pulp plugin
+        pulp_registry = self.spec.pulp_registry.value
+        if pulp_registry:
+            dj.dock_json_set_arg('postbuild_plugins', 'pulp_push',
+                                 'pulp_registry_name', pulp_registry)
+
+            # Verify we have either a sourceSecret or username/password
+            if 'sourceSecret' not in self.template['spec']['source']:
+                conf = dj.dock_json_get_plugin_conf('postbuild_plugins',
+                                                    'pulp_push')
+                args = conf.get('args', {})
+                if 'username' not in args:
+                    raise OsbsValidationException("Pulp registry specified "
+                                                  "but no auth config")
+        else:
+            # If no pulp registry is specified, don't run the pulp plugin
+            dj.remove_plugin("postbuild_plugins", "pulp_push")
+
         dj.write_dock_json()
-        self.build_json = self.template
-        logger.debug(self.build_json)
-        return self.build_json
-
-
-@register_build_class
-class ProductionWithoutKojiBuild(CommonProductionBuild):
-    key = PROD_WITHOUT_KOJI_BUILD_TYPE
-
-    def __init__(self, build_json_store, **kwargs):
-        super(ProductionWithoutKojiBuild, self).__init__(build_json_store, **kwargs)
-        self.spec = ProdWithoutKojiSpec()
-
-    def set_params(self, **kwargs):
-        """
-        set parameters according to specification
-
-        these parameters are accepted:
-
-        :param sources_command: str, command used to fetch dist-git sources
-        :param architecture: str, architecture we are building for
-        :param vendor: str, vendor name
-        :param build_host: str, host the build will run on
-        :param authoritative_registry: str, the docker registry authoritative for this image
-        :param metadata_plugin_use_auth: bool, use auth when posting metadata from dock?
-        """
-        logger.debug("setting params '%s' for %s", kwargs, self.spec)
-        self.spec.set_params(**kwargs)
-
-    def render(self, validate=True):
-        if validate:
-            self.spec.validate()
-        super(ProductionWithoutKojiBuild, self).render()
-        dj = DockJsonManipulator(self.template, self.inner_template)
-
-        dj.write_dock_json()
-        self.build_json = self.template
-        logger.debug(self.build_json)
-        return self.build_json
-
-
-@register_build_class
-class ProductionWithSecretBuild(ProductionBuild):
-    key = PROD_WITH_SECRET_BUILD_TYPE
-
-    def __init__(self, build_json_store, **kwargs):
-        super(ProductionWithSecretBuild, self).__init__(build_json_store, **kwargs)
-        self.spec = ProdWithSecretSpec()
-
-    def set_params(self, **kwargs):
-        """
-        set parameters according to specification
-
-        these parameters are accepted:
-
-        :param koji_target: str, koji tag with packages used to build the image
-        :param kojiroot: str, URL from which koji packages are fetched
-        :param kojihub: str, URL of the koji hub
-        :param sources_command: str, command used to fetch dist-git sources
-        :param architecture: str, architecture we are building for
-        :param vendor: str, vendor name
-        :param build_host: str, host the build will run on
-        :param authoritative_registry: str, the docker registry authoritative for this image
-        :param metadata_plugin_use_auth: bool, use auth when posting metadata from dock?
-        :param source_secret: str, resource name of source secret
-        """
-        logger.debug("setting params '%s' for %s", kwargs, self.spec)
-        self.spec.set_params(**kwargs)
-
-    def render(self, validate=True):
-        if validate:
-            self.spec.validate()
-        super(ProductionWithSecretBuild, self).render()
-        dj = DockJsonManipulator(self.template, self.inner_template)
-
-        self.template['spec']['source']['sourceSecret']['name'] = self.spec.source_secret.value
-        # XXX workaround for openshift-0.5.2 compatibility - remove it (and the
-        # corresponding build json part) once we migrate to the v1 api
-        self.template['spec']['source']['sourceSecretName'] = self.spec.source_secret.value
-
-        # don't push to docker registry, we're using pulp here
-        # but still construct the unique tag
-        self.template['spec']['output']['to']['name'] = self.spec.image_tag.value
-        dj.dock_json_set_arg('postbuild_plugins', "pulp_push", "pulp_registry_name",
-                             self.spec.pulp_registry.value)
-        dj.dock_json_set_arg('postbuild_plugins', "cp_built_image_to_nfs", "nfs_server_path",
-                             self.spec.nfs_server_path.value)
-        if self.spec.nfs_dest_dir.value:
-            dj.dock_json_set_arg('postbuild_plugins', "cp_built_image_to_nfs", "dest_dir",
-                                 self.spec.nfs_dest_dir.value)
-        dj.write_dock_json()
-
         self.build_json = self.template
         logger.debug(self.build_json)
         return self.build_json

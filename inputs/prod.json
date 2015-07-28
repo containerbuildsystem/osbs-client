@@ -10,7 +10,11 @@
       "git": {
         "uri": "{{GIT_URI}}",
         "ref": "{{GIT_REF}}"
-      }
+      },
+      "sourceSecret": {
+        "name": "{{SOURCE_SECRET}}"
+      },
+      "sourceSecretName": "{{SOURCE_SECRET}}"
     },
     "output": {
       "to": {

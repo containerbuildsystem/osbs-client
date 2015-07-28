@@ -190,7 +190,7 @@ class OSBS(object):
     @osbsapi
     def create_prod_without_koji_build(self, git_uri, git_ref, user, component, architecture, yum_repourls=None,
                                        namespace=DEFAULT_NAMESPACE, **kwargs):
-        build_request = self.get_build_request(PROD_WITHOUT_KOJI_BUILD_TYPE)
+        build_request = self.get_build_request(PROD_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
             git_ref=git_ref,
@@ -241,12 +241,12 @@ class OSBS(object):
         :return: instance of BuildRequest
         """
         build_type = self.build_conf.get_build_type()
-        if build_type == PROD_BUILD_TYPE:
+        if build_type in (PROD_BUILD_TYPE,
+                          PROD_WITHOUT_KOJI_BUILD_TYPE,
+                          PROD_WITH_SECRET_BUILD_TYPE):
             return self.create_prod_build(namespace=namespace, **kwargs)
         elif build_type == SIMPLE_BUILD_TYPE:
             return self.create_simple_build(namespace=namespace, **kwargs)
-        elif build_type == PROD_WITHOUT_KOJI_BUILD_TYPE:
-            return self.create_prod_without_koji_build(namespace=namespace, **kwargs)
         elif build_type == PROD_WITH_SECRET_BUILD_TYPE:
             return self.create_prod_with_secret_build(namespace=namespace, **kwargs)
         else:
