@@ -1,6 +1,6 @@
 # Using a Source Secret
 
-The `prod-with-secret` build type allows you to provide some secret content to the build using [Kubernetes Secret Volumes](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/secrets.md).
+The `prod` build type allows you to provide some secret content to the build using [Kubernetes Secret Volumes](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/secrets.md).
 
 This is useful when the build workflow requires keys, certificates, etc, which should not be part of the buildroot image.
 
@@ -52,7 +52,7 @@ When you need to change the data, you can use `update` instead of `create`.
 In your OSBS build instance configuration, use the following values:
 
 ```
-build_type = prod-with-secret
+build_type = prod
 source_secret = mysecret
 ```
 

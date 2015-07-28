@@ -48,15 +48,32 @@
   ],
   "prepublish_plugins": [
     {
-      "name": "squash"
+      "name": "squash",
+      "args": {
+        "remove_former_image": false,
+        "dont_load": true
+      }
     }
   ],
   "postbuild_plugins": [
+    {
+      "name": "cp_built_image_to_nfs",
+      "args": {
+        "nfs_server_path": "{{NFS_SERVER_PATH}}"
+      }
+    },
     {
       "name": "tag_by_labels"
     },
     {
       "name": "tag_and_push"
+    },
+    {
+      "name": "pulp_push",
+      "args": {
+        "pulp_registry_name": "{{PULP_REGISTRY_NAME}}",
+        "load_squashed_image": true
+      }
     },
     {
       "args": {
