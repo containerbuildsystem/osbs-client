@@ -151,6 +151,7 @@ class CommonProdSpec(CommonSpec):
     vendor = BuildParam("vendor")
     build_host = BuildParam("build_host")
     authoritative_registry = BuildParam("authoritative_registry ")
+    scratch_build = BuildParam("scratch_build")
 
     def __init__(self):
         super(CommonProdSpec, self).__init__()
@@ -163,13 +164,15 @@ class CommonProdSpec(CommonSpec):
         ]
 
     def set_params(self, sources_command=None, architecture=None, vendor=None,
-                   build_host=None, authoritative_registry=None, **kwargs):
+                   build_host=None, authoritative_registry=None,
+                   scratch_build=None, **kwargs):
         super(CommonProdSpec, self).set_params(**kwargs)
         self.sources_command.value = sources_command
         self.architecture.value = architecture
         self.vendor.value = vendor
         self.build_host.value = build_host
         self.authoritative_registry.value = authoritative_registry
+        self.scratch_build.value = scratch_build
 
 
 class ProdSpec(CommonProdSpec):
