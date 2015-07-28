@@ -174,8 +174,13 @@ class CommonBuild(BuildRequest):
                                       self.spec.yum_repourls.value)
 
         if self.spec.metadata_plugin_use_auth.value is not None:
-            self.dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
-                                      "use_auth", self.spec.metadata_plugin_use_auth.value)
+            try:
+                self.dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3",
+                                          "use_auth", self.spec.metadata_plugin_use_auth.value)
+            except RuntimeError:
+                # For compatibility with older osbs.conf files
+                self.dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
+                                          "use_auth", self.spec.metadata_plugin_use_auth.value)
 
     def validate_input(self):
         self.spec.validate()
@@ -233,8 +238,13 @@ class ProductionBuild(CommonBuild):
         dj.dock_json_merge_arg('prebuild_plugins', "add_labels_in_dockerfile",
                                "labels", implicit_labels)
 
-        dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
-                             "url", self.spec.openshift_uri.value)
+        try:
+            dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3",
+                                 "url", self.spec.openshift_uri.value)
+        except RuntimeError:
+            # For compatibility with older osbs.conf files
+            dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
+                                 "url", self.spec.openshift_uri.value)
 
         # if there is yum repo specified, don't pick stuff from koji
         if self.spec.yum_repourls.value:
@@ -328,8 +338,14 @@ class SimpleBuild(CommonBuild):
         dj = DockJsonManipulator(self.template, self.inner_template)
         dj.dock_json_set_arg('prebuild_plugins', "change_source_registry", "registry_uri",
                              self.spec.registry_uri.value)
-        dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url",
-                             self.spec.openshift_uri.value)
+        try:
+            dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3", "url",
+                                 self.spec.openshift_uri.value)
+        except RuntimeError:
+            # For compatibility with older osbs.conf files
+            dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url",
+                                 self.spec.openshift_uri.value)
+
         dj.write_dock_json()
         self.build_json = self.template
         logger.debug(self.build_json)
