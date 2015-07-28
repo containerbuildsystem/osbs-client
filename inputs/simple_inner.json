@@ -20,7 +20,9 @@
         "image_id": "BUILT_IMAGE_ID"
       },
       "name": "all_rpm_packages"
-    },
+    }
+  ],
+  "exit_plugins": [
     {
       "args": {
         "url": "{{OPENSHIFT_URI}}",

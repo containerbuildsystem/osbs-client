@@ -10,6 +10,7 @@ import copy
 import inspect
 import json
 import os
+import shutil
 import sys
 from types import GeneratorType
 
@@ -189,6 +190,60 @@ def test_manipulator_merge():
     assert plugin['args']['key1']['z'] == '9'
 
 
+def test_render_simple_request_incorrect_postbuild(tmpdir):
+    this_file = inspect.getfile(test_render_prod_request)
+    this_dir = os.path.dirname(this_file)
+    parent_dir = os.path.dirname(this_dir)
+    inputs_path = os.path.join(parent_dir, "inputs")
+
+    # Make temporary copies of the JSON files
+    for basename in ['simple.json', 'simple_inner.json']:
+        shutil.copy(os.path.join(inputs_path, basename),
+                    os.path.join(str(tmpdir), basename))
+
+    # Create an inner JSON description which incorrectly runs the exit
+    # plugins as postbuild plugins.
+    with open(os.path.join(str(tmpdir), 'simple_inner.json'), 'r+') as inner:
+        inner_json = json.load(inner)
+
+        # Re-write all the exit plugins as postbuild plugins
+        exit_plugins = inner_json['exit_plugins']
+        inner_json['postbuild_plugins'].extend(exit_plugins)
+        del inner_json['exit_plugins']
+
+        inner.seek(0)
+        json.dump(inner_json, inner)
+        inner.truncate()
+
+    bm = BuildManager(str(tmpdir))
+    build_request = bm.get_build_request_by_type("simple")
+    kwargs = {
+        'git_uri': "http://git/",
+        'git_ref': "master",
+        'user': "john-foo",
+        'component': "component",
+        'registry_uri': "registry.example.com",
+        'openshift_uri': "http://openshift/",
+    }
+    build_request.set_params(**kwargs)
+    build_json = build_request.render()
+
+    env_vars = build_json['spec']['strategy']['customStrategy']['env']
+    plugins_json = None
+    for d in env_vars:
+        if d['name'] == 'DOCK_PLUGINS':
+            plugins_json = d['value']
+            break
+
+    assert plugins_json is not None
+    plugins = json.loads(plugins_json)
+
+    # Check the store_metadata_in_osv3's uri parameter was set
+    # correctly, even though it was listed as a postbuild plugin.
+    assert plugin_value_get(plugins, "postbuild_plugins", "store_metadata_in_osv3", "args", "url") == \
+           "http://openshift/"
+
+
 def test_render_simple_request():
     this_file = inspect.getfile(test_render_prod_request)
     this_dir = os.path.dirname(this_file)
@@ -223,7 +278,7 @@ def test_render_simple_request():
 
     assert plugins_json is not None
     plugins = json.loads(plugins_json)
-    assert plugin_value_get(plugins, "postbuild_plugins", "store_metadata_in_osv3", "args", "url") == \
+    assert plugin_value_get(plugins, "exit_plugins", "store_metadata_in_osv3", "args", "url") == \
            "http://openshift/"
 
 
@@ -275,7 +330,7 @@ def test_render_prod_request_with_repo():
     assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts", "args", "command") == "make"
     assert plugin_value_get(plugins, "prebuild_plugins", "change_source_registry", "args", "registry_uri") == \
            "registry.example.com"
-    assert plugin_value_get(plugins, "postbuild_plugins", "store_metadata_in_osv3", "args", "url") == \
+    assert plugin_value_get(plugins, "exit_plugins", "store_metadata_in_osv3", "args", "url") == \
            "http://openshift/"
     with pytest.raises(NoSuchPluginException):
         assert get_plugin(plugins, "prebuild_plugins", "koji")
@@ -343,7 +398,7 @@ def test_render_prod_request():
     assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts", "args", "command") == "make"
     assert plugin_value_get(plugins, "prebuild_plugins", "change_source_registry", "args", "registry_uri") == \
         "registry.example.com"
-    assert plugin_value_get(plugins, "postbuild_plugins", "store_metadata_in_osv3", "args", "url") == \
+    assert plugin_value_get(plugins, "exit_plugins", "store_metadata_in_osv3", "args", "url") == \
         "http://openshift/"
     assert plugin_value_get(plugins, "prebuild_plugins", "koji", "args", "root") == "http://root/"
     assert plugin_value_get(plugins, "prebuild_plugins", "koji", "args", "target") == "koji-target"
@@ -408,7 +463,7 @@ def test_render_prod_without_koji_request():
     assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts", "args", "command") == "make"
     assert plugin_value_get(plugins, "prebuild_plugins", "change_source_registry", "args", "registry_uri") == \
         "registry.example.com"
-    assert plugin_value_get(plugins, "postbuild_plugins", "store_metadata_in_osv3", "args", "url") == \
+    assert plugin_value_get(plugins, "exit_plugins", "store_metadata_in_osv3", "args", "url") == \
         "http://openshift/"
 
     with pytest.raises(NoSuchPluginException):
