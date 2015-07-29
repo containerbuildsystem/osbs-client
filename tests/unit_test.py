@@ -23,6 +23,7 @@ from osbs.build.build_response import BuildResponse
 from osbs.build.build_request import BuildManager, BuildRequest
 from osbs.build.build_request import SimpleBuild, ProductionBuild
 from osbs.build.spec import BuildIDParam
+from osbs.cli.main import str_on_2_unicode_on_3
 from osbs.constants import BUILD_FINISHED_STATES
 from osbs.constants import SIMPLE_BUILD_TYPE, PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
 from osbs.constants import PROD_WITH_SECRET_BUILD_TYPE
@@ -754,3 +755,15 @@ def test_build_id_param_raise_exc():
     p = BuildIDParam()
     with pytest.raises(OsbsValidationException):
         p.value = r"\\\\@@@@||||"
+
+
+def test_force_str():
+    b = b"s"
+    if sys.version_info[0] == 3:
+        s = "s"
+        assert str_on_2_unicode_on_3(s) == s
+        assert str_on_2_unicode_on_3(b) == s
+    else:
+        s = u"s"
+        assert str_on_2_unicode_on_3(s) == b
+        assert str_on_2_unicode_on_3(b) == b

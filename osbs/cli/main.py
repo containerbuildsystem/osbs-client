@@ -214,6 +214,22 @@ def cmd_get_user(args, osbs):
         print("Name: \"%s\"\nFull Name: \"%s\"" % (name, full_name))
 
 
+def str_on_2_unicode_on_3(s):
+    """
+    argparse is way too awesome when doing repr() on choices when printing usage
+
+    :param s: str or unicode
+    :return: str on 2, unicode on 3
+    """
+
+    if sys.version_info[0] <= 2:
+        return str(s)
+    else:  # 3+
+        if not isinstance(s, str):
+            return str(s, encoding="utf-8")
+        return s
+
+
 def cli():
     parser = argparse.ArgumentParser(
         description="OpenShift Build Service client"
@@ -224,37 +240,37 @@ def cli():
 
     subparsers = parser.add_subparsers(help='commands')
 
-    list_builds_parser = subparsers.add_parser('list-builds', help='list builds in OSBS',
+    list_builds_parser = subparsers.add_parser(str_on_2_unicode_on_3('list-builds'), help='list builds in OSBS',
                                                description="list all builds in specified namespace "
                                                "(to list all builds in all namespaces, use --namespace=\"\")")
     list_builds_parser.add_argument("USER", help="list builds only for specified username",
                                     nargs="?")
     list_builds_parser.set_defaults(func=cmd_list_builds)
 
-    watch_build_parser = subparsers.add_parser('watch-build', help='wait till build finishes')
+    watch_build_parser = subparsers.add_parser(str_on_2_unicode_on_3('watch-build'), help='wait till build finishes')
     watch_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
     watch_build_parser.set_defaults(func=cmd_watch_build)
 
-    get_build_parser = subparsers.add_parser('get-build', help='get info about build')
+    get_build_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-build'), help='get info about build')
     get_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
     get_build_parser.set_defaults(func=cmd_get_build)
 
-    cancel_build_parser = subparsers.add_parser('cancel-build', help='cancel build specified by ID')
+    cancel_build_parser = subparsers.add_parser(str_on_2_unicode_on_3('cancel-build'), help='cancel build specified by ID')
     cancel_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
     cancel_build_parser.set_defaults(func=cmd_cancel_build)
 
-    import_image_parser = subparsers.add_parser('import-image', help='import tags for ImageStream')
+    import_image_parser = subparsers.add_parser(str_on_2_unicode_on_3('import-image'), help='import tags for ImageStream')
     import_image_parser.add_argument("NAME", help="ImageStream name", nargs=1)
     import_image_parser.set_defaults(func=cmd_import_image)
 
-    get_token_parser = subparsers.add_parser('get-token', help='get authentication token')
+    get_token_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-token'), help='get authentication token')
     get_token_parser.set_defaults(func=cmd_get_token)
 
-    get_user_parser = subparsers.add_parser('get-user', help='get info about user')
+    get_user_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-user'), help='get info about user')
     get_user_parser.add_argument("USERNAME", nargs="?", default=None)
     get_user_parser.set_defaults(func=cmd_get_user)
 
-    build_logs_parser = subparsers.add_parser('build-logs', help='get or follow build logs')
+    build_logs_parser = subparsers.add_parser(str_on_2_unicode_on_3('build-logs'), help='get or follow build logs')
     build_logs_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
     build_logs_parser.add_argument("-f", "--follow", help="follow logs as they come", action="store_true",
                                    default=False)
@@ -264,7 +280,7 @@ def cli():
                                    action="store_true", default=False)
     build_logs_parser.set_defaults(func=cmd_build_logs)
 
-    build_parser = subparsers.add_parser('build', help='build an image in OSBS')
+    build_parser = subparsers.add_parser(str_on_2_unicode_on_3('build'), help='build an image in OSBS')
     build_parser.add_argument("--build-type", "-T", action="store", metavar="BUILD_TYPE",
                               help="build type (prod, simple)")
     build_parser.add_argument("--build-json-dir", action="store", metavar="PATH",
