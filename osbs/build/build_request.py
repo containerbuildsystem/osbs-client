@@ -221,12 +221,11 @@ class ProductionBuild(CommonBuild):
         if validate:
             self.spec.validate()
         super(ProductionBuild, self).render()
-        dj = DockJsonManipulator(self.template, self.inner_template)
 
-        dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts",
-                             "command", self.spec.sources_command.value)
-        dj.dock_json_set_arg('prebuild_plugins', "pull_base_image",
-                             "parent_registry", self.spec.registry_uri.value)
+        self.dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts",
+                                  "command", self.spec.sources_command.value)
+        self.dj.dock_json_set_arg('prebuild_plugins', "pull_base_image",
+                                  "parent_registry", self.spec.registry_uri.value)
 
         implicit_labels = {
             'Architecture': self.spec.architecture.value,
@@ -235,30 +234,31 @@ class ProductionBuild(CommonBuild):
             'Authoritative_Registry': self.spec.authoritative_registry.value,
         }
 
-        dj.dock_json_merge_arg('prebuild_plugins', "add_labels_in_dockerfile",
-                               "labels", implicit_labels)
+        self.dj.dock_json_merge_arg('prebuild_plugins', "add_labels_in_dockerfile",
+                                    "labels", implicit_labels)
 
         try:
-            dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3",
-                                 "url", self.spec.openshift_uri.value)
+            self.dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3",
+                                      "url", self.spec.openshift_uri.value)
         except RuntimeError:
             # For compatibility with older osbs.conf files
-            dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
-                                 "url", self.spec.openshift_uri.value)
+            self.dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
+                                      "url", self.spec.openshift_uri.value)
 
         # if there is yum repo specified, don't pick stuff from koji
         if self.spec.yum_repourls.value:
             logger.info("removing koji from request, because there is yum repo specified")
-            dj.remove_plugin("prebuild_plugins", "koji")
+            self.dj.remove_plugin("prebuild_plugins", "koji")
         elif not (self.spec.koji_target.value and
                   self.spec.kojiroot.value and
                   self.spec.kojihub.value):
             logger.info("removing koji from request as not specified")
-            dj.remove_plugin("prebuild_plugins", "koji")
+            self.dj.remove_plugin("prebuild_plugins", "koji")
         else:
-            dj.dock_json_set_arg('prebuild_plugins', "koji", "target", self.spec.koji_target.value)
-            dj.dock_json_set_arg('prebuild_plugins', "koji", "root", self.spec.kojiroot.value)
-            dj.dock_json_set_arg('prebuild_plugins', "koji", "hub", self.spec.kojihub.value)
+            self.dj.dock_json_set_arg('prebuild_plugins', "koji",
+                                      "target", self.spec.koji_target.value)
+            self.dj.dock_json_set_arg('prebuild_plugins', "koji", "root", self.spec.kojiroot.value)
+            self.dj.dock_json_set_arg('prebuild_plugins', "koji", "hub", self.spec.kojihub.value)
 
         # If there is a pulp secret, use it
         if self.spec.source_secret.value:
@@ -279,33 +279,33 @@ class ProductionBuild(CommonBuild):
         # If NFS destination set, use it
         nfs_server_path = self.spec.nfs_server_path.value
         if nfs_server_path:
-            dj.dock_json_set_arg('postbuild_plugins', 'cp_built_image_to_nfs',
-                                 'nfs_server_path', nfs_server_path)
-            dj.dock_json_set_arg('postbuild_plugins', 'cp_built_image_to_nfs',
-                                 'nfs_dest_dir', self.spec.nfs_dest_dir.value)
+            self.dj.dock_json_set_arg('postbuild_plugins', 'cp_built_image_to_nfs',
+                                      'nfs_server_path', nfs_server_path)
+            self.dj.dock_json_set_arg('postbuild_plugins', 'cp_built_image_to_nfs',
+                                      'nfs_dest_dir', self.spec.nfs_dest_dir.value)
         else:
             # Otherwise, don't run the NFS plugin
-            dj.remove_plugin("postbuild_plugins", "cp_built_image_to_nfs")
+            self.dj.remove_plugin("postbuild_plugins", "cp_built_image_to_nfs")
 
         # If a pulp registry is specified, use the pulp plugin
         pulp_registry = self.spec.pulp_registry.value
         if pulp_registry:
-            dj.dock_json_set_arg('postbuild_plugins', 'pulp_push',
-                                 'pulp_registry_name', pulp_registry)
+            self.dj.dock_json_set_arg('postbuild_plugins', 'pulp_push',
+                                      'pulp_registry_name', pulp_registry)
 
             # Verify we have either a sourceSecret or username/password
             if 'sourceSecret' not in self.template['spec']['source']:
-                conf = dj.dock_json_get_plugin_conf('postbuild_plugins',
-                                                    'pulp_push')
+                conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins',
+                                                         'pulp_push')
                 args = conf.get('args', {})
                 if 'username' not in args:
                     raise OsbsValidationException("Pulp registry specified "
                                                   "but no auth config")
         else:
             # If no pulp registry is specified, don't run the pulp plugin
-            dj.remove_plugin("postbuild_plugins", "pulp_push")
+            self.dj.remove_plugin("postbuild_plugins", "pulp_push")
 
-        dj.write_dock_json()
+        self.dj.write_dock_json()
         self.build_json = self.template
         logger.debug(self.build_json)
         return self.build_json
@@ -335,18 +335,17 @@ class SimpleBuild(CommonBuild):
         if validate:
             self.spec.validate()
         super(SimpleBuild, self).render()
-        dj = DockJsonManipulator(self.template, self.inner_template)
-        dj.dock_json_set_arg('prebuild_plugins', "pull_base_image", "parent_registry",
-                             self.spec.registry_uri.value)
+        self.dj.dock_json_set_arg('prebuild_plugins', "pull_base_image", "parent_registry",
+                                  self.spec.registry_uri.value)
         try:
-            dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3", "url",
-                                 self.spec.openshift_uri.value)
+            self.dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3", "url",
+                                      self.spec.openshift_uri.value)
         except RuntimeError:
             # For compatibility with older osbs.conf files
-            dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url",
-                                 self.spec.openshift_uri.value)
+            self.dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url",
+                                      self.spec.openshift_uri.value)
 
-        dj.write_dock_json()
+        self.dj.write_dock_json()
         self.build_json = self.template
         logger.debug(self.build_json)
         return self.build_json
