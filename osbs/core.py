@@ -164,14 +164,19 @@ class Openshift(object):
         return self._post(url, data=build_config_json,
                           headers={"Content-Type": "application/json"})
 
+    def instantiate_build_config(self, build_config_id, namespace=DEFAULT_NAMESPACE):
+        url = self._build_url("namespaces/%s/buildconfigs/%s/instantiate" % (
+            namespace, build_config_id))
+        # TODO: should we have the api version somewhere in conf?
+        return self._post(url, data=json.dumps({"kind": "BuildRequest", "apiVersion": "v1beta3",
+                                     "metadata": {"name": build_config_id}}),
+                          headers={"Content-Type": "application/json"})
+
     def start_build(self, build_config_id, namespace=DEFAULT_NAMESPACE):
         """
         :return:
         """
-        build_config = self.get_build_config(build_config_id, namespace=namespace)
-        assert build_config["kind"] == "BuildConfig"
-        build_config["kind"] = "Build"
-        return self.create_build(json.dumps(build_config), namespace=namespace)
+        return self.instantiate_build_config(build_config_id, namespace=namespace)
 
     def logs(self, build_id, follow=False, build_json=None, wait_if_missing=False,
              namespace=DEFAULT_NAMESPACE):

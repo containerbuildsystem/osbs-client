@@ -127,6 +127,11 @@ class OSBS(object):
         build_response = BuildResponse(response)
         return build_response
 
+    def _create_build_config_and_build(self, build_json, namespace):
+        build_config = self.os.create_build_config(json.dumps(build_json), namespace=namespace)
+        build_config_name = build_config.json()['metadata']['name']
+        return self.os.start_build(build_config_name, namespace=namespace)
+
     @osbsapi
     def create_prod_build(self, git_uri, git_ref, user, component, target, architecture, yum_repourls=None,
                           namespace=DEFAULT_NAMESPACE, **kwargs):
@@ -150,7 +155,7 @@ class OSBS(object):
             metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
         )
         build_json = build_request.render()
-        response = self.os.create_build(json.dumps(build_json), namespace=namespace)
+        response = self._create_build_config_and_build(build_json, namespace)
         build_response = BuildResponse(response)
         logger.debug(build_response.json)
         return build_response
@@ -182,7 +187,7 @@ class OSBS(object):
             nfs_dest_dir=self.build_conf.get_nfs_destination_dir(),
         )
         build_json = build_request.render()
-        response = self.os.create_build(json.dumps(build_json), namespace=namespace)
+        response = self._create_build_config_and_build(build_json, namespace)
         build_response = BuildResponse(response)
         logger.debug(build_response.json)
         return build_response
@@ -207,7 +212,7 @@ class OSBS(object):
             metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
         )
         build_json = build_request.render()
-        response = self.os.create_build(json.dumps(build_json), namespace=namespace)
+        response = self._create_build_config_and_build(build_json, namespace)
         build_response = BuildResponse(response)
         return build_response
 
@@ -226,7 +231,7 @@ class OSBS(object):
             metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
         )
         build_json = build_request.render()
-        response = self.os.create_build(json.dumps(build_json), namespace=namespace)
+        response = self._create_build_config_and_build(build_json, namespace)
         build_response = BuildResponse(response)
         logger.debug(build_response.json)
         return build_response

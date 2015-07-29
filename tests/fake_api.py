@@ -16,7 +16,7 @@ from osbs.core import Openshift
 from osbs.http import Response
 from osbs.conf import Configuration
 from osbs.api import OSBS
-from tests.constants import TEST_BUILD
+from tests.constants import TEST_BUILD, TEST_BUILD_CONFIG
 from tempfile import NamedTemporaryFile
 
 try:
@@ -85,6 +85,16 @@ DEFINITION = {
     "/osapi/v1beta3/watch/namespaces/default/builds/%s/" % TEST_BUILD: {
         "get": {
             "file": "watch_build_test-build-123.json",
+        }
+    },
+    "/osapi/v1beta3/namespaces/default/buildconfigs/": {
+        "post": {
+            "file": "created_build_config_test-build-config-123.json",
+        }
+    },
+    "/osapi/v1beta3/namespaces/default/buildconfigs/%s/instantiate" % TEST_BUILD_CONFIG: {
+        "post": {
+            "file": "instantiated_test-build-config-123.json",
         }
     },
 }

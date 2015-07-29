@@ -1,6 +1,6 @@
 {
   "apiVersion": "v1beta3",
-  "kind": "Build",
+  "kind": "BuildConfig",
   "metadata":{
     "name": "{{NAME}}"
   },
@@ -26,7 +26,7 @@
       "type": "Custom",
       "customStrategy": {
         "from": {
-          "kind": "ImageStreamTag",
+          "kind": "DockerImage",
           "name": "buildroot:latest"
         },
         "exposeDockerSocket": true,
