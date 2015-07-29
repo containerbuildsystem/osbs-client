@@ -1,6 +1,13 @@
 {
   "prebuild_plugins": [
     {
+      "name": "pull_base_image",
+      "args": {
+        "parent_registry": "{{REGISTRY_URI}}",
+        "parent_registry_insecure": true
+      }
+    },
+    {
       "name": "change_from_in_dockerfile"
     },
     {
@@ -37,13 +44,6 @@
     },
     {
       "name": "dockerfile_content"
-    },
-    {
-      "name": "change_source_registry",
-      "args": {
-        "registry_uri": "{{REGISTRY_URI}}",
-        "insecure_registry": true
-      }
     }
   ],
   "prepublish_plugins": [

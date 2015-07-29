@@ -330,7 +330,7 @@ def test_render_prod_request_with_repo():
     plugins = json.loads(plugins_json)
 
     assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts", "args", "command") == "make"
-    assert plugin_value_get(plugins, "prebuild_plugins", "change_source_registry", "args", "registry_uri") == \
+    assert plugin_value_get(plugins, "prebuild_plugins", "pull_base_image", "args", "parent_registry") == \
            "registry.example.com"
     assert plugin_value_get(plugins, "exit_plugins", "store_metadata_in_osv3", "args", "url") == \
            "http://openshift/"
@@ -398,7 +398,7 @@ def test_render_prod_request():
     plugins = json.loads(plugins_json)
 
     assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts", "args", "command") == "make"
-    assert plugin_value_get(plugins, "prebuild_plugins", "change_source_registry", "args", "registry_uri") == \
+    assert plugin_value_get(plugins, "prebuild_plugins", "pull_base_image", "args", "parent_registry") == \
         "registry.example.com"
     assert plugin_value_get(plugins, "exit_plugins", "store_metadata_in_osv3", "args", "url") == \
         "http://openshift/"
@@ -463,7 +463,7 @@ def test_render_prod_without_koji_request():
     plugins = json.loads(plugins_json)
 
     assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts", "args", "command") == "make"
-    assert plugin_value_get(plugins, "prebuild_plugins", "change_source_registry", "args", "registry_uri") == \
+    assert plugin_value_get(plugins, "prebuild_plugins", "pull_base_image", "args", "parent_registry") == \
         "registry.example.com"
     assert plugin_value_get(plugins, "exit_plugins", "store_metadata_in_osv3", "args", "url") == \
         "http://openshift/"
