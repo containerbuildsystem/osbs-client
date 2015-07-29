@@ -258,7 +258,7 @@ def test_render_simple_request():
         'git_ref': "master",
         'user': "john-foo",
         'component': "component",
-        'registry_uri': "registry.example.com",
+        'registry_uri': "http://registry.example.com:5000",
         'openshift_uri': "http://openshift/",
     }
     build_request.set_params(**kwargs)
@@ -268,7 +268,7 @@ def test_render_simple_request():
     assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
     assert build_json["spec"]["source"]["git"]["ref"] == "master"
     assert build_json["spec"]["output"]["to"]["name"].startswith(
-        "registry.example.com/john-foo/component:"
+        "registry.example.com:5000/john-foo/component:"
     )
 
     env_vars = build_json['spec']['strategy']['customStrategy']['env']
