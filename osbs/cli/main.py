@@ -37,7 +37,7 @@ def cmd_list_builds(args, osbs):
         print_json_nicely(json_output)
     elif args.output == 'text':
         format_str = "{name:48} {status:16} {image:64}"
-        print(format_str.format(**{"name": "BUILD NAME", "status": "STATUS", "image": "IMAGE NAME"}), file=sys.stderr)
+        print(format_str.format(**{"name": "BUILD ID", "status": "STATUS", "image": "IMAGE NAME"}), file=sys.stderr)
         for build in builds:
             image = build.get_image_tag()
             if args.USER:
