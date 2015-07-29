@@ -149,6 +149,13 @@ def osbs(openshift):
 build_json_dir = {build_json_dir}
 [default]
 openshift_uri = https://0.0.0.0/
+registry_uri = registry.example.com
+sources_command = fedpkg sources
+vendor = Example, Inc.
+build_host = localhost
+authoritative_registry = registry.example.com
+koji_root = http://koji.example.com/kojiroot
+koji_hub = http://koji.example.com/kojihub
 build_type = simple
 """.format (build_json_dir="inputs"))
         fp.flush()

@@ -28,6 +28,8 @@ from osbs.constants import PROD_WITH_SECRET_BUILD_TYPE
 from osbs.exceptions import OsbsValidationException
 from osbs.http import Response
 from tests.constants import TEST_BUILD, TEST_LABEL, TEST_LABEL_VALUE
+from tests.constants import TEST_GIT_URI, TEST_GIT_REF, TEST_USER
+from tests.constants import TEST_COMPONENT, TEST_TARGET, TEST_ARCH
 from tests.fake_api import ResponseMapping, DEFINITION
 
 
@@ -523,6 +525,12 @@ def test_list_builds_api(osbs):
     assert len(response_list) > 0
     # response_list is a list of BuildResponse objects
     assert isinstance(response_list[0], BuildResponse)
+
+
+def test_create_prod_build(osbs):
+    response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF, TEST_USER,
+                                      TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
+    assert isinstance(response, BuildResponse)
 
 
 def test_wait_for_build_to_finish(osbs):
