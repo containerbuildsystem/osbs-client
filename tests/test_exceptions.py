@@ -19,9 +19,8 @@ logger = logging.getLogger("osbs.tests")
 
 
 def test_missing_config():
-    with pytest.raises(OsbsException):
-        os_conf = Configuration(conf_file="/nonexistent/path",
-                                conf_section="default")
+    os_conf = Configuration(conf_file="/nonexistent/path",
+                            conf_section="default")
 
 def test_no_config():
     os_conf = Configuration(conf_file=None,
@@ -31,9 +30,8 @@ def test_no_config():
 
 def test_missing_section():
     with NamedTemporaryFile() as f:
-        with pytest.raises(OsbsException):
-            os_conf = Configuration(conf_file=f.name,
-                                    conf_section="missing")
+        os_conf = Configuration(conf_file=f.name,
+                                conf_section="missing")
 
 def test_no_build_type():
     with NamedTemporaryFile(mode='w+') as f:
