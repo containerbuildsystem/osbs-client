@@ -12,7 +12,8 @@ import logging
 from osbs.build.build_response import BuildResponse
 from osbs.constants import DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNNING_STATES, BUILD_CANCELLED_STATE
 from osbs.constants import WATCH_MODIFIED, WATCH_DELETED, WATCH_ERROR
-from osbs.exceptions import OsbsResponseException, OsbsException, OsbsWatchBuildNotFound
+from osbs.exceptions import OsbsResponseException, OsbsException, OsbsWatchBuildNotFound, \
+                            OsbsAuthException
 
 try:
     # py2
@@ -75,7 +76,8 @@ class Openshift(object):
             if self.token:
                 headers["Authorization"] = "Bearer %s" % self.token
             else:
-                raise ValueError("Token was not retrieved successfully.")
+                raise OsbsAuthException("Please check your credentials. "
+                                        "Token was not retrieved successfully.")
         return headers, kwargs
 
     def _post(self, url, with_auth=True, **kwargs):

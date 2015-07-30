@@ -56,6 +56,9 @@ class OsbsNetworkException(OsbsException):
         self.status_code = status_code
 
 
+class OsbsAuthException(OsbsException):
+    pass
+
 class OsbsValidationException(OsbsException):
     pass
 

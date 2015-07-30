@@ -18,7 +18,7 @@ from osbs import set_logging
 from osbs.api import OSBS
 from osbs.conf import Configuration
 from osbs.constants import DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION
-from osbs.exceptions import OsbsNetworkException, OsbsException
+from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsAuthException
 
 
 logger = logging.getLogger('osbs')
@@ -365,6 +365,13 @@ def main():
         else:
             logger.error("Network error at %s (%d): %s",
                          ex.url, ex.status_code, ex.message)
+            return -1
+    except OsbsAuthException as ex:
+        if is_verbose:
+            raise
+        else:
+            logger.error("Authentication failure: %s",
+                         ex.message)
             return -1
     except Exception as ex:  # pylint: disable=broad-except
         if is_verbose:
