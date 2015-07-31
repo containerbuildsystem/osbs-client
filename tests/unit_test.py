@@ -668,9 +668,9 @@ def test_list_builds_api(osbs):
 
 def test_create_prod_build(osbs):
     # TODO: test situation when a buildconfig already exists
-    flexmock(osbs).should_receive('_get_git_branch_and_base_image').\
-        with_args(TEST_GIT_URI, TEST_GIT_REF).and_return('master', 'fedora23/python')
-    response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF, TEST_USER,
+    flexmock(osbs).should_receive('_get_base_image').\
+        with_args(TEST_GIT_URI, TEST_GIT_REF).and_return('fedora23/python')
+    response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_REF, TEST_USER,
                                       TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
     assert isinstance(response, BuildResponse)
 

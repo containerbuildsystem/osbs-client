@@ -19,7 +19,7 @@ from osbs.build.build_response import BuildResponse
 from osbs.constants import DEFAULT_NAMESPACE, PROD_BUILD_TYPE
 from osbs.core import Openshift
 from osbs.exceptions import OsbsException
-from osbs.utils import checkout_git_repo, get_git_branch, get_base_image
+from osbs.utils import checkout_git_repo, get_base_image
 
 
 # Decorator for API methods.
@@ -141,8 +141,8 @@ class OSBS(object):
                 bc = rb['metadata']['labels']['buildconfig']
                 if bc == build_config_name and \
                         (phase in BUILD_PENDING_STATES + BUILD_RUNNING_STATES):
-                    raise OsbsException('A build for %s in state %s, can\'t proceed.' %
-                                        (build_config_name, phase))
+                    raise OsbsException('Build %s for %s in state %s, can\'t proceed.' %
+                                        (rb['metadata']['name'], build_config_name, phase))
             except KeyError:
                 # rb wasn't created from this buildconfig
                 pass
@@ -159,16 +159,14 @@ class OSBS(object):
             self.os.create_build_config(json.dumps(build_json), namespace=namespace)
         return self.os.start_build(build_config_name, namespace=namespace)
 
-    def _get_git_branch_and_base_image(self, git_uri, git_ref):
+    def _get_base_image(self, git_uri, git_ref):
         code_dir = checkout_git_repo(git_uri, git_ref)
-        git_branch = get_git_branch(code_dir)
-        base_image = get_base_image(code_dir)
-        return git_branch, base_image
+        return get_base_image(code_dir)
 
     @osbsapi
-    def create_prod_build(self, git_uri, git_ref, user, component, target, architecture, yum_repourls=None,
-                          namespace=DEFAULT_NAMESPACE, **kwargs):
-        git_branch, base_image = self._get_git_branch_and_base_image(git_uri, git_ref)
+    def create_prod_build(self, git_uri, git_ref, git_branch, user, component, target,
+                          architecture, yum_repourls=None, namespace=DEFAULT_NAMESPACE, **kwargs):
+        base_image = self._get_base_image(git_uri, git_ref)
         build_request = self.get_build_request(PROD_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
@@ -196,9 +194,10 @@ class OSBS(object):
         return build_response
 
     @osbsapi
-    def create_prod_with_secret_build(self, git_uri, git_ref, user, component, target, architecture,
-                                      yum_repourls=None, namespace=DEFAULT_NAMESPACE, **kwargs):
-        git_branch, base_image = self._get_git_branch_and_base_image(git_uri, git_ref)
+    def create_prod_with_secret_build(self, git_uri, git_ref, git_branch, user, component,
+                                      target, architecture, yum_repourls=None,
+                                      namespace=DEFAULT_NAMESPACE, **kwargs):
+        base_image = self._get_base_image(git_uri, git_ref)
         build_request = self.get_build_request(PROD_WITH_SECRET_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
@@ -230,9 +229,10 @@ class OSBS(object):
         return build_response
 
     @osbsapi
-    def create_prod_without_koji_build(self, git_uri, git_ref, user, component, architecture, yum_repourls=None,
+    def create_prod_without_koji_build(self, git_uri, git_ref, git_branch, user, component,
+                                       architecture, yum_repourls=None,
                                        namespace=DEFAULT_NAMESPACE, **kwargs):
-        git_branch, base_image = self._get_git_branch_and_base_image(git_uri, git_ref)
+        base_image = self._get_base_image(git_uri, git_ref)
         build_request = self.get_build_request(PROD_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
@@ -256,9 +256,9 @@ class OSBS(object):
         return build_response
 
     @osbsapi
-    def create_simple_build(self, git_uri, git_ref, user, component, yum_repourls=None,
+    def create_simple_build(self, git_uri, git_ref, git_branch, user, component, yum_repourls=None,
                             namespace=DEFAULT_NAMESPACE, **kwargs):
-        git_branch, base_image = self._get_git_branch_and_base_image(git_uri, git_ref)
+        base_image = self._get_base_image(git_uri, git_ref)
         build_request = self.get_build_request(SIMPLE_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,

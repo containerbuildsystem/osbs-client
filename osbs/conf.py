@@ -137,6 +137,10 @@ class Configuration(object):
         val = self._get_value("git_commit", self.conf_section, "git_commit", can_miss=True)
         return val
 
+    def get_git_branch(self):
+        val = self._get_value("git_branch", self.conf_section, "git_branch", can_miss=True)
+        return val
+
     def get_user(self):
         """ user namespace when tagging and pushing image """
         val = self._get_value("user", self.conf_section, "user", can_miss=True)

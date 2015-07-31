@@ -34,12 +34,6 @@ def checkout_git_repo(uri, commit):
     return tmpdir
 
 
-def get_git_branch(repo_dir):
-    p = subprocess.Popen(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE, cwd=repo_dir)
-    return p.communicate()[0].strip()
-
-
 def get_base_image(repo_dir):
     df_path = os.path.join(repo_dir, 'Dockerfile')
     df = DockerfileParser(df_path)
