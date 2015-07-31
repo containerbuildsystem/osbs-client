@@ -164,6 +164,11 @@ class Openshift(object):
         return self._post(url, data=build_config_json,
                           headers={"Content-Type": "application/json"})
 
+    def update_build_config(self, build_config_id, build_config_json, namespace=DEFAULT_NAMESPACE):
+        url = self._build_url("namespaces/%s/buildconfigs/%s" % (namespace, build_config_id))
+        return self._put(url, data=build_config_json,
+                         headers={"Content-Type": "application/json"})
+
     def instantiate_build_config(self, build_config_id, namespace=DEFAULT_NAMESPACE):
         url = self._build_url("namespaces/%s/buildconfigs/%s/instantiate" % (
             namespace, build_config_id))

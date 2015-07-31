@@ -21,7 +21,7 @@
         "output": {
             "to": {
                 "kind": "DockerImage",
-                "name": "10.34.2.242:5000/bkabrda/foo:20150729150321"
+                "name": "10.34.2.242:5000/bkabrda/master/component:20150729150321"
             }
         },
         "source": {
@@ -33,6 +33,6 @@
         }
     },
     "metadata": {
-        "name": "test-build-config-123"
+        "name": "component-master"
     }
 }
