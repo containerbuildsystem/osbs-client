@@ -5,6 +5,17 @@
     "name": "{{NAME}}"
   },
   "spec": {
+    "triggers": [
+      {
+        "type": "ImageChange",
+        "imageChange": {
+          "from": {
+            "kind": "ImageStreamTag",
+            "name": "{{BASE_IMAGE_STREAM}}"
+          }
+        }
+      }
+    ],
     "source": {
       "type": "Git",
       "git": {

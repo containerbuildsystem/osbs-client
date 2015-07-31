@@ -86,9 +86,20 @@ BUILD_JSON = {
     "metadata": {
         "name": "{{NAME}}"
     },
-    "kind": "Build",
+    "kind": "BuildConfig",
     "apiVersion": "v1beta3",
     "spec": {
+        "triggers": [
+            {
+                "type": "ImageChange",
+                "imageChange": {
+                "from": {
+                    "kind": "ImageStreamTag",
+                    "name": "{{BASE_IMAGE_STREAM}}"
+                }
+                }
+            }
+        ],
         "source": {
             "type": "Git",
             "git": {
@@ -226,6 +237,7 @@ def test_render_simple_request_incorrect_postbuild(tmpdir):
         'git_ref': "master",
         'user': "john-foo",
         'component': "component",
+        'base_image': 'fedora:latest',
         'registry_uri': "registry.example.com",
         'openshift_uri': "http://openshift/",
     }
@@ -261,6 +273,7 @@ def test_render_simple_request():
         'git_branch': TEST_GIT_REF,
         'user': "john-foo",
         'component': TEST_COMPONENT,
+        'base_image': 'fedora:latest',
         'registry_uri': "http://registry.example.com:5000",
         'openshift_uri': "http://openshift/",
     }
@@ -268,6 +281,8 @@ def test_render_simple_request():
     build_json = build_request.render()
 
     assert build_json["metadata"]["name"] == "%s-%s" % (TEST_COMPONENT, TEST_GIT_REF)
+    assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == \
+        os.path.join(kwargs["registry_uri"], kwargs["base_image"])
     assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
     assert build_json["spec"]["source"]["git"]["ref"] == "master"
     assert build_json["spec"]["output"]["to"]["name"].startswith(
@@ -301,6 +316,7 @@ def test_render_prod_request_with_repo():
         'git_branch': TEST_GIT_REF,
         'user': "john-foo",
         'component': TEST_COMPONENT,
+        'base_image': 'fedora:latest',
         'registry_uri': "registry.example.com",
         'openshift_uri': "http://openshift/",
         'koji_target': "koji-target",
@@ -317,6 +333,8 @@ def test_render_prod_request_with_repo():
     build_json = build_request.render()
 
     assert build_json["metadata"]["name"] == "%s-%s" % (TEST_COMPONENT, TEST_GIT_REF)
+    assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == \
+        os.path.join(kwargs["registry_uri"], kwargs["base_image"])
     assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
     assert build_json["spec"]["source"]["git"]["ref"] == "master"
     assert build_json["spec"]["output"]["to"]["name"].startswith(
@@ -371,6 +389,7 @@ def test_render_prod_request():
         'git_branch': TEST_GIT_REF,
         'user': "john-foo",
         'component': TEST_COMPONENT,
+        'base_image': 'fedora:latest',
         'registry_uri': "registry.example.com",
         'openshift_uri': "http://openshift/",
         'koji_target': "koji-target",
@@ -386,6 +405,8 @@ def test_render_prod_request():
     build_json = build_request.render()
 
     assert build_json["metadata"]["name"] == "%s-%s" % (TEST_COMPONENT, TEST_GIT_REF)
+    assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == \
+        os.path.join(kwargs["registry_uri"], kwargs["base_image"])
     assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
     assert build_json["spec"]["source"]["git"]["ref"] == "master"
     assert build_json["spec"]["output"]["to"]["name"].startswith(
@@ -440,6 +461,7 @@ def test_render_prod_without_koji_request():
         'git_branch': TEST_GIT_REF,
         'user': "john-foo",
         'component': TEST_COMPONENT,
+        'base_image': 'fedora:latest',
         'registry_uri': "registry.example.com",
         'openshift_uri': "http://openshift/",
         'sources_command': "make",
@@ -452,6 +474,8 @@ def test_render_prod_without_koji_request():
     build_json = build_request.render()
 
     assert build_json["metadata"]["name"] == "%s-%s" % (TEST_COMPONENT, TEST_GIT_REF)
+    assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == \
+        os.path.join(kwargs["registry_uri"], kwargs["base_image"])
     assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
     assert build_json["spec"]["source"]["git"]["ref"] == "master"
     assert build_json["spec"]["output"]["to"]["name"].startswith(
@@ -506,6 +530,7 @@ def test_render_prod_with_secret_request():
         'git_branch': TEST_GIT_REF,
         'user': "john-foo",
         'component': TEST_COMPONENT,
+        'base_image': 'fedora:latest',
         'registry_uri': "",
         'pulp_registry': "registry.example.com",
         'nfs_server_path': "server:path",
@@ -553,6 +578,7 @@ def test_render_with_yum_repourls():
         'git_branch': TEST_GIT_REF,
         'user': "john-foo",
         'component': TEST_COMPONENT,
+        'base_image': 'fedora:latest',
         'registry_uri': "registry.example.com",
         'openshift_uri': "http://openshift/",
         'koji_target': "koji-target",
@@ -620,6 +646,7 @@ def test_render_prod_with_pulp_no_auth():
         'git_branch': TEST_GIT_REF,
         'user': "john-foo",
         'component': TEST_COMPONENT,
+        'base_image': 'fedora:latest',
         'registry_uri': "registry.example.com",
         'openshift_uri': "http://openshift/",
         'sources_command': "make",

@@ -2,6 +2,17 @@
     "apiVersion": "v1beta3",
     "kind": "BuildConfig",
     "spec": {
+        "triggers": [
+            {
+                "type": "ImageChange",
+                "imageChange": {
+                    "from": {
+                        "kind": "ImageStreamTag",
+                        "name": "fedora:latest"
+                    }
+                }
+            }
+        ],
         "strategy": {
             "type": "Custom",
             "customStrategy": {

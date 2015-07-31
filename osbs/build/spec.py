@@ -12,6 +12,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 
 import logging
 import datetime
+import os
 import re
 from osbs.constants import DEFAULT_GIT_REF
 from osbs.exceptions import OsbsValidationException
@@ -109,6 +110,7 @@ class CommonSpec(BuildTypeSpec):
     git_branch = BuildParam('git_branch')
     user = UserParam()
     component = BuildParam('component')
+    base_image = BuildParam('base_image')
     registry_uri = BuildParam('registry_uri')
     openshift_uri = BuildParam('openshift_uri')
     name = BuildIDParam()
@@ -126,7 +128,7 @@ class CommonSpec(BuildTypeSpec):
         ]
 
     def set_params(self, git_uri=None, git_ref=None, git_branch=None, registry_uri=None, user=None,
-                   component=None, openshift_uri=None, yum_repourls=None,
+                   component=None, base_image=None, openshift_uri=None, yum_repourls=None,
                    metadata_plugin_use_auth=None, **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
@@ -143,6 +145,7 @@ class CommonSpec(BuildTypeSpec):
         self.yum_repourls.value = yum_repourls or []
         self.metadata_plugin_use_auth.value = metadata_plugin_use_auth
         self.name.value = '%s-%s' % (self.component.value, self.git_branch.value)
+        self.base_image.value = os.path.join(registry_uri, base_image)
 
 
 class ProdSpec(CommonSpec):

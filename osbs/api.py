@@ -19,7 +19,7 @@ from osbs.build.build_response import BuildResponse
 from osbs.constants import DEFAULT_NAMESPACE, PROD_BUILD_TYPE
 from osbs.core import Openshift
 from osbs.exceptions import OsbsException
-from osbs.utils import checkout_git_repo, get_base_image
+from osbs.utils import checkout_git_repo, get_base_image, deep_update
 
 
 # Decorator for API methods.
@@ -130,6 +130,7 @@ class OSBS(object):
         return build_response
 
     def _create_build_config_and_build(self, build_json, namespace):
+        # TODO: test this method more thoroughly
         build_config_name = build_json['metadata']['name']
 
         # check if a build already exists for this config; if so then raise
@@ -147,13 +148,18 @@ class OSBS(object):
                 # rb wasn't created from this buildconfig
                 pass
 
+        existing_bc = None
         try:
             # see if there's already a build config
-            self.os.get_build_config(build_config_name)
-            # if so, then just update it
-            logger.debug('build config for %s already exists, updating...', build_config_name)
-            self.os.update_build_config(build_config_name, build_json, namespace)
+            existing_bc = self.os.get_build_config(build_config_name)
         except OsbsException:
+            pass  # doesn't exist => do nothing
+
+        if existing_bc is not None:
+            deep_update(existing_bc, build_json)
+            logger.debug('build config for %s already exists, updating...', build_config_name)
+            self.os.update_build_config(build_config_name, json.dumps(existing_bc), namespace)
+        else:
             # if it doesn't exist, then create it
             logger.debug('build config for %s doesn\'t exist, creating...', build_config_name)
             self.os.create_build_config(json.dumps(build_json), namespace=namespace)
@@ -174,6 +180,7 @@ class OSBS(object):
             git_branch=git_branch,
             user=user,
             component=component,
+            base_image=base_image,
             registry_uri=self.build_conf.get_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
             kojiroot=self.build_conf.get_kojiroot(),
@@ -205,6 +212,7 @@ class OSBS(object):
             git_branch=git_branch,
             user=user,
             component=component,
+            base_image=base_image,
             registry_uri=self.build_conf.get_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
             kojiroot=self.build_conf.get_kojiroot(),
@@ -240,6 +248,7 @@ class OSBS(object):
             git_branch=git_branch,
             user=user,
             component=component,
+            base_image=base_image,
             registry_uri=self.build_conf.get_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
             sources_command=self.build_conf.get_sources_command(),
@@ -266,6 +275,7 @@ class OSBS(object):
             git_branch=git_branch,
             user=user,
             component=component,
+            base_image=base_image,
             registry_uri=self.build_conf.get_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
             yum_repourls=yum_repourls,

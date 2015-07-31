@@ -27,6 +27,15 @@ def graceful_chain_get(d, *args):
     return t
 
 
+def deep_update(orig, new):
+    if isinstance(orig, dict) and isinstance(new, dict):
+        for k, v in new.items():
+            if isinstance(orig.get(k, None), dict) and isinstance(v, dict):
+                deep_update(orig[k], v)
+            else:
+                orig[k] = v
+
+
 def checkout_git_repo(uri, commit):
     tmpdir = tempfile.mkdtemp()
     subprocess.check_call(['git', 'clone', uri, '-b', commit, tmpdir], stdout=subprocess.PIPE,
