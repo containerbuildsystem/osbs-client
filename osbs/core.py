@@ -26,7 +26,7 @@ except ImportError:
     import urllib.parse as urlparse
     from urllib.parse import urlencode
 
-from .http import get_http_session
+from .http import HttpSession
 
 
 logger = logging.getLogger(__name__)
@@ -34,8 +34,13 @@ logger = logging.getLogger(__name__)
 
 def check_response(response):
     if response.status_code not in (httplib.OK, httplib.CREATED):
-        logger.error("[%s] %s", response.status_code, response.content)
-        raise OsbsResponseException(message=response.content, status_code=response.status_code)
+        if hasattr(response, 'content'):
+            content = response.content
+        else:
+            content = reduce(lambda s1, s2: s1 + s2, response.iter_lines(), '')
+
+        logger.error("[%s] %s", response.status_code, content)
+        raise OsbsResponseException(message=content, status_code=response.status_code)
 
 
 # TODO: error handling: create function which handles errors in response object
@@ -47,7 +52,7 @@ class Openshift(object):
         self._os_oauth_url = openshift_oauth_url
         self.verbose = verbose
         self.verify_ssl = verify_ssl
-        self._con = get_http_session(verbose=self.verbose)
+        self._con = HttpSession(verbose=self.verbose)
 
         # auth stuff
         self.use_kerberos = use_kerberos
@@ -217,6 +222,7 @@ class Openshift(object):
         buildlogs_url = self._build_url("namespaces/%s/builds/%s/log/" % (namespace, build_id),
                                         follow=(1 if follow else 0))
         response = self._get(buildlogs_url, stream=follow, headers={'Connection': 'close'})
+        check_response(response)
 
         if follow:
             return response.iter_lines()
@@ -251,40 +257,40 @@ class Openshift(object):
         """
         logger.info("watching build '%s'", build_id)
         url = self._build_url("watch/namespaces/%s/builds/%s/" % (namespace, build_id))
-        response = self._get(url, stream=True, headers={'Connection': 'close'})
-        for line in response.iter_lines():
-            j = json.loads(line)
-            logger.debug(line)
-            obj = j.get("object", None)
-            if obj is None:
-                logger.error("'object' is None")
-                continue
-            try:
-                obj_name = obj["metadata"]["name"]
-            except KeyError:
-                logger.error("'object' doesn't have any name")
-                continue
-            try:
-                obj_status = obj["status"]["phase"]
-            except KeyError:
-                logger.error("'object' doesn't have any status")
-                continue
-            else:
-                obj_status_lower = obj_status.lower()
-            logger.info("object has changed: '%s', status: '%s', name: '%s'",
-                        j['type'], obj_status, obj_name)
-            if obj_name == build_id:
-                logger.info("matching build found")
-                logger.debug("is %s in %s?", repr(obj_status_lower), states)
-                if obj_status_lower in states:
-                    logger.debug("Yes, build is in the state I'm waiting for.")
-                    response.close_multi()
-                    return obj
+        with self._get(url, stream=True, headers={'Connection': 'close'}) as response:
+            check_response(response)
+            for line in response.iter_lines():
+                j = json.loads(line)
+                logger.debug(line)
+                obj = j.get("object", None)
+                if obj is None:
+                    logger.error("'object' is None")
+                    continue
+                try:
+                    obj_name = obj["metadata"]["name"]
+                except KeyError:
+                    logger.error("'object' doesn't have any name")
+                    continue
+                try:
+                    obj_status = obj["status"]["phase"]
+                except KeyError:
+                    logger.error("'object' doesn't have any status")
+                    continue
                 else:
-                    logger.debug("No, build is not in the state I'm "
-                                 "waiting for.")
-            else:
-                logger.info("The build %r isn't me %r", obj_name, build_id)
+                    obj_status_lower = obj_status.lower()
+                logger.info("object has changed: '%s', status: '%s', name: '%s'",
+                            j['type'], obj_status, obj_name)
+                if obj_name == build_id:
+                    logger.info("matching build found")
+                    logger.debug("is %s in %s?", repr(obj_status_lower), states)
+                    if obj_status_lower in states:
+                        logger.debug("Yes, build is in the state I'm waiting for.")
+                        return obj
+                    else:
+                        logger.debug("No, build is not in the state I'm "
+                                     "waiting for.")
+                else:
+                    logger.info("The build %r isn't me %r", obj_name, build_id)
 
         # I'm not sure how we can end up here since there are two possible scenarios:
         #   1. our object was found and we are returning in the loop
@@ -433,38 +439,39 @@ class Openshift(object):
         resourceVersion = imagestream_json['metadata']['resourceVersion']
         url = self._build_url("watch/namespaces/%s/imagestreams/%s/" % (namespace, name),
                               resourceVersion=resourceVersion)
-        response = self._get(url, stream=True, headers={'Connection': 'close'})
-        for line in response.iter_lines():
-            j = json.loads(line)
-            logger.debug(line)
-            if 'object' not in j:
-                logger.error("no 'object'")
-                continue
+        with self._get(url, stream=True, headers={'Connection': 'close'}) as response:
+            check_response(response)
+            for line in response.iter_lines():
+                j = json.loads(line)
+                logger.debug(line)
+                if 'object' not in j:
+                    logger.error("no 'object'")
+                    continue
 
-            if 'type' not in j:
-                logger.error("no 'type'")
-                continue
+                if 'type' not in j:
+                    logger.error("no 'type'")
+                    continue
 
-            changetype = j['type']
-            logger.info("Change type: %r", changetype)
-            changetype = changetype.lower()
-            if changetype == WATCH_DELETED:
-                logger.info("Watched ImageStream was deleted")
-                break
-
-            if changetype == WATCH_ERROR:
-                logger.error("Error watching ImageStream")
-                break
-
-            if changetype == WATCH_MODIFIED:
-                logger.info("ImageStream modified")
-                obj = j['object']
-                metadata = obj.get('metadata', {})
-                annotations = metadata.get('annotations', {})
-                logger.info("ImageStream annotations: %r", annotations)
-                if annotations.get(check_annotation, False):
-                    logger.info("ImageStream updated")
+                changetype = j['type']
+                logger.info("Change type: %r", changetype)
+                changetype = changetype.lower()
+                if changetype == WATCH_DELETED:
+                    logger.info("Watched ImageStream was deleted")
                     break
+
+                if changetype == WATCH_ERROR:
+                    logger.error("Error watching ImageStream")
+                    break
+
+                if changetype == WATCH_MODIFIED:
+                    logger.info("ImageStream modified")
+                    obj = j['object']
+                    metadata = obj.get('metadata', {})
+                    annotations = metadata.get('annotations', {})
+                    logger.info("ImageStream annotations: %r", annotations)
+                    if annotations.get(check_annotation, False):
+                        logger.info("ImageStream updated")
+                        break
 
 
 if __name__ == '__main__':

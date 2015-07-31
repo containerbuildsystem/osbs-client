@@ -29,8 +29,8 @@ from osbs.constants import BUILD_FINISHED_STATES
 from osbs.constants import SIMPLE_BUILD_TYPE, PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
 from osbs.constants import PROD_WITH_SECRET_BUILD_TYPE
 from osbs.exceptions import OsbsValidationException
-from osbs.http import Response
 from osbs import utils
+from osbs.http import HttpResponse, parse_headers
 from tests.constants import TEST_BUILD, TEST_BUILD_CONFIG, TEST_LABEL, TEST_LABEL_VALUE
 from tests.constants import TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH, TEST_USER
 from tests.constants import TEST_COMPONENT, TEST_TARGET, TEST_ARCH
@@ -910,13 +910,13 @@ def test_get_build_request_api(osbs):
 def test_set_labels_on_build_api(osbs):
     labels = {'label1': 'value1', 'label2': 'value2'}
     response = osbs.set_labels_on_build(TEST_BUILD, labels)
-    assert isinstance(response, Response)
+    assert isinstance(response, HttpResponse)
 
 
 def test_set_annotations_on_build_api(osbs):
     annotations = {'ann1': 'value1', 'ann2': 'value2'}
     response = osbs.set_annotations_on_build(TEST_BUILD, annotations)
-    assert isinstance(response, Response)
+    assert isinstance(response, HttpResponse)
 
 
 def test_get_token_api(osbs):
@@ -929,8 +929,8 @@ def test_get_user_api(osbs):
 
 def test_build_logs_api(osbs):
     logs = osbs.get_build_logs(TEST_BUILD)
-    assert isinstance(logs, tuple(list(six.string_types) + [bytes]))
-    assert logs == b"line 1"
+    assert isinstance(logs, six.string_types)
+    assert logs == "line 1"
 
 
 def test_build_logs_api_follow(osbs):
@@ -958,11 +958,11 @@ def test_parse_headers():
     file_name = value["get"]["file"]
     raw_headers = rm.get_response_content(file_name)
 
-    r = Response(raw_headers=raw_headers)
+    headers = parse_headers(raw_headers)
 
-    assert r.headers is not None
-    assert len(r.headers.items()) > 0
-    assert r.headers["location"]
+    assert headers is not None
+    assert len(headers.items()) > 0
+    assert headers["location"]
 
 
 def test_build_id_param_shorten_id():

@@ -48,6 +48,7 @@ class OsbsResponseException(OsbsException):
 
 
 class OsbsNetworkException(OsbsException):
+    """ cURL returned an error """
     def __init__(self, url, message, status_code, *args, **kwargs):
         super(OsbsNetworkException, self).__init__("(%s) %s" % (status_code,
                                                                 message),

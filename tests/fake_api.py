@@ -13,7 +13,7 @@ import pytest
 import inspect
 import logging
 from osbs.core import Openshift
-from osbs.http import Response
+from osbs.http import HttpResponse
 from osbs.conf import Configuration
 from osbs.api import OSBS
 from tests.constants import (TEST_BUILD, TEST_COMPONENT, TEST_GIT_REF,
@@ -30,6 +30,21 @@ except ImportError:
 
 logger = logging.getLogger("osbs.tests")
 
+
+class StreamingResponse(object):
+    def __init__(self, status_code=200, content=b'', headers=None):
+        self.status_code = status_code
+        self.content = content
+        self.headers = headers or {}
+
+    def iter_lines(self):
+        yield self.content.decode("utf-8")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
 
 class Connection(object):
     def __init__(self, version="0.5.2"):
@@ -155,19 +170,10 @@ class Connection(object):
             raise ValueError("Can't find '%s' in url mapping definition" % key)
 
     @staticmethod
-    def response(status_code=200, content='', headers=None):
-        res = Response(content=content)
-        res.status_code = status_code
-        res._headers = headers or {}
-        return res
+    def response(status_code=200, content=b'', headers=None):
+        return HttpResponse(status_code, headers or {}, content.decode("utf-8"))
 
     def _request(self, url, method, stream=None, *args, **kwargs):
-        def iter_lines():
-            yield res.content.decode("utf-8")
-
-        def close_multi():
-            pass
-
         parsed_url = urlparse.urlparse(url)
         # fragment = parsed_url.fragment
         # parsed_fragment = urlparse.parse_qs(fragment)
@@ -176,11 +182,10 @@ class Connection(object):
             url_path += '?' + parsed_url.query
         logger.info("URL path is '%s'", url_path)
         kwargs = self.response_mapping.response_mapping(url_path, method)
-        res = self.response(**kwargs)
         if stream:
-            res.iter_lines = iter_lines
-            res.close_multi = close_multi
-        return res
+            return StreamingResponse(**kwargs)
+        else:
+            return self.response(**kwargs)
 
     def get(self, url, *args, **kwargs):
         return self._request(url, "get", *args, **kwargs)
