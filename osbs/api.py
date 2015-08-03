@@ -311,6 +311,14 @@ class OSBS(object):
         return response
 
     @osbsapi
+    def set_labels_on_build_config(self, build_config_id, labels,
+                                   namespace=DEFAULT_NAMESPACE):
+        response = self.os.set_labels_on_build_config(build_config_id,
+                                                      labels,
+                                                      namespace=namespace)
+        return response
+
+    @osbsapi
     def set_annotations_on_build(self, build_id, annotations, namespace=DEFAULT_NAMESPACE):
         return self.os.set_annotations_on_build(build_id, annotations, namespace=namespace)
 

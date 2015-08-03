@@ -298,25 +298,38 @@ class Openshift(object):
                                    namespace)
         return build_response
 
-    def set_labels_on_build(self, build_id, labels, namespace=DEFAULT_NAMESPACE):
+    def set_labels_on_object(self, collection, name, labels,
+                             namespace=DEFAULT_NAMESPACE):
         """
-        set labels on build object
+        set labels on object
 
         labels have to match RE: (([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])? and
         have at most 63 chars
 
-        :param build_id: str, id of build
+        :param collection: str, object collection e.g. 'builds'
+        :param name: str, name of object
         :param labels: dict, labels to set
         :param namespace: str
         :return:
         """
-        url = self._build_url("namespaces/%s/builds/%s" % (namespace, build_id))
+        url = self._build_url("namespaces/%s/%s/%s" % (namespace, collection,
+                                                       name))
         build_json = self._get(url).json()
         build_json['metadata'].setdefault('labels', {})
         build_json['metadata']['labels'].update(labels)
         response = self._put(url, data=json.dumps(build_json), use_json=True)
         check_response(response)
         return response
+
+    def set_labels_on_build(self, build_id, labels,
+                            namespace=DEFAULT_NAMESPACE):
+        return self.set_labels_on_object('builds', build_id, labels,
+                                         namespace=namespace)
+
+    def set_labels_on_build_config(self, build_config_id, labels,
+                                   namespace=DEFAULT_NAMESPACE):
+        return self.set_labels_on_object('buildconfigs', build_config_id,
+                                         labels, namespace=namespace)
 
     def set_annotations_on_build(self, build_id, annotations, namespace=DEFAULT_NAMESPACE):
         """
