@@ -1,8 +1,11 @@
 {
   "apiVersion": "v1beta3",
   "kind": "BuildConfig",
-  "metadata":{
-    "name": "{{NAME}}"
+  "metadata": {
+    "name": "{{NAME}}",
+    "labels": {
+      "is_autorebuild": "false"
+    }
   },
   "spec": {
     "triggers": [

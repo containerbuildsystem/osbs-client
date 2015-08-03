@@ -1,6 +1,13 @@
 {
   "prebuild_plugins": [
     {
+      "args": {
+        "key": "is_autorebuild",
+        "value": "true"
+      },
+      "name": "check_and_set_rebuild"
+    },
+    {
       "name": "pull_base_image",
       "args": {
         "parent_registry": "{{REGISTRY_URI}}",
