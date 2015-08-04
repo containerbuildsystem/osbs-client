@@ -21,7 +21,7 @@ import sys
 import json
 import time
 import logging
-import email.parser
+from io import BytesIO
 
 import pycurl
 
@@ -30,11 +30,9 @@ from osbs.exceptions import OsbsException, OsbsNetworkException, OsbsResponseExc
 try:
     # py2
     import httplib
-    from StringIO import StringIO as BytesIO
 except ImportError:
     # py3
     import http.client as httplib
-    from io import BytesIO
 
 
 logger = logging.getLogger(__name__)
@@ -73,31 +71,29 @@ PYCURL_NETWORK_CODES = [x for x in PYCURL_NETWORK_CODES if x is not None]
 
 
 def parse_headers(all_headers):
-    # headers_buffer contains headers from all responses - even without FOLLOWLOCATION there
+    # all_headers contains headers from all responses - even without FOLLOWLOCATION there
     # might be multiple sets of headers due to 401 Unauthorized. We only care about the last
     # response.
     try:
-        raw_headers = all_headers.split("\r\n\r\n")[-2]
+        raw_headers = all_headers.split(b"\r\n\r\n")[-2]
     except IndexError:
         logger.warning('Incorrectly terminated http headers')
         raw_headers = all_headers
 
     logger.debug("raw headers: " + repr(raw_headers))
-    encoded_raw_headers = raw_headers.encode('iso-8859-1')
-    try:
-        # py 2
-        # seekable has to be 0, otherwise it won't parse anything
-        m = httplib.HTTPMessage(BytesIO(encoded_raw_headers), seekable=0)
-        m.readheaders()
-        return m.dict
-    except TypeError as ex:
-        # py 3
-        if ex.args[0] == "__init__() got an unexpected keyword argument 'seekable'":
-            parser = email.parser.Parser()
-            m = parser.parsestr(encoded_raw_headers)
-            return dict(m.items())
-        else:
-            raise
+
+    # http://stackoverflow.com/questions/24728088/python-parse-http-response-string/24729316#24729316
+    class FakeSocket(object):
+        def __init__(self, response_str):
+            self._file = BytesIO(response_str)
+
+        def makefile(self, *args, **kwargs):
+            return self._file
+
+    response = httplib.HTTPResponse(FakeSocket(raw_headers))
+    response.begin()
+    header_list = [(k.lower(), v) for (k, v) in response.getheaders()]
+    return dict(header_list)
 
 
 class HttpSession(object):
@@ -194,7 +190,9 @@ class HttpStream(object):
         self.c.setopt(pycurl.SSL_VERIFYHOST, 2 if verify_ssl else 0)
         self.c.setopt(pycurl.VERBOSE, 1 if verbose else 0)
         if username and password:
-            self.c.setopt(pycurl.USERPWD, b"%s:%s" % (username, password))
+            username = username.encode('utf-8')
+            password = password.encode('utf-8')
+            self.c.setopt(pycurl.USERPWD, username + b":" + password)
 
         if data:
             # curl sets the method to post if one sets any POSTFIELDS (even '')
@@ -229,8 +227,7 @@ class HttpStream(object):
             self._select()
             self._perform()
 
-        all_headers = self.headers_buffer.getvalue().decode("ascii", 'replace')  # py 2.{6,7} compat
-        self.headers = parse_headers(all_headers)
+        self.headers = parse_headers(self.headers_buffer.getvalue())
         self.status_code = self.c.getinfo(pycurl.HTTP_CODE)
 
     def _perform(self):

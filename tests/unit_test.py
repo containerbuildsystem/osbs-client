@@ -948,8 +948,6 @@ def test_build_logs_api_from_docker(osbs, decode_docker_logs):
     assert logs.split('\n')[0].find("Step ") != -1
 
 
-@pytest.mark.skipif(sys.version_info[0] >= 3,
-                    reason="known not to work on Python 3 (#74)")
 def test_parse_headers():
     conn = Connection("0.5.4")
     rm = ResponseMapping("0.5.4", lookup=conn.get_definition_for)
