@@ -9,6 +9,7 @@ from __future__ import print_function, unicode_literals, absolute_import
 
 import json
 import logging
+import os
 import sys
 from functools import wraps
 
@@ -47,7 +48,11 @@ logger = logging.getLogger(__name__)
 
 
 class OSBS(object):
-    """ """
+    """
+    Note: all API methods return osbs.http.Response object. This is, due to historical
+    reasons, untrue for list_builds and get_user, which return list of BuildResult objects
+    and dict respectively.
+    """
     @osbsapi
     def __init__(self, openshift_configuration, build_configuration):
         """ """
@@ -375,3 +380,15 @@ class OSBS(object):
     @osbsapi
     def get_user(self, username="~"):
         return self.os.get_user(username).json()
+
+    @osbsapi
+    def get_image_stream(self, stream_id, namespace=DEFAULT_NAMESPACE):
+        return self.os.get_image_stream(stream_id, namespace)
+
+    @osbsapi
+    def create_image_stream(self, name, docker_image_repository, namespace=DEFAULT_NAMESPACE):
+        img_stream_file = os.path.join(self.os_conf.get_build_json_store(), 'image_stream.json')
+        stream = json.load(open(img_stream_file))
+        stream['metadata']['name'] = name
+        stream['spec']['dockerImageRepository'] = docker_image_repository
+        return self.os.create_image_stream(json.dumps(stream), namespace=DEFAULT_NAMESPACE)

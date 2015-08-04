@@ -345,6 +345,18 @@ class Openshift(object):
         check_response(response)
         return response
 
+    def get_image_stream(self, stream_id, namespace=DEFAULT_NAMESPACE):
+        url = self._build_url("namespaces/%s/imagestreams/%s" % (namespace, stream_id))
+        response = self._get(url)
+        check_response(response)
+        return response
+
+    def create_image_stream(self, stream_json, namespace=DEFAULT_NAMESPACE):
+        url = self._build_url("namespaces/%s/imagestreams/" % namespace)
+        response = self._post(url, data=stream_json,
+                              headers={"Content-Type": "application/json"})
+        return response
+
     def import_image(self, name, namespace=DEFAULT_NAMESPACE):
         """
         Import image tags from a Docker registry into an ImageStream
