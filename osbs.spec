@@ -41,6 +41,7 @@ This package contains osbs command line client.
 Summary:        Python 2 module for OpenShift Build Service
 Group:          Development/Tools
 License:        BSD
+Requires:       python-dockerfile-parse
 Requires:       python-pycurl
 Requires:       python-setuptools
 #Requires:       python-requests
@@ -55,6 +56,7 @@ This package contains osbs Python 2 bindings.
 Summary:        Python 3 module for OpenShift Build Service
 Group:          Development/Tools
 License:        BSD
+Requires:       python3-dockerfile-parse
 Requires:       python3-pycurl
 Requires:       python3-setuptools
 #Requires:       python3-requests
