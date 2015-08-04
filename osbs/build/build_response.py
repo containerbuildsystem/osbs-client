@@ -72,10 +72,16 @@ class BuildResponse(object):
     def get_time_created(self):
         return graceful_chain_get(self.json, "metadata", "creationTimestamp")
 
+    def get_annotations(self):
+        return graceful_chain_get(self.json, "metadata", "annotations")
+
+    def get_labels(self):
+        return graceful_chain_get(self.json, "metadata", "labels")
+
     def get_annotations_or_labels(self):
-        r = graceful_chain_get(self.json, "metadata", "annotations")
+        r = self.get_annotations()
         if r is None:
-            r = graceful_chain_get(self.json, "metadata", "labels")
+            r = self.get_labels()
         return r
 
     def get_rpm_packages(self):

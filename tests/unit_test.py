@@ -30,6 +30,7 @@ from osbs.constants import SIMPLE_BUILD_TYPE, PROD_BUILD_TYPE, PROD_WITHOUT_KOJI
 from osbs.constants import PROD_WITH_SECRET_BUILD_TYPE
 from osbs.exceptions import OsbsValidationException
 from osbs.http import Response
+from osbs import utils
 from tests.constants import TEST_BUILD, TEST_LABEL, TEST_LABEL_VALUE
 from tests.constants import TEST_GIT_URI, TEST_GIT_REF, TEST_USER
 from tests.constants import TEST_COMPONENT, TEST_TARGET, TEST_ARCH
@@ -695,7 +696,7 @@ def test_list_builds_api(osbs):
 
 def test_create_prod_build(osbs):
     # TODO: test situation when a buildconfig already exists
-    flexmock(osbs).should_receive('_get_base_image').\
+    flexmock(utils).should_receive('get_base_image').\
         with_args(TEST_GIT_URI, TEST_GIT_REF).and_return('fedora23/python')
     response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_REF, TEST_USER,
                                       TEST_COMPONENT, TEST_TARGET, TEST_ARCH)

@@ -43,7 +43,12 @@ def checkout_git_repo(uri, commit):
     return tmpdir
 
 
-def get_base_image(repo_dir):
+def get_base_image_from_dir(repo_dir):
     df_path = os.path.join(repo_dir, 'Dockerfile')
     df = DockerfileParser(df_path)
     return df.baseimage
+
+
+def get_base_image(git_uri, git_ref):
+    code_dir = checkout_git_repo(git_uri, git_ref)
+    return get_base_image_from_dir(code_dir)

@@ -12,14 +12,14 @@ import logging
 import sys
 from functools import wraps
 
-from .constants import (SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE,
-                        PROD_WITH_SECRET_BUILD_TYPE, BUILD_PENDING_STATES, BUILD_RUNNING_STATES)
+from .constants import SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE, PROD_WITH_SECRET_BUILD_TYPE
 from osbs.build.build_request import BuildManager
 from osbs.build.build_response import BuildResponse
 from osbs.constants import DEFAULT_NAMESPACE, PROD_BUILD_TYPE
 from osbs.core import Openshift
 from osbs.exceptions import OsbsException
-from osbs.utils import checkout_git_repo, get_base_image, deep_update
+# import utils in this way, so that we can mock standalone functions with flexmock
+from osbs import utils
 
 
 # Decorator for API methods.
@@ -135,18 +135,16 @@ class OSBS(object):
 
         # check if a build already exists for this config; if so then raise
         # TODO: could we do this more effectively than traversing all?
-        running_builds = self.os.list_builds(namespace=namespace).json()
-        for rb in running_builds['items']:
-            try:
-                phase = rb['status']['phase'].lower()
-                bc = rb['metadata']['labels']['buildconfig']
-                if bc == build_config_name and \
-                        (phase in BUILD_PENDING_STATES + BUILD_RUNNING_STATES):
-                    raise OsbsException('Build %s for %s in state %s, can\'t proceed.' %
-                                        (rb['metadata']['name'], build_config_name, phase))
-            except KeyError:
-                # rb wasn't created from this buildconfig
-                pass
+        running_builds = [BuildResponse(request=None, build_json=rb)
+                          for rb in self.os.list_builds(namespace=namespace).json()['items']]
+        for rb in running_builds:
+            labels = rb.get_labels()
+            if labels is None:
+                continue
+            bc = labels.get('buildconfig', None)
+            if bc == build_config_name and (rb.is_pending() or rb.is_running()):
+                raise OsbsException('Build %s for %s in state %s, can\'t proceed.' %
+                                    (rb.get_build_name(), build_config_name, rb.status))
 
         existing_bc = None
         try:
@@ -156,7 +154,7 @@ class OSBS(object):
             pass  # doesn't exist => do nothing
 
         if existing_bc is not None:
-            deep_update(existing_bc, build_json)
+            utils.deep_update(existing_bc, build_json)
             logger.debug('build config for %s already exists, updating...', build_config_name)
             self.os.update_build_config(build_config_name, json.dumps(existing_bc), namespace)
         else:
@@ -165,14 +163,10 @@ class OSBS(object):
             self.os.create_build_config(json.dumps(build_json), namespace=namespace)
         return self.os.start_build(build_config_name, namespace=namespace)
 
-    def _get_base_image(self, git_uri, git_ref):
-        code_dir = checkout_git_repo(git_uri, git_ref)
-        return get_base_image(code_dir)
-
     @osbsapi
     def create_prod_build(self, git_uri, git_ref, git_branch, user, component, target,
                           architecture, yum_repourls=None, namespace=DEFAULT_NAMESPACE, **kwargs):
-        base_image = self._get_base_image(git_uri, git_ref)
+        base_image = utils.get_base_image(git_uri, git_ref)
         build_request = self.get_build_request(PROD_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
@@ -204,7 +198,7 @@ class OSBS(object):
     def create_prod_with_secret_build(self, git_uri, git_ref, git_branch, user, component,
                                       target, architecture, yum_repourls=None,
                                       namespace=DEFAULT_NAMESPACE, **kwargs):
-        base_image = self._get_base_image(git_uri, git_ref)
+        base_image = utils.get_base_image(git_uri, git_ref)
         build_request = self.get_build_request(PROD_WITH_SECRET_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
@@ -240,7 +234,7 @@ class OSBS(object):
     def create_prod_without_koji_build(self, git_uri, git_ref, git_branch, user, component,
                                        architecture, yum_repourls=None,
                                        namespace=DEFAULT_NAMESPACE, **kwargs):
-        base_image = self._get_base_image(git_uri, git_ref)
+        base_image = utils.get_base_image(git_uri, git_ref)
         build_request = self.get_build_request(PROD_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
@@ -267,7 +261,7 @@ class OSBS(object):
     @osbsapi
     def create_simple_build(self, git_uri, git_ref, git_branch, user, component, yum_repourls=None,
                             namespace=DEFAULT_NAMESPACE, **kwargs):
-        base_image = self._get_base_image(git_uri, git_ref)
+        base_image = utils.get_base_image(git_uri, git_ref)
         build_request = self.get_build_request(SIMPLE_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
