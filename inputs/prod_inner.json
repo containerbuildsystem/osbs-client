@@ -2,8 +2,10 @@
   "prebuild_plugins": [
     {
       "args": {
-        "key": "is_autorebuild",
-        "value": "true"
+        "label_key": "is_autorebuild",
+        "label_value": "true",
+        "url": "{{OPENSHIFT_URI}}",
+        "verify_ssl": false
       },
       "name": "check_and_set_rebuild"
     },
