@@ -1,0 +1,60 @@
+{
+    "status": {
+        "config": {
+            "kind": "BuildConfig",
+            "name": "component-master",
+            "namespace": "default"
+        },
+        "phase": "New"
+    },
+    "apiVersion": "v1beta3",
+    "kind": "Build",
+    "spec": {
+        "strategy": {
+            "type": "Custom",
+            "customStrategy": {
+                "exposeDockerSocket": true,
+                "from": {
+                    "kind": "DockerImage",
+                    "name": "buildroot:latest"
+                },
+                "env": [
+                    {
+                        "name": "DOCK_PLUGINS",
+                        "value": "{\"prebuild_plugins\": [{\"name\": \"change_from_in_dockerfile\"}, {\"name\": \"dockerfile_content\"}, {\"args\": {\"registry_uri\": \"10.34.2.242:5000\", \"insecure_registry\": true}, \"name\": \"change_source_registry\"}], \"exit_plugins\": [{\"args\": {\"url\": \"https://192.168.122.121:8443\", \"verify_ssl\": false}, \"name\": \"store_metadata_in_osv3\"}], \"postbuild_plugins\": [{\"args\": {\"image_id\": \"BUILT_IMAGE_ID\"}, \"name\": \"all_rpm_packages\"}]}"
+                    },
+                    {
+                        "name": "OPENSHIFT_CUSTOM_BUILD_BASE_IMAGE",
+                        "value": "buildroot:latest"
+                    }
+                ]
+            }
+        },
+        "resources": {},
+        "output": {
+            "to": {
+                "kind": "DockerImage",
+                "name": "10.34.2.242:5000/bkabrda/master/component:20150729152103"
+            }
+        },
+        "source": {
+            "git": {
+                "uri": "https://github.com/TomasTomecek/docker-hello-world.git",
+                "ref": "master"
+            },
+            "type": "Git"
+        },
+        "serviceAccount": "builder"
+    },
+    "metadata": {
+        "uid": "a96af1c9-35f4-11e5-a19a-525400667fb8",
+        "creationTimestamp": "2015-07-29T13:21:03Z",
+        "resourceVersion": "3823",
+        "selfLink": "/osapi/v1beta3/namespaces/default/buildconfigs/component-master/instantiate",
+        "labels": {
+            "buildconfig": "component-master"
+        },
+        "name": "component-master",
+        "namespace": "default"
+    }
+}

@@ -1,0 +1,49 @@
+{
+    "apiVersion": "v1beta3",
+    "kind": "BuildConfig",
+    "spec": {
+        "triggers": [
+            {
+                "type": "ImageChange",
+                "imageChange": {
+                    "from": {
+                        "kind": "ImageStreamTag",
+                        "name": "fedora:latest"
+                    }
+                }
+            }
+        ],
+        "strategy": {
+            "type": "Custom",
+            "customStrategy": {
+                "exposeDockerSocket": true,
+                "from": {
+                    "kind": "DockerImage",
+                    "name": "buildroot:latest"
+                },
+                "env": [
+                    {
+                        "name": "DOCK_PLUGINS",
+                        "value": "{\"prebuild_plugins\": [{\"name\": \"change_from_in_dockerfile\"}, {\"name\": \"dockerfile_content\"}, {\"args\": {\"registry_uri\": \"10.34.2.242:5000\", \"insecure_registry\": true}, \"name\": \"change_source_registry\"}], \"exit_plugins\": [{\"args\": {\"url\": \"https://192.168.122.121:8443\", \"verify_ssl\": false}, \"name\": \"store_metadata_in_osv3\"}], \"postbuild_plugins\": [{\"args\": {\"image_id\": \"BUILT_IMAGE_ID\"}, \"name\": \"all_rpm_packages\"}]}"
+                    }
+                ]
+            }
+        },
+        "output": {
+            "to": {
+                "kind": "DockerImage",
+                "name": "10.34.2.242:5000/bkabrda/master/component:20150729150321"
+            }
+        },
+        "source": {
+            "git": {
+                "uri": "https://github.com/TomasTomecek/docker-hello-world.git",
+                "ref": "master"
+            },
+            "type": "Git"
+        }
+    },
+    "metadata": {
+        "name": "component-master"
+    }
+}

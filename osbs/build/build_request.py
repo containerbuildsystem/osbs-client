@@ -167,6 +167,8 @@ class CommonBuild(BuildRequest):
 
         tag_with_registry = self.spec.registry_uri.value + "/" + self.spec.image_tag.value
         self.template['spec']['output']['to']['name'] = tag_with_registry
+        self.template['spec']['triggers'][0]['imageChange']['from']['name'] = \
+            self.spec.base_image.value
 
         if (self.spec.yum_repourls.value is not None and
                 self.dj.dock_json_has_plugin_conf('prebuild_plugins', "add_yum_repo_by_url")):

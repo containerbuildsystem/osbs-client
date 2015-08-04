@@ -123,6 +123,7 @@ def cmd_build(args, osbs):
     build = osbs.create_build(
         git_uri=osbs.build_conf.get_git_uri(),
         git_ref=osbs.build_conf.get_git_ref(),
+        git_branch=osbs.build_conf.get_git_branch(),
         user=osbs.build_conf.get_user(),
         component=osbs.build_conf.get_component(),
         target=osbs.build_conf.get_koji_target(),
@@ -289,6 +290,8 @@ def cli():
                               required=True, help="URL to git repo")
     build_parser.add_argument("--git-commit", action='store', default="master",
                               help="checkout this commit")
+    build_parser.add_argument("-b", "--git-branch", action='store', required=True,
+                              help="name of git branch")
     build_parser.add_argument("-t", "--target", action='store',
                               help="koji target name")
     build_parser.add_argument("-a", "--arch", action='store', default=uname()[4],

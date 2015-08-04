@@ -1,10 +1,24 @@
 {
   "apiVersion": "v1beta3",
-  "kind": "Build",
-  "metadata":{
-    "name": "{{NAME}}"
+  "kind": "BuildConfig",
+  "metadata": {
+    "name": "{{NAME}}",
+    "labels": {
+      "is_autorebuild": "false"
+    }
   },
   "spec": {
+    "triggers": [
+      {
+        "type": "ImageChange",
+        "imageChange": {
+          "from": {
+            "kind": "ImageStreamTag",
+            "name": "{{BASE_IMAGE_STREAM}}"
+          }
+        }
+      }
+    ],
     "source": {
       "type": "Git",
       "git": {
@@ -22,7 +36,7 @@
       "type": "Custom",
       "customStrategy": {
         "from": {
-          "kind": "ImageStreamTag",
+          "kind": "DockerImage",
           "name": "buildroot:latest"
         },
         "exposeDockerSocket": true,

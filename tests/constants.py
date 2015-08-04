@@ -8,6 +8,7 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import absolute_import, unicode_literals
 
 TEST_BUILD = "test-build-123"
+TEST_BUILD_CONFIG = "test-build-config-123"
 TEST_GIT_URI = "git://hostname/path"
 TEST_GIT_REF = "master"
 TEST_USER = "user"

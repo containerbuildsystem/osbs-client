@@ -9,6 +9,7 @@ from __future__ import print_function, unicode_literals, absolute_import
 
 import json
 import logging
+import os
 import sys
 from functools import wraps
 
@@ -17,7 +18,9 @@ from osbs.build.build_request import BuildManager
 from osbs.build.build_response import BuildResponse
 from osbs.constants import DEFAULT_NAMESPACE, PROD_BUILD_TYPE
 from osbs.core import Openshift
-from osbs.exceptions import OsbsResponseException, OsbsException
+from osbs.exceptions import OsbsException
+# import utils in this way, so that we can mock standalone functions with flexmock
+from osbs import utils
 
 
 # Decorator for API methods.
@@ -45,7 +48,11 @@ logger = logging.getLogger(__name__)
 
 
 class OSBS(object):
-    """ """
+    """
+    Note: all API methods return osbs.http.Response object. This is, due to historical
+    reasons, untrue for list_builds and get_user, which return list of BuildResult objects
+    and dict respectively.
+    """
     @osbsapi
     def __init__(self, openshift_configuration, build_configuration):
         """ """
@@ -127,15 +134,52 @@ class OSBS(object):
         build_response = BuildResponse(response)
         return build_response
 
+    def _create_build_config_and_build(self, build_json, namespace):
+        # TODO: test this method more thoroughly
+        build_config_name = build_json['metadata']['name']
+
+        # check if a build already exists for this config; if so then raise
+        # TODO: could we do this more effectively than traversing all?
+        running_builds = [BuildResponse(request=None, build_json=rb)
+                          for rb in self.os.list_builds(namespace=namespace).json()['items']]
+        for rb in running_builds:
+            labels = rb.get_labels()
+            if labels is None:
+                continue
+            bc = labels.get('buildconfig', None)
+            if bc == build_config_name and (rb.is_pending() or rb.is_running()):
+                raise OsbsException('Build %s for %s in state %s, can\'t proceed.' %
+                                    (rb.get_build_name(), build_config_name, rb.status))
+
+        existing_bc = None
+        try:
+            # see if there's already a build config
+            existing_bc = self.os.get_build_config(build_config_name)
+        except OsbsException:
+            pass  # doesn't exist => do nothing
+
+        if existing_bc is not None:
+            utils.deep_update(existing_bc, build_json)
+            logger.debug('build config for %s already exists, updating...', build_config_name)
+            self.os.update_build_config(build_config_name, json.dumps(existing_bc), namespace)
+        else:
+            # if it doesn't exist, then create it
+            logger.debug('build config for %s doesn\'t exist, creating...', build_config_name)
+            self.os.create_build_config(json.dumps(build_json), namespace=namespace)
+        return self.os.start_build(build_config_name, namespace=namespace)
+
     @osbsapi
-    def create_prod_build(self, git_uri, git_ref, user, component, target, architecture, yum_repourls=None,
-                          namespace=DEFAULT_NAMESPACE, **kwargs):
+    def create_prod_build(self, git_uri, git_ref, git_branch, user, component, target,
+                          architecture, yum_repourls=None, namespace=DEFAULT_NAMESPACE, **kwargs):
+        base_image = utils.get_base_image(git_uri, git_ref)
         build_request = self.get_build_request(PROD_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
             git_ref=git_ref,
+            git_branch=git_branch,
             user=user,
             component=component,
+            base_image=base_image,
             registry_uri=self.build_conf.get_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
             kojiroot=self.build_conf.get_kojiroot(),
@@ -150,20 +194,24 @@ class OSBS(object):
             metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
         )
         build_json = build_request.render()
-        response = self.os.create_build(json.dumps(build_json), namespace=namespace)
+        response = self._create_build_config_and_build(build_json, namespace)
         build_response = BuildResponse(response)
         logger.debug(build_response.json)
         return build_response
 
     @osbsapi
-    def create_prod_with_secret_build(self, git_uri, git_ref, user, component, target, architecture,
-                                      yum_repourls=None, namespace=DEFAULT_NAMESPACE, **kwargs):
+    def create_prod_with_secret_build(self, git_uri, git_ref, git_branch, user, component,
+                                      target, architecture, yum_repourls=None,
+                                      namespace=DEFAULT_NAMESPACE, **kwargs):
+        base_image = utils.get_base_image(git_uri, git_ref)
         build_request = self.get_build_request(PROD_WITH_SECRET_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
             git_ref=git_ref,
+            git_branch=git_branch,
             user=user,
             component=component,
+            base_image=base_image,
             registry_uri=self.build_conf.get_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
             kojiroot=self.build_conf.get_kojiroot(),
@@ -182,20 +230,24 @@ class OSBS(object):
             nfs_dest_dir=self.build_conf.get_nfs_destination_dir(),
         )
         build_json = build_request.render()
-        response = self.os.create_build(json.dumps(build_json), namespace=namespace)
+        response = self._create_build_config_and_build(build_json, namespace)
         build_response = BuildResponse(response)
         logger.debug(build_response.json)
         return build_response
 
     @osbsapi
-    def create_prod_without_koji_build(self, git_uri, git_ref, user, component, architecture, yum_repourls=None,
+    def create_prod_without_koji_build(self, git_uri, git_ref, git_branch, user, component,
+                                       architecture, yum_repourls=None,
                                        namespace=DEFAULT_NAMESPACE, **kwargs):
+        base_image = utils.get_base_image(git_uri, git_ref)
         build_request = self.get_build_request(PROD_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
             git_ref=git_ref,
+            git_branch=git_branch,
             user=user,
             component=component,
+            base_image=base_image,
             registry_uri=self.build_conf.get_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
             sources_command=self.build_conf.get_sources_command(),
@@ -207,26 +259,29 @@ class OSBS(object):
             metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
         )
         build_json = build_request.render()
-        response = self.os.create_build(json.dumps(build_json), namespace=namespace)
+        response = self._create_build_config_and_build(build_json, namespace)
         build_response = BuildResponse(response)
         return build_response
 
     @osbsapi
-    def create_simple_build(self, git_uri, git_ref, user, component, yum_repourls=None,
+    def create_simple_build(self, git_uri, git_ref, git_branch, user, component, yum_repourls=None,
                             namespace=DEFAULT_NAMESPACE, **kwargs):
+        base_image = utils.get_base_image(git_uri, git_ref)
         build_request = self.get_build_request(SIMPLE_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
             git_ref=git_ref,
+            git_branch=git_branch,
             user=user,
             component=component,
+            base_image=base_image,
             registry_uri=self.build_conf.get_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
             yum_repourls=yum_repourls,
             metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
         )
         build_json = build_request.render()
-        response = self.os.create_build(json.dumps(build_json), namespace=namespace)
+        response = self._create_build_config_and_build(build_json, namespace)
         build_response = BuildResponse(response)
         logger.debug(build_response.json)
         return build_response
@@ -352,3 +407,15 @@ class OSBS(object):
     @osbsapi
     def get_user(self, username="~"):
         return self.os.get_user(username).json()
+
+    @osbsapi
+    def get_image_stream(self, stream_id, namespace=DEFAULT_NAMESPACE):
+        return self.os.get_image_stream(stream_id, namespace)
+
+    @osbsapi
+    def create_image_stream(self, name, docker_image_repository, namespace=DEFAULT_NAMESPACE):
+        img_stream_file = os.path.join(self.os_conf.get_build_json_store(), 'image_stream.json')
+        stream = json.load(open(img_stream_file))
+        stream['metadata']['name'] = name
+        stream['spec']['dockerImageRepository'] = docker_image_repository
+        return self.os.create_image_stream(json.dumps(stream), namespace=DEFAULT_NAMESPACE)

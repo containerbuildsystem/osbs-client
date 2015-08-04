@@ -1,0 +1,10 @@
+{
+  "apiVersion": "v1",
+  "kind": "ImageStream",
+  "metadata": {
+    "name": "{{NAME}}"
+  },
+  "spec": {
+    "dockerImageRepository": "{{DOCKER_IMAGE_REPOSITORY}}"
+  }
+}

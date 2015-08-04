@@ -12,6 +12,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 
 import logging
 import datetime
+import os
 import re
 from osbs.constants import DEFAULT_GIT_REF
 from osbs.exceptions import OsbsValidationException
@@ -66,28 +67,23 @@ class BuildIDParam(BuildParam):
 
     @BuildParam.value.setter
     def value(self, val):  # pylint: disable=W0221
-        d = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-
         # build ID has to conform to:
         #  * 63 chars at most
         #  * (([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?
-        build_id = "%s-%s" % (val, d)
 
-        if len(build_id) > 63:
+        if len(val) > 63:
             # component + timestamp > 63
-            d_len = len(d)
-            new_prefix = val[:63 - d_len - 1]
-            new_name = "%s-%s" % (new_prefix, d)
-            logger.warning("'%s' is too long, changing to '%s'", build_id, new_name)
-            build_id = new_name
+            new_name = val[:63]
+            logger.warning("'%s' is too long, changing to '%s'", val, new_name)
+            val = new_name
 
         build_id_re = re.compile(r"^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$")
-        match = build_id_re.match(build_id)
+        match = build_id_re.match(val)
         if not match:
-            logger.error("'%s' is not valid build ID", build_id)
+            logger.error("'%s' is not valid build ID", val)
             raise OsbsValidationException("Build ID '%s', doesn't match regex '%s'" %
-                                          (build_id, build_id_re))
-        BuildParam.value.fset(self, build_id)
+                                          (val, build_id_re))
+        BuildParam.value.fset(self, val)
 
 
 class BuildTypeSpec(object):
@@ -111,8 +107,10 @@ class BuildTypeSpec(object):
 class CommonSpec(BuildTypeSpec):
     git_uri = BuildParam('git_uri')
     git_ref = BuildParam('git_ref', default=DEFAULT_GIT_REF)
+    git_branch = BuildParam('git_branch')
     user = UserParam()
     component = BuildParam('component')
+    base_image = BuildParam('base_image')
     registry_uri = BuildParam('registry_uri')
     openshift_uri = BuildParam('openshift_uri')
     name = BuildIDParam()
@@ -129,11 +127,12 @@ class CommonSpec(BuildTypeSpec):
             self.openshift_uri,
         ]
 
-    def set_params(self, git_uri=None, git_ref=None, registry_uri=None, user=None,
-                   component=None, openshift_uri=None, yum_repourls=None,
+    def set_params(self, git_uri=None, git_ref=None, git_branch=None, registry_uri=None, user=None,
+                   component=None, base_image=None, openshift_uri=None, yum_repourls=None,
                    metadata_plugin_use_auth=None, **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
+        self.git_branch.value = git_branch
         self.user.value = user
         self.component.value = component
         # We only want the hostname[:port]
@@ -145,7 +144,8 @@ class CommonSpec(BuildTypeSpec):
             raise OsbsValidationException("yum_repourls must be a list")
         self.yum_repourls.value = yum_repourls or []
         self.metadata_plugin_use_auth.value = metadata_plugin_use_auth
-        self.name.value = self.component.value
+        self.name.value = '%s-%s' % (self.component.value, self.git_branch.value)
+        self.base_image.value = os.path.join(registry_uri, base_image)
 
 
 class ProdSpec(CommonSpec):

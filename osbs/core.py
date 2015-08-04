@@ -164,14 +164,24 @@ class Openshift(object):
         return self._post(url, data=build_config_json,
                           headers={"Content-Type": "application/json"})
 
+    def update_build_config(self, build_config_id, build_config_json, namespace=DEFAULT_NAMESPACE):
+        url = self._build_url("namespaces/%s/buildconfigs/%s" % (namespace, build_config_id))
+        return self._put(url, data=build_config_json,
+                         headers={"Content-Type": "application/json"})
+
+    def instantiate_build_config(self, build_config_id, namespace=DEFAULT_NAMESPACE):
+        url = self._build_url("namespaces/%s/buildconfigs/%s/instantiate" % (
+            namespace, build_config_id))
+        # TODO: should we have the api version somewhere in conf?
+        return self._post(url, data=json.dumps({"kind": "BuildRequest", "apiVersion": "v1beta3",
+                                     "metadata": {"name": build_config_id}}),
+                          headers={"Content-Type": "application/json"})
+
     def start_build(self, build_config_id, namespace=DEFAULT_NAMESPACE):
         """
         :return:
         """
-        build_config = self.get_build_config(build_config_id, namespace=namespace)
-        assert build_config["kind"] == "BuildConfig"
-        build_config["kind"] = "Build"
-        return self.create_build(json.dumps(build_config), namespace=namespace)
+        return self.instantiate_build_config(build_config_id, namespace=namespace)
 
     def logs(self, build_id, follow=False, build_json=None, wait_if_missing=False,
              namespace=DEFAULT_NAMESPACE):
@@ -381,6 +391,18 @@ class Openshift(object):
                                                 'annotations', annotations,
                                                 self._replace_metadata_things,
                                                 namespace=namespace)
+
+    def get_image_stream(self, stream_id, namespace=DEFAULT_NAMESPACE):
+        url = self._build_url("namespaces/%s/imagestreams/%s" % (namespace, stream_id))
+        response = self._get(url)
+        check_response(response)
+        return response
+
+    def create_image_stream(self, stream_json, namespace=DEFAULT_NAMESPACE):
+        url = self._build_url("namespaces/%s/imagestreams/" % namespace)
+        response = self._post(url, data=stream_json,
+                              headers={"Content-Type": "application/json"})
+        return response
 
     def import_image(self, name, namespace=DEFAULT_NAMESPACE):
         """
