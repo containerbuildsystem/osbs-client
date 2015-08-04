@@ -298,40 +298,70 @@ class Openshift(object):
                                    namespace)
         return build_response
 
-    def set_labels_on_object(self, collection, name, labels,
-                             namespace=DEFAULT_NAMESPACE):
+    @staticmethod
+    def _update_metadata_things(metadata, things, values):
+        metadata.setdefault(things, {})
+        metadata[things].update(values)
+
+    @staticmethod
+    def _replace_metadata_things(metadata, things, values):
+        metadata[things] = values
+
+    def adjust_attributes_on_object(self, collection, name, things, values,
+                                    how, namespace=DEFAULT_NAMESPACE):
         """
-        set labels on object
+        adjust labels or annotations on object
 
         labels have to match RE: (([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])? and
         have at most 63 chars
 
         :param collection: str, object collection e.g. 'builds'
         :param name: str, name of object
-        :param labels: dict, labels to set
+        :param things: str, 'labels' or 'annotations'
+        :param values: dict, values to set
+        :param how: callable, how to adjust the values e.g.
+                    self._replace_metadata_things
         :param namespace: str
         :return:
         """
         url = self._build_url("namespaces/%s/%s/%s" % (namespace, collection,
                                                        name))
         build_json = self._get(url).json()
-        build_json['metadata'].setdefault('labels', {})
-        build_json['metadata']['labels'].update(labels)
+        how(build_json['metadata'], things, values)
         response = self._put(url, data=json.dumps(build_json), use_json=True)
         check_response(response)
         return response
 
+    def update_labels_on_build(self, build_id, labels,
+                               namespace=DEFAULT_NAMESPACE):
+        return self.adjust_attributes_on_object('builds', build_id,
+                                                'labels', labels,
+                                                self._update_metadata_things,
+                                                namespace=namespace)
+
     def set_labels_on_build(self, build_id, labels,
                             namespace=DEFAULT_NAMESPACE):
-        return self.set_labels_on_object('builds', build_id, labels,
-                                         namespace=namespace)
+        return self.adjust_attributes_on_object('builds', build_id,
+                                                'labels', labels,
+                                                self._replace_metadata_things,
+                                                namespace=namespace)
+
+    def update_labels_on_build_config(self, build_config_id, labels,
+                                      namespace=DEFAULT_NAMESPACE):
+        return self.adjust_attributes_on_object('buildconfigs', build_config_id,
+                                                'labels', labels,
+                                                self._update_metadata_things,
+                                                namespace=namespace)
 
     def set_labels_on_build_config(self, build_config_id, labels,
                                    namespace=DEFAULT_NAMESPACE):
-        return self.set_labels_on_object('buildconfigs', build_config_id,
-                                         labels, namespace=namespace)
+        return self.adjust_attributes_on_object('buildconfigs', build_config_id,
+                                                'labels', labels,
+                                                self._replace_metadata_things,
+                                                namespace=namespace)
 
-    def set_annotations_on_build(self, build_id, annotations, namespace=DEFAULT_NAMESPACE):
+    def update_annotations_on_build(self, build_id, annotations,
+                                    namespace=DEFAULT_NAMESPACE):
         """
         set annotations on build object
 
@@ -340,13 +370,17 @@ class Openshift(object):
         :param namespace: str
         :return:
         """
-        url = self._build_url("namespaces/%s/builds/%s/" % (namespace, build_id))
-        build_json = self._get(url).json()
-        build_json['metadata'].setdefault('annotations', {})
-        build_json['metadata']['annotations'].update(annotations)
-        response = self._put(url, data=json.dumps(build_json), use_json=True)
-        check_response(response)
-        return response
+        return self.adjust_attributes_on_object('builds', build_id,
+                                                'annotations', annotations,
+                                                self._update_metadata_things,
+                                                namespace=namespace)
+
+    def set_annotations_on_build(self, build_id, annotations,
+                                 namespace=DEFAULT_NAMESPACE):
+        return self.adjust_attributes_on_object('builds', build_id,
+                                                'annotations', annotations,
+                                                self._replace_metadata_things,
+                                                namespace=namespace)
 
     def import_image(self, name, namespace=DEFAULT_NAMESPACE):
         """

@@ -306,8 +306,21 @@ class OSBS(object):
         return build_response
 
     @osbsapi
+    def update_labels_on_build(self, build_id, labels,
+                               namespace=DEFAULT_NAMESPACE):
+        response = self.os.update_labels_on_build(build_id, labels,
+                                                  namespace=namespace)
+    @osbsapi
     def set_labels_on_build(self, build_id, labels, namespace=DEFAULT_NAMESPACE):
         response = self.os.set_labels_on_build(build_id, labels, namespace=namespace)
+        return response
+
+    @osbsapi
+    def update_labels_on_build_config(self, build_config_id, labels,
+                                      namespace=DEFAULT_NAMESPACE):
+        response = self.os.update_labels_on_build_config(build_config_id,
+                                                         labels,
+                                                         namespace=namespace)
         return response
 
     @osbsapi
@@ -317,6 +330,12 @@ class OSBS(object):
                                                       labels,
                                                       namespace=namespace)
         return response
+
+    @osbsapi
+    def update_annotations_on_build(self, build_id, annotations,
+                                    namespace=DEFAULT_NAMESPACE):
+        return self.os.update_annotations_on_build(build_id, annotations,
+                                                   namespace=namespace)
 
     @osbsapi
     def set_annotations_on_build(self, build_id, annotations, namespace=DEFAULT_NAMESPACE):
