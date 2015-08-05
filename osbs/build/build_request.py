@@ -176,6 +176,10 @@ class CommonBuild(BuildRequest):
             self.dj.dock_json_set_arg('prebuild_plugins', "add_yum_repo_by_url", "repourls",
                                       self.spec.yum_repourls.value)
 
+        if self.dj.dock_json_has_plugin_conf('prebuild_plugins', 'check_and_set_rebuild'):
+            self.dj.dock_json_set_arg('prebuild_plugins', 'check_and_set_rebuild', 'url',
+                                      self.spec.openshift_uri.value)
+
         if self.spec.use_auth.value is not None:
             try:
                 self.dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3",
