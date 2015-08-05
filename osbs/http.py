@@ -186,6 +186,7 @@ class HttpStream(object):
         self.c.setopt(pycurl.URL, str(url))
         self.c.setopt(pycurl.WRITEFUNCTION, self.response_buffer.write)
         self.c.setopt(pycurl.HEADERFUNCTION, self.headers_buffer.write)
+        self.c.setopt(pycurl.DEBUGFUNCTION, self._curl_debug)
         self.c.setopt(pycurl.SSL_VERIFYPEER, 1 if verify_ssl else 0)
         self.c.setopt(pycurl.SSL_VERIFYHOST, 2 if verify_ssl else 0)
         self.c.setopt(pycurl.VERBOSE, 1 if verbose else 0)
@@ -302,6 +303,23 @@ class HttpStream(object):
 
         if pending is not None:
             yield pending
+
+    @staticmethod
+    def _curl_debug(debug_type, debug_msg):
+        try:
+            logger_name = {
+                pycurl.INFOTYPE_TEXT: 'curl',
+                pycurl.INFOTYPE_HEADER_IN: 'in',
+                pycurl.INFOTYPE_HEADER_OUT: 'out'
+            }[debug_type]
+        except KeyError:
+            return
+
+        curl_logger = logging.getLogger(__name__ + '.' + logger_name)
+        for line in debug_msg.splitlines():
+            if not line:
+                continue
+            curl_logger.debug(line)
 
     @property
     def encoding(self):
