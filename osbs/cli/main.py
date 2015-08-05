@@ -297,7 +297,7 @@ def cli():
     build_parser.add_argument("-a", "--arch", action='store', default=uname()[4],
                               help="build architecture")
     build_parser.add_argument("-u", "--user", action='store', required=True,
-                              help="username (will be image prefix)")
+                              help="prefix for docker image repository")
     build_parser.add_argument("-c", "--component", action='store', required=True,
                               help="name of component")
     build_parser.add_argument("--no-logs", action='store_true', required=False, default=False,
@@ -323,9 +323,9 @@ def cli():
     parser.add_argument("--instance", "-i", action='store', metavar="SECTION_NAME",
                         help="section within config for requested instance", default=DEFAULT_CONFIGURATION_SECTION)
     parser.add_argument("--username", action='store',
-                        help="username within OSBS")
+                        help="name of user to use for Basic Authentication in OSBS")
     parser.add_argument("--password", action='store',
-                        help="password within OSBS")
+                        help="password to use for Basic Authentication in OSBS")
     parser.add_argument("--use-kerberos", action='store_true', default=None,
                         help="use kerberos for authentication")
     parser.add_argument("--verify-ssl", action='store_true', default=None,
