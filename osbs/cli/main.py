@@ -18,7 +18,7 @@ from osbs import set_logging
 from osbs.api import OSBS
 from osbs.conf import Configuration
 from osbs.constants import DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION
-from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsAuthException
+from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsAuthException, OsbsResponseException
 
 
 logger = logging.getLogger('osbs')
@@ -395,6 +395,16 @@ def main():
         else:
             logger.error("Authentication failure: %s",
                          ex.message)
+            return -1
+    except OsbsResponseException as ex:
+        if is_verbose:
+            raise
+        else:
+            if isinstance(ex.json, dict) and 'message' in ex.json:
+                msg = ex.json['message']
+            else:
+                msg = ex.message
+            logger.error("Server returned error %s: %s", ex.status_code, msg)
             return -1
     except Exception as ex:  # pylint: disable=broad-except
         if is_verbose:

@@ -10,6 +10,7 @@ Exceptions raised by OSBS
 """
 from __future__ import print_function, absolute_import, unicode_literals
 
+import json
 from traceback import format_tb
 
 
@@ -45,6 +46,13 @@ class OsbsResponseException(OsbsException):
     def __init__(self, message, status_code, *args, **kwargs):
         super(OsbsResponseException, self).__init__(message, *args, **kwargs)
         self.status_code = status_code
+
+        # try decoding openshift Status object
+        # https://docs.openshift.org/latest/rest_api/openshift_v1.html#v1-status
+        try:
+            self.json = json.loads(message)
+        except ValueError:
+            self.json = None
 
 
 class OsbsNetworkException(OsbsException):
