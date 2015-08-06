@@ -181,7 +181,7 @@ class Response(object):
                 url = getattr(self.curl, "url", None)
             else:
                 url = None
-            message = self._get_received_data()
+            message = self.content or self._get_received_data()
             raise OsbsNetworkException(url, message, self.status_code)
 
     def _check_curl_errors(self):
