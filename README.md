@@ -42,4 +42,4 @@ $ osbs build -g http://path.to.gitrepo.with.dockerfile/ -c image-name -u your-ni
 
 ## Deploying OpenShift Build System
 
-We have [documentation](https://github.com/DBuildService/osbs-client/blob/master/docs/osbs_instance_setup.md) how you can setup your own instance.
+We have [documentation](https://github.com/projectatomic/osbs-client/blob/master/docs/osbs_instance_setup.md) how you can setup your own instance.

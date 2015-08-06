@@ -33,12 +33,12 @@ def _install_requirements():
     return requirements
 
 setup(
-    name="osbs",
+    name="osbs-client",
     description='Python module and command line client for OpenShift Build Service',
     version="0.14",
     author='Tomas Tomecek',
     author_email='ttomecek@redhat.com',
-    url='https://github.com/DBuildService/osbs',
+    url='https://github.com/projectatomic/osbs-client',
     license="BSD",
     packages=find_packages(exclude=["tests"]),
     entry_points={
