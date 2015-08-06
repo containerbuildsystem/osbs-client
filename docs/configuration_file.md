@@ -55,6 +55,8 @@ Some options are also mandatory.
 
 * `use_kerberos` (*optional*, `boolean`) — when OpenShift is hidden behind authentication proxy, you can use kerberos for authentication
 
+* `client_cert`, `client_key` (*optional*, `string`) - paths to PEM-encoded client certificate and key to be used for authentication
+
 * `registry_uri` (*optional*, `string`) — docker registry URI to use for pulling and pushing images
 
 * `pulp_registry_name` (*optional*, `string`) — name of pulp registry within dockpulp config

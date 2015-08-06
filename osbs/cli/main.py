@@ -332,6 +332,10 @@ def cli():
                         help="password to use for Basic Authentication in OSBS")
     parser.add_argument("--use-kerberos", action='store_true', default=None,
                         help="use kerberos for authentication")
+    parser.add_argument("--client-cert", action='store',
+                        help="path to client certificate in PEM format to use for authentication")
+    parser.add_argument("--client-key", action='store',
+                        help="path to key file for the certificate provided with --client-cert")
     parser.add_argument("--verify-ssl", action='store_true', default=None,
                         help="verify CA on secure connections")
     parser.add_argument("--with-auth", action="store_true", dest="use_auth", default=None,

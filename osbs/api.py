@@ -65,6 +65,8 @@ class OSBS(object):
                             username=self.os_conf.get_username(),
                             password=self.os_conf.get_password(),
                             use_kerberos=self.os_conf.get_use_kerberos(),
+                            client_cert=self.os_conf.get_client_cert(),
+                            client_key=self.os_conf.get_client_key(),
                             use_auth=self.os_conf.get_use_auth(),
                             verify_ssl=self.os_conf.get_verify_ssl())
         self._bm = None

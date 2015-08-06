@@ -153,7 +153,8 @@ class HttpStream(object):
 
     def __init__(self, url, method, data=None, kerberos_auth=False,
                  allow_redirects=True, verify_ssl=True, use_json=False,
-                 headers=None, stream=False, username=None, password=None, verbose=False):
+                 headers=None, stream=False, username=None, password=None,
+                 client_cert=None, client_key=None, verbose=False):
         self.finished = False  # have we read all data?
         self.closed = False    # have we destroyed curl resources?
 
@@ -196,6 +197,12 @@ class HttpStream(object):
             username = username.encode('utf-8')
             password = password.encode('utf-8')
             self.c.setopt(pycurl.USERPWD, username + b":" + password)
+
+        if client_cert and client_key:
+            self.c.setopt(pycurl.SSLCERTTYPE, "PEM")
+            self.c.setopt(pycurl.SSLKEYTYPE, "PEM")
+            self.c.setopt(pycurl.SSLCERT, client_cert)
+            self.c.setopt(pycurl.SSLKEY, client_key)
 
         if data:
             # curl sets the method to post if one sets any POSTFIELDS (even '')

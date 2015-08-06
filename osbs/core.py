@@ -47,7 +47,8 @@ def check_response(response):
 class Openshift(object):
 
     def __init__(self, openshift_api_url, openshift_oauth_url, verbose=False,
-                 username=None, password=None, use_kerberos=False, verify_ssl=True, use_auth=None):
+                 username=None, password=None, use_kerberos=False, client_cert=None,
+                 client_key=None, verify_ssl=True, use_auth=None):
         self.os_api_url = openshift_api_url
         self._os_oauth_url = openshift_oauth_url
         self.verbose = verbose
@@ -58,6 +59,8 @@ class Openshift(object):
         self.use_kerberos = use_kerberos
         self.username = username
         self.password = password
+        self.client_cert = client_cert
+        self.client_key = client_key
         if use_auth is None:
             self.use_auth = bool(use_kerberos or (username and password))
         else:
@@ -83,6 +86,18 @@ class Openshift(object):
             else:
                 raise OsbsAuthException("Please check your credentials. "
                                         "Token was not retrieved successfully.")
+
+        # Use the client certificate both for the OAuth request and OpenShift
+        # API requests. Certificate auth can be used as an alternative to
+        # OAuth, however a scenario where they are used to get OAuth token is
+        # also possible. Certificate is not sent when server does not request it.
+        if self.client_cert or self.client_key:
+            if self.client_cert and self.client_key:
+                kwargs["client_cert"] = self.client_cert
+                kwargs["client_key"] = self.client_key
+            else:
+                raise OsbsAuthException("You need to provide both client certificate and key.")
+
         return headers, kwargs
 
     def _post(self, url, with_auth=True, **kwargs):

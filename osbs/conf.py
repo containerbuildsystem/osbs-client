@@ -177,6 +177,12 @@ class Configuration(object):
     def get_password(self):
         return self._get_value("password", self.conf_section, "password", can_miss=True)
 
+    def get_client_cert(self):
+        return self._get_value("client_cert", self.conf_section, "client_cert", can_miss=True)
+
+    def get_client_key(self):
+        return self._get_value("client_key", self.conf_section, "client_key", can_miss=True)
+
     def get_use_kerberos(self):
         return self._get_value("use_kerberos", self.conf_section, "use_kerberos", can_miss=True, is_bool_val=True)
 
