@@ -115,7 +115,7 @@ class CommonSpec(BuildTypeSpec):
     openshift_uri = BuildParam('openshift_uri')
     name = BuildIDParam()
     yum_repourls = BuildParam("yum_repourls")
-    metadata_plugin_use_auth = BuildParam("metadata_plugin_use_auth", allow_none=True)  # for debugging
+    use_auth = BuildParam("use_auth", allow_none=True)
 
     def __init__(self):
         self.required_params = [
@@ -129,7 +129,7 @@ class CommonSpec(BuildTypeSpec):
 
     def set_params(self, git_uri=None, git_ref=None, git_branch=None, registry_uri=None, user=None,
                    component=None, base_image=None, openshift_uri=None, yum_repourls=None,
-                   metadata_plugin_use_auth=None, **kwargs):
+                   use_auth=None, **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
         self.git_branch.value = git_branch
@@ -143,7 +143,7 @@ class CommonSpec(BuildTypeSpec):
         if not (yum_repourls is None or isinstance(yum_repourls, list)):
             raise OsbsValidationException("yum_repourls must be a list")
         self.yum_repourls.value = yum_repourls or []
-        self.metadata_plugin_use_auth.value = metadata_plugin_use_auth
+        self.use_auth.value = use_auth
         self.name.value = '%s-%s' % (self.component.value, self.git_branch.value)
         self.base_image.value = os.path.join(registry_uri, base_image)
 

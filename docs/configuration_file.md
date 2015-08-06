@@ -73,8 +73,6 @@ Some options are also mandatory.
 
 * `use_auth` (*optional*, `boolean`) — by default, osbs-client is trying to authenticate against OpenShift master to get OAuth token; you may disable the process with this option
 
-* `metadata_plugin_use_auth` (*optional*, `boolean`) — during build, atomic-container is sending metadata to OpenShift master; this is the same option as `use_auth`, except it consumed during build
-
 * `source_secret` (*optional*, `string`) — name of [kubernetes secret](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/design/secrets.md) to use for pulp plugin
 
 * `nfs_server_path` (*optional*, `string`) — NFS server and path to use for storing built image (it is passed to `mount` command)

@@ -146,7 +146,7 @@ class CommonBuild(BuildRequest):
         :param component: str, component part of the image name
         :param openshift_uri: str, URL of openshift instance for the build
         :param yum_repourls: list of str, URLs to yum repo files to include
-        :param metadata_plugin_use_auth: bool, use auth when posting metadata from dock?
+        :param use_auth: bool, use auth from atomic-reactor?
         """
         logger.debug("setting params '%s' for %s", kwargs, self.spec)
         self.spec.set_params(**kwargs)
@@ -176,14 +176,14 @@ class CommonBuild(BuildRequest):
             self.dj.dock_json_set_arg('prebuild_plugins', "add_yum_repo_by_url", "repourls",
                                       self.spec.yum_repourls.value)
 
-        if self.spec.metadata_plugin_use_auth.value is not None:
+        if self.spec.use_auth.value is not None:
             try:
                 self.dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3",
-                                          "use_auth", self.spec.metadata_plugin_use_auth.value)
+                                          "use_auth", self.spec.use_auth.value)
             except RuntimeError:
                 # For compatibility with older osbs.conf files
                 self.dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
-                                          "use_auth", self.spec.metadata_plugin_use_auth.value)
+                                          "use_auth", self.spec.use_auth.value)
 
     def validate_input(self):
         self.spec.validate()
@@ -215,7 +215,7 @@ class ProductionBuild(CommonBuild):
         :param vendor: str, vendor name
         :param build_host: str, host the build will run on
         :param authoritative_registry: str, the docker registry authoritative for this image
-        :param metadata_plugin_use_auth: bool, use auth when posting metadata from dock?
+        :param use_auth: bool, use auth from atomic-reactor?
         """
         logger.debug("setting params '%s' for %s", kwargs, self.spec)
         self.spec.set_params(**kwargs)
