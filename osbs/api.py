@@ -190,8 +190,8 @@ class OSBS(object):
             vendor=self.build_conf.get_vendor(),
             build_host=self.build_conf.get_build_host(),
             authoritative_registry=self.build_conf.get_authoritative_registry(),
-            yum_repourls=yum_repourls,
-            metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
+            use_auth=self.build_conf.get_use_auth(),
+            yum_repourls=yum_repourls
         )
         build_json = build_request.render()
         response = self._create_build_config_and_build(build_json, namespace)
@@ -224,7 +224,7 @@ class OSBS(object):
             authoritative_registry=self.build_conf.get_authoritative_registry(),
             yum_repourls=yum_repourls,
             source_secret=self.build_conf.get_source_secret(),
-            metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
+            use_auth=self.build_conf.get_use_auth(),
             pulp_registry=self.os_conf.get_pulp_registry(),
             nfs_server_path=self.os_conf.get_nfs_server_path(),
             nfs_dest_dir=self.build_conf.get_nfs_destination_dir(),
@@ -256,7 +256,7 @@ class OSBS(object):
             build_host=self.build_conf.get_build_host(),
             authoritative_registry=self.build_conf.get_authoritative_registry(),
             yum_repourls=yum_repourls,
-            metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
+            use_auth=self.build_conf.get_use_auth(),
         )
         build_json = build_request.render()
         response = self._create_build_config_and_build(build_json, namespace)
@@ -278,7 +278,7 @@ class OSBS(object):
             registry_uri=self.build_conf.get_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
             yum_repourls=yum_repourls,
-            metadata_plugin_use_auth=self.build_conf.get_metadata_plugin_use_auth(),
+            use_auth=self.build_conf.get_use_auth(),
         )
         build_json = build_request.render()
         response = self._create_build_config_and_build(build_json, namespace)
