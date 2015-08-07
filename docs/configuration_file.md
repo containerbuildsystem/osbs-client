@@ -79,8 +79,8 @@ Some options are also mandatory.
 
 * `nfs_dest_dir` (*optional*, `string`) — directory to create on provided NFS server where image will be stored
 
-* `cpu_limit` (*optional*, `string`) — CPU limit to apply to build (for more info, see [documentation for resources](https://github.com/DBuildService/osbs-client/blob/master/docs/resource.md)
+* `cpu_limit` (*optional*, `string`) — CPU limit to apply to build (for more info, see [documentation for resources](https://github.com/projectatomic/osbs-client/blob/master/docs/resource.md)
 
-* `memory_limit` (*optional*, `string`) — memory limit to apply to build (for more info, see [documentation for resources](https://github.com/DBuildService/osbs-client/blob/master/docs/resource.md)
+* `memory_limit` (*optional*, `string`) — memory limit to apply to build (for more info, see [documentation for resources](https://github.com/projectatomic/osbs-client/blob/master/docs/resource.md)
 
-* `storage_limit` (*optional*, `string`) — storage limit to apply to build (for more info, see [documentation for resources](https://github.com/DBuildService/osbs-client/blob/master/docs/resource.md)
+* `storage_limit` (*optional*, `string`) — storage limit to apply to build (for more info, see [documentation for resources](https://github.com/projectatomic/osbs-client/blob/master/docs/resource.md)

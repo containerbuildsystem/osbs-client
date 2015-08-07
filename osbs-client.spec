@@ -4,9 +4,11 @@
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 # set to 0 to create a normal release
 %global postrelease 0
-%global release 1
+%global release 2
 
-Name:           osbs
+%global osbs_obsolete_vr 0.14-2
+
+Name:           osbs-client
 Version:        0.14
 %if "x%{postrelease}" != "x0"
 Release:        %{release}.%{postrelease}.git.%{shortcommit}%{?dist}
@@ -17,12 +19,12 @@ Release:        %{release}%{?dist}
 Summary:        Python command line client for OpenShift Build Service
 Group:          Development/Tools
 License:        BSD
-URL:            https://github.com/DBuildService/osbs
-Source0:        https://github.com/DBuildService/osbs/archive/%{commit}/osbs-%{commit}.tar.gz
+URL:            https://github.com/projectatomic/osbs-client
+Source0:        https://github.com/projectatomic/osbs-client/archive/%{commit}/osbs-client-%{commit}.tar.gz
 
 BuildArch:      noarch
 
-Requires:       python-osbs
+Requires:       python-osbs-client
 
 BuildRequires:  python2-devel
 BuildRequires:  python-setuptools
@@ -32,12 +34,15 @@ BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
 %endif
 
+Provides:       osbs = %{version}-%{release}
+Obsoletes:      osbs < %{osbs_obsolete_vr}
+
 %description
 It is able to query OpenShift v3 for various stuff related to building images.
 It can initiate builds, list builds, get info about builds, get build logs...
 This package contains osbs command line client.
 
-%package -n python-osbs
+%package -n python-osbs-client
 Summary:        Python 2 module for OpenShift Build Service
 Group:          Development/Tools
 License:        BSD
@@ -46,13 +51,16 @@ Requires:       python-pycurl
 Requires:       python-setuptools
 #Requires:       python-requests
 
-%description -n python-osbs
+Provides:       python-osbs = %{version}-%{release}
+Obsoletes:      python-osbs < %{osbs_obsolete_vr}
+
+%description -n python-osbs-client
 It is able to query OpenShift v3 for various stuff related to building images.
 It can initiate builds, list builds, get info about builds, get build logs...
 This package contains osbs Python 2 bindings.
 
 %if 0%{?with_python3}
-%package -n python3-osbs
+%package -n python3-osbs-client
 Summary:        Python 3 module for OpenShift Build Service
 Group:          Development/Tools
 License:        BSD
@@ -61,7 +69,10 @@ Requires:       python3-pycurl
 Requires:       python3-setuptools
 #Requires:       python3-requests
 
-%description -n python3-osbs
+Provides:       python3-osbs = %{version}-%{release}
+Obsoletes:      python3-osbs < %{osbs_obsolete_vr}
+
+%description -n python3-osbs-client
 It is able to query OpenShift v3 for various stuff related to building images.
 It can initiate builds, list builds, get info about builds, get build logs...
 This package contains osbs Python 3 bindings.
@@ -107,35 +118,35 @@ ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 %{_bindir}/osbs
 
 
-%files -n python-osbs
+%files -n python-osbs-client
 %doc README.md
 %{!?_licensedir:%global license %%doc}
 %license LICENSE
 %{_bindir}/osbs2
 %if 0%{?rhel}
-%{python_sitelib}/osbs/
-%{python_sitelib}/osbs-%{version}-py2.*.egg-info/
+%{python_sitelib}/osbs*
 %else
-%{python2_sitelib}/osbs/
-%{python2_sitelib}/osbs-%{version}-py2.*.egg-info/
+%{python2_sitelib}/osbs*
 %endif
 %dir %{_datadir}/osbs
 %{_datadir}/osbs/*.json
 
 
 %if 0%{?with_python3}
-%files -n python3-osbs
+%files -n python3-osbs-client
 %doc README.md
 %{!?_licensedir:%global license %%doc}
 %license LICENSE
 %{_bindir}/osbs3
-%{python3_sitelib}/osbs/
-%{python3_sitelib}/osbs-%{version}-py3.*.egg-info/
+%{python3_sitelib}/osbs*
 %dir %{_datadir}/osbs
 %{_datadir}/osbs/*.json
 %endif # with_python3
 
 %changelog
+* Thu Aug 06 2015 bkabrda <bkabrda@redhat.com> - 0.14-2
+- renamed to osbs-client
+
 * Wed Jul 01 2015 Martin Milata <mmilata@redhat.com> - 0.14-1
 - new upstream release: 0.14
 

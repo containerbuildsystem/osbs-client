@@ -1,6 +1,6 @@
 # Deploying OpenShift Build System
 
-We also have an [ansible playbook](https://github.com/DBuildService/ansible-osbs) that automates these steps. Please note that the playbook may not be in sync with this guide. Feel free to report any issues.
+We also have an [ansible playbook](https://github.com/projectatomic/ansible-osbs) that automates these steps. Please note that the playbook may not be in sync with this guide. Feel free to report any issues.
 
 
 ## Base system
@@ -316,8 +316,6 @@ If your OpenShift instance is being used by other people, make sure that everyon
 
 ## atomic-reactor
 
-Right now we are in process of changing name from `dock` to `atomic-reactor`.
-
 In order to build images, you need to have a build image. It is the image where OpenShift performs builds. The image has installed component called [atomic-reactor](https://github.com/projectatomic/atomic-reactor), which performs the build itself.
 
 
@@ -336,12 +334,10 @@ RUN yum -y update && \
 CMD ["atomic-reactor", "--verbose", "inside-build", "--input", "osv3"]
 ```
 
-Please note that previous name of atomic-reactor was dock and right now we are in a process of doing the rename.
-
 *Optional packages*
 
- * **osbs** — if you would like to submit results back to OpenShift (requires `atomic-reactor-metadata`)
- * **dock-koji** — [atomic-reactor plugin](https://github.com/DBuildService/dock/blob/master/dock/plugins/pre_koji.py) for getting packages from koji targets
+ * **osbs-client** — if you would like to submit results back to OpenShift (requires `atomic-reactor-metadata`)
+ * **atomic-reactor-koji** — [atomic-reactor plugin](https://github.com/projectatomic/atomic-reactor/blob/master/atomic_reactor/plugins/pre_koji.py) for getting packages from koji targets
  * **fedpkg** — atomic-reactor can fetch artifacts from lookaside cache of dist-git
 
 
