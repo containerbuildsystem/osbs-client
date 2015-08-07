@@ -57,6 +57,12 @@ Some options are also mandatory.
 
 * `client_cert`, `client_key` (*optional*, `string`) - paths to PEM-encoded client certificate and key to be used for authentication
 
+* `kerberos_keytab` (*optional*, `string`) - location of the keytab that will be used to initialize kerberos credentials - usually in the form `FILE:<absolute_path>`, see [kerberos documentation](http://web.mit.edu/Kerberos/krb5-latest/doc/basic/keytab_def.html) for other possible values
+
+* `kerberos_principal` (*optional*, `string`) - kerberos principal for the keytab provided in `kerberos_keytab`
+
+* `kerberos_ccache` (*optional*, `string`) - location of credential cache to use when `kerberos_keytab` is set (please refer to [kerberos documentation](http://web.mit.edu/Kerberos/krb5-latest/doc/basic/ccache_def.html) for list of credential cache types)
+
 * `registry_uri` (*optional*, `string`) — docker registry URI to use for pulling and pushing images
 
 * `pulp_registry_name` (*optional*, `string`) — name of pulp registry within dockpulp config

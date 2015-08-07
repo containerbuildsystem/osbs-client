@@ -49,6 +49,7 @@ License:        BSD
 Requires:       python-dockerfile-parse
 Requires:       python-pycurl
 Requires:       python-setuptools
+Requires:       krb5-workstation
 #Requires:       python-requests
 
 Provides:       python-osbs = %{version}-%{release}
@@ -67,6 +68,7 @@ License:        BSD
 Requires:       python3-dockerfile-parse
 Requires:       python3-pycurl
 Requires:       python3-setuptools
+Requires:       krb5-workstation
 #Requires:       python3-requests
 
 Provides:       python3-osbs = %{version}-%{release}
