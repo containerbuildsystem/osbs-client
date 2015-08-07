@@ -179,6 +179,9 @@ class CommonBuild(BuildRequest):
         if self.dj.dock_json_has_plugin_conf('prebuild_plugins', 'check_and_set_rebuild'):
             self.dj.dock_json_set_arg('prebuild_plugins', 'check_and_set_rebuild', 'url',
                                       self.spec.openshift_uri.value)
+            if self.spec.use_auth.value is not None:
+                self.dj.dock_json_set_arg('prebuild_plugins', 'check_and_set_rebuild',
+                                          'use_auth', self.spec.use_auth.value)
 
         if self.spec.use_auth.value is not None:
             try:
