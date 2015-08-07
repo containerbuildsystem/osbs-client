@@ -16,7 +16,7 @@ from osbs.core import Openshift
 from osbs.http import Response
 from osbs.conf import Configuration
 from osbs.api import OSBS
-from tests.constants import TEST_BUILD, TEST_COMPONENT, TEST_GIT_REF
+from tests.constants import TEST_BUILD, TEST_COMPONENT, TEST_GIT_REF, TEST_BUILD_CONFIG
 from tempfile import NamedTemporaryFile
 
 try:
@@ -98,20 +98,19 @@ DEFINITION = {
             "file": "created_build_config_test-build-config-123.json",
         }
     },
-    "/osapi/v1beta3/namespaces/default/buildconfigs/%s-%s/instantiate" % \
-        (TEST_COMPONENT, TEST_GIT_REF): {
+    "/osapi/v1beta3/namespaces/default/buildconfigs/%s/instantiate" % TEST_BUILD_CONFIG: {
         "post": {
             "file": "instantiated_test-build-config-123.json",
         }
     },
     # use both version with ending slash and without it
-    "/osapi/v1beta3/namespaces/default/buildconfigs/%s-%s" % (TEST_COMPONENT, TEST_GIT_REF): {
+    "/osapi/v1beta3/namespaces/default/buildconfigs/%s" % TEST_BUILD_CONFIG: {
         "get": {
             "custom_callback": buildconfig_not_found,
             "file": "not_found_build-config-component-master.json",
         }
     },
-    "/osapi/v1beta3/namespaces/default/buildconfigs/%s-%s/" % (TEST_COMPONENT, TEST_GIT_REF): {
+    "/osapi/v1beta3/namespaces/default/buildconfigs/%s/" % TEST_BUILD_CONFIG: {
         "get": {
             "custom_callback": buildconfig_not_found,
             "file": "not_found_build-config-component-master.json",

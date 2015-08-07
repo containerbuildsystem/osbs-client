@@ -147,9 +147,10 @@ class CommonSpec(BuildTypeSpec):
             raise OsbsValidationException("yum_repourls must be a list")
         self.yum_repourls.value = yum_repourls or []
         self.use_auth.value = use_auth
-        self.name.value = '%s-%s' % (self.component.value, self.git_branch.value)
+        self.name.value = name_label.replace('/', '-')
         self.trigger_imagestream_name.value = get_imagestream_name_from_image(base_image)
-        self.imagestream_name.value = name_label.replace('/', '-')
+        # imagestream and buildconfig have precisely the same name
+        self.imagestream_name.value = self.name.value
         self.imagestream_url.value = os.path.join(self.registry_uri.value, name_label)
 
 
