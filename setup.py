@@ -13,6 +13,7 @@ from setuptools import setup, find_packages
 
 data_files = {
     "share/osbs": [
+        "inputs/image_stream.json",
         "inputs/prod.json",
         "inputs/prod_inner.json",
         "inputs/simple.json",
