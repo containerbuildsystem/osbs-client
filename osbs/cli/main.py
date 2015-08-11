@@ -291,7 +291,7 @@ def cli():
     build_parser.add_argument("--git-commit", action='store', default="master",
                               help="checkout this commit")
     build_parser.add_argument("-b", "--git-branch", action='store', required=True,
-                              help="name of git branch")
+                              help="name of git branch (for incrementing Release)")
     build_parser.add_argument("-t", "--target", action='store',
                               help="koji target name")
     build_parser.add_argument("-a", "--arch", action='store', default=uname()[4],
