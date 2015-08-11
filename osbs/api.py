@@ -191,39 +191,6 @@ class OSBS(object):
             vendor=self.build_conf.get_vendor(),
             build_host=self.build_conf.get_build_host(),
             authoritative_registry=self.build_conf.get_authoritative_registry(),
-            use_auth=self.build_conf.get_use_auth(),
-            yum_repourls=yum_repourls
-        )
-        build_json = build_request.render()
-        response = self._create_build_config_and_build(build_json, namespace)
-        build_response = BuildResponse(response)
-        logger.debug(build_response.json)
-        return build_response
-
-    @osbsapi
-    def create_prod_with_secret_build(self, git_uri, git_ref, git_branch, user, component,
-                                      target, architecture, yum_repourls=None,
-                                      namespace=DEFAULT_NAMESPACE, **kwargs):
-        df_parser = utils.get_df_parser(git_uri, git_ref)
-        build_request = self.get_build_request(PROD_WITH_SECRET_BUILD_TYPE)
-        build_request.set_params(
-            git_uri=git_uri,
-            git_ref=git_ref,
-            git_branch=git_branch,
-            user=user,
-            component=component,
-            base_image=df_parser.baseimage,
-            name_label=df_parser.labels['Name'],
-            registry_uri=self.build_conf.get_registry_uri(),
-            openshift_uri=self.os_conf.get_openshift_base_uri(),
-            kojiroot=self.build_conf.get_kojiroot(),
-            kojihub=self.build_conf.get_kojihub(),
-            sources_command=self.build_conf.get_sources_command(),
-            koji_target=target,
-            architecture=architecture,
-            vendor=self.build_conf.get_vendor(),
-            build_host=self.build_conf.get_build_host(),
-            authoritative_registry=self.build_conf.get_authoritative_registry(),
             yum_repourls=yum_repourls,
             source_secret=self.build_conf.get_source_secret(),
             use_auth=self.build_conf.get_use_auth(),
@@ -238,33 +205,20 @@ class OSBS(object):
         return build_response
 
     @osbsapi
+    def create_prod_with_secret_build(self, git_uri, git_ref, git_branch, user, component,
+                                      target, architecture, yum_repourls=None,
+                                      namespace=DEFAULT_NAMESPACE, **kwargs):
+        return self.create_prod_build(git_uri, git_ref, git_branch, user, component, target,
+                                      architecture, yum_repourls=yum_repourls,
+                                      namespace=namespace, **kwargs)
+
+    @osbsapi
     def create_prod_without_koji_build(self, git_uri, git_ref, git_branch, user, component,
                                        architecture, yum_repourls=None,
                                        namespace=DEFAULT_NAMESPACE, **kwargs):
-        df_parser = utils.get_df_parser(git_uri, git_ref)
-        build_request = self.get_build_request(PROD_BUILD_TYPE)
-        build_request.set_params(
-            git_uri=git_uri,
-            git_ref=git_ref,
-            git_branch=git_branch,
-            user=user,
-            component=component,
-            base_image=df_parser.baseimage,
-            name_label=df_parser.labels['Name'],
-            registry_uri=self.build_conf.get_registry_uri(),
-            openshift_uri=self.os_conf.get_openshift_base_uri(),
-            sources_command=self.build_conf.get_sources_command(),
-            architecture=architecture,
-            vendor=self.build_conf.get_vendor(),
-            build_host=self.build_conf.get_build_host(),
-            authoritative_registry=self.build_conf.get_authoritative_registry(),
-            yum_repourls=yum_repourls,
-            use_auth=self.build_conf.get_use_auth(),
-        )
-        build_json = build_request.render()
-        response = self._create_build_config_and_build(build_json, namespace)
-        build_response = BuildResponse(response)
-        return build_response
+        return self.create_prod_build(git_uri, git_ref, git_branch, user, component, None,
+                                      architecture, yum_repourls=yum_repourls,
+                                      namespace=namespace, **kwargs)
 
     @osbsapi
     def create_simple_build(self, git_uri, git_ref, git_branch, user, component, yum_repourls=None,
