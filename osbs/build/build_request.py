@@ -169,7 +169,7 @@ class CommonBuild(BuildRequest):
         self.template['spec']['output']['to']['name'] = tag_with_registry
         if 'triggers' in self.template['spec']:
             self.template['spec']['triggers']\
-                [0]['imageChange']['from']['name'] = self.spec.base_image.value
+                [0]['imageChange']['from']['name'] = self.spec.trigger_imagestream_name.value
 
         if (self.spec.yum_repourls.value is not None and
                 self.dj.dock_json_has_plugin_conf('prebuild_plugins', "add_yum_repo_by_url")):
@@ -191,6 +191,17 @@ class CommonBuild(BuildRequest):
                 # For compatibility with older osbs.conf files
                 self.dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
                                           "use_auth", self.spec.use_auth.value)
+
+        if self.dj.dock_json_has_plugin_conf('postbuild_plugins', 'import_image'):
+            self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'imagestream',
+                                      self.spec.imagestream_name.value)
+            self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'docker_image_repo',
+                                      self.spec.imagestream_url.value)
+            self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'url',
+                                      self.spec.openshift_uri.value)
+            if self.spec.use_auth.value is not None:
+                self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'use_auth',
+                                          self.spec.use_auth.value)
 
     def validate_input(self):
         self.spec.validate()

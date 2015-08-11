@@ -171,7 +171,7 @@ class OSBS(object):
     @osbsapi
     def create_prod_build(self, git_uri, git_ref, git_branch, user, component, target,
                           architecture, yum_repourls=None, namespace=DEFAULT_NAMESPACE, **kwargs):
-        base_image = utils.get_base_image(git_uri, git_ref)
+        df_parser = utils.get_df_parser(git_uri, git_ref)
         build_request = self.get_build_request(PROD_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
@@ -179,7 +179,8 @@ class OSBS(object):
             git_branch=git_branch,
             user=user,
             component=component,
-            base_image=base_image,
+            base_image=df_parser.baseimage,
+            name_label=df_parser.labels['Name'],
             registry_uri=self.build_conf.get_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
             kojiroot=self.build_conf.get_kojiroot(),
@@ -203,7 +204,7 @@ class OSBS(object):
     def create_prod_with_secret_build(self, git_uri, git_ref, git_branch, user, component,
                                       target, architecture, yum_repourls=None,
                                       namespace=DEFAULT_NAMESPACE, **kwargs):
-        base_image = utils.get_base_image(git_uri, git_ref)
+        df_parser = utils.get_df_parser(git_uri, git_ref)
         build_request = self.get_build_request(PROD_WITH_SECRET_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
@@ -211,7 +212,8 @@ class OSBS(object):
             git_branch=git_branch,
             user=user,
             component=component,
-            base_image=base_image,
+            base_image=df_parser.baseimage,
+            name_label=df_parser.labels['Name'],
             registry_uri=self.build_conf.get_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
             kojiroot=self.build_conf.get_kojiroot(),
@@ -239,7 +241,7 @@ class OSBS(object):
     def create_prod_without_koji_build(self, git_uri, git_ref, git_branch, user, component,
                                        architecture, yum_repourls=None,
                                        namespace=DEFAULT_NAMESPACE, **kwargs):
-        base_image = utils.get_base_image(git_uri, git_ref)
+        df_parser = utils.get_df_parser(git_uri, git_ref)
         build_request = self.get_build_request(PROD_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
@@ -247,7 +249,8 @@ class OSBS(object):
             git_branch=git_branch,
             user=user,
             component=component,
-            base_image=base_image,
+            base_image=df_parser.baseimage,
+            name_label=df_parser.labels['Name'],
             registry_uri=self.build_conf.get_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
             sources_command=self.build_conf.get_sources_command(),
@@ -266,7 +269,7 @@ class OSBS(object):
     @osbsapi
     def create_simple_build(self, git_uri, git_ref, git_branch, user, component, yum_repourls=None,
                             namespace=DEFAULT_NAMESPACE, **kwargs):
-        base_image = utils.get_base_image(git_uri, git_ref)
+        df_parser = utils.get_df_parser(git_uri, git_ref)
         build_request = self.get_build_request(SIMPLE_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
@@ -274,7 +277,8 @@ class OSBS(object):
             git_branch=git_branch,
             user=user,
             component=component,
-            base_image=base_image,
+            base_image=df_parser.baseimage,
+            name_label=df_parser.labels['Name'],
             registry_uri=self.build_conf.get_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
             yum_repourls=yum_repourls,

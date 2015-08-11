@@ -1,15 +1,6 @@
 {
   "prebuild_plugins": [
     {
-      "args": {
-        "label_key": "is_autorebuild",
-        "label_value": "true",
-        "url": "{{OPENSHIFT_URI}}",
-        "verify_ssl": false
-      },
-      "name": "check_and_set_rebuild"
-    },
-    {
       "name": "pull_base_image",
       "args": {
         "parent_registry": "{{REGISTRY_URI}}",

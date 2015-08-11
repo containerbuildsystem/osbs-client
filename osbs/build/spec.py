@@ -16,6 +16,7 @@ import os
 import re
 from osbs.constants import DEFAULT_GIT_REF
 from osbs.exceptions import OsbsValidationException
+from osbs.utils import get_imagestream_name_from_image
 
 
 logger = logging.getLogger(__name__)
@@ -110,7 +111,9 @@ class CommonSpec(BuildTypeSpec):
     git_branch = BuildParam('git_branch')
     user = UserParam()
     component = BuildParam('component')
-    base_image = BuildParam('base_image')
+    trigger_imagestream_name = BuildParam('trigger_imagestream_name')
+    imagestream_name = BuildParam('imagestream_name')
+    imagestream_url = BuildParam('imagestream_url')
     registry_uri = BuildParam('registry_uri')
     openshift_uri = BuildParam('openshift_uri')
     name = BuildIDParam()
@@ -128,8 +131,8 @@ class CommonSpec(BuildTypeSpec):
         ]
 
     def set_params(self, git_uri=None, git_ref=None, git_branch=None, registry_uri=None, user=None,
-                   component=None, base_image=None, openshift_uri=None, yum_repourls=None,
-                   use_auth=None, **kwargs):
+                   component=None, base_image=None, name_label=None, openshift_uri=None,
+                   yum_repourls=None, use_auth=None, **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
         self.git_branch.value = git_branch
@@ -144,8 +147,11 @@ class CommonSpec(BuildTypeSpec):
             raise OsbsValidationException("yum_repourls must be a list")
         self.yum_repourls.value = yum_repourls or []
         self.use_auth.value = use_auth
-        self.name.value = '%s-%s' % (self.component.value, self.git_branch.value)
-        self.base_image.value = os.path.join(registry_uri, base_image)
+        self.name.value = name_label.replace('/', '-')
+        self.trigger_imagestream_name.value = get_imagestream_name_from_image(base_image)
+        # imagestream and buildconfig have precisely the same name
+        self.imagestream_name.value = self.name.value
+        self.imagestream_url.value = os.path.join(self.registry_uri.value, name_label)
 
 
 class ProdSpec(CommonSpec):

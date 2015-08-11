@@ -43,12 +43,22 @@ def checkout_git_repo(uri, commit):
     return tmpdir
 
 
-def get_base_image_from_dir(repo_dir):
-    df_path = os.path.join(repo_dir, 'Dockerfile')
-    df = DockerfileParser(df_path)
-    return df.baseimage
-
-
-def get_base_image(git_uri, git_ref):
+def get_df_parser(git_uri, git_ref):
     code_dir = checkout_git_repo(git_uri, git_ref)
-    return get_base_image_from_dir(code_dir)
+    return DockerfileParser(os.path.join(code_dir, 'Dockerfile'))
+
+
+def get_imagestream_name_from_image(image):
+    # this duplicates some logic with atomic_reactor.util.ImageName,
+    # but I don't think it's worth it to depend on AR just for this
+    ret = image
+    parts = image.split('/', 2)
+    if len(parts) == 2:
+        if '.' in parts[0] or ':' in parts[0]:
+            ret = parts[1]
+    elif len(parts) == 3:
+        ret = '%s/%s' % (parts[1], parts[2])
+    if ':' in ret:
+        ret = ret[:ret.index(':')]
+
+    return ret.replace('/', '-')

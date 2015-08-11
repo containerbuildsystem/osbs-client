@@ -239,6 +239,7 @@ def test_render_simple_request_incorrect_postbuild(tmpdir):
         'user': "john-foo",
         'component': "component",
         'base_image': 'fedora:latest',
+        'name_label': 'fedora/resultingimage',
         'registry_uri': "registry.example.com",
         'openshift_uri': "http://openshift/",
     }
@@ -268,6 +269,7 @@ def test_render_simple_request():
     inputs_path = os.path.join(parent_dir, "inputs")
     bm = BuildManager(inputs_path)
     build_request = bm.get_build_request_by_type("simple")
+    name_label = "fedora/resultingimage"
     kwargs = {
         'git_uri': "http://git/",
         'git_ref': TEST_GIT_REF,
@@ -275,13 +277,14 @@ def test_render_simple_request():
         'user': "john-foo",
         'component': TEST_COMPONENT,
         'base_image': 'fedora:latest',
+        'name_label': name_label,
         'registry_uri': "http://registry.example.com:5000",
         'openshift_uri': "http://openshift/",
     }
     build_request.set_params(**kwargs)
     build_json = build_request.render()
 
-    assert build_json["metadata"]["name"] == "%s-%s" % (TEST_COMPONENT, TEST_GIT_REF)
+    assert build_json["metadata"]["name"] == name_label.replace('/', '-')
     #assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == \
     #    os.path.join(kwargs["registry_uri"], kwargs["base_image"])
     assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
@@ -310,6 +313,7 @@ def test_render_prod_request_with_repo():
     inputs_path = os.path.join(parent_dir, "inputs")
     bm = BuildManager(inputs_path)
     build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+    name_label = "fedora/resultingimage"
     assert isinstance(build_request, ProductionBuild)
     kwargs = {
         'git_uri': "http://git/",
@@ -318,6 +322,7 @@ def test_render_prod_request_with_repo():
         'user': "john-foo",
         'component': TEST_COMPONENT,
         'base_image': 'fedora:latest',
+        'name_label': name_label,
         'registry_uri': "registry.example.com",
         'openshift_uri': "http://openshift/",
         'koji_target': "koji-target",
@@ -333,7 +338,7 @@ def test_render_prod_request_with_repo():
     build_request.set_params(**kwargs)
     build_json = build_request.render()
 
-    assert build_json["metadata"]["name"] == "%s-%s" % (TEST_COMPONENT, TEST_GIT_REF)
+    assert build_json["metadata"]["name"] == name_label.replace('/', '-')
     #assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == \
     #    os.path.join(kwargs["registry_uri"], kwargs["base_image"])
     assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
@@ -384,6 +389,7 @@ def test_render_prod_request():
     inputs_path = os.path.join(parent_dir, "inputs")
     bm = BuildManager(inputs_path)
     build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+    name_label = "fedora/resultingimage"
     kwargs = {
         'git_uri': "http://git/",
         'git_ref': TEST_GIT_REF,
@@ -391,6 +397,7 @@ def test_render_prod_request():
         'user': "john-foo",
         'component': TEST_COMPONENT,
         'base_image': 'fedora:latest',
+        'name_label': name_label,
         'registry_uri': "registry.example.com",
         'openshift_uri': "http://openshift/",
         'koji_target': "koji-target",
@@ -405,7 +412,7 @@ def test_render_prod_request():
     build_request.set_params(**kwargs)
     build_json = build_request.render()
 
-    assert build_json["metadata"]["name"] == "%s-%s" % (TEST_COMPONENT, TEST_GIT_REF)
+    assert build_json["metadata"]["name"] == name_label.replace('/', '-')
     #assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == \
     #    os.path.join(kwargs["registry_uri"], kwargs["base_image"])
     assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
@@ -455,6 +462,7 @@ def test_render_prod_without_koji_request():
     inputs_path = os.path.join(parent_dir, "inputs")
     bm = BuildManager(inputs_path)
     build_request = bm.get_build_request_by_type(PROD_WITHOUT_KOJI_BUILD_TYPE)
+    name_label = "fedora/resultingimage"
     assert isinstance(build_request, ProductionBuild)
     kwargs = {
         'git_uri': "http://git/",
@@ -463,6 +471,7 @@ def test_render_prod_without_koji_request():
         'user': "john-foo",
         'component': TEST_COMPONENT,
         'base_image': 'fedora:latest',
+        'name_label': name_label,
         'registry_uri': "registry.example.com",
         'openshift_uri': "http://openshift/",
         'sources_command': "make",
@@ -474,7 +483,7 @@ def test_render_prod_without_koji_request():
     build_request.set_params(**kwargs)
     build_json = build_request.render()
 
-    assert build_json["metadata"]["name"] == "%s-%s" % (TEST_COMPONENT, TEST_GIT_REF)
+    assert build_json["metadata"]["name"] == name_label.replace('/', '-')
     #assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == \
     #    os.path.join(kwargs["registry_uri"], kwargs["base_image"])
     assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
@@ -532,6 +541,7 @@ def test_render_prod_with_secret_request():
         'user': "john-foo",
         'component': TEST_COMPONENT,
         'base_image': 'fedora:latest',
+        'name_label': 'fedora/resultingimage',
         'registry_uri': "",
         'pulp_registry': "registry.example.com",
         'nfs_server_path': "server:path",
@@ -580,6 +590,7 @@ def test_render_with_yum_repourls():
         'user': "john-foo",
         'component': TEST_COMPONENT,
         'base_image': 'fedora:latest',
+        'name_label': 'fedora/resultingimage',
         'registry_uri': "registry.example.com",
         'openshift_uri': "http://openshift/",
         'koji_target': "koji-target",
@@ -648,6 +659,7 @@ def test_render_prod_with_pulp_no_auth():
         'user': "john-foo",
         'component': TEST_COMPONENT,
         'base_image': 'fedora:latest',
+        'name_label': 'fedora/resultingimage',
         'registry_uri': "registry.example.com",
         'openshift_uri': "http://openshift/",
         'sources_command': "make",
@@ -696,8 +708,11 @@ def test_list_builds_api(osbs):
 
 def test_create_prod_build(osbs):
     # TODO: test situation when a buildconfig already exists
-    flexmock(utils).should_receive('get_base_image').\
-        with_args(TEST_GIT_URI, TEST_GIT_REF).and_return('fedora23/python')
+    class MockParser(object):
+        labels = {'Name': 'fedora23/something'}
+        baseimage = 'fedora23/python'
+    flexmock(utils).should_receive('get_df_parser').\
+        with_args(TEST_GIT_URI, TEST_GIT_REF).and_return(MockParser())
     response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_REF, TEST_USER,
                                       TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
     assert isinstance(response, BuildResponse)
