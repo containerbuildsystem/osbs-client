@@ -711,10 +711,43 @@ def test_create_prod_build(osbs):
     class MockParser(object):
         labels = {'Name': 'fedora23/something'}
         baseimage = 'fedora23/python'
-    flexmock(utils).should_receive('get_df_parser').\
-        with_args(TEST_GIT_URI, TEST_GIT_REF).and_return(MockParser())
+    (flexmock(utils)
+     .should_receive('get_df_parser')
+     .with_args(TEST_GIT_URI, TEST_GIT_REF)
+     .and_return(MockParser()))
     response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_REF, TEST_USER,
                                       TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
+    assert isinstance(response, BuildResponse)
+
+
+def test_create_prod_with_secret_build(osbs):
+    # TODO: test situation when a buildconfig already exists
+    class MockParser(object):
+        labels = {'Name': 'fedora23/something'}
+        baseimage = 'fedora23/python'
+    (flexmock(utils)
+     .should_receive('get_df_parser')
+     .with_args(TEST_GIT_URI, TEST_GIT_REF)
+     .and_return(MockParser()))
+    response = osbs.create_prod_with_secret_build(TEST_GIT_URI, TEST_GIT_REF,
+                                                  TEST_GIT_REF, TEST_USER,
+                                                  TEST_COMPONENT, TEST_TARGET,
+                                                  TEST_ARCH)
+    assert isinstance(response, BuildResponse)
+
+
+def test_create_prod_without_koji_build(osbs):
+    # TODO: test situation when a buildconfig already exists
+    class MockParser(object):
+        labels = {'Name': 'fedora23/something'}
+        baseimage = 'fedora23/python'
+    (flexmock(utils)
+     .should_receive('get_df_parser')
+     .with_args(TEST_GIT_URI, TEST_GIT_REF)
+     .and_return(MockParser()))
+    response = osbs.create_prod_without_koji_build(TEST_GIT_URI, TEST_GIT_REF,
+                                                   TEST_GIT_REF, TEST_USER,
+                                                   TEST_COMPONENT, TEST_ARCH)
     assert isinstance(response, BuildResponse)
 
 
