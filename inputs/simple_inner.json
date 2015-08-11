@@ -1,15 +1,6 @@
 {
   "prebuild_plugins": [
     {
-      "args": {
-        "label_key": "is_autorebuild",
-        "label_value": "true",
-        "url": "{{OPENSHIFT_URI}}",
-        "verify_ssl": false
-      },
-      "name": "check_and_set_rebuild"
-    },
-    {
       "name": "pull_base_image",
       "args": {
         "parent_registry": "{{REGISTRY_URI}}",
@@ -29,15 +20,6 @@
         "image_id": "BUILT_IMAGE_ID"
       },
       "name": "all_rpm_packages"
-    },
-    {
-      "args": {
-        "imagestream": "{{IMAGESTREAM}}",
-        "docker_image_repo": "{{DOCKER_IMAGE_REPO}}",
-        "url": "{{OPENSHIFT_URI}}",
-        "verify_ssl": false
-      },
-      "name": "import_image"
     }
   ],
   "exit_plugins": [

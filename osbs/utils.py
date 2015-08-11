@@ -61,4 +61,4 @@ def get_imagestream_name_from_image(image):
     if ':' in ret:
         ret = ret[:ret.index(':')]
 
-    return ret
+    return ret.replace('/', '-')

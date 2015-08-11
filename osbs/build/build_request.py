@@ -192,6 +192,9 @@ class CommonBuild(BuildRequest):
                                       self.spec.imagestream_url.value)
             self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'url',
                                       self.spec.openshift_uri.value)
+            if self.spec.use_auth.value is not None:
+                self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'use_auth',
+                                          self.spec.use_auth.value)
 
     def validate_input(self):
         self.spec.validate()

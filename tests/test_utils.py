@@ -13,11 +13,11 @@ def test_deep_update():
 @pytest.mark.parametrize(('img', 'expected'), [
     ('fedora23', 'fedora23'),
     ('fedora23:sometag', 'fedora23'),
-    ('fedora23/python', 'fedora23/python'),
-    ('fedora23/python:sometag', 'fedora23/python'),
+    ('fedora23/python', 'fedora23-python'),
+    ('fedora23/python:sometag', 'fedora23-python'),
     ('docker.io/fedora23', 'fedora23'),
-    ('docker.io/fedora23/python', 'fedora23/python'),
-    ('docker.io/fedora23/python:sometag', 'fedora23/python'),
+    ('docker.io/fedora23/python', 'fedora23-python'),
+    ('docker.io/fedora23/python:sometag', 'fedora23-python'),
 ])
 def test_get_imagestream_name_from_image(img, expected):
     assert get_imagestream_name_from_image(img) == expected
