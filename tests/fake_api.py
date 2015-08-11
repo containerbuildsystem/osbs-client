@@ -16,7 +16,8 @@ from osbs.core import Openshift
 from osbs.http import Response
 from osbs.conf import Configuration
 from osbs.api import OSBS
-from tests.constants import TEST_BUILD, TEST_COMPONENT, TEST_GIT_REF, TEST_BUILD_CONFIG
+from tests.constants import (TEST_BUILD, TEST_COMPONENT, TEST_GIT_REF,
+                             TEST_GIT_BRANCH, TEST_BUILD_CONFIG)
 from tempfile import NamedTemporaryFile
 
 try:

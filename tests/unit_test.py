@@ -273,7 +273,7 @@ def test_render_simple_request():
     kwargs = {
         'git_uri': "http://git/",
         'git_ref': TEST_GIT_REF,
-        'git_branch': TEST_GIT_REF,
+        'git_branch': TEST_GIT_BRANCH,
         'user': "john-foo",
         'component': TEST_COMPONENT,
         'base_image': 'fedora:latest',
@@ -545,7 +545,7 @@ def test_render_prod_with_secret_request():
     kwargs = {
         'git_uri': "http://git/",
         'git_ref': TEST_GIT_REF,
-        'git_branch': TEST_GIT_REF,
+        'git_branch': TEST_GIT_BRANCH,
         'user': "john-foo",
         'component': TEST_COMPONENT,
         'base_image': 'fedora:latest',
@@ -598,7 +598,7 @@ def test_render_with_yum_repourls():
     kwargs = {
         'git_uri': "http://git/",
         'git_ref': TEST_GIT_REF,
-        'git_branch': TEST_GIT_REF,
+        'git_branch': TEST_GIT_BRANCH,
         'user': "john-foo",
         'component': TEST_COMPONENT,
         'base_image': 'fedora:latest',
@@ -671,7 +671,7 @@ def test_render_prod_with_pulp_no_auth():
     kwargs = {
         'git_uri': "http://git/",
         'git_ref': TEST_GIT_REF,
-        'git_branch': TEST_GIT_REF,
+        'git_branch': TEST_GIT_BRANCH,
         'user': "john-foo",
         'component': TEST_COMPONENT,
         'base_image': 'fedora:latest',
@@ -812,9 +812,10 @@ def test_create_prod_build(osbs):
         baseimage = 'fedora23/python'
     (flexmock(utils)
      .should_receive('get_df_parser')
-     .with_args(TEST_GIT_URI, TEST_GIT_REF)
+     .with_args(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH)
      .and_return(MockParser()))
-    response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_REF, TEST_USER,
+    response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                      TEST_GIT_BRANCH, TEST_USER,
                                       TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
     assert isinstance(response, BuildResponse)
 
@@ -826,10 +827,10 @@ def test_create_prod_with_secret_build(osbs):
         baseimage = 'fedora23/python'
     (flexmock(utils)
      .should_receive('get_df_parser')
-     .with_args(TEST_GIT_URI, TEST_GIT_REF)
+     .with_args(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH)
      .and_return(MockParser()))
     response = osbs.create_prod_with_secret_build(TEST_GIT_URI, TEST_GIT_REF,
-                                                  TEST_GIT_REF, TEST_USER,
+                                                  TEST_GIT_BRANCH, TEST_USER,
                                                   TEST_COMPONENT, TEST_TARGET,
                                                   TEST_ARCH)
     assert isinstance(response, BuildResponse)
@@ -842,10 +843,10 @@ def test_create_prod_without_koji_build(osbs):
         baseimage = 'fedora23/python'
     (flexmock(utils)
      .should_receive('get_df_parser')
-     .with_args(TEST_GIT_URI, TEST_GIT_REF)
+     .with_args(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH)
      .and_return(MockParser()))
     response = osbs.create_prod_without_koji_build(TEST_GIT_URI, TEST_GIT_REF,
-                                                   TEST_GIT_REF, TEST_USER,
+                                                   TEST_GIT_BRANCH, TEST_USER,
                                                    TEST_COMPONENT, TEST_ARCH)
     assert isinstance(response, BuildResponse)
 
