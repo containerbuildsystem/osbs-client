@@ -15,7 +15,7 @@ from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.spec import CommonSpec, ProdSpec, SimpleSpec
 from osbs.constants import PROD_BUILD_TYPE, SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
 from osbs.constants import PROD_WITH_SECRET_BUILD_TYPE
-from osbs.exceptions import OsbsValidationException
+from osbs.exceptions import OsbsException, OsbsValidationException
 
 
 build_classes = {}
