@@ -134,22 +134,40 @@ class OSBS(object):
         build_response = BuildResponse(response)
         return build_response
 
+    def _get_running_builds_for_build_config(self, build_config_id, namespace=DEFAULT_NAMESPACE):
+        all_builds_for_bc = self.os.list_builds(
+            build_config_id=build_config_id,
+            namespace=namespace).json()['items']
+        running = []
+        for b in all_builds_for_bc:
+            br = BuildResponse(request=None, build_json=b)
+            if br.is_pending() or br.is_running():
+                running.append(br)
+        return running
+
+    def _panic_msg_for_more_running_builds(self, build_config_name, builds):
+        # this should never happen, but if it does, we want to know all the builds
+        #  that were running at the time
+        builds = ', '.join(['%s: %s' % (b.get_build_name(), b.status) for b in builds])
+        msg = 'Multiple builds for %s running, can\'t proceed: %s' % \
+            (build_config_name, builds)
+        return msg
+
     def _create_build_config_and_build(self, build_json, namespace):
         # TODO: test this method more thoroughly
         build_config_name = build_json['metadata']['name']
 
         # check if a build already exists for this config; if so then raise
-        # TODO: could we do this more effectively than traversing all?
-        running_builds = [BuildResponse(request=None, build_json=rb)
-                          for rb in self.os.list_builds(namespace=namespace).json()['items']]
-        for rb in running_builds:
-            labels = rb.get_labels()
-            if labels is None:
-                continue
-            bc = labels.get('buildconfig', None)
-            if bc == build_config_name and (rb.is_pending() or rb.is_running()):
-                raise OsbsException('Build %s for %s in state %s, can\'t proceed.' %
-                                    (rb.get_build_name(), build_config_name, rb.status))
+        running_builds = self._get_running_builds_for_build_config(build_config_name, namespace)
+        rb_len = len(running_builds)
+        if rb_len > 0:
+            if rb_len == 1:
+                rb = running_builds[0]
+                msg = 'Build %s for %s in state %s, can\'t proceed.' % \
+                    (rb.get_build_name(), build_config_name, rb.status)
+            else:
+                msg = self._panic_msg_for_more_running_builds(build_config_name, running_builds)
+            raise OsbsException(msg)
 
         existing_bc = None
         try:
@@ -158,6 +176,7 @@ class OSBS(object):
         except OsbsException:
             pass  # doesn't exist => do nothing
 
+        build = None
         if existing_bc is not None:
             utils.deep_update(existing_bc, build_json)
             logger.debug('build config for %s already exists, updating...', build_config_name)
@@ -166,7 +185,19 @@ class OSBS(object):
             # if it doesn't exist, then create it
             logger.debug('build config for %s doesn\'t exist, creating...', build_config_name)
             self.os.create_build_config(json.dumps(build_json), namespace=namespace)
-        return self.os.start_build(build_config_name, namespace=namespace)
+            # under some circumstances, creating a buildConfig might instantiate it, so
+            #  check for an already running build and return it if it exists
+            #  see https://github.com/projectatomic/osbs-client/issues/205
+            builds = self._get_running_builds_for_build_config(build_config_name, namespace)
+            if len(builds) > 0:
+                if len(builds) > 1:
+                    raise OsbsException(
+                        self._panic_msg_for_more_running_builds(build_config_name, builds))
+                else:
+                    build = builds[0]
+        if build is None:
+            build = self.os.start_build(build_config_name, namespace=namespace)
+        return build
 
     @osbsapi
     def create_prod_build(self, git_uri, git_ref, git_branch, user, component, target,

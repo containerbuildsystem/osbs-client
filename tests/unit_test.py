@@ -34,7 +34,7 @@ from osbs import utils
 from tests.constants import TEST_BUILD, TEST_LABEL, TEST_LABEL_VALUE
 from tests.constants import TEST_GIT_URI, TEST_GIT_REF, TEST_USER
 from tests.constants import TEST_COMPONENT, TEST_TARGET, TEST_ARCH
-from tests.fake_api import ResponseMapping, DEFINITION
+from tests.fake_api import ResponseMapping, get_definition_for
 
 
 logger = logging.getLogger("osbs.tests")
@@ -819,7 +819,7 @@ def test_build_logs_api_from_docker(osbs, decode_docker_logs):
 def test_parse_headers():
     rm = ResponseMapping("0.5.4")
 
-    file_name = DEFINITION["/oauth/authorize"]["get"]["file"]
+    file_name = get_definition_for("/oauth/authorize")["get"]["file"]
     raw_headers = rm.get_response_content(file_name)
 
     r = Response(raw_headers=raw_headers)

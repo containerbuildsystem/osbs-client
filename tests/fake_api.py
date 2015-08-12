@@ -44,6 +44,8 @@ def buildconfig_not_found(content):
     }
 
 
+# mapping of urls or tuples of urls to responses; use get_definition_for
+#  to get values from this dict
 DEFINITION = {
     "/osapi/v1beta3/namespaces/default/builds/": {
         "get": {
@@ -55,7 +57,8 @@ DEFINITION = {
     },
 
     # Some 'builds' requests are with a trailing slash, some without:
-    "/osapi/v1beta3/namespaces/default/builds/%s" % TEST_BUILD: {
+    ("/osapi/v1beta3/namespaces/default/builds/%s" % TEST_BUILD,
+     "/osapi/v1beta3/namespaces/default/builds/%s/" % TEST_BUILD): {
         "get": {
             "file": "build_test-build-123.json",
         },
@@ -63,21 +66,17 @@ DEFINITION = {
             "file": "build_test-build-123.json",
         }
     },
-    "/osapi/v1beta3/namespaces/default/builds/%s/" % TEST_BUILD: {
-        "get": {
-            "file": "build_test-build-123.json",
-        },
-        "put": {
-            "file": "build_test-build-123.json",
-        }
-    },
-    "/osapi/v1beta3/namespaces/default/builds/%s/log/" % TEST_BUILD: {
+    ("/osapi/v1beta3/namespaces/default/builds/%s/log/" % TEST_BUILD,
+     "/osapi/v1beta3/namespaces/default/builds/%s/log/?follow=0" % TEST_BUILD,
+     "/osapi/v1beta3/namespaces/default/builds/%s/log/?follow=1" % TEST_BUILD): {
         "get": {
             "file": "build_test-build-123_logs.txt",
         },
     },
 
-    "/oauth/authorize": {
+    ("/oauth/authorize",
+     "/oauth/authorize?client_id=openshift-challenging-client&response_type=token",
+     "/oauth/authorize?response_type=token&client_id=openshift-challenging-client"): {
         "get": {
             "file": "authorize.txt",
             "custom_callback": process_authorize,
@@ -104,19 +103,38 @@ DEFINITION = {
         }
     },
     # use both version with ending slash and without it
-    "/osapi/v1beta3/namespaces/default/buildconfigs/%s" % TEST_BUILD_CONFIG: {
+    ("/osapi/v1beta3/namespaces/default/buildconfigs/%s" % TEST_BUILD_CONFIG,
+     "/osapi/v1beta3/namespaces/default/buildconfigs/%s/" % TEST_BUILD_CONFIG): {
         "get": {
             "custom_callback": buildconfig_not_found,
             "file": "not_found_build-config-component-master.json",
         }
     },
-    "/osapi/v1beta3/namespaces/default/buildconfigs/%s/" % TEST_BUILD_CONFIG: {
+    "/osapi/v1beta3/namespaces/default/builds/?labelSelector=buildconfig%%3D%s" %
+    TEST_BUILD_CONFIG: {
         "get": {
-            "custom_callback": buildconfig_not_found,
-            "file": "not_found_build-config-component-master.json",
+            "file": "builds_list_fedora23-something_no_running.json"
         }
     },
 }
+
+
+def get_definition_for(key):
+    """Returns value associated with given key in global DEFINITION dict.
+
+    This means that either key is an actual dict key in DEFINITION or it is member
+    of a tuple that serves as a dict key in DEFINITION.
+    """
+    global DEFINITION
+    found = None
+    for k, v in DEFINITION.items():
+        if isinstance(k, tuple) and key in k:
+            found = v
+        elif k == key:
+            found = v
+    if found is None:
+        raise ValueError("Can't find '%s' in url mapping definition" % key)
+    return found
 
 
 logger = logging.getLogger("osbs.tests")
@@ -145,6 +163,8 @@ class Connection(object):
         # fragment = parsed_url.fragment
         # parsed_fragment = urlparse.parse_qs(fragment)
         url_path = parsed_url.path
+        if parsed_url.query:
+            url_path += '?' + parsed_url.query
         logger.info("URL path is '%s'", url_path)
         kwargs = self.response_mapping.response_mapping(url_path, method)
         res = response(**kwargs)
@@ -208,8 +228,9 @@ class ResponseMapping(object):
 
     def response_mapping(self, url_path, method):
         global DEFINITION
-        file_name = DEFINITION[url_path][method]["file"]
-        custom_callback = DEFINITION[url_path][method].get("custom_callback", None)
+        value_to_use = get_definition_for(url_path)
+        file_name = value_to_use[method]["file"]
+        custom_callback = value_to_use[method].get("custom_callback", None)
         content = self.get_response_content(file_name)
         if custom_callback:
             return custom_callback(content)
