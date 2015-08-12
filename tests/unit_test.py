@@ -196,6 +196,21 @@ def test_manipulator_get_dock_json_missing_input():
         m.get_dock_json()
 
 
+def test_build_request_is_auto_instantiated():
+    build_json = copy.deepcopy(BUILD_JSON)
+    br = BuildRequest('something')
+    flexmock(br).should_receive('template').and_return(build_json)
+    assert br.is_auto_instantiated() == True
+
+
+def test_build_request_isnt_auto_instantiated():
+    build_json = copy.deepcopy(BUILD_JSON)
+    build_json['spec']['triggers'] = []
+    br = BuildRequest('something')
+    flexmock(br).should_receive('template').and_return(build_json)
+    assert br.is_auto_instantiated() == False
+
+
 def test_manipulator_merge():
     inner = copy.deepcopy(INNER_DOCK_JSON)
     plugin = [x for x in inner['prebuild_plugins'] if x["name"] == "a_plugin"][0]
