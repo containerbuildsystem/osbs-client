@@ -18,6 +18,8 @@ This document mentions several components that communicate with each other:
  4. osbs-client updates Openshift's `BuildConfig` values for current build of *IM*. Most importantly, it makes sure that:
    * `ImageStream` for *BL* is in triggers. This ensures that when *BL* is rebuilt, *IM* is rebuilt as well.
    * `is_autorebuild` label is set to `"false"`, so that atomic-reactor knows that this is a build executed by user.
+   * the `BuildConfig`'s source git ref names the git branch the build is from
+   * the `bump_release` configuration names the branch's commit the initial build is from
  5. osbs-client starts the Openshift build from `BuildConfig` for *IM*.
  6. Openshift spawns a new build container that contains atomic-reactor inside.
  7. atomic-reactor's `CheckAndSetRebuildPlugin` is run. This determines whether the build is an automatically triggered autorebuild by examining `is_autrebuild` label. If this is autorebuild, then TODO. If this is not autorebuild, then the `is_autorebuild` label of the `BuildConfig` is set to `"true"`. This is done in order to ensure that all subsequent builds (except user-executed builds) are marked as autorebuild.

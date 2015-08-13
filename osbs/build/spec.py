@@ -168,6 +168,8 @@ class ProdSpec(CommonSpec):
     pulp_registry = BuildParam("pulp_registry", allow_none=True)
     nfs_server_path = BuildParam("nfs_server_path", allow_none=True)
     nfs_dest_dir = BuildParam("nfs_dest_dir", allow_none=True)
+    git_push_url = BuildParam("git_push_url", allow_none=True)
+    git_push_username = BuildParam("git_push_username", allow_none=True)
 
     def __init__(self):
         super(ProdSpec, self).__init__()
@@ -183,13 +185,16 @@ class ProdSpec(CommonSpec):
             self.source_secret,
             self.pulp_registry,
             self.nfs_server_path,
+            self.git_push_url,
+            self.git_push_username,
         ]
 
     def set_params(self, sources_command=None, architecture=None, vendor=None,
                    build_host=None, authoritative_registry=None,
                    koji_target=None, kojiroot=None, kojihub=None,
                    source_secret=None, pulp_registry=None, nfs_server_path=None,
-                   nfs_dest_dir=None, **kwargs):
+                   nfs_dest_dir=None, git_push_url=None, git_push_username=None,
+                   **kwargs):
         super(ProdSpec, self).set_params(**kwargs)
         self.sources_command.value = sources_command
         self.architecture.value = architecture
@@ -203,6 +208,8 @@ class ProdSpec(CommonSpec):
         self.pulp_registry.value = pulp_registry
         self.nfs_server_path.value = nfs_server_path
         self.nfs_dest_dir.value = nfs_dest_dir
+        self.git_push_url.value = git_push_url
+        self.git_push_username.value = git_push_username
         timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         self.image_tag.value = "%s/%s:%s-%s" % (
             self.user.value,

@@ -17,6 +17,14 @@
       }
     },
     {
+      "args": {
+        "author_name": "Build System",
+        "author_email": "build@example.com",
+        "git_ref": "{{GIT_REF}}"
+      },
+      "name": "bump_release"
+    },
+    {
       "name": "change_from_in_dockerfile"
     },
     {

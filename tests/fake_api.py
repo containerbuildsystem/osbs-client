@@ -187,6 +187,7 @@ authoritative_registry = registry.example.com
 koji_root = http://koji.example.com/kojiroot
 koji_hub = http://koji.example.com/kojihub
 build_type = simple
+use_auth = false
 """.format (build_json_dir="inputs"))
         fp.flush()
         dummy_config = Configuration(fp.name)

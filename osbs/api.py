@@ -170,7 +170,8 @@ class OSBS(object):
 
     @osbsapi
     def create_prod_build(self, git_uri, git_ref, git_branch, user, component, target,
-                          architecture, yum_repourls=None, namespace=DEFAULT_NAMESPACE, **kwargs):
+                          architecture, yum_repourls=None, git_push_url=None,
+                          namespace=DEFAULT_NAMESPACE, **kwargs):
         df_parser = utils.get_df_parser(git_uri, git_ref, git_branch)
         build_request = self.get_build_request(PROD_BUILD_TYPE)
         build_request.set_params(
@@ -197,6 +198,8 @@ class OSBS(object):
             pulp_registry=self.os_conf.get_pulp_registry(),
             nfs_server_path=self.os_conf.get_nfs_server_path(),
             nfs_dest_dir=self.build_conf.get_nfs_destination_dir(),
+            git_push_url=self.build_conf.get_git_push_url(),
+            git_push_username=self.build_conf.get_git_push_username(),
         )
         build_json = build_request.render()
         response = self._create_build_config_and_build(build_json, namespace)
