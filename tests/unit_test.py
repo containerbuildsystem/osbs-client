@@ -356,22 +356,22 @@ def test_render_prod_request_with_repo():
     plugins = json.loads(plugins_json)
 
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
+        get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "prebuild_plugins", "bump_release")
+        get_plugin(plugins, "prebuild_plugins", "bump_release")
     assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts", "args", "command") == "make"
     assert plugin_value_get(plugins, "prebuild_plugins", "pull_base_image", "args", "parent_registry") == \
            "registry.example.com"
     assert plugin_value_get(plugins, "exit_plugins", "store_metadata_in_osv3", "args", "url") == \
            "http://openshift/"
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "prebuild_plugins", "koji")
+        get_plugin(plugins, "prebuild_plugins", "koji")
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
+        get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
+        get_plugin(plugins, "postbuild_plugins", "pulp_push")
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "postbuild_plugins", "import_image")
+        get_plugin(plugins, "postbuild_plugins", "import_image")
     assert 'sourceSecret' not in build_json["spec"]["source"]
     assert 'sourceSecretName' not in build_json["spec"]["source"]
     plugin_value_get(plugins, "prebuild_plugins", "add_yum_repo_by_url", "args", "repourls") == \
@@ -435,9 +435,9 @@ def test_render_prod_request():
     plugins = json.loads(plugins_json)
 
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
+        get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "prebuild_plugins", "bump_release")
+        get_plugin(plugins, "prebuild_plugins", "bump_release")
     assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts", "args", "command") == "make"
     assert plugin_value_get(plugins, "prebuild_plugins", "pull_base_image", "args", "parent_registry") == \
         "registry.example.com"
@@ -447,11 +447,11 @@ def test_render_prod_request():
     assert plugin_value_get(plugins, "prebuild_plugins", "koji", "args", "target") == "koji-target"
     assert plugin_value_get(plugins, "prebuild_plugins", "koji", "args", "hub") == "http://hub/"
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
+        get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
+        get_plugin(plugins, "postbuild_plugins", "pulp_push")
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "postbuild_plugins", "import_image")
+        get_plugin(plugins, "postbuild_plugins", "import_image")
     assert 'sourceSecret' not in build_json["spec"]["source"]
     assert 'sourceSecretName' not in build_json["spec"]["source"]
 
@@ -511,9 +511,9 @@ def test_render_prod_without_koji_request():
     plugins = json.loads(plugins_json)
 
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
+        get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "prebuild_plugins", "bump_release")
+        get_plugin(plugins, "prebuild_plugins", "bump_release")
     assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts", "args", "command") == "make"
     assert plugin_value_get(plugins, "prebuild_plugins", "pull_base_image", "args", "parent_registry") == \
         "registry.example.com"
@@ -521,13 +521,13 @@ def test_render_prod_without_koji_request():
         "http://openshift/"
 
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "prebuild_plugins", "koji")
+        get_plugin(plugins, "prebuild_plugins", "koji")
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
+        get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
+        get_plugin(plugins, "postbuild_plugins", "pulp_push")
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "postbuild_plugins", "import_image")
+        get_plugin(plugins, "postbuild_plugins", "import_image")
     assert 'sourceSecret' not in build_json["spec"]["source"]
     assert 'sourceSecretName' not in build_json["spec"]["source"]
 
@@ -587,14 +587,14 @@ def test_render_prod_with_secret_request():
     plugins = json.loads(plugins_json)
 
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
+        get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "prebuild_plugins", "bump_release")
+        get_plugin(plugins, "prebuild_plugins", "bump_release")
     assert get_plugin(plugins, "prebuild_plugins", "koji")
     assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
     assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "postbuild_plugins", "import_image")
+        get_plugin(plugins, "postbuild_plugins", "import_image")
 
 
 def test_render_with_yum_repourls():
@@ -655,17 +655,17 @@ def test_render_with_yum_repourls():
     assert 'http://example.com/repo2.repo' in repourls
 
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
+        get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "prebuild_plugins", "bump_release")
+        get_plugin(plugins, "prebuild_plugins", "bump_release")
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "prebuild_plugins", "koji")
+        get_plugin(plugins, "prebuild_plugins", "koji")
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
+        get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
+        get_plugin(plugins, "postbuild_plugins", "pulp_push")
     with pytest.raises(NoSuchPluginException):
-        assert get_plugin(plugins, "postbuild_plugins", "import_image")
+        get_plugin(plugins, "postbuild_plugins", "import_image")
 
 
 def test_render_prod_with_pulp_no_auth():
