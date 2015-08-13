@@ -192,17 +192,6 @@ class CommonBuild(BuildRequest):
                 self.dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
                                           "use_auth", self.spec.use_auth.value)
 
-        if self.dj.dock_json_has_plugin_conf('postbuild_plugins', 'import_image'):
-            self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'imagestream',
-                                      self.spec.imagestream_name.value)
-            self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'docker_image_repo',
-                                      self.spec.imagestream_url.value)
-            self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'url',
-                                      self.spec.openshift_uri.value)
-            if self.spec.use_auth.value is not None:
-                self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'use_auth',
-                                          self.spec.use_auth.value)
-
     def validate_input(self):
         self.spec.validate()
 
@@ -266,6 +255,13 @@ class ProductionBuild(CommonBuild):
             self.dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
                                       "url", self.spec.openshift_uri.value)
 
+        # If there are no triggers set, there is no point in running
+        # the import_image plugin.
+        triggers = self.template['spec'].get('triggers', [])
+        if len(triggers) == 0:
+            logger.info("removing import_image from request because there are no triggers")
+            self.dj.remove_plugin("postbuild_plugins", "import_image")
+
         # if there is yum repo specified, don't pick stuff from koji
         if self.spec.yum_repourls.value:
             logger.info("removing koji from request, because there is yum repo specified")
@@ -325,6 +321,19 @@ class ProductionBuild(CommonBuild):
         else:
             # If no pulp registry is specified, don't run the pulp plugin
             self.dj.remove_plugin("postbuild_plugins", "pulp_push")
+
+
+        # Configure the import_image plugin
+        if self.dj.dock_json_has_plugin_conf('postbuild_plugins', 'import_image'):
+            self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'imagestream',
+                                      self.spec.imagestream_name.value)
+            self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'docker_image_repo',
+                                      self.spec.imagestream_url.value)
+            self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'url',
+                                      self.spec.openshift_uri.value)
+            if self.spec.use_auth.value is not None:
+                self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'use_auth',
+                                          self.spec.use_auth.value)
 
         self.dj.write_dock_json()
         self.build_json = self.template
