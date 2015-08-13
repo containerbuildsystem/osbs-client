@@ -285,8 +285,7 @@ def test_render_simple_request():
     build_json = build_request.render()
 
     assert build_json["metadata"]["name"] == name_label.replace('/', '-')
-    #assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == \
-    #    os.path.join(kwargs["registry_uri"], kwargs["base_image"])
+    assert "triggers" not in build_json["spec"]
     assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
     assert build_json["spec"]["source"]["git"]["ref"] == "master"
     assert build_json["spec"]["output"]["to"]["name"].startswith(
@@ -339,8 +338,7 @@ def test_render_prod_request_with_repo():
     build_json = build_request.render()
 
     assert build_json["metadata"]["name"] == name_label.replace('/', '-')
-    #assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == \
-    #    os.path.join(kwargs["registry_uri"], kwargs["base_image"])
+    assert "triggers" not in build_json["spec"]
     assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
     assert build_json["spec"]["source"]["git"]["ref"] == "master"
     assert build_json["spec"]["output"]["to"]["name"].startswith(
@@ -357,6 +355,8 @@ def test_render_prod_request_with_repo():
     assert plugins_json is not None
     plugins = json.loads(plugins_json)
 
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
     assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts", "args", "command") == "make"
     assert plugin_value_get(plugins, "prebuild_plugins", "pull_base_image", "args", "parent_registry") == \
            "registry.example.com"
@@ -368,6 +368,8 @@ def test_render_prod_request_with_repo():
         assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
     with pytest.raises(NoSuchPluginException):
         assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "postbuild_plugins", "import_image")
     assert 'sourceSecret' not in build_json["spec"]["source"]
     assert 'sourceSecretName' not in build_json["spec"]["source"]
     plugin_value_get(plugins, "prebuild_plugins", "add_yum_repo_by_url", "args", "repourls") == \
@@ -413,8 +415,7 @@ def test_render_prod_request():
     build_json = build_request.render()
 
     assert build_json["metadata"]["name"] == name_label.replace('/', '-')
-    #assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == \
-    #    os.path.join(kwargs["registry_uri"], kwargs["base_image"])
+    assert "triggers" not in build_json["spec"]
     assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
     assert build_json["spec"]["source"]["git"]["ref"] == "master"
     assert build_json["spec"]["output"]["to"]["name"].startswith(
@@ -431,6 +432,8 @@ def test_render_prod_request():
     assert plugins_json is not None
     plugins = json.loads(plugins_json)
 
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
     assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts", "args", "command") == "make"
     assert plugin_value_get(plugins, "prebuild_plugins", "pull_base_image", "args", "parent_registry") == \
         "registry.example.com"
@@ -443,6 +446,8 @@ def test_render_prod_request():
         assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
     with pytest.raises(NoSuchPluginException):
         assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "postbuild_plugins", "import_image")
     assert 'sourceSecret' not in build_json["spec"]["source"]
     assert 'sourceSecretName' not in build_json["spec"]["source"]
 
@@ -484,8 +489,7 @@ def test_render_prod_without_koji_request():
     build_json = build_request.render()
 
     assert build_json["metadata"]["name"] == name_label.replace('/', '-')
-    #assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == \
-    #    os.path.join(kwargs["registry_uri"], kwargs["base_image"])
+    assert "triggers" not in build_json["spec"]
     assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
     assert build_json["spec"]["source"]["git"]["ref"] == "master"
     assert build_json["spec"]["output"]["to"]["name"].startswith(
@@ -502,6 +506,8 @@ def test_render_prod_without_koji_request():
     assert plugins_json is not None
     plugins = json.loads(plugins_json)
 
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
     assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts", "args", "command") == "make"
     assert plugin_value_get(plugins, "prebuild_plugins", "pull_base_image", "args", "parent_registry") == \
         "registry.example.com"
@@ -514,6 +520,8 @@ def test_render_prod_without_koji_request():
         assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
     with pytest.raises(NoSuchPluginException):
         assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "postbuild_plugins", "import_image")
     assert 'sourceSecret' not in build_json["spec"]["source"]
     assert 'sourceSecretName' not in build_json["spec"]["source"]
 
@@ -572,9 +580,13 @@ def test_render_prod_with_secret_request():
     assert plugins_json is not None
     plugins = json.loads(plugins_json)
 
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
     assert get_plugin(plugins, "prebuild_plugins", "koji")
     assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
     assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "postbuild_plugins", "import_image")
 
 
 def test_render_with_yum_repourls():
@@ -635,11 +647,15 @@ def test_render_with_yum_repourls():
     assert 'http://example.com/repo2.repo' in repourls
 
     with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
+    with pytest.raises(NoSuchPluginException):
         assert get_plugin(plugins, "prebuild_plugins", "koji")
     with pytest.raises(NoSuchPluginException):
         assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
     with pytest.raises(NoSuchPluginException):
         assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
+    with pytest.raises(NoSuchPluginException):
+        assert get_plugin(plugins, "postbuild_plugins", "import_image")
 
 
 def test_render_prod_with_pulp_no_auth():
@@ -672,6 +688,89 @@ def test_render_prod_with_pulp_no_auth():
     build_request.set_params(**kwargs)
     with pytest.raises(OsbsValidationException):
         build_json = build_request.render()
+
+
+def test_render_prod_request_with_trigger(tmpdir):
+    this_file = inspect.getfile(test_render_prod_request)
+    this_dir = os.path.dirname(this_file)
+    parent_dir = os.path.dirname(this_dir)
+    inputs_path = os.path.join(parent_dir, "inputs")
+
+    # Make temporary copies of the JSON files
+    for basename in ['prod.json', 'prod_inner.json']:
+        shutil.copy(os.path.join(inputs_path, basename),
+                    os.path.join(str(tmpdir), basename))
+
+    # Create a build JSON description with an image change trigger
+    with open(os.path.join(str(tmpdir), 'prod.json'), 'r+') as prod_json:
+        build_json = json.load(prod_json)
+
+        # Add the image change trigger
+        build_json['spec']['triggers'] = [
+            {
+                "type": "ImageChange",
+                "imageChange": {
+                    "from": {
+                        "kind": "ImageStreamTag",
+                        "name": "{{BASE_IMAGE_STREAM}}"
+                    }
+                }
+            }
+        ]
+
+        prod_json.seek(0)
+        json.dump(build_json, prod_json)
+        prod_json.truncate()
+
+    bm = BuildManager(str(tmpdir))
+    build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+    name_label = "fedora/resultingimage"
+    kwargs = {
+        'git_uri': "http://git/",
+        'git_ref': TEST_GIT_REF,
+        'git_branch': TEST_GIT_REF,
+        'user': "john-foo",
+        'component': TEST_COMPONENT,
+        'base_image': 'fedora:latest',
+        'name_label': name_label,
+        'registry_uri': "registry.example.com",
+        'openshift_uri': "http://openshift/",
+        'sources_command': "make",
+        'architecture': "x86_64",
+        'vendor': "Foo Vendor",
+        'build_host': "our.build.host.example.com",
+        'authoritative_registry': "registry.example.com",
+    }
+    build_request.set_params(**kwargs)
+    build_json = build_request.render()
+
+    assert "triggers" in build_json["spec"]
+    assert build_json["spec"]["triggers"][0]\
+        ["imageChange"]["from"]["name"] == 'fedora'
+
+    strategy = build_json['spec']['strategy']['customStrategy']['env']
+    plugins_json = None
+    for d in strategy:
+        if d['name'] == 'DOCK_PLUGINS':
+            plugins_json = d['value']
+            break
+
+    plugins = json.loads(plugins_json)
+    assert get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
+    assert plugin_value_get(plugins, "prebuild_plugins",
+                            "check_and_set_rebuild", "args",
+                            "url") == kwargs["openshift_uri"]
+    assert get_plugin(plugins, "postbuild_plugins", "import_image")
+    assert plugin_value_get(plugins,
+                            "postbuild_plugins", "import_image", "args",
+                            "imagestream") == name_label.replace('/', '-')
+    expected_repo = os.path.join(kwargs["registry_uri"], name_label)
+    assert plugin_value_get(plugins,
+                            "postbuild_plugins", "import_image", "args",
+                            "docker_image_repo") == expected_repo
+    assert plugin_value_get(plugins,
+                            "postbuild_plugins", "import_image", "args",
+                            "url") == kwargs["openshift_uri"]
 
 
 def test_get_user(openshift):
