@@ -256,11 +256,14 @@ class ProductionBuild(CommonBuild):
                                       "url", self.spec.openshift_uri.value)
 
         # If there are no triggers set, there is no point in running
-        # the import_image plugin.
+        # the check_and_set_rebuild or import_image plugins.
         triggers = self.template['spec'].get('triggers', [])
         if len(triggers) == 0:
-            logger.info("removing import_image from request because there are no triggers")
-            self.dj.remove_plugin("postbuild_plugins", "import_image")
+            for when, which in [("prebuild_plugins", "check_and_set_rebuild"),
+                                ("postbuild_plugins", "import_image")]:
+                logger.info("removing %s from request because there are no triggers",
+                            which)
+                self.dj.remove_plugin(when, which)
 
         # if there is yum repo specified, don't pick stuff from koji
         if self.spec.yum_repourls.value:
