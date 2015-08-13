@@ -222,12 +222,15 @@ class Openshift(object):
             return response.iter_lines()
         return response.content
 
-    def list_builds(self, namespace=DEFAULT_NAMESPACE):
+    def list_builds(self, build_config_id=None, namespace=DEFAULT_NAMESPACE):
         """
 
         :return:
         """
-        url = self._build_url("namespaces/%s/builds/" % namespace)
+        query = {}
+        if build_config_id is not None:
+            query['labelSelector'] = '%s=%s' % ('buildconfig', build_config_id)
+        url = self._build_url("namespaces/%s/builds/" % namespace, **query)
         return self._get(url)
 
     def get_build(self, build_id, namespace=DEFAULT_NAMESPACE):

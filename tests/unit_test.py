@@ -34,7 +34,7 @@ from osbs import utils
 from tests.constants import TEST_BUILD, TEST_LABEL, TEST_LABEL_VALUE
 from tests.constants import TEST_GIT_URI, TEST_GIT_REF, TEST_USER
 from tests.constants import TEST_COMPONENT, TEST_TARGET, TEST_ARCH
-from tests.fake_api import ResponseMapping, DEFINITION
+from tests.fake_api import ResponseMapping, get_definition_for
 
 
 logger = logging.getLogger("osbs.tests")
@@ -194,6 +194,21 @@ def test_manipulator_get_dock_json_missing_input():
     m = DockJsonManipulator(build_json, None)
     with pytest.raises(RuntimeError):
         m.get_dock_json()
+
+
+def test_build_request_is_auto_instantiated():
+    build_json = copy.deepcopy(BUILD_JSON)
+    br = BuildRequest('something')
+    flexmock(br).should_receive('template').and_return(build_json)
+    assert br.is_auto_instantiated() == True
+
+
+def test_build_request_isnt_auto_instantiated():
+    build_json = copy.deepcopy(BUILD_JSON)
+    build_json['spec']['triggers'] = []
+    br = BuildRequest('something')
+    flexmock(br).should_receive('template').and_return(build_json)
+    assert br.is_auto_instantiated() == False
 
 
 def test_manipulator_merge():
@@ -918,7 +933,7 @@ def test_build_logs_api_from_docker(osbs, decode_docker_logs):
 def test_parse_headers():
     rm = ResponseMapping("0.5.4")
 
-    file_name = DEFINITION["/oauth/authorize"]["get"]["file"]
+    file_name = get_definition_for("/oauth/authorize")["get"]["file"]
     raw_headers = rm.get_response_content(file_name)
 
     r = Response(raw_headers=raw_headers)

@@ -124,6 +124,15 @@ class BuildRequest(object):
             self._dj = DockJsonManipulator(self.template, self.inner_template)
         return self._dj
 
+    def is_auto_instantiated(self):
+        """Return True if this BuildConfig will be automatically instantiated when created."""
+        triggers = self.template['spec'].get('triggers', [])
+        for trigger in triggers:
+            if trigger['type'] == 'ImageChange' and \
+                    trigger['imageChange']['from']['kind'] == 'ImageStreamTag':
+                return True
+        return False
+
 
 class CommonBuild(BuildRequest):
     def __init__(self, build_json_store):
