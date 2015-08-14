@@ -28,130 +28,138 @@ except ImportError:
     import urllib.parse as urlparse
 
 
-def process_authorize(content):
-    match = re.findall(b"[Ll]ocation: (.+)", content)
-    headers = {
-        "location": match[0],
-    }
-    logger.debug("headers: %s", headers)
-    return {
-        "headers": headers
-    }
-
-
-def buildconfig_not_found(content):
-    return {
-        "status_code": 404,
-    }
-
-
-# mapping of urls or tuples of urls to responses; use get_definition_for
-#  to get values from this dict
-DEFINITION = {
-    "/osapi/v1beta3/namespaces/default/builds/": {
-        "get": {
-            "file": "builds_list.json",
-        },
-        "post": {
-            "file": "build_test-build-123.json",
-        },
-    },
-
-    # Some 'builds' requests are with a trailing slash, some without:
-    ("/osapi/v1beta3/namespaces/default/builds/%s" % TEST_BUILD,
-     "/osapi/v1beta3/namespaces/default/builds/%s/" % TEST_BUILD): {
-        "get": {
-            "file": "build_test-build-123.json",
-        },
-        "put": {
-            "file": "build_test-build-123.json",
-        }
-    },
-    ("/osapi/v1beta3/namespaces/default/builds/%s/log/" % TEST_BUILD,
-     "/osapi/v1beta3/namespaces/default/builds/%s/log/?follow=0" % TEST_BUILD,
-     "/osapi/v1beta3/namespaces/default/builds/%s/log/?follow=1" % TEST_BUILD): {
-        "get": {
-            "file": "build_test-build-123_logs.txt",
-        },
-    },
-
-    ("/oauth/authorize",
-     "/oauth/authorize?client_id=openshift-challenging-client&response_type=token",
-     "/oauth/authorize?response_type=token&client_id=openshift-challenging-client"): {
-        "get": {
-            "file": "authorize.txt",
-            "custom_callback": process_authorize,
-        }
-    },
-    "/osapi/v1beta3/users/~/": {
-        "get": {
-            "file": "get_user.json",
-        }
-    },
-    "/osapi/v1beta3/watch/namespaces/default/builds/%s/" % TEST_BUILD: {
-        "get": {
-            "file": "watch_build_test-build-123.json",
-        }
-    },
-    "/osapi/v1beta3/namespaces/default/buildconfigs/": {
-        "post": {
-            "file": "created_build_config_test-build-config-123.json",
-        }
-    },
-    "/osapi/v1beta3/namespaces/default/buildconfigs/%s/instantiate" % TEST_BUILD_CONFIG: {
-        "post": {
-            "file": "instantiated_test-build-config-123.json",
-        }
-    },
-    # use both version with ending slash and without it
-    ("/osapi/v1beta3/namespaces/default/buildconfigs/%s" % TEST_BUILD_CONFIG,
-     "/osapi/v1beta3/namespaces/default/buildconfigs/%s/" % TEST_BUILD_CONFIG): {
-        "get": {
-            "custom_callback": buildconfig_not_found,
-            "file": "not_found_build-config-component-master.json",
-        }
-    },
-    "/osapi/v1beta3/namespaces/default/builds/?labelSelector=buildconfig%%3D%s" %
-    TEST_BUILD_CONFIG: {
-        "get": {
-            "file": "builds_list_fedora23-something_no_running.json"
-        }
-    },
-}
-
-
-def get_definition_for(key):
-    """Returns value associated with given key in global DEFINITION dict.
-
-    This means that either key is an actual dict key in DEFINITION or it is member
-    of a tuple that serves as a dict key in DEFINITION.
-    """
-    global DEFINITION
-    found = None
-    for k, v in DEFINITION.items():
-        if isinstance(k, tuple) and key in k:
-            found = v
-        elif k == key:
-            found = v
-    if found is None:
-        raise ValueError("Can't find '%s' in url mapping definition" % key)
-    return found
-
-
 logger = logging.getLogger("osbs.tests")
-
-
-def response(status_code=200, content='', headers=None):
-    res = Response(content=content)
-    res.status_code = status_code
-    res._headers = headers or {}
-    return res
 
 
 class Connection(object):
     def __init__(self, version="0.5.2"):
         self.version = version
-        self.response_mapping = ResponseMapping(version)
+        self.response_mapping = ResponseMapping(version,
+                                                lookup=self.get_definition_for)
+
+        # mapping of urls or tuples of urls to responses; use get_definition_for
+        #  to get values from this dict
+        self.DEFINITION = {
+            "/osapi/v1beta3/namespaces/default/builds/": {
+                "get": {
+                    "file": "builds_list.json",
+                },
+                "post": {
+                    "file": "build_test-build-123.json",
+                },
+            },
+
+            # Some 'builds' requests are with a trailing slash, some without:
+            ("/osapi/v1beta3/namespaces/default/builds/%s" % TEST_BUILD,
+             "/osapi/v1beta3/namespaces/default/builds/%s/" % TEST_BUILD): {
+                 "get": {
+                     "file": "build_test-build-123.json",
+                 },
+                 "put": {
+                     "file": "build_test-build-123.json",
+                 }
+             },
+
+            ("/osapi/v1beta3/namespaces/default/builds/%s/log/" % TEST_BUILD,
+             "/osapi/v1beta3/namespaces/default/builds/%s/log/?follow=0" % TEST_BUILD,
+             "/osapi/v1beta3/namespaces/default/builds/%s/log/?follow=1" % TEST_BUILD): {
+                 "get": {
+                     "file": "build_test-build-123_logs.txt",
+                 },
+             },
+
+            ("/oauth/authorize",
+             "/oauth/authorize?client_id=openshift-challenging-client&response_type=token",
+             "/oauth/authorize?response_type=token&client_id=openshift-challenging-client"): {
+                 "get": {
+                     "file": "authorize.txt",
+                     "custom_callback": self.process_authorize,
+                 }
+             },
+
+            "/osapi/v1beta3/users/~/": {
+                "get": {
+                    "file": "get_user.json",
+                }
+            },
+
+            "/osapi/v1beta3/watch/namespaces/default/builds/%s/" % TEST_BUILD: {
+                "get": {
+                    "file": "watch_build_test-build-123.json",
+                }
+            },
+
+            "/osapi/v1beta3/namespaces/default/buildconfigs/": {
+                "post": {
+                    "file": "created_build_config_test-build-config-123.json",
+                }
+            },
+
+            "/osapi/v1beta3/namespaces/default/buildconfigs/%s/instantiate" % TEST_BUILD_CONFIG: {
+                "post": {
+                    "file": "instantiated_test-build-config-123.json",
+                }
+            },
+
+            # use both version with ending slash and without it
+            ("/osapi/v1beta3/namespaces/default/buildconfigs/%s" % TEST_BUILD_CONFIG,
+             "/osapi/v1beta3/namespaces/default/buildconfigs/%s/" % TEST_BUILD_CONFIG): {
+                 "get": {
+                     "custom_callback": self.buildconfig_not_found,
+                     "file": "not_found_build-config-component-master.json",
+                 }
+             },
+
+            "/osapi/v1beta3/namespaces/default/builds/?labelSelector=buildconfig%%3D%s" %
+            TEST_BUILD_CONFIG: {
+                "get": {
+                    "file": "builds_list_fedora23-something_no_running.json"
+                }
+            },
+        }
+
+
+    @staticmethod
+    def process_authorize(key, content):
+        match = re.findall(b"[Ll]ocation: (.+)", content)
+        headers = {
+            "location": match[0],
+        }
+        logger.debug("headers: %s", headers)
+        return {
+            "headers": headers
+        }
+
+    @staticmethod
+    def buildconfig_not_found(key, content):
+        return {
+            "status_code": 404,
+        }
+
+    def get_definition_for(self, key):
+        """
+        Returns key and value associated with given key in DEFINITION dict.
+
+        This means that either key is an actual dict key in DEFINITION or it is member
+        of a tuple that serves as a dict key in DEFINITION.
+        """
+        try:
+            # Try a direct look-up
+            return key, self.DEFINITION[key]
+        except KeyError:
+            # Try all the tuples
+            for k, v in self.DEFINITION.items():
+                if isinstance(k, tuple) and key in k:
+                    return k, v
+
+            raise ValueError("Can't find '%s' in url mapping definition" % key)
+
+    @staticmethod
+    def response(status_code=200, content='', headers=None):
+        res = Response(content=content)
+        res.status_code = status_code
+        res._headers = headers or {}
+        return res
 
     def _request(self, url, method, stream=None, *args, **kwargs):
         def iter_lines():
@@ -168,7 +176,7 @@ class Connection(object):
             url_path += '?' + parsed_url.query
         logger.info("URL path is '%s'", url_path)
         kwargs = self.response_mapping.response_mapping(url_path, method)
-        res = response(**kwargs)
+        res = self.response(**kwargs)
         if stream:
             res.iter_lines = iter_lines
             res.close_multi = close_multi
@@ -218,24 +226,27 @@ use_auth = false
 
 
 class ResponseMapping(object):
-    def __init__(self, version):
+    def __init__(self, version, lookup):
         self.version = version
+        self.lookup = lookup
 
     def get_response_content(self, file_name):
         this_file = inspect.getfile(ResponseMapping)
         this_dir = os.path.dirname(this_file)
         json_path = os.path.join(this_dir, "mock_jsons", self.version, file_name)
+        logger.debug("File: %s", json_path)
         with open(json_path, "r") as fd:
             return fd.read().encode("utf-8")
 
     def response_mapping(self, url_path, method):
-        global DEFINITION
-        value_to_use = get_definition_for(url_path)
+        key, value_to_use = self.lookup(url_path)
         file_name = value_to_use[method]["file"]
+        logger.debug("API response content: %s", file_name)
         custom_callback = value_to_use[method].get("custom_callback", None)
         content = self.get_response_content(file_name)
         if custom_callback:
-            return custom_callback(content)
+            logger.debug("Custom API callback: %s", custom_callback)
+            return custom_callback(key, content)
         else:
             return {"content": content}
 
