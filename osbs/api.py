@@ -211,7 +211,7 @@ class OSBS(object):
                         raise OsbsException(
                             self._panic_msg_for_more_running_builds(build_config_name, builds))
                     else:
-                        build = builds[0]
+                        build = builds[0].request
         if build is None:
             build = self.os.start_build(build_config_name, namespace=namespace)
         return build
