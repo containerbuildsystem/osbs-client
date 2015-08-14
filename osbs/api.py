@@ -148,8 +148,8 @@ class OSBS(object):
 
     def _poll_for_builds_from_buildconfig(self, build_config_id, namespace=DEFAULT_NAMESPACE):
         # try polling for 60 seconds and then fail if build doesn't appear
-        start = int(time.time())
-        while start + 60 < int(time.time()):
+        deadline = int(time.time()) + 60
+        while int(time.time()) < deadline:
             logger.debug('polling for build from BuildConfig "%s"' % build_config_id)
             builds = self._get_running_builds_for_build_config(build_config_id, namespace)
             if len(builds) > 0:
