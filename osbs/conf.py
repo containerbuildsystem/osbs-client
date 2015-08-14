@@ -234,3 +234,11 @@ class Configuration(object):
     def get_storage_limit(self):
         return self._get_value("storage_limit", self.conf_section,
                                "storage_limit", can_miss=True)
+
+    def get_git_push_url(self):
+        return self._get_value("git_push_url", self.conf_section,
+                               "git_push_url", can_miss=True)
+
+    def get_git_push_username(self):
+        return self._get_value("git_push_username", self.conf_section,
+                               "git_push_username", can_miss=True)

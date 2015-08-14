@@ -36,15 +36,22 @@ def deep_update(orig, new):
                 orig[k] = v
 
 
-def checkout_git_repo(uri, commit):
+def checkout_git_repo(git_uri, git_ref, git_branch):
     tmpdir = tempfile.mkdtemp()
-    subprocess.check_call(['git', 'clone', uri, '-b', commit, tmpdir], stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE)
+    subprocess.check_call(['git', 'clone', git_uri, '-b', git_branch, tmpdir],
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    # Find the specific ref we want
+    subprocess.check_call(['git', 'reset', '--hard', git_ref],
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE,
+                          cwd=tmpdir)
+
     return tmpdir
 
 
-def get_df_parser(git_uri, git_ref):
-    code_dir = checkout_git_repo(git_uri, git_ref)
+def get_df_parser(git_uri, git_ref, git_branch):
+    code_dir = checkout_git_repo(git_uri, git_ref, git_branch)
     return DockerfileParser(os.path.join(code_dir, 'Dockerfile'))
 
 

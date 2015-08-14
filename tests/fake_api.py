@@ -16,7 +16,8 @@ from osbs.core import Openshift
 from osbs.http import Response
 from osbs.conf import Configuration
 from osbs.api import OSBS
-from tests.constants import TEST_BUILD, TEST_COMPONENT, TEST_GIT_REF, TEST_BUILD_CONFIG
+from tests.constants import (TEST_BUILD, TEST_COMPONENT, TEST_GIT_REF,
+                             TEST_GIT_BRANCH, TEST_BUILD_CONFIG)
 from tempfile import NamedTemporaryFile
 
 try:
@@ -206,6 +207,7 @@ authoritative_registry = registry.example.com
 koji_root = http://koji.example.com/kojiroot
 koji_hub = http://koji.example.com/kojihub
 build_type = simple
+use_auth = false
 """.format (build_json_dir="inputs"))
         fp.flush()
         dummy_config = Configuration(fp.name)

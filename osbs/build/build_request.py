@@ -11,6 +11,13 @@ import json
 import logging
 import os
 
+try:
+    # py2
+    import urlparse
+except ImportError:
+    # py3
+    import urllib.parse as urlparse
+
 from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.spec import CommonSpec, ProdSpec, SimpleSpec
 from osbs.constants import PROD_BUILD_TYPE, SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
@@ -232,6 +239,7 @@ class ProductionBuild(CommonBuild):
         :param build_host: str, host the build will run on
         :param authoritative_registry: str, the docker registry authoritative for this image
         :param use_auth: bool, use auth from atomic-reactor?
+        :param git_push_url: str, URL for git push
         """
         logger.debug("setting params '%s' for %s", kwargs, self.spec)
         self.spec.set_params(**kwargs)
@@ -265,10 +273,11 @@ class ProductionBuild(CommonBuild):
                                       "url", self.spec.openshift_uri.value)
 
         # If there are no triggers set, there is no point in running
-        # the check_and_set_rebuild or import_image plugins.
+        # the check_and_set_rebuild, bump_release, or import_image plugins.
         triggers = self.template['spec'].get('triggers', [])
         if len(triggers) == 0:
             for when, which in [("prebuild_plugins", "check_and_set_rebuild"),
+                                ("prebuild_plugins", "bump_release"),
                                 ("postbuild_plugins", "import_image")]:
                 logger.info("removing %s from request because there are no triggers",
                             which)
@@ -288,6 +297,39 @@ class ProductionBuild(CommonBuild):
                                       "target", self.spec.koji_target.value)
             self.dj.dock_json_set_arg('prebuild_plugins', "koji", "root", self.spec.kojiroot.value)
             self.dj.dock_json_set_arg('prebuild_plugins', "koji", "hub", self.spec.kojihub.value)
+
+        # If the bump_release plugin is present, configure it
+        if self.dj.dock_json_has_plugin_conf('prebuild_plugins',
+                                             'bump_release'):
+            push_url = self.spec.git_push_url.value
+
+            if push_url is not None:
+                # Do we need to add in a username?
+                if self.spec.git_push_username.value is not None:
+                    components = urlparse.urlsplit(push_url)
+
+                    # Remove any existing username
+                    netloc = components.netloc.split('@', 1)[-1]
+
+                    # Add in the configured username
+                    comps = list(components)
+                    comps[1] = "%s@%s" % (self.spec.git_push_username.value,
+                                          netloc)
+
+                    # Reassemble the URL
+                    push_url = urlparse.urlunsplit(comps)
+
+                self.dj.dock_json_set_arg('prebuild_plugins', 'bump_release',
+                                          'push_url', push_url)
+
+            # Set the source git ref to the branch we're building
+            # from, but configure the plugin with the commit hash we
+            # started with.
+            logger.info("bump_release configured so setting source git ref to %s",
+                        self.spec.git_branch.value)
+            self.template['spec']['source']['git']['ref'] = self.spec.git_branch.value
+            self.dj.dock_json_set_arg('prebuild_plugins', 'bump_release',
+                                      'git_ref', self.spec.git_ref.value)
 
         # If there is a pulp secret, use it
         if self.spec.source_secret.value:
