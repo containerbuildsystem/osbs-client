@@ -55,6 +55,16 @@ def get_df_parser(git_uri, git_ref, git_branch):
     return DockerfileParser(os.path.join(code_dir, 'Dockerfile'))
 
 
+def git_repo_humanish_part_from_uri(git_uri):
+    git_uri = git_uri.rstrip('/')
+    if git_uri.endswith("/.git"):
+        git_uri = git_uri[:-5]
+    elif git_uri.endswith(".git"):
+        git_uri = git_uri[:-4]
+
+    return os.path.basename(git_uri)
+
+
 def get_imagestream_name_from_image(image):
     # this duplicates some logic with atomic_reactor.util.ImageName,
     # but I don't think it's worth it to depend on AR just for this
