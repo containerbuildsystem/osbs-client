@@ -93,6 +93,18 @@ PYCURL_NETWORK_CODES = [pycurl.E_BAD_CONTENT_ENCODING,
 
 PYCURL_NETWORK_CODES = [x for x in PYCURL_NETWORK_CODES if x is not None]
 
+PYCURL_DEBUG_PREFIX = [
+    '*',  # TEXT
+    '<',  # HEADER_IN
+    '>',  # HEADER_OUT
+    '{',  # DATA_IN
+    '}',  # DATA_OUT
+    '{',  # SSL_DATA_IN
+    '}',  # SSL_DATA_OUT
+]
+
+PYCURL_DEBUG_NOT_STRIPPED = ' !\\n'
+
 
 class Response(object):
     """ let's mock Response object of requests """
@@ -316,6 +328,7 @@ class PycurlAdapter(object):
         self.c.setopt(pycurl.SSL_VERIFYPEER, 1 if verify_ssl else 0)
         self.c.setopt(pycurl.SSL_VERIFYHOST, 2 if verify_ssl else 0)
         self.c.setopt(pycurl.VERBOSE, 1 if self.verbose else 0)
+        self.c.setopt(pycurl.DEBUGFUNCTION, pycurl_debug_callback)
         if username and password:
             self.c.setopt(pycurl.USERPWD, b"%s:%s" % (username, password))
 
@@ -433,3 +446,32 @@ def get_http_session(verbose=None):
     #    return requests.Session()
     else:
         raise OsbsException("no http library imported")
+
+
+def pycurl_debug_callback(debug_type, debug_msg):
+    """
+    pycurl's debugfunction callback
+
+    Format pycurl debug messages, prefix it with debug type, strip newlines
+    and log it through python logging module with debug level.
+
+    Messages are prefixed in similar way how curl's TRACE_PLAIN works. See
+    PYCURL_DEBUG_PREFIX for description of prefixes.
+
+    By default all newlines ('\\n') are removed from the debug messages. If
+    new line wasn't found in the message it is prefixed with
+    string PYCURL_DEBUG_NOT_STRIPPED.
+
+    :param debug_type: int, defined by pycurl's API for debugfunction.
+    :param debug_msg: str, defined by pycurl's API for debugfunction.
+    """
+    try:
+        debug_type = PYCURL_DEBUG_PREFIX[debug_type]
+    except IndexError:
+        debug_type = '#%s' % debug_type
+    not_stripped = ''
+    if debug_msg.endswith('\n'):
+        debug_msg = debug_msg[:-1]
+    else:
+        not_stripped = PYCURL_DEBUG_NOT_STRIPPED
+    logger.debug("pycurl %s%s: '%s'", debug_type, not_stripped, debug_msg)
