@@ -31,7 +31,7 @@ from osbs.constants import PROD_WITH_SECRET_BUILD_TYPE
 from osbs.exceptions import OsbsValidationException
 from osbs.http import Response
 from osbs import utils
-from tests.constants import TEST_BUILD, TEST_LABEL, TEST_LABEL_VALUE
+from tests.constants import TEST_BUILD, TEST_BUILD_CONFIG, TEST_LABEL, TEST_LABEL_VALUE
 from tests.constants import TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH, TEST_USER
 from tests.constants import TEST_COMPONENT, TEST_TARGET, TEST_ARCH
 from tests.fake_api import ResponseMapping, get_definition_for
@@ -249,7 +249,7 @@ def test_render_simple_request_incorrect_postbuild(tmpdir):
     bm = BuildManager(str(tmpdir))
     build_request = bm.get_build_request_by_type("simple")
     kwargs = {
-        'git_uri': "http://git/",
+        'git_uri': TEST_GIT_URI,
         'git_ref': TEST_GIT_REF,
         'user': "john-foo",
         'component': "component",
@@ -286,7 +286,7 @@ def test_render_simple_request():
     build_request = bm.get_build_request_by_type("simple")
     name_label = "fedora/resultingimage"
     kwargs = {
-        'git_uri': "http://git/",
+        'git_uri': TEST_GIT_URI,
         'git_ref': TEST_GIT_REF,
         'git_branch': TEST_GIT_BRANCH,
         'user': "john-foo",
@@ -299,9 +299,9 @@ def test_render_simple_request():
     build_request.set_params(**kwargs)
     build_json = build_request.render()
 
-    assert build_json["metadata"]["name"] == name_label.replace('/', '-')
+    assert build_json["metadata"]["name"] == TEST_BUILD_CONFIG
     assert "triggers" not in build_json["spec"]
-    assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
+    assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
     assert build_json["spec"]["source"]["git"]["ref"] == TEST_GIT_REF
     assert build_json["spec"]["output"]["to"]["name"].startswith(
         "registry.example.com:5000/john-foo/component:"
@@ -330,7 +330,7 @@ def test_render_prod_request_with_repo():
     name_label = "fedora/resultingimage"
     assert isinstance(build_request, ProductionBuild)
     kwargs = {
-        'git_uri': "http://git/",
+        'git_uri': TEST_GIT_URI,
         'git_ref': TEST_GIT_REF,
         'git_branch': TEST_GIT_BRANCH,
         'user': "john-foo",
@@ -352,9 +352,9 @@ def test_render_prod_request_with_repo():
     build_request.set_params(**kwargs)
     build_json = build_request.render()
 
-    assert build_json["metadata"]["name"] == name_label.replace('/', '-')
+    assert build_json["metadata"]["name"] == TEST_BUILD_CONFIG
     assert "triggers" not in build_json["spec"]
-    assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
+    assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
     assert build_json["spec"]["source"]["git"]["ref"] == TEST_GIT_REF
     assert build_json["spec"]["output"]["to"]["name"].startswith(
         "registry.example.com/john-foo/component:"
@@ -410,7 +410,7 @@ def test_render_prod_request():
     build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
     name_label = "fedora/resultingimage"
     kwargs = {
-        'git_uri': "http://git/",
+        'git_uri': TEST_GIT_URI,
         'git_ref': TEST_GIT_REF,
         'git_branch': TEST_GIT_BRANCH,
         'user': "john-foo",
@@ -431,9 +431,9 @@ def test_render_prod_request():
     build_request.set_params(**kwargs)
     build_json = build_request.render()
 
-    assert build_json["metadata"]["name"] == name_label.replace('/', '-')
+    assert build_json["metadata"]["name"] == TEST_BUILD_CONFIG
     assert "triggers" not in build_json["spec"]
-    assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
+    assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
     assert build_json["spec"]["source"]["git"]["ref"] == TEST_GIT_REF
     assert build_json["spec"]["output"]["to"]["name"].startswith(
         "registry.example.com/john-foo/component:"
@@ -489,7 +489,7 @@ def test_render_prod_without_koji_request():
     name_label = "fedora/resultingimage"
     assert isinstance(build_request, ProductionBuild)
     kwargs = {
-        'git_uri': "http://git/",
+        'git_uri': TEST_GIT_URI,
         'git_ref': TEST_GIT_REF,
         'git_branch': TEST_GIT_BRANCH,
         'user': "john-foo",
@@ -507,9 +507,9 @@ def test_render_prod_without_koji_request():
     build_request.set_params(**kwargs)
     build_json = build_request.render()
 
-    assert build_json["metadata"]["name"] == name_label.replace('/', '-')
+    assert build_json["metadata"]["name"] == TEST_BUILD_CONFIG
     assert "triggers" not in build_json["spec"]
-    assert build_json["spec"]["source"]["git"]["uri"] == "http://git/"
+    assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
     assert build_json["spec"]["source"]["git"]["ref"] == TEST_GIT_REF
     assert build_json["spec"]["output"]["to"]["name"].startswith(
         "registry.example.com/john-foo/component:"
@@ -564,7 +564,7 @@ def test_render_prod_with_secret_request():
     build_request = bm.get_build_request_by_type(PROD_WITH_SECRET_BUILD_TYPE)
     assert isinstance(build_request, ProductionBuild)
     kwargs = {
-        'git_uri': "http://git/",
+        'git_uri': TEST_GIT_URI,
         'git_ref': TEST_GIT_REF,
         'git_branch': TEST_GIT_BRANCH,
         'user': "john-foo",
@@ -619,7 +619,7 @@ def test_render_with_yum_repourls():
     inputs_path = os.path.join(parent_dir, "inputs")
     bm = BuildManager(inputs_path)
     kwargs = {
-        'git_uri': "http://git/",
+        'git_uri': TEST_GIT_URI,
         'git_ref': TEST_GIT_REF,
         'git_branch': TEST_GIT_BRANCH,
         'user': "john-foo",
@@ -694,7 +694,7 @@ def test_render_prod_with_pulp_no_auth():
     bm = BuildManager(inputs_path)
     build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
     kwargs = {
-        'git_uri': "http://git/",
+        'git_uri': TEST_GIT_URI,
         'git_ref': TEST_GIT_REF,
         'git_branch': TEST_GIT_BRANCH,
         'user': "john-foo",
@@ -752,7 +752,7 @@ def test_render_prod_request_with_trigger(tmpdir):
     name_label = "fedora/resultingimage"
     push_url = "ssh://{username}git.example.com/git/{component}.git"
     kwargs = {
-        'git_uri': "http://git/",
+        'git_uri': TEST_GIT_URI,
         'git_ref': TEST_GIT_REF,
         'git_branch': TEST_GIT_REF,
         'user': "john-foo",

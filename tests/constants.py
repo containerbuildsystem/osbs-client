@@ -8,7 +8,7 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import absolute_import, unicode_literals
 
 TEST_BUILD = "test-build-123"
-TEST_BUILD_CONFIG = "fedora23-something"
+TEST_BUILD_CONFIG = "path-master"
 TEST_GIT_URI = "git://hostname/path"
 TEST_GIT_REF = "01234567"
 TEST_GIT_BRANCH = "master"

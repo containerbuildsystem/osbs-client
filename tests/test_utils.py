@@ -16,6 +16,7 @@ def test_deep_update():
     ('http://git.example.com/git/repo.git/', 'repo'),
     ('http://git.example.com/git/repo.git', 'repo'),
     ('http://git.example.com/git/repo/.git', 'repo'),
+    ('git://hostname/path', 'path'),
 ])
 def test_git_repo_humanish_part_from_uri(uri, humanish):
     assert git_repo_humanish_part_from_uri(uri) == humanish
