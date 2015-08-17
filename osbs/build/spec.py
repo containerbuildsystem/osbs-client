@@ -16,7 +16,8 @@ import os
 import re
 from osbs.constants import DEFAULT_GIT_REF
 from osbs.exceptions import OsbsValidationException
-from osbs.utils import get_imagestream_name_from_image
+from osbs.utils import (get_imagestreamtag_from_image,
+                        git_repo_humanish_part_from_uri)
 
 
 logger = logging.getLogger(__name__)
@@ -111,7 +112,7 @@ class CommonSpec(BuildTypeSpec):
     git_branch = BuildParam('git_branch')
     user = UserParam()
     component = BuildParam('component')
-    trigger_imagestream_name = BuildParam('trigger_imagestream_name')
+    trigger_imagestreamtag = BuildParam('trigger_imagestreamtag')
     imagestream_name = BuildParam('imagestream_name')
     imagestream_url = BuildParam('imagestream_url')
     registry_uri = BuildParam('registry_uri')
@@ -147,10 +148,11 @@ class CommonSpec(BuildTypeSpec):
             raise OsbsValidationException("yum_repourls must be a list")
         self.yum_repourls.value = yum_repourls or []
         self.use_auth.value = use_auth
-        self.name.value = name_label.replace('/', '-')
-        self.trigger_imagestream_name.value = get_imagestream_name_from_image(base_image)
-        # imagestream and buildconfig have precisely the same name
-        self.imagestream_name.value = self.name.value
+        repo = git_repo_humanish_part_from_uri(git_uri)
+        self.name.value = "{repo}-{branch}".format(repo=repo,
+                                                   branch=git_branch)
+        self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
+        self.imagestream_name.value = name_label.replace('/', '-')
         self.imagestream_url.value = os.path.join(self.registry_uri.value, name_label)
 
 
