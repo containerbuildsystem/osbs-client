@@ -185,7 +185,7 @@ class CommonBuild(BuildRequest):
         self.template['spec']['output']['to']['name'] = tag_with_registry
         if 'triggers' in self.template['spec']:
             self.template['spec']['triggers']\
-                [0]['imageChange']['from']['name'] = self.spec.trigger_imagestream_name.value
+                [0]['imageChange']['from']['name'] = self.spec.trigger_imagestreamtag.value
 
         if (self.spec.yum_repourls.value is not None and
                 self.dj.dock_json_has_plugin_conf('prebuild_plugins', "add_yum_repo_by_url")):

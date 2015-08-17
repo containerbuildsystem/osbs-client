@@ -774,7 +774,7 @@ def test_render_prod_request_with_trigger(tmpdir):
 
     assert "triggers" in build_json["spec"]
     assert build_json["spec"]["triggers"][0]\
-        ["imageChange"]["from"]["name"] == 'fedora'
+        ["imageChange"]["from"]["name"] == 'fedora:latest'
 
     strategy = build_json['spec']['strategy']['customStrategy']['env']
     plugins_json = None

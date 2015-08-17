@@ -65,17 +65,26 @@ def git_repo_humanish_part_from_uri(git_uri):
     return os.path.basename(git_uri)
 
 
-def get_imagestream_name_from_image(image):
+def get_imagestreamtag_from_image(image):
+    """
+    return ImageStreamTag, give a FROM value
+
+    :param image: str, the FROM value from the Dockerfile
+    :return: str, ImageStreamTag
+    """
+
     # this duplicates some logic with atomic_reactor.util.ImageName,
     # but I don't think it's worth it to depend on AR just for this
+
     ret = image
+
+    # Remove the registry part
     parts = image.split('/', 2)
     if len(parts) == 2:
         if '.' in parts[0] or ':' in parts[0]:
             ret = parts[1]
     elif len(parts) == 3:
         ret = '%s/%s' % (parts[1], parts[2])
-    if ':' in ret:
-        ret = ret[:ret.index(':')]
 
+    # ImageStream names cannot contain '/'
     return ret.replace('/', '-')
