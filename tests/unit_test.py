@@ -18,6 +18,7 @@ from flexmock import flexmock
 import pytest
 import logging
 import six
+import pycurl
 from .fake_api import openshift, osbs
 from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.build_response import BuildResponse
@@ -30,7 +31,8 @@ from osbs.constants import SIMPLE_BUILD_TYPE, PROD_BUILD_TYPE, PROD_WITHOUT_KOJI
 from osbs.constants import PROD_WITH_SECRET_BUILD_TYPE
 from osbs.exceptions import OsbsValidationException
 from osbs import utils
-from osbs.http import HttpResponse, parse_headers
+from osbs.http import HttpSession, HttpStream, HttpResponse, parse_headers
+import osbs.http as osbs_http
 from tests.constants import TEST_BUILD, TEST_BUILD_CONFIG, TEST_LABEL, TEST_LABEL_VALUE
 from tests.constants import TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH, TEST_USER
 from tests.constants import TEST_COMPONENT, TEST_TARGET, TEST_ARCH
@@ -988,3 +990,42 @@ def test_force_str():
         s = u"s"
         assert str_on_2_unicode_on_3(s) == b
         assert str_on_2_unicode_on_3(b) == b
+
+
+@pytest.mark.parametrize('chunks,expected_content', [
+    ([b'foo', b'', b'bar', b'baz'], u'foobarbaz'),
+    ([b'a', b'b', b'\xc4', b'\x8d', b'x'], u'ab\u010dx'),
+    ([b'\xe2', b'\x8a', b'\x86'], u'\u2286'),
+    ([b'\xe2\x8a', b'\x86'], u'\u2286'),
+    ([b'\xe2', b'\x8a\x86'], u'\u2286'),
+    ([b'aaaa', b'\xe2\x8a', b'\x86'], u'aaaa\u2286'),
+    ([b'aaaa\xe2\x8a', b'\x86'], u'aaaa\u2286'),
+    ([b'\xe2\x8a', b'\x86ffff'], u'\u2286ffff'),
+])
+def test_http_multibyte_decoding(chunks, expected_content):
+    class Whatever(object):
+        def __getattr__(self, name):
+            return self
+
+        def __call__(self, *args, **kwargs):
+            return self
+    flexmock(pycurl).should_receive('Curl').and_return(Whatever())
+    flexmock(pycurl).should_receive('CurlMulti').and_return(Whatever())
+    (flexmock(osbs_http).should_receive('parse_headers')
+                        .and_return({ 'content-type': 'application/json; charset=utf-8' }))
+    flexmock(HttpStream, _select=lambda: None)
+
+    def mock_perform(self):
+        if chunks:
+            self.response_buffer.write(chunks.pop(0))
+        else:
+            self.finished = True
+
+    try:
+        orig_perform = HttpStream._perform
+        HttpStream._perform = mock_perform
+
+        r = HttpSession(verbose=True).get('http://')
+        assert r.content == expected_content
+    finally:
+        HttpStream._perform = orig_perform

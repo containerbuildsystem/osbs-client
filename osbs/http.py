@@ -20,6 +20,7 @@ import re
 import sys
 import json
 import time
+import codecs
 import logging
 from io import BytesIO
 
@@ -160,6 +161,7 @@ class HttpStream(object):
         self.headers = None
         self.response_buffer = BytesIO()
         self.headers_buffer = BytesIO()
+        self.response_decoder = None
 
         self.url = url
         headers = headers or {}
@@ -230,6 +232,7 @@ class HttpStream(object):
 
         self.headers = parse_headers(self.headers_buffer.getvalue())
         self.status_code = self.c.getinfo(pycurl.HTTP_CODE)
+        self.response_decoder = codecs.getincrementaldecoder(self.encoding)()
 
     def _perform(self):
         while True:
@@ -261,10 +264,10 @@ class HttpStream(object):
         return self.response_buffer.tell() != 0
 
     def _get_received_data(self):
-        result = self.response_buffer.getvalue().decode(self.encoding)
+        result = self.response_buffer.getvalue()
         self.response_buffer.truncate(0)
         self.response_buffer.seek(0)
-        return result
+        return self.response_decoder.decode(result, final=self.finished)
 
     def iter_chunks(self):
         while True:
