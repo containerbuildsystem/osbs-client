@@ -9,7 +9,7 @@ from osbs.http import parse_headers, HttpSession, HttpStream
 
 from tests.fake_api import Connection, ResponseMapping
 
-logger = logging.getLogger("osbs.tests")
+logger = logging.getLogger(__file__)
 
 
 @pytest.fixture
