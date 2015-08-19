@@ -29,6 +29,7 @@ except ImportError:
 
 
 logger = logging.getLogger("osbs.tests")
+API_PREFIX = "/osapi/{v}/".format(v=Configuration.get_openshift_api_version())
 
 
 class StreamingResponse(object):
@@ -46,6 +47,7 @@ class StreamingResponse(object):
     def __exit__(self, exc_type, exc_value, traceback):
         pass
 
+
 class Connection(object):
     def __init__(self, version="0.5.2"):
         self.version = version
@@ -55,7 +57,7 @@ class Connection(object):
         # mapping of urls or tuples of urls to responses; use get_definition_for
         #  to get values from this dict
         self.DEFINITION = {
-            "/osapi/v1beta3/namespaces/default/builds/": {
+            API_PREFIX + "namespaces/default/builds/": {
                 "get": {
                     "file": "builds_list.json",
                 },
@@ -65,8 +67,8 @@ class Connection(object):
             },
 
             # Some 'builds' requests are with a trailing slash, some without:
-            ("/osapi/v1beta3/namespaces/default/builds/%s" % TEST_BUILD,
-             "/osapi/v1beta3/namespaces/default/builds/%s/" % TEST_BUILD): {
+            (API_PREFIX + "namespaces/default/builds/%s" % TEST_BUILD,
+             API_PREFIX + "namespaces/default/builds/%s/" % TEST_BUILD): {
                  "get": {
                      "file": "build_test-build-123.json",
                  },
@@ -75,9 +77,9 @@ class Connection(object):
                  }
              },
 
-            ("/osapi/v1beta3/namespaces/default/builds/%s/log/" % TEST_BUILD,
-             "/osapi/v1beta3/namespaces/default/builds/%s/log/?follow=0" % TEST_BUILD,
-             "/osapi/v1beta3/namespaces/default/builds/%s/log/?follow=1" % TEST_BUILD): {
+            (API_PREFIX + "namespaces/default/builds/%s/log/" % TEST_BUILD,
+             API_PREFIX + "namespaces/default/builds/%s/log/?follow=0" % TEST_BUILD,
+             API_PREFIX + "namespaces/default/builds/%s/log/?follow=1" % TEST_BUILD): {
                  "get": {
                      "file": "build_test-build-123_logs.txt",
                  },
@@ -92,40 +94,40 @@ class Connection(object):
                  }
              },
 
-            "/osapi/v1beta3/users/~/": {
+            API_PREFIX + "users/~/": {
                 "get": {
                     "file": "get_user.json",
                 }
             },
 
-            "/osapi/v1beta3/watch/namespaces/default/builds/%s/" % TEST_BUILD: {
+            API_PREFIX + "watch/namespaces/default/builds/%s/" % TEST_BUILD: {
                 "get": {
                     "file": "watch_build_test-build-123.json",
                 }
             },
 
-            "/osapi/v1beta3/namespaces/default/buildconfigs/": {
+            API_PREFIX + "namespaces/default/buildconfigs/": {
                 "post": {
                     "file": "created_build_config_test-build-config-123.json",
                 }
             },
 
-            "/osapi/v1beta3/namespaces/default/buildconfigs/%s/instantiate" % TEST_BUILD_CONFIG: {
+            API_PREFIX + "namespaces/default/buildconfigs/%s/instantiate" % TEST_BUILD_CONFIG: {
                 "post": {
                     "file": "instantiated_test-build-config-123.json",
                 }
             },
 
             # use both version with ending slash and without it
-            ("/osapi/v1beta3/namespaces/default/buildconfigs/%s" % TEST_BUILD_CONFIG,
-             "/osapi/v1beta3/namespaces/default/buildconfigs/%s/" % TEST_BUILD_CONFIG): {
+            (API_PREFIX + "namespaces/default/buildconfigs/%s" % TEST_BUILD_CONFIG,
+             API_PREFIX + "namespaces/default/buildconfigs/%s/" % TEST_BUILD_CONFIG): {
                  "get": {
                      "custom_callback": self.buildconfig_not_found,
                      "file": "not_found_build-config-component-master.json",
                  }
              },
 
-            "/osapi/v1beta3/namespaces/default/builds/?labelSelector=buildconfig%%3D%s" %
+            API_PREFIX + "namespaces/default/builds/?labelSelector=buildconfig%%3D%s" %
             TEST_BUILD_CONFIG: {
                 "get": {
                     "file": "builds_list_fedora23-something_no_running.json"
@@ -199,7 +201,7 @@ class Connection(object):
 
 @pytest.fixture(params=["0.5.2", "0.5.4"])
 def openshift(request):
-    os_inst = Openshift("/osapi/v1beta3/", "/oauth/authorize")
+    os_inst = Openshift(API_PREFIX, "/oauth/authorize")
     os_inst._con = Connection(request.param)
     return os_inst
 

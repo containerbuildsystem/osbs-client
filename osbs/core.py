@@ -46,10 +46,12 @@ def check_response(response):
 # TODO: error handling: create function which handles errors in response object
 class Openshift(object):
 
-    def __init__(self, openshift_api_url, openshift_oauth_url, verbose=False,
+    def __init__(self, openshift_api_url, openshift_api_version,
+                 openshift_oauth_url, verbose=False,
                  username=None, password=None, use_kerberos=False, client_cert=None,
                  client_key=None, verify_ssl=True, use_auth=None):
         self.os_api_url = openshift_api_url
+        self._os_api_version = openshift_api_version
         self._os_oauth_url = openshift_oauth_url
         self.verbose = verbose
         self.verify_ssl = verify_ssl
@@ -190,11 +192,16 @@ class Openshift(object):
                          headers={"Content-Type": "application/json"})
 
     def instantiate_build_config(self, build_config_id, namespace=DEFAULT_NAMESPACE):
-        url = self._build_url("namespaces/%s/buildconfigs/%s/instantiate" % (
-            namespace, build_config_id))
-        # TODO: should we have the api version somewhere in conf?
-        return self._post(url, data=json.dumps({"kind": "BuildRequest", "apiVersion": "v1beta3",
-                                     "metadata": {"name": build_config_id}}),
+        url = self._build_url("namespaces/%s/buildconfigs/%s/instantiate" %
+                              (namespace, build_config_id))
+        data = json.dumps({
+            "kind": "BuildRequest",
+            "apiVersion": self._os_api_version,
+            "metadata": {
+                "name": build_config_id,
+            },
+        })
+        return self._post(url, data=data,
                           headers={"Content-Type": "application/json"})
 
     def start_build(self, build_config_id, namespace=DEFAULT_NAMESPACE):
@@ -490,7 +497,8 @@ class Openshift(object):
 
 
 if __name__ == '__main__':
-    o = Openshift(openshift_api_url="https://localhost:8443/osapi/v1beta3/",
+    o = Openshift(openshift_api_url="https://localhost:8443/osapi/v1/",
+                  openshift_api_version="v1",
                   openshift_oauth_url="https://localhost:8443/oauth/authorize",
                   verbose=True)
     print(o.get_oauth_token())
