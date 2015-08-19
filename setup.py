@@ -41,7 +41,7 @@ setup(
     author_email='atomic-devel@projectatomic.io',
     url='https://github.com/projectatomic/osbs-client',
     license="BSD",
-    packages=find_packages(exclude=["tests"]),
+    packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     entry_points={
           'console_scripts': ['osbs=osbs.cli.main:main'],
     },
