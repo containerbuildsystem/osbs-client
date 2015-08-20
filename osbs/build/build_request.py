@@ -419,8 +419,6 @@ class SimpleBuild(CommonBuild):
         if validate:
             self.spec.validate()
         super(SimpleBuild, self).render()
-        self.dj.dock_json_set_arg('prebuild_plugins', "pull_base_image", "parent_registry",
-                                  self.spec.registry_uri.value)
         try:
             self.dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3", "url",
                                       self.spec.openshift_uri.value)
