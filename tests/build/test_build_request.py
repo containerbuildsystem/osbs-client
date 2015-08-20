@@ -141,6 +141,12 @@ class TestBuildRequest(object):
 
         assert plugins_json is not None
         plugins = json.loads(plugins_json)
+        pull_base_image = get_plugin(plugins, "prebuild_plugins",
+                                     "pull_base_image")
+        assert pull_base_image is not None
+        assert ('args' not in pull_base_image or
+                'parent_registry' not in pull_base_image['args'])
+
         assert plugin_value_get(plugins, "exit_plugins", "store_metadata_in_osv3", "args", "url") == \
             "http://openshift/"
 
