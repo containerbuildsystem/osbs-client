@@ -29,7 +29,8 @@ except ImportError:
 
 
 logger = logging.getLogger("osbs.tests")
-API_PREFIX = "/osapi/{v}/".format(v=Configuration.get_openshift_api_version())
+API_VER = Configuration.get_openshift_api_version()
+API_PREFIX = "/oapi/{v}/".format(v=API_VER)
 
 
 class StreamingResponse(object):
@@ -49,7 +50,7 @@ class StreamingResponse(object):
 
 
 class Connection(object):
-    def __init__(self, version="0.5.2"):
+    def __init__(self, version="0.5.4"):
         self.version = version
         self.response_mapping = ResponseMapping(version,
                                                 lookup=self.get_definition_for)
@@ -199,9 +200,9 @@ class Connection(object):
         return self._request(url, "put", *args, **kwargs)
 
 
-@pytest.fixture(params=["0.5.2", "0.5.4"])
+@pytest.fixture(params=["0.5.4"])
 def openshift(request):
-    os_inst = Openshift(API_PREFIX, "/oauth/authorize")
+    os_inst = Openshift(API_PREFIX, API_VER, "/oauth/authorize")
     os_inst._con = Connection(request.param)
     return os_inst
 

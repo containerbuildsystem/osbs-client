@@ -110,17 +110,17 @@ class Configuration(object):
     @staticmethod
     def get_openshift_api_version():
         # This is not configurable.
-        return "v1beta3"
+        return "v1"
 
     def get_openshift_api_uri(self):
         """
-        https://<host>[:<port>]/osapi/<API version>/
+        https://<host>[:<port>]/oapi/<API version>/
 
         :return: str
         """
         base_uri = self.get_openshift_base_uri()
         version = self.get_openshift_api_version()
-        return urljoin(base_uri, "/osapi/{version}/".format(version=version))
+        return urljoin(base_uri, "/oapi/{version}/".format(version=version))
 
     def get_openshift_oauth_api_uri(self):
         """

@@ -30,7 +30,7 @@ TEST_BUILD_JSON = {
         "name": "{{NAME}}"
     },
     "kind": "BuildConfig",
-    "apiVersion": "v1beta3",
+    "apiVersion": "v1",
     "spec": {
         "triggers": [
             {

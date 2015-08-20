@@ -335,8 +335,6 @@ class ProductionBuild(CommonBuild):
         if self.spec.source_secret.value:
             name = self.spec.source_secret.value
             self.template['spec']['source']['sourceSecret']['name'] = name
-            # OpenShift 0.5.2 compatibility, remove once we migrate to v1 api
-            self.template['spec']['source']['sourceSecretName'] = name
 
             # Don't push to docker registry, we're using pulp here
             # but still construct the unique tag
@@ -344,8 +342,6 @@ class ProductionBuild(CommonBuild):
         else:
             # Otherwise remove references to the secret
             del self.template['spec']['source']['sourceSecret']
-            # Openshift 0.5.2 compatibility, remove once we migrate to v1 api
-            del self.template['spec']['source']['sourceSecretName']
 
         # If NFS destination set, use it
         nfs_server_path = self.spec.nfs_server_path.value

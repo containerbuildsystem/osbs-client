@@ -19,7 +19,7 @@ from osbs.build.build_request import BuildManager
 from osbs.build.build_response import BuildResponse
 from osbs.constants import DEFAULT_NAMESPACE, PROD_BUILD_TYPE
 from osbs.core import Openshift
-from osbs.exceptions import OsbsException
+from osbs.exceptions import OsbsException, OsbsValidationException
 # import utils in this way, so that we can mock standalone functions with flexmock
 from osbs import utils
 
@@ -174,6 +174,11 @@ class OSBS(object):
     def _create_build_config_and_build(self, build_request, namespace):
         # TODO: test this method more thoroughly
         build_json = build_request.render()
+        apiVersion = build_json['apiVersion']
+        if apiVersion != self.os_conf.get_openshift_api_version():
+            raise OsbsValidationException("BuildConfig template has incorrect apiVersion (%s)" %
+                                          apiVersion)
+
         build_config_name = build_json['metadata']['name']
 
         # check if a build already exists for this config; if so then raise

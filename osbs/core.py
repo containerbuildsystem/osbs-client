@@ -497,7 +497,7 @@ class Openshift(object):
 
 
 if __name__ == '__main__':
-    o = Openshift(openshift_api_url="https://localhost:8443/osapi/v1/",
+    o = Openshift(openshift_api_url="https://localhost:8443/oapi/v1/",
                   openshift_api_version="v1",
                   openshift_oauth_url="https://localhost:8443/oauth/authorize",
                   verbose=True)
