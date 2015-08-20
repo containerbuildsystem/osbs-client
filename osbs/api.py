@@ -273,9 +273,8 @@ class OSBS(object):
                                       namespace=namespace, **kwargs)
 
     @osbsapi
-    def create_simple_build(self, git_uri, git_ref, git_branch, user, component, yum_repourls=None,
+    def create_simple_build(self, git_uri, git_ref, user, component, yum_repourls=None,
                             namespace=DEFAULT_NAMESPACE, **kwargs):
-        df_parser = utils.get_df_parser(git_uri, git_ref, git_branch)
         build_request = self.get_build_request(SIMPLE_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
