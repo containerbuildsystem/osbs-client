@@ -124,7 +124,7 @@ class TestBuildRequest(object):
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
-        assert build_json["metadata"]["name"] == TEST_BUILD_CONFIG
+        assert build_json["metadata"]["name"] is not None
         assert "triggers" not in build_json["spec"]
         assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
         assert build_json["spec"]["source"]["git"]["ref"] == TEST_GIT_REF

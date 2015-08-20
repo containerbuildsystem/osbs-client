@@ -109,12 +109,8 @@ class BuildTypeSpec(object):
 class CommonSpec(BuildTypeSpec):
     git_uri = BuildParam('git_uri')
     git_ref = BuildParam('git_ref', default=DEFAULT_GIT_REF)
-    git_branch = BuildParam('git_branch')
     user = UserParam()
     component = BuildParam('component')
-    trigger_imagestreamtag = BuildParam('trigger_imagestreamtag')
-    imagestream_name = BuildParam('imagestream_name')
-    imagestream_url = BuildParam('imagestream_url')
     registry_uri = BuildParam('registry_uri')
     openshift_uri = BuildParam('openshift_uri')
     name = BuildIDParam()
@@ -131,12 +127,11 @@ class CommonSpec(BuildTypeSpec):
             self.openshift_uri,
         ]
 
-    def set_params(self, git_uri=None, git_ref=None, git_branch=None, registry_uri=None, user=None,
-                   component=None, base_image=None, name_label=None, openshift_uri=None,
+    def set_params(self, git_uri=None, git_ref=None, registry_uri=None, user=None,
+                   component=None, openshift_uri=None,
                    yum_repourls=None, use_auth=None, **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
-        self.git_branch.value = git_branch
         self.user.value = user
         self.component.value = component
         # We only want the hostname[:port]
@@ -148,15 +143,13 @@ class CommonSpec(BuildTypeSpec):
             raise OsbsValidationException("yum_repourls must be a list")
         self.yum_repourls.value = yum_repourls or []
         self.use_auth.value = use_auth
-        repo = git_repo_humanish_part_from_uri(git_uri)
-        self.name.value = "{repo}-{branch}".format(repo=repo,
-                                                   branch=git_branch)
-        self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
-        self.imagestream_name.value = name_label.replace('/', '-')
-        self.imagestream_url.value = os.path.join(self.registry_uri.value, name_label)
 
 
 class ProdSpec(CommonSpec):
+    git_branch = BuildParam('git_branch')
+    trigger_imagestreamtag = BuildParam('trigger_imagestreamtag')
+    imagestream_name = BuildParam('imagestream_name')
+    imagestream_url = BuildParam('imagestream_url')
     sources_command = BuildParam("sources_command")
     architecture = BuildParam("architecture")
     vendor = BuildParam("vendor")
@@ -195,7 +188,8 @@ class ProdSpec(CommonSpec):
                    build_host=None, authoritative_registry=None,
                    koji_target=None, kojiroot=None, kojihub=None,
                    source_secret=None, pulp_registry=None, nfs_server_path=None,
-                   nfs_dest_dir=None, git_push_url=None, git_push_username=None,
+                   nfs_dest_dir=None, git_branch=None, base_image=None,
+                   name_label=None, git_push_url=None, git_push_username=None,
                    **kwargs):
         super(ProdSpec, self).set_params(**kwargs)
         self.sources_command.value = sources_command
@@ -212,6 +206,14 @@ class ProdSpec(CommonSpec):
         self.nfs_dest_dir.value = nfs_dest_dir
         self.git_push_url.value = git_push_url
         self.git_push_username.value = git_push_username
+        self.git_branch.value = git_branch
+        repo = git_repo_humanish_part_from_uri(self.git_uri.value)
+        self.name.value = "{repo}-{branch}".format(repo=repo,
+                                                   branch=git_branch)
+        self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
+        self.imagestream_name.value = name_label.replace('/', '-')
+        self.imagestream_url.value = os.path.join(self.registry_uri.value,
+                                                  name_label)
         timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         self.image_tag.value = "%s/%s:%s-%s" % (
             self.user.value,
@@ -227,4 +229,5 @@ class SimpleSpec(CommonSpec):
     def set_params(self, **kwargs):
         super(SimpleSpec, self).set_params(**kwargs)
         timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        self.name.value = "build-%s" % timestamp
         self.image_tag.value = "%s/%s:%s" % (self.user.value, self.component.value, timestamp)
