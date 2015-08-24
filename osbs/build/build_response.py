@@ -10,7 +10,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 import json
 import logging
 
-from osbs.utils import graceful_chain_get
+from osbs.utils import graceful_chain_get, get_time_from_rfc3399
 from osbs.constants import BUILD_FINISHED_STATES, BUILD_RUNNING_STATES, \
     BUILD_SUCCEEDED_STATES, BUILD_FAILED_STATES, BUILD_PENDING_STATES
 
@@ -71,6 +71,9 @@ class BuildResponse(object):
 
     def get_time_created(self):
         return graceful_chain_get(self.json, "metadata", "creationTimestamp")
+
+    def get_time_created_in_seconds(self):
+        return get_time_from_rfc3399(self.get_time_created())
 
     def get_annotations(self):
         return graceful_chain_get(self.json, "metadata", "annotations")

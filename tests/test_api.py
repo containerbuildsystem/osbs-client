@@ -30,6 +30,9 @@ class TestOSBS(object):
         assert len(response_list) > 0
         # response_list is a list of BuildResponse objects
         assert isinstance(response_list[0], BuildResponse)
+        # All the timestamps are understood
+        for build in response_list:
+            assert build.get_time_created_in_seconds() != 0.0
 
     def test_create_prod_build(self, osbs):
         # TODO: test situation when a buildconfig already exists

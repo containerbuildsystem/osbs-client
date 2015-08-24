@@ -38,7 +38,8 @@ def cmd_list_builds(args, osbs):
     elif args.output == 'text':
         format_str = "{name:48} {status:16} {image:64}"
         print(format_str.format(**{"name": "BUILD ID", "status": "STATUS", "image": "IMAGE NAME"}), file=sys.stderr)
-        for build in builds:
+        for build in sorted(builds,
+                            key=lambda x: x.get_time_created_in_seconds()):
             image = build.get_image_tag()
             if args.USER:
                 # image can contain registry - we may have to parse it more intelligently
