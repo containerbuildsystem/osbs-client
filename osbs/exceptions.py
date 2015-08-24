@@ -35,7 +35,7 @@ class OsbsException(Exception):
 
     def __repr__(self):
         if self.cause and not hasattr(self, '__context__'):
-            return "OsbsException caused by %r" % self.cause
+            return "OsbsException: %s (from %r)" % (self.message, self.cause)
         else:
             return super(OsbsException, self).__repr__()
 
