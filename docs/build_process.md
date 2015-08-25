@@ -20,9 +20,23 @@ This document mentions several components that communicate with each other:
    * `is_autorebuild` label is set to `"false"`, so that atomic-reactor knows that this is a build executed by user.
    * the `BuildConfig`'s source git ref names the git branch the build is from
    * the `bump_release` configuration names the branch's commit the initial build is from
+   * the `stop_autorebuild_if_disabled` configuration names the config file where autorebuilds are enabled/disabled, see [OSBS repo configuration file](#osbs-repo-configuration-file)
  5. osbs-client starts the Openshift build from `BuildConfig` for *IM*.
  6. Openshift spawns a new build container that contains atomic-reactor inside.
  7. atomic-reactor's `CheckAndSetRebuildPlugin` is run. This determines whether the build is an automatically triggered autorebuild by examining `is_autrebuild` label. If this is autorebuild, then TODO. If this is not autorebuild, then the `is_autorebuild` label of the `BuildConfig` is set to `"true"`. This is done in order to ensure that all subsequent builds (except user-executed builds) are marked as autorebuild.
  8. atomic-reactor builds the image.
  9. Assuming the build is successful, atomic-reactor pushes the built image into registry and runs post-build plugins. These can vary depending on type of build, but usually it means pushing image to Pulp or copying it to NFS or so.
  10. atomic-reactor's `ImportImagePlugin` is run, which checks whether ImageStream for *IM* exists. If not, it creates it. Then, either way, it imports newly built *IM* into the `ImageStream`. If there are already some other images that use *IM* as their base image, they get rebuilt.
+
+## OSBS Repo Configuration File
+
+OSBS repo config file is a file that resides in the top level of built Git repo. It is currently not mandatory. The default name is `.osbs-repo-config`.
+
+Currently, only `[autorebuild]` section is supported and `enabled` argument inside that. The `enabled` argument is a boolean, recognized values are 0, false, 1 and true (case insensitive). For example:
+
+```
+[autorebuild]
+enabled=1
+```
+
+`enabled` is true by default (e.g. if the file is not present or the value is not set in the config file).

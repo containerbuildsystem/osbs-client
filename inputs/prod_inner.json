@@ -10,6 +10,12 @@
       "name": "check_and_set_rebuild"
     },
     {
+      "args": {
+        "config_file": ".osbs-repo-config"
+      },
+      "name": "stop_autorebuild_if_disabled"
+    },
+    {
       "name": "pull_base_image",
       "args": {
         "parent_registry": "{{REGISTRY_URI}}",
