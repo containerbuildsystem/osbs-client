@@ -19,6 +19,7 @@ from osbs.api import OSBS
 from osbs.conf import Configuration
 from osbs.constants import DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION
 from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsAuthException, OsbsResponseException
+from osbs.cli.capture import setup_json_capture
 
 
 logger = logging.getLogger('osbs')
@@ -348,6 +349,8 @@ def cli():
     parser.add_argument("--namespace", help="name of namespace to query against "
                                             "(you may require blank namespace with --namespace=\"\")",
                         metavar="NAMESPACE", action="store", default="default")
+    parser.add_argument("--capture-dir", metavar="DIR", action="store",
+                        help="capture JSON responses and save them in DIR")
     args = parser.parse_args()
     return parser, args
 
@@ -376,6 +379,9 @@ def main():
         set_logging(level=logging.INFO)
 
     osbs = OSBS(os_conf, build_conf)
+
+    if args.capture_dir is not None:
+        setup_json_capture(osbs, os_conf, args.capture_dir)
 
     try:
         args.func(args, osbs)

@@ -176,7 +176,7 @@ class Connection(object):
     def response(status_code=200, content=b'', headers=None):
         return HttpResponse(status_code, headers or {}, content.decode("utf-8"))
 
-    def _request(self, url, method, stream=None, *args, **kwargs):
+    def request(self, url, method, stream=None, *args, **kwargs):
         parsed_url = urlparse.urlparse(url)
         # fragment = parsed_url.fragment
         # parsed_fragment = urlparse.parse_qs(fragment)
@@ -191,13 +191,13 @@ class Connection(object):
             return self.response(**kwargs)
 
     def get(self, url, *args, **kwargs):
-        return self._request(url, "get", *args, **kwargs)
+        return self.request(url, "get", *args, **kwargs)
 
     def post(self, url, *args, **kwargs):
-        return self._request(url, "post", *args, **kwargs)
+        return self.request(url, "post", *args, **kwargs)
 
     def put(self, url, *args, **kwargs):
-        return self._request(url, "put", *args, **kwargs)
+        return self.request(url, "put", *args, **kwargs)
 
 
 @pytest.fixture(params=["0.5.4"])
@@ -214,7 +214,7 @@ def osbs(openshift):
 [general]
 build_json_dir = {build_json_dir}
 [default]
-openshift_uri = https://0.0.0.0/
+openshift_uri = /
 registry_uri = registry.example.com
 sources_command = fedpkg sources
 vendor = Example, Inc.
