@@ -10,9 +10,11 @@ from __future__ import print_function, absolute_import, unicode_literals
 import copy
 import os
 import subprocess
+import sys
 import tempfile
 
 from dockerfile_parse import DockerfileParser
+from osbs.exceptions import OsbsException
 
 
 def graceful_chain_get(d, *args):
@@ -38,14 +40,25 @@ def deep_update(orig, new):
 
 def checkout_git_repo(git_uri, git_ref, git_branch):
     tmpdir = tempfile.mkdtemp()
-    subprocess.check_call(['git', 'clone', git_uri, '-b', git_branch, tmpdir],
-                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        subprocess.check_call(['git', 'clone', git_uri,
+                               '-b', git_branch, tmpdir],
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE)
+    except subprocess.CalledProcessError as ex:
+        raise OsbsException("Unable to clone git repo '%s' "
+                            "branch '%s'" % (git_uri, git_branch),
+                            cause=ex, traceback=sys.exc_info()[2])
 
     # Find the specific ref we want
-    subprocess.check_call(['git', 'reset', '--hard', git_ref],
-                          stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE,
-                          cwd=tmpdir)
+    try:
+        subprocess.check_call(['git', 'reset', '--hard', git_ref],
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE,
+                              cwd=tmpdir)
+    except subprocess.CalledProcessError as ex:
+        raise OsbsException("Unable to reset branch to '%s'" % git_ref,
+                            cause=ex, traceback=sys.exc_info()[2])
 
     return tmpdir
 
