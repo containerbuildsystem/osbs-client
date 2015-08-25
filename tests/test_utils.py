@@ -9,7 +9,8 @@ import pytest
 
 from osbs.utils import (deep_update,
                         get_imagestreamtag_from_image,
-                        git_repo_humanish_part_from_uri)
+                        git_repo_humanish_part_from_uri,
+                        get_time_from_rfc3399)
 
 
 def test_deep_update():
@@ -40,3 +41,22 @@ def test_git_repo_humanish_part_from_uri(uri, humanish):
 ])
 def test_get_imagestreamtag_from_image(img, expected):
     assert get_imagestreamtag_from_image(img) == expected
+
+
+@pytest.mark.parametrize(('rfc3399', 'seconds'), [
+    ('2015-08-24T10:41:00Z', 1440412860.0),
+])
+def test_get_time_from_rfc3399_valid(rfc3399, seconds):
+    assert get_time_from_rfc3399(rfc3399) == seconds
+
+
+@pytest.mark.parametrize('rfc3399', [
+    ('just completely invalid'),
+
+    # The implementation doesn't know enough about RFC 3399 to
+    # distinguish between invalid and unsupported
+    ('2015-08-24T10:41:00.1Z'),
+])
+def test_get_time_from_rfc3399_invalid(rfc3399):
+    with pytest.raises(RuntimeError):
+        get_time_from_rfc3399(rfc3399)

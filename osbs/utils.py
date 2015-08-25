@@ -12,6 +12,8 @@ import os
 import subprocess
 import sys
 import tempfile
+from time import strptime
+from calendar import timegm
 
 from dockerfile_parse import DockerfileParser
 from osbs.exceptions import OsbsException
@@ -101,3 +103,20 @@ def get_imagestreamtag_from_image(image):
 
     # ImageStream names cannot contain '/'
     return ret.replace('/', '-')
+
+def get_time_from_rfc3399(rfc3399):
+    """
+    return time tuple from an RFC 3399-formatted time string
+
+    :param rfc3399: str, time in RFC 3399 format
+    :return: float, seconds since the Epoch
+    """
+
+    try:
+        # Decode the RFC 3399 date with no fractional seconds
+        # (the format Origin provides)
+        time_tuple = strptime(rfc3399, '%Y-%m-%dT%H:%M:%SZ')
+    except ValueError:
+        raise RuntimeError("Time format not understood: %s" % rfc3399)
+
+    return timegm(time_tuple)
