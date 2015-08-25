@@ -1,49 +1,51 @@
 {
-    "apiVersion": "v1beta3",
+    "apiVersion": "v1",
     "kind": "BuildConfig",
+    "metadata": {
+        "creationTimestamp": "2015-08-21T10:12:40Z",
+        "labels": {
+            "is_autorebuild": "false"
+        },
+        "name": "test-build-config-123",
+        "namespace": "default",
+        "resourceVersion": "676",
+        "selfLink": "/oapi/v1/namespaces/default/buildconfigs/test-build-config-123",
+        "uid": "27a2693f-47ed-11e5-969c-52540080e6f8"
+    },
     "spec": {
-        "triggers": [
-            {
-                "type": "ImageChange",
-                "imageChange": {
-                    "from": {
-                        "kind": "ImageStreamTag",
-                        "name": "fedora:latest"
-                    }
-                }
+        "output": {
+            "to": {
+                "kind": "DockerImage",
+                "name": "localhost:5000/twaugh/component:20150821111239"
             }
-        ],
+        },
+        "resources": {},
+        "source": {
+            "git": {
+                "ref": "master",
+                "uri": "https://github.com/TomasTomecek/docker-hello-world.git"
+            },
+            "type": "Git"
+        },
         "strategy": {
-            "type": "Custom",
             "customStrategy": {
+                "env": [
+                    {
+                        "name": "DOCK_PLUGINS",
+                        "value": "{\"prebuild_plugins\": [{\"args\": {}, \"name\": \"pull_base_image\"}, {\"name\": \"change_from_in_dockerfile\"}, {\"name\": \"dockerfile_content\"}], \"exit_plugins\": [{\"args\": {\"url\": \"https://osbs.localdomain:8443/\", \"verify_ssl\": false, \"use_auth\": false}, \"name\": \"store_metadata_in_osv3\"}, {\"name\": \"remove_built_image\"}], \"postbuild_plugins\": [{\"args\": {\"image_id\": \"BUILT_IMAGE_ID\"}, \"name\": \"all_rpm_packages\"}]}"
+                    }
+                ],
                 "exposeDockerSocket": true,
                 "from": {
                     "kind": "DockerImage",
                     "name": "buildroot:latest"
-                },
-                "env": [
-                    {
-                        "name": "DOCK_PLUGINS",
-                        "value": "{\"prebuild_plugins\": [{\"name\": \"change_from_in_dockerfile\"}, {\"name\": \"dockerfile_content\"}, {\"args\": {\"registry_uri\": \"10.34.2.242:5000\", \"insecure_registry\": true}, \"name\": \"change_source_registry\"}], \"exit_plugins\": [{\"args\": {\"url\": \"https://192.168.122.121:8443\", \"verify_ssl\": false}, \"name\": \"store_metadata_in_osv3\"}], \"postbuild_plugins\": [{\"args\": {\"image_id\": \"BUILT_IMAGE_ID\"}, \"name\": \"all_rpm_packages\"}]}"
-                    }
-                ]
-            }
-        },
-        "output": {
-            "to": {
-                "kind": "DockerImage",
-                "name": "10.34.2.242:5000/bkabrda/master/component:20150729150321"
-            }
-        },
-        "source": {
-            "git": {
-                "uri": "https://github.com/TomasTomecek/docker-hello-world.git",
-                "ref": "master"
+                }
             },
-            "type": "Git"
-        }
+            "type": "Custom"
+        },
+        "triggers": null
     },
-    "metadata": {
-        "name": "component-master"
+    "status": {
+        "lastVersion": 0
     }
 }

@@ -56,13 +56,18 @@ class Connection(object):
                                                 lookup=self.get_definition_for)
 
         # mapping of urls or tuples of urls to responses; use get_definition_for
-        #  to get values from this dict
+        # to get values from this dict
+        #
+        # The files are captured using the command line tool's
+        # --capture-dir parameter, and edited as needed.
         self.DEFINITION = {
             API_PREFIX + "namespaces/default/builds/": {
                 "get": {
+                    # Contains a list of builds
                     "file": "builds_list.json",
                 },
                 "post": {
+                    # Contains a single build named test-build-123
                     "file": "build_test-build-123.json",
                 },
             },
@@ -71,6 +76,8 @@ class Connection(object):
             (API_PREFIX + "namespaces/default/builds/%s" % TEST_BUILD,
              API_PREFIX + "namespaces/default/builds/%s/" % TEST_BUILD): {
                  "get": {
+                     # Contains a single build in Completed phase
+                     # named test-build-123
                      "file": "build_test-build-123.json",
                  },
                  "put": {
@@ -82,6 +89,7 @@ class Connection(object):
              API_PREFIX + "namespaces/default/builds/%s/log/?follow=0" % TEST_BUILD,
              API_PREFIX + "namespaces/default/builds/%s/log/?follow=1" % TEST_BUILD): {
                  "get": {
+                     # Lines of text
                      "file": "build_test-build-123_logs.txt",
                  },
              },
@@ -103,18 +111,23 @@ class Connection(object):
 
             API_PREFIX + "watch/namespaces/default/builds/%s/" % TEST_BUILD: {
                 "get": {
+                    # Single MODIFIED item, with a Build object in
+                    # Completed phase named test-build-123
                     "file": "watch_build_test-build-123.json",
                 }
             },
 
             API_PREFIX + "namespaces/default/buildconfigs/": {
                 "post": {
+                    # Contains a BuildConfig named test-build-config-123
                     "file": "created_build_config_test-build-config-123.json",
                 }
             },
 
             API_PREFIX + "namespaces/default/buildconfigs/%s/instantiate" % TEST_BUILD_CONFIG: {
                 "post": {
+                    # A Build named test-build-123 instantiated from a
+                    # BuildConfig named test-build-config-123
                     "file": "instantiated_test-build-config-123.json",
                 }
             },
@@ -124,6 +137,7 @@ class Connection(object):
              API_PREFIX + "namespaces/default/buildconfigs/%s/" % TEST_BUILD_CONFIG): {
                  "get": {
                      "custom_callback": self.buildconfig_not_found,
+                     # Empty file (no response content as the status is 404
                      "file": "not_found_build-config-component-master.json",
                  }
              },
@@ -131,7 +145,10 @@ class Connection(object):
             API_PREFIX + "namespaces/default/builds/?labelSelector=buildconfig%%3D%s" %
             TEST_BUILD_CONFIG: {
                 "get": {
-                    "file": "builds_list_fedora23-something_no_running.json"
+                    # Contains a BuildList with Builds labeled with
+                    # buildconfig=fedora23-something, none of which
+                    # are running
+                    "file": "builds_list.json"
                 }
             },
         }
@@ -200,7 +217,7 @@ class Connection(object):
         return self.request(url, "put", *args, **kwargs)
 
 
-@pytest.fixture(params=["0.5.4"])
+@pytest.fixture(params=["0.5.4", "1.0.4"])
 def openshift(request):
     os_inst = Openshift(API_PREFIX, API_VER, "/oauth/authorize")
     os_inst._con = Connection(request.param)
