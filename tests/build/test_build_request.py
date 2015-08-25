@@ -83,8 +83,6 @@ class TestBuildRequest(object):
             'git_ref': TEST_GIT_REF,
             'user': "john-foo",
             'component': "component",
-            'base_image': 'fedora:latest',
-            'name_label': 'fedora/resultingimage',
             'registry_uri': "registry.example.com",
             'openshift_uri': "http://openshift/",
         }
@@ -113,11 +111,8 @@ class TestBuildRequest(object):
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
-            'git_branch': TEST_GIT_BRANCH,
             'user': "john-foo",
             'component': TEST_COMPONENT,
-            'base_image': 'fedora:latest',
-            'name_label': name_label,
             'registry_uri': "http://registry.example.com:5000",
             'openshift_uri': "http://openshift/",
         }
