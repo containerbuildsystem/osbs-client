@@ -7,6 +7,9 @@ of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, absolute_import, unicode_literals
 
+import logging
+import os
+
 try:
     # py2
     import ConfigParser as configparser
@@ -18,6 +21,9 @@ except ImportError:
 
 from osbs.constants import DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION, GENERAL_CONFIGURATION_SECTION
 from osbs.exceptions import OsbsException
+
+
+logger = logging.getLogger(__name__)
 
 
 class Configuration(object):
@@ -43,14 +49,11 @@ class Configuration(object):
         :param kwargs: keyword arguments, which have highest priority: key is cli argument name
         """
         self.scp = configparser.SafeConfigParser()
-        try:
+        if conf_file and os.path.isfile(conf_file) and os.access(conf_file, os.R_OK):
             self.scp.read(conf_file)
-        except (IOError, TypeError):
-            pass
-        else:
             if not self.scp.has_section(conf_section):
-                raise OsbsException("Specified section '%s' not found in '%s'" %
-                                    (conf_section, conf_file))
+                logger.warning("Specified section '%s' not found in '%s'",
+                               conf_section, conf_file)
         self.conf_section = conf_section
         self.args = cli_args
         self.kwargs = kwargs
