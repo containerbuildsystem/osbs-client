@@ -1,0 +1,70 @@
+{
+    "apiVersion": "v1", 
+    "items": [
+        {
+        "apiVersion": "v1", 
+        "kind": "Build", 
+        "metadata": {
+            "creationTimestamp": "2015-08-26T16:18:18Z", 
+            "labels": {
+                "buildconfig": "fedora23-something", 
+                "is_autorebuild": "false"
+            }, 
+            "name": "component-master-1", 
+            "namespace": "default", 
+            "resourceVersion": "488", 
+            "selfLink": "/oapi/v1/namespaces/default/builds/component-master-1", 
+            "uid": "1013cdd6-4c0e-11e5-9c59-52540080e6f8"
+        }, 
+        "spec": {
+            "output": {
+                "to": {
+                    "kind": "DockerImage", 
+                    "name": "localhost:5000/twaugh/component:20150826171818"
+                }
+            }, 
+            "resources": {}, 
+            "source": {
+                "git": {
+                    "ref": "master", 
+                    "uri": "https://github.com/TomasTomecek/docker-hello-world.git"
+                }, 
+                "type": "Git"
+            }, 
+            "strategy": {
+                "customStrategy": {
+                    "env": [
+                        {
+                            "name": "DOCK_PLUGINS", 
+                            "value": "{\"prebuild_plugins\": [{\"args\": {}, \"name\": \"pull_base_image\"}, {\"name\": \"change_from_in_dockerfile\"}, {\"name\": \"dockerfile_content\"}], \"exit_plugins\": [{\"args\": {\"url\": \"https://osbs.localdomain:8443/\", \"verify_ssl\": false, \"use_auth\": false}, \"name\": \"store_metadata_in_osv3\"}, {\"name\": \"remove_built_image\"}], \"postbuild_plugins\": [{\"args\": {\"image_id\": \"BUILT_IMAGE_ID\"}, \"name\": \"all_rpm_packages\"}]}"
+                        }, 
+                        {
+                            "name": "OPENSHIFT_CUSTOM_BUILD_BASE_IMAGE", 
+                            "value": "buildroot:latest"
+                        }
+                    ], 
+                    "exposeDockerSocket": true, 
+                    "from": {
+                        "kind": "DockerImage", 
+                        "name": "buildroot:latest"
+                    }
+                }, 
+                "type": "Custom"
+            }
+        }, 
+        "status": {
+            "config": {
+                "kind": "BuildConfig", 
+                "name": "fedora23-something", 
+                "namespace": "default"
+            }, 
+            "phase": "Pending"
+        }
+    }
+    ], 
+    "kind": "BuildList", 
+    "metadata": {
+        "resourceVersion": "483", 
+        "selfLink": "/oapi/v1/namespaces/default/builds/"
+    }
+}
