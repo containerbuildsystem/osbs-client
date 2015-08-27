@@ -338,6 +338,12 @@ def cli():
                         help="path to client certificate in PEM format to use for authentication")
     parser.add_argument("--client-key", action='store',
                         help="path to key file for the certificate provided with --client-cert")
+    parser.add_argument("--kerberos-keytab", action='store',
+                        help="path to kerberos keytab to obtain credentials from")
+    parser.add_argument("--kerberos-principal", action='store',
+                        help="kerberos principal for the provided keytab")
+    parser.add_argument("--kerberos-ccache", action='store',
+                        help="path to credential cache to use instead of the default one")
     parser.add_argument("--verify-ssl", action='store_true', default=None,
                         help="verify CA on secure connections")
     parser.add_argument("--with-auth", action="store_true", dest="use_auth", default=None,

@@ -195,6 +195,15 @@ class Configuration(object):
     def get_use_kerberos(self):
         return self._get_value("use_kerberos", self.conf_section, "use_kerberos", can_miss=True, is_bool_val=True)
 
+    def get_kerberos_keytab(self):
+        return self._get_value("kerberos_keytab", self.conf_section, "kerberos_keytab", can_miss=True)
+
+    def get_kerberos_principal(self):
+        return self._get_value("kerberos_principal", self.conf_section, "kerberos_principal", can_miss=True)
+
+    def get_kerberos_ccache(self):
+        return self._get_value("kerberos_ccache", self.conf_section, "kerberos_ccache", can_miss=True)
+
     def get_registry_uri(self):
         return self._get_value("registry_uri", self.conf_section, "registry_uri", can_miss=True)
 
