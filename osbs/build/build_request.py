@@ -208,6 +208,19 @@ class CommonBuild(BuildRequest):
                 self.dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
                                           "use_auth", self.spec.use_auth.value)
 
+        if self.spec.os_username.value is not None and self.spec.os_password.value is not None:
+            try:
+                self.dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3",
+                                          "username", self.spec.os_username.value)
+                self.dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3",
+                                          "password", self.spec.os_password.value)
+            except RuntimeError:
+                # For compatibility with older osbs.conf files
+                self.dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
+                                          "username", self.spec.os_username.value)
+                self.dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
+                                          "password", self.spec.os_password.value)
+
     def validate_input(self):
         self.spec.validate()
 
