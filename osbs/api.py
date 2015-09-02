@@ -137,7 +137,7 @@ class OSBS(object):
         :return: instance of build.build_response.BuildResponse
         """
         build = build_request.render()
-        response = self.os.create_build(json.dumps(build.build_json), namespace=namespace)
+        response = self.os.create_build(json.dumps(build), namespace=namespace)
         build_response = BuildResponse(response)
         return build_response
 
