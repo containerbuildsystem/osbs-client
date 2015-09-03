@@ -30,7 +30,8 @@ except ImportError:
 
 logger = logging.getLogger("osbs.tests")
 API_VER = Configuration.get_openshift_api_version()
-API_PREFIX = "/oapi/{v}/".format(v=API_VER)
+OAPI_PREFIX = "/oapi/{v}/".format(v=API_VER)
+API_PREFIX = "/api/{v}/".format(v=API_VER)
 
 
 class StreamingResponse(object):
@@ -61,7 +62,7 @@ class Connection(object):
         # The files are captured using the command line tool's
         # --capture-dir parameter, and edited as needed.
         self.DEFINITION = {
-            API_PREFIX + "namespaces/default/builds/": {
+            OAPI_PREFIX + "namespaces/default/builds/": {
                 "get": {
                     # Contains a list of builds
                     "file": "builds_list.json",
@@ -73,8 +74,8 @@ class Connection(object):
             },
 
             # Some 'builds' requests are with a trailing slash, some without:
-            (API_PREFIX + "namespaces/default/builds/%s" % TEST_BUILD,
-             API_PREFIX + "namespaces/default/builds/%s/" % TEST_BUILD): {
+            (OAPI_PREFIX + "namespaces/default/builds/%s" % TEST_BUILD,
+             OAPI_PREFIX + "namespaces/default/builds/%s/" % TEST_BUILD): {
                  "get": {
                      # Contains a single build in Completed phase
                      # named test-build-123
@@ -85,9 +86,9 @@ class Connection(object):
                  }
              },
 
-            (API_PREFIX + "namespaces/default/builds/%s/log/" % TEST_BUILD,
-             API_PREFIX + "namespaces/default/builds/%s/log/?follow=0" % TEST_BUILD,
-             API_PREFIX + "namespaces/default/builds/%s/log/?follow=1" % TEST_BUILD): {
+            (OAPI_PREFIX + "namespaces/default/builds/%s/log/" % TEST_BUILD,
+             OAPI_PREFIX + "namespaces/default/builds/%s/log/?follow=0" % TEST_BUILD,
+             OAPI_PREFIX + "namespaces/default/builds/%s/log/?follow=1" % TEST_BUILD): {
                  "get": {
                      # Lines of text
                      "file": "build_test-build-123_logs.txt",
@@ -103,13 +104,13 @@ class Connection(object):
                  }
              },
 
-            API_PREFIX + "users/~/": {
+            OAPI_PREFIX + "users/~/": {
                 "get": {
                     "file": "get_user.json",
                 }
             },
 
-            API_PREFIX + "watch/namespaces/default/builds/%s/" % TEST_BUILD: {
+            OAPI_PREFIX + "watch/namespaces/default/builds/%s/" % TEST_BUILD: {
                 "get": {
                     # Single MODIFIED item, with a Build object in
                     # Completed phase named test-build-123
@@ -117,14 +118,14 @@ class Connection(object):
                 }
             },
 
-            API_PREFIX + "namespaces/default/buildconfigs/": {
+            OAPI_PREFIX + "namespaces/default/buildconfigs/": {
                 "post": {
                     # Contains a BuildConfig named test-build-config-123
                     "file": "created_build_config_test-build-config-123.json",
                 }
             },
 
-            API_PREFIX + "namespaces/default/buildconfigs/%s/instantiate" % TEST_BUILD_CONFIG: {
+            OAPI_PREFIX + "namespaces/default/buildconfigs/%s/instantiate" % TEST_BUILD_CONFIG: {
                 "post": {
                     # A Build named test-build-123 instantiated from a
                     # BuildConfig named test-build-config-123
@@ -133,8 +134,8 @@ class Connection(object):
             },
 
             # use both version with ending slash and without it
-            (API_PREFIX + "namespaces/default/buildconfigs/%s" % TEST_BUILD_CONFIG,
-             API_PREFIX + "namespaces/default/buildconfigs/%s/" % TEST_BUILD_CONFIG): {
+            (OAPI_PREFIX + "namespaces/default/buildconfigs/%s" % TEST_BUILD_CONFIG,
+             OAPI_PREFIX + "namespaces/default/buildconfigs/%s/" % TEST_BUILD_CONFIG): {
                  "get": {
                      "custom_callback": self.buildconfig_not_found,
                      # Empty file (no response content as the status is 404
@@ -142,7 +143,7 @@ class Connection(object):
                  }
              },
 
-            API_PREFIX + "namespaces/default/builds/?labelSelector=buildconfig%%3D%s" %
+            OAPI_PREFIX + "namespaces/default/builds/?labelSelector=buildconfig%%3D%s" %
             TEST_BUILD_CONFIG: {
                 "get": {
                     # Contains a BuildList with Builds labeled with
@@ -150,6 +151,15 @@ class Connection(object):
                     # are running
                     "file": "builds_list.json"
                 }
+            },
+
+            API_PREFIX + "namespaces/default/pods/?labelSelector=openshift.io%%2Fbuild.name%%3D%s" %
+            TEST_BUILD: {
+                "get": {
+                    # Contains a list of build pods, just needs not to
+                    # be empty
+                    "file": "pods.json",
+                },
             },
         }
 
@@ -219,7 +229,8 @@ class Connection(object):
 
 @pytest.fixture(params=["0.5.4", "1.0.4"])
 def openshift(request):
-    os_inst = Openshift(API_PREFIX, API_VER, "/oauth/authorize")
+    os_inst = Openshift(OAPI_PREFIX, API_VER, "/oauth/authorize",
+                        k8s_api_url=API_PREFIX)
     os_inst._con = Connection(request.param)
     return os_inst
 

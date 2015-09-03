@@ -47,10 +47,12 @@ def check_response(response):
 # TODO: error handling: create function which handles errors in response object
 class Openshift(object):
     def __init__(self, openshift_api_url, openshift_api_version, openshift_oauth_url,
+                 k8s_api_url=None,
                  verbose=False, username=None, password=None, use_kerberos=False,
                  kerberos_keytab=None, kerberos_principal=None, kerberos_ccache=None,
                  client_cert=None, client_key=None, verify_ssl=True, use_auth=None):
         self.os_api_url = openshift_api_url
+        self.k8s_api_url = k8s_api_url
         self._os_api_version = openshift_api_version
         self._os_oauth_url = openshift_oauth_url
         self.verbose = verbose
@@ -75,6 +77,11 @@ class Openshift(object):
     @property
     def os_oauth_url(self):
         return self._os_oauth_url
+
+    def _build_k8s_url(self, url, **query):
+        if query:
+            url += ("?" + urlencode(query))
+        return urlparse.urljoin(self.k8s_api_url, url)
 
     def _build_url(self, url, **query):
         if query:
@@ -182,6 +189,13 @@ class Openshift(object):
         url = self._build_url("namespaces/%s/builds/%s/" % (namespace, build_id))
         return self._put(url, data=json.dumps(br.json),
                          headers={"Content-Type": "application/json"})
+
+    def list_pods(self, label=None, namespace=DEFAULT_NAMESPACE):
+        kwargs = {}
+        if label is not None:
+            kwargs['labelSelector'] = label
+        url = self._build_k8s_url("namespaces/%s/pods/" % namespace, **kwargs)
+        return self._get(url)
 
     def get_build_config(self, build_config_id, namespace=DEFAULT_NAMESPACE):
         url = self._build_url("namespaces/%s/buildconfigs/%s/" % (namespace, build_config_id))

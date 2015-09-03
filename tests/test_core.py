@@ -7,6 +7,7 @@ of the BSD license. See the LICENSE file for details.
 """
 import six
 
+from osbs.http import HttpResponse
 from osbs.constants import BUILD_FINISHED_STATES
 
 from tests.constants import TEST_BUILD, TEST_LABEL, TEST_LABEL_VALUE
@@ -22,6 +23,11 @@ class TestOpenshift(object):
         l = openshift.list_builds()
         assert l is not None
         assert bool(l.json())  # is there at least something
+
+    def test_list_pods(self, openshift):
+        response = openshift.list_pods(label="openshift.io/build.name=%s" %
+                                       TEST_BUILD)
+        assert isinstance(response, HttpResponse)
 
     def test_get_oauth_token(self, openshift):
         token = openshift.get_oauth_token()

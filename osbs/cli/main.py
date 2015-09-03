@@ -217,6 +217,19 @@ def cmd_get_user(args, osbs):
         print("Name: \"%s\"\nFull Name: \"%s\"" % (name, full_name))
 
 
+def cmd_get_build_image_id(args, osbs):
+    pod = osbs.get_pod_for_build(args.BUILD_ID[0], namespace=args.namespace)
+    if args.output == 'json':
+        json_output = pod.get_container_image_ids()
+        print_json_nicely(json_output)
+    elif args.output == 'text':
+        format_str = "{tag:18} {image:64}"
+        print(format_str.format(tag='TAG', image='IMAGE ID'), file=sys.stderr)
+        image_ids = pod.get_container_image_ids()
+        for name, image_id in image_ids.items():
+            print(format_str.format(tag=name, image=image_id))
+
+
 def str_on_2_unicode_on_3(s):
     """
     argparse is way too awesome when doing repr() on choices when printing usage
@@ -319,6 +332,12 @@ def cli():
     build_parser.add_argument("--storage-limit", action='store', required=False,
                               help="storage limit")
     build_parser.set_defaults(func=cmd_build)
+
+    get_build_image_id = subparsers.add_parser(str_on_2_unicode_on_3('get-build-image-id'),
+                                                help='get build container image ID',
+                                                description='get build container images for a build in a namespace')
+    get_build_image_id.add_argument("BUILD_ID", help="build ID", nargs=1)
+    get_build_image_id.set_defaults(func=cmd_get_build_image_id)
 
     parser.add_argument("--openshift-uri", action='store', metavar="URL",
                         help="openshift URL to remote API")
