@@ -254,6 +254,8 @@ class OSBS(object):
             yum_repourls=yum_repourls,
             source_secret=self.build_conf.get_source_secret(),
             use_auth=self.build_conf.get_use_auth(),
+            os_username=self.build_conf.get_username(),
+            os_password=self.build_conf.get_password(),
             pulp_registry=self.os_conf.get_pulp_registry(),
             nfs_server_path=self.os_conf.get_nfs_server_path(),
             nfs_dest_dir=self.build_conf.get_nfs_destination_dir(),
@@ -294,6 +296,8 @@ class OSBS(object):
             openshift_uri=self.os_conf.get_openshift_base_uri(),
             yum_repourls=yum_repourls,
             use_auth=self.build_conf.get_use_auth(),
+            os_username=self.build_conf.get_username(),
+            os_password=self.build_conf.get_password(),
         )
         response = self._create_build_config_and_build(build_request, namespace)
         build_response = BuildResponse(response)

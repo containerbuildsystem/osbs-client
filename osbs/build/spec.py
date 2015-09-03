@@ -116,6 +116,8 @@ class CommonSpec(BuildTypeSpec):
     name = BuildIDParam()
     yum_repourls = BuildParam("yum_repourls")
     use_auth = BuildParam("use_auth", allow_none=True)
+    os_username = BuildParam("os_username", allow_none=True)
+    os_password = BuildParam("os_password", allow_none=True)
 
     def __init__(self):
         self.required_params = [
@@ -129,7 +131,8 @@ class CommonSpec(BuildTypeSpec):
 
     def set_params(self, git_uri=None, git_ref=None, registry_uri=None, user=None,
                    component=None, openshift_uri=None,
-                   yum_repourls=None, use_auth=None, **kwargs):
+                   yum_repourls=None, use_auth=None, os_username=None,
+                   os_password=None, **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
         self.user.value = user
@@ -143,6 +146,8 @@ class CommonSpec(BuildTypeSpec):
             raise OsbsValidationException("yum_repourls must be a list")
         self.yum_repourls.value = yum_repourls or []
         self.use_auth.value = use_auth
+        self.os_username.value = os_username
+        self.os_password.value = os_password
 
 
 class ProdSpec(CommonSpec):
