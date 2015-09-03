@@ -598,3 +598,88 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins,
                                 "postbuild_plugins", "import_image", "args",
                                 "url") == kwargs["openshift_uri"]
+
+    def test_render_prod_request_new_secrets(self, tmpdir):
+        bm = BuildManager(INPUTS_PATH)
+        secret_name = 'mysecret'
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'base_image': 'fedora:latest',
+            'name_label': "fedora/resultingimage",
+            'registry_uri': "registry.example.com",
+            'openshift_uri': "http://openshift/",
+            'sources_command': "make",
+            'architecture': "x86_64",
+            'vendor': "Foo Vendor",
+            'build_host': "our.build.host.example.com",
+            'authoritative_registry': "registry.example.com",
+            'pulp_registry': 'foo',
+            'pulp_secret': secret_name,
+        }
+
+        # Default required version (0.5.4), implicitly and explicitly
+        for required in (None, [0, 5, 4]):
+            build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+            if required is not None:
+                build_request.set_openshift_required_version(required)
+
+            build_request.set_params(**kwargs)
+            build_json = build_request.render()
+
+            # Using the sourceSecret scheme
+            assert 'sourceSecret' in build_json['spec']['source']
+            assert build_json['spec']['source']\
+                ['sourceSecret']['name'] == secret_name
+
+            # Not using the secrets array scheme
+            assert 'secrets' not in build_json['spec']['strategy']['customStrategy']
+
+            # We shouldn't have pulp_secret_path set
+            env = build_json['spec']['strategy']['customStrategy']['env']
+            plugins_json = None
+            for d in env:
+                if d['name'] == 'DOCK_PLUGINS':
+                    plugins_json = d['value']
+                    break
+
+            assert plugins_json is not None
+            plugins = json.loads(plugins_json)
+            assert 'pulp_secret_path' not in plugin_value_get(plugins,
+                                                              'postbuild_plugins',
+                                                              'pulp_push',
+                                                              'args')
+
+        # Set required version to 1.0.6
+
+        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        build_request.set_openshift_required_version([1, 0, 6])
+        build_json = build_request.render()
+        # Not using the sourceSecret scheme
+        assert 'sourceSecret' not in build_json['spec']['source']
+
+        # Using the secrets array scheme instead
+        assert 'secrets' in build_json['spec']['strategy']['customStrategy']
+        secrets = build_json['spec']['strategy']['customStrategy']['secrets']
+        pulp_secret = [secret for secret in secrets
+                       if secret['secretSource']['name'] == secret_name]
+        assert len(pulp_secret) > 0
+        assert 'mountPath' in pulp_secret[0]
+
+        # Check that the secret's mountPath matches the plugin's
+        # configured path for the secret
+        mount_path = pulp_secret[0]['mountPath']
+        env = build_json['spec']['strategy']['customStrategy']['env']
+        plugins_json = None
+        for d in env:
+            if d['name'] == 'DOCK_PLUGINS':
+                plugins_json = d['value']
+                break
+
+        assert plugins_json is not None
+        plugins = json.loads(plugins_json)
+        assert plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push',
+                                'args', 'pulp_secret_path') == mount_path

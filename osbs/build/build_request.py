@@ -22,6 +22,7 @@ from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.spec import CommonSpec, ProdSpec, SimpleSpec
 from osbs.constants import PROD_BUILD_TYPE, SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
 from osbs.constants import PROD_WITH_SECRET_BUILD_TYPE
+from osbs.constants import SECRETS_PATH
 from osbs.exceptions import OsbsException, OsbsValidationException
 
 
@@ -52,6 +53,7 @@ class BuildRequest(object):
         self._inner_template = None  # dock json
         self._dj = None
         self._resource_limits = None
+        self._openshift_required_version = [0, 5, 4]
 
     def set_params(self, **kwargs):
         """
@@ -74,6 +76,10 @@ class BuildRequest(object):
 
         if storage is not None:
             self._resource_limits['storage'] = storage
+
+    def set_openshift_required_version(self, openshift_required_version):
+        if openshift_required_version is not None:
+            self._openshift_required_version = openshift_required_version
 
     @staticmethod
     def new_by_type(build_name, *args, **kwargs):
@@ -208,6 +214,15 @@ class CommonBuild(BuildRequest):
                 self.dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
                                           "use_auth", self.spec.use_auth.value)
 
+        # For Origin 1.0.6 we'll use the 'secrets' array; for earlier
+        # versions we'll just use 'sourceSecret'
+        if self._openshift_required_version < [1, 0, 6]:
+            if 'secrets' in self.template['spec']['strategy']['customStrategy']:
+                del self.template['spec']['strategy']['customStrategy']['secrets']
+        else:
+            if 'sourceSecret' in self.template['spec']['source']:
+                del self.template['spec']['source']['sourceSecret']
+
     def validate_input(self):
         self.spec.validate()
 
@@ -226,7 +241,7 @@ class ProductionBuild(CommonBuild):
 
         these parameters are accepted:
 
-        :param source_secret: str, resource name of source secret
+        :param pulp_secret: str, resource name of pulp secret
         :param koji_target: str, koji tag with packages used to build the image
         :param kojiroot: str, URL from which koji packages are fetched
         :param kojihub: str, URL of the koji hub
@@ -332,16 +347,39 @@ class ProductionBuild(CommonBuild):
                                       'git_ref', self.spec.git_ref.value)
 
         # If there is a pulp secret, use it
-        if self.spec.source_secret.value:
-            name = self.spec.source_secret.value
-            self.template['spec']['source']['sourceSecret']['name'] = name
+        if self.spec.pulp_secret.value:
+            name = self.spec.pulp_secret.value
+
+            if 'secrets' in self.template['spec']['strategy']['customStrategy']:
+                # origin 1.0.6 and newer
+                pulp_secret_path = os.path.join(SECRETS_PATH, name)
+                logger.info("Configuring pulp secret at %s", pulp_secret_path)
+                custom = self.template['spec']['strategy']['customStrategy']
+                custom['secrets'].append({
+                    'secretSource': {
+                        'name': name,
+                    },
+                    'mountPath': pulp_secret_path,
+                })
+                self.dj.dock_json_set_arg('postbuild_plugins', 'pulp_push',
+                                          'pulp_secret_path', pulp_secret_path)
+            else:
+                # origin 1.0.5 and earlier
+                logger.info("Configuring pulp secret as sourceSecret")
+                if 'sourceSecret' not in self.template['spec']['source']:
+                    raise OsbsValidationException("JSON template does not allow secrets")
+
+                self.template['spec']['source']['sourceSecret']['name'] = name
 
             # Don't push to docker registry, we're using pulp here
             # but still construct the unique tag
             self.template['spec']['output']['to']['name'] = self.spec.image_tag.value
         else:
             # Otherwise remove references to the secret
-            del self.template['spec']['source']['sourceSecret']
+            if 'sourceSecret' in self.template['spec']['source']:
+                del self.template['spec']['source']['sourceSecret']
+            if 'secrets' in self.template['spec']['strategy']['customStrategy']:
+                del self.template['spec']['strategy']['customStrategy']['secrets']
 
         # If NFS destination set, use it
         nfs_server_path = self.spec.nfs_server_path.value
@@ -360,8 +398,8 @@ class ProductionBuild(CommonBuild):
             self.dj.dock_json_set_arg('postbuild_plugins', 'pulp_push',
                                       'pulp_registry_name', pulp_registry)
 
-            # Verify we have either a sourceSecret or username/password
-            if 'sourceSecret' not in self.template['spec']['source']:
+            # Verify we have either a secret or username/password
+            if self.spec.pulp_secret.value is None:
                 conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins',
                                                          'pulp_push')
                 args = conf.get('args', {})

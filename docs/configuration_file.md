@@ -27,6 +27,8 @@ Some options are also mandatory.
 
 * `verbose` (*optional*, `boolean`) — enable verbose logging
 
+* `openshift_required_version` (*optional*, `string`) — required version to run against (adjusts build template as appropriate)
+
 ### instance options
 
 * `openshift_uri` (**mandatory**, `string`) — root URL where openshift master API server is listening (e.g. `localhost:8443`)
@@ -81,7 +83,7 @@ Some options are also mandatory.
 
 * `use_auth` (*optional*, `boolean`) — by default, osbs-client is trying to authenticate against OpenShift master to get OAuth token; you may disable the process with this option
 
-* `source_secret` (*optional*, `string`) — name of [kubernetes secret](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/design/secrets.md) to use for pulp plugin
+* `pulp_secret` (*optional*, `string`) — name of [kubernetes secret](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/design/secrets.md) to use for pulp plugin
 
 * `nfs_server_path` (*optional*, `string`) — NFS server and path to use for storing built image (it is passed to `mount` command)
 

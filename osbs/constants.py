@@ -40,3 +40,6 @@ PROD_BUILD_TYPE = "prod"
 PROD_WITHOUT_KOJI_BUILD_TYPE = "prod-without-koji"
 PROD_WITH_SECRET_BUILD_TYPE = "prod-with-secret"
 SIMPLE_BUILD_TYPE = "simple"
+
+# Where will secrets be mounted?
+SECRETS_PATH = "/var/run/secrets/atomic-reactor"

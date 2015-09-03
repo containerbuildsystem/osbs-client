@@ -1,4 +1,4 @@
-# Using a Source Secret
+# Using Kubernetes Secrets
 
 The `prod` build type allows you to provide some secret content to the build using [Kubernetes Secret Volumes](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/secrets.md).
 
@@ -6,7 +6,7 @@ This is useful when the build workflow requires keys, certificates, etc, which s
 
 The way it works is that a special resource, of type 'Secret', is manually created on the host. This resource is persistent and contains the secret data in the form of keys and base64-encoded values.
 
-Then, when a build container is created, a secret volume is created by OpenShift from that resource and mounted within the container at `$SOURCE_SECRET_PATH`. The secret values can then be accessed as files.
+Then, when a build container is created, a secret volume is created by OpenShift from that resource and mounted within the container at a specified path. The secret values can then be accessed as files.
 
 
 ## Creating the resource
@@ -21,7 +21,7 @@ secrets/mysecret
 
 You also have to allow the build pod service account to [access the secret](https://docs.openshift.org/latest/dev_guide/service_accounts.html#managing-allowed-secrets).
 ```
-$ oc secrets add serviceaccount/default secrets/mysecret --for=mount
+$ oc secrets add serviceaccount/builder secrets/mysecret --for=mount
 ```
 
 ### OpenShift < 0.6.1
@@ -53,11 +53,11 @@ In your OSBS build instance configuration, use the following values:
 
 ```
 build_type = prod
-source_secret = mysecret
+pulp_secret = mysecret
 ```
 
-The `source_secret` name must match the resource name specified in the JSON.
+The `pulp_secret` name must match the resource name specified in the JSON.
 
 ## Fetching the secrets within the build root
 
-In your `dock` plugin which needs the secret values, fetch the location of the Secret Volume mount from the environment variable `SOURCE_SECRET_PATH`. The files in that directory will match the keys from the secret resource's data (`key` and `cert`, from the JSON shown above).
+In your `atomic-reactor` plugin which needs the secret values, provide a configuration parameter to specify the location of the Secret Volume mount. The files in that directory will match the keys from the secret resource's data (`key` and `cert`, from the JSON shown above).

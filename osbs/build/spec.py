@@ -159,7 +159,7 @@ class ProdSpec(CommonSpec):
     kojiroot = BuildParam("kojiroot", allow_none=True)
     kojihub = BuildParam("kojihub", allow_none=True)
     image_tag = BuildParam("image_tag")
-    source_secret = BuildParam("source_secret", allow_none=True)
+    pulp_secret = BuildParam("pulp_secret", allow_none=True)
     pulp_registry = BuildParam("pulp_registry", allow_none=True)
     nfs_server_path = BuildParam("nfs_server_path", allow_none=True)
     nfs_dest_dir = BuildParam("nfs_dest_dir", allow_none=True)
@@ -177,7 +177,7 @@ class ProdSpec(CommonSpec):
             self.koji_target,
             self.kojiroot,
             self.kojihub,
-            self.source_secret,
+            self.pulp_secret,
             self.pulp_registry,
             self.nfs_server_path,
             self.git_push_url,
@@ -187,7 +187,8 @@ class ProdSpec(CommonSpec):
     def set_params(self, sources_command=None, architecture=None, vendor=None,
                    build_host=None, authoritative_registry=None,
                    koji_target=None, kojiroot=None, kojihub=None,
-                   source_secret=None, pulp_registry=None, nfs_server_path=None,
+                   source_secret=None, # compatibility name for pulp_secret
+                   pulp_secret=None, pulp_registry=None, nfs_server_path=None,
                    nfs_dest_dir=None, git_branch=None, base_image=None,
                    name_label=None, git_push_url=None, git_push_username=None,
                    **kwargs):
@@ -200,7 +201,7 @@ class ProdSpec(CommonSpec):
         self.koji_target.value = koji_target
         self.kojiroot.value = kojiroot
         self.kojihub.value = kojihub
-        self.source_secret.value = source_secret
+        self.pulp_secret.value = pulp_secret or source_secret
         self.pulp_registry.value = pulp_registry
         self.nfs_server_path.value = nfs_server_path
         self.nfs_dest_dir.value = nfs_dest_dir

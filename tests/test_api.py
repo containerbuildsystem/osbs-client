@@ -19,7 +19,7 @@ from osbs import utils
 
 from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
                              TEST_GIT_URI, TEST_TARGET, TEST_USER)
-from tests.fake_api import openshift, osbs
+from tests.fake_api import openshift, osbs, osbs106
 
 
 class TestOSBS(object):
@@ -47,6 +47,23 @@ class TestOSBS(object):
                                           TEST_GIT_BRANCH, TEST_USER,
                                           TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
         assert isinstance(response, BuildResponse)
+
+    def test_create_prod_build_set_required_version(self, osbs106):
+        class MockParser(object):
+            labels = {'Name': 'fedora23/something'}
+            baseimage = 'fedora23/python'
+        (flexmock(utils)
+            .should_receive('get_df_parser')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH)
+            .and_return(MockParser()))
+        (flexmock(BuildRequest)
+            .should_receive('set_openshift_required_version')
+            .with_args([1, 0, 6])
+            .once())
+        response = osbs106.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                             TEST_GIT_BRANCH, TEST_USER,
+                                             TEST_COMPONENT, TEST_TARGET,
+                                             TEST_ARCH)
 
     def test_create_prod_with_secret_build(self, osbs):
         # TODO: test situation when a buildconfig already exists
