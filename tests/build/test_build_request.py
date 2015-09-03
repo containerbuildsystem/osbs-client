@@ -210,8 +210,8 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         assert 'sourceSecret' not in build_json["spec"]["source"]
-        plugin_value_get(plugins, "prebuild_plugins", "add_yum_repo_by_url",
-                         "args", "repourls") == ["http://example.com/my.repo"]
+        assert plugin_value_get(plugins, "prebuild_plugins", "add_yum_repo_by_url",
+                                "args", "repourls") == ["http://example.com/my.repo"]
 
         labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile",
                                   "args", "labels")
