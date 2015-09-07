@@ -235,6 +235,12 @@ class Configuration(object):
     def get_use_auth(self):
         return self._get_value("use_auth", self.conf_section, "use_auth", can_miss=True, is_bool_val=True)
 
+    def get_builder_use_auth(self):
+        return self._get_value("builder_use_auth", self.conf_section,
+                               "builder_use_auth", can_miss=True,
+                               default=self.get_use_auth(),
+                               is_bool_val=True)
+
     def get_source_secret(self):
         return self._get_value("source_secret", self.conf_section,
                                "source_secret", can_miss=True)
