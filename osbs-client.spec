@@ -67,6 +67,7 @@ Group:          Development/Tools
 License:        BSD
 Requires:       python3-dockerfile-parse
 Requires:       python3-pycurl
+Requires:       python3-dateutil
 Requires:       python3-setuptools
 Requires:       krb5-workstation
 #Requires:       python3-requests

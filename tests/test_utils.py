@@ -9,6 +9,8 @@ from flexmock import flexmock
 import os
 import pytest
 import datetime
+import sys
+from time import tzset
 
 from osbs.utils import (deep_update,
                         get_imagestreamtag_from_image,
@@ -48,22 +50,40 @@ def test_get_imagestreamtag_from_image(img, expected):
     assert get_imagestreamtag_from_image(img) == expected
 
 
+@pytest.mark.parametrize('tz', [
+    'UTC',
+    'EST',
+])
 @pytest.mark.parametrize(('rfc3339', 'seconds'), [
     ('2015-08-24T10:41:00Z', 1440412860.0),
 ])
-def test_get_time_from_rfc3339_valid(rfc3339, seconds):
+def test_get_time_from_rfc3339_valid(rfc3339, seconds, tz):
+    os.environ['TZ'] = tz
+    tzset()
     assert get_time_from_rfc3339(rfc3339) == seconds
+
+
+@pytest.mark.skipif(sys.version_info[0] < 3,
+                    reason="requires python3")
+@pytest.mark.parametrize('tz', [
+    'UTC',
+    'EST',
+])
+@pytest.mark.parametrize(('rfc3339', 'seconds'), [
+    # These tests only work in Python 3
+    ('2015-08-24T10:41:00.1Z', 1440412860.1),
+    ('2015-09-22T11:12:00+01:00', 1442916720),
+])
+def test_get_time_from_rfc3339_valid_alt_format(rfc3339, seconds, tz):
+    os.environ['TZ'] = tz
+    tzset()
 
 
 @pytest.mark.parametrize('rfc3339', [
     ('just completely invalid'),
-
-    # The implementation doesn't know enough about RFC 3339 to
-    # distinguish between invalid and unsupported
-    ('2015-08-24T10:41:00.1Z'),
 ])
 def test_get_time_from_rfc3339_invalid(rfc3339):
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ValueError):
         get_time_from_rfc3339(rfc3339)
 
 
