@@ -7,12 +7,15 @@ of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, unicode_literals, absolute_import
 import json
+import os
 
 import logging
 from osbs.kerberos_ccache import kerberos_ccache_init
 from osbs.build.build_response import BuildResponse
 from osbs.constants import DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNNING_STATES, BUILD_CANCELLED_STATE
 from osbs.constants import WATCH_MODIFIED, WATCH_DELETED, WATCH_ERROR
+from osbs.constants import (SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
+                            SERVICEACCOUNT_CACRT)
 from osbs.exceptions import OsbsResponseException, OsbsException, OsbsWatchBuildNotFound, \
                             OsbsAuthException
 
@@ -66,11 +69,42 @@ class Openshift(object):
         self.kerberos_keytab = kerberos_keytab
         self.kerberos_principal = kerberos_principal
         self.kerberos_ccache = kerberos_ccache
+        self.token = None
+        self.ca = None
+        auth_credentials_provided = bool(use_kerberos or
+                                         (username and password))
         if use_auth is None:
-            self.use_auth = bool(use_kerberos or (username and password))
+            self.use_auth = auth_credentials_provided
+            if not self.use_auth:
+                # Are we running inside a pod? If so, we will have a
+                # token available which can be used for authentication
+                self.use_auth = self.can_use_serviceaccount_token()
         else:
             self.use_auth = use_auth
-        self.token = None
+            if not auth_credentials_provided:
+                # We've been told to use authentication but no
+                # credentials have been given. See if we're running
+                # inside a pod, and if so use the provided token.
+                self.can_use_serviceaccount_token()
+
+    def can_use_serviceaccount_token(self):
+        try:
+            with open(os.path.join(SERVICEACCOUNT_SECRET,
+                                   SERVICEACCOUNT_TOKEN),
+                      mode='rt') as tfp:
+                self.token = tfp.read().rstrip()
+
+            ca = os.path.join(SERVICEACCOUNT_SECRET,
+                              SERVICEACCOUNT_CACRT)
+            if os.access(ca, os.R_OK):
+                self.ca = ca
+        except IOError:
+            # No token available
+            return False
+        else:
+            # We can authenticate using the supplied token
+            logger.info("Using service account's auth token")
+            return True
 
     @property
     def os_oauth_url(self):
@@ -102,6 +136,10 @@ class Openshift(object):
                 kwargs["client_key"] = self.client_key
             else:
                 raise OsbsAuthException("You need to provide both client certificate and key.")
+
+        # Do we have a ca.crt? If so, use it
+        if self.verify_ssl and self.ca is not None:
+            kwargs["ca"] = self.ca
 
         return headers, kwargs
 

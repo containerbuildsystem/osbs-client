@@ -40,3 +40,8 @@ PROD_BUILD_TYPE = "prod"
 PROD_WITHOUT_KOJI_BUILD_TYPE = "prod-without-koji"
 PROD_WITH_SECRET_BUILD_TYPE = "prod-with-secret"
 SIMPLE_BUILD_TYPE = "simple"
+
+# How to authenticate from within a pod
+SERVICEACCOUNT_SECRET = "/var/run/secrets/kubernetes.io/serviceaccount"
+SERVICEACCOUNT_TOKEN = "token"
+SERVICEACCOUNT_CACRT = "ca.crt"
