@@ -36,12 +36,12 @@ def test_git_repo_humanish_part_from_uri(uri, humanish):
 
 
 @pytest.mark.parametrize(('img', 'expected'), [
-    ('fedora23', 'fedora23'),
+    ('fedora23', 'fedora23:latest'),
     ('fedora23:sometag', 'fedora23:sometag'),
-    ('fedora23/python', 'fedora23-python'),
+    ('fedora23/python', 'fedora23-python:latest'),
     ('fedora23/python:sometag', 'fedora23-python:sometag'),
-    ('docker.io/fedora23', 'fedora23'),
-    ('docker.io/fedora23/python', 'fedora23-python'),
+    ('docker.io/fedora23', 'fedora23:latest'),
+    ('docker.io/fedora23/python', 'fedora23-python:latest'),
     ('docker.io/fedora23/python:sometag', 'fedora23-python:sometag'),
 ])
 def test_get_imagestreamtag_from_image(img, expected):

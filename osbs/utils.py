@@ -102,7 +102,13 @@ def get_imagestreamtag_from_image(image):
         ret = '%s/%s' % (parts[1], parts[2])
 
     # ImageStream names cannot contain '/'
-    return ret.replace('/', '-')
+    ret = ret.replace('/', '-')
+
+    # If there is no ':' suffix value, add one
+    if ret.find(':') == -1:
+        ret += ":latest"
+
+    return ret
 
 def get_time_from_rfc3399(rfc3399):
     """
