@@ -152,7 +152,7 @@ class HttpStream(object):
     """
 
     def __init__(self, url, method, data=None, kerberos_auth=False,
-                 allow_redirects=True, verify_ssl=True, use_json=False,
+                 allow_redirects=True, verify_ssl=True, ca=None, use_json=False,
                  headers=None, stream=False, username=None, password=None,
                  client_cert=None, client_key=None, verbose=False):
         self.finished = False  # have we read all data?
@@ -192,6 +192,10 @@ class HttpStream(object):
         self.c.setopt(pycurl.DEBUGFUNCTION, self._curl_debug)
         self.c.setopt(pycurl.SSL_VERIFYPEER, 1 if verify_ssl else 0)
         self.c.setopt(pycurl.SSL_VERIFYHOST, 2 if verify_ssl else 0)
+        if ca:
+            logger.info("Setting CAINFO to %r", ca)
+            self.c.setopt(pycurl.CAINFO, ca)
+
         self.c.setopt(pycurl.VERBOSE, 1 if verbose else 0)
         if username and password:
             username = username.encode('utf-8')
