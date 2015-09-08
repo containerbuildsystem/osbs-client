@@ -154,6 +154,7 @@ class OSBS(object):
         :param namespace: str, place/context where the build should be executed
         :return: instance of build.build_response.BuildResponse
         """
+        build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         build = build_request.render()
         response = self.os.create_build(json.dumps(build), namespace=namespace)
         build_response = BuildResponse(response)
@@ -270,7 +271,7 @@ class OSBS(object):
             build_host=self.build_conf.get_build_host(),
             authoritative_registry=self.build_conf.get_authoritative_registry(),
             yum_repourls=yum_repourls,
-            source_secret=self.build_conf.get_source_secret(),
+            pulp_secret=self.build_conf.get_pulp_secret(),
             use_auth=self.build_conf.get_builder_use_auth(),
             pulp_registry=self.os_conf.get_pulp_registry(),
             nfs_server_path=self.os_conf.get_nfs_server_path(),
@@ -278,6 +279,7 @@ class OSBS(object):
             git_push_url=self.build_conf.get_git_push_url(),
             git_push_username=self.build_conf.get_git_push_username(),
         )
+        build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         response = self._create_build_config_and_build(build_request, namespace)
         build_response = BuildResponse(response)
         logger.debug(build_response.json)
@@ -313,6 +315,7 @@ class OSBS(object):
             yum_repourls=yum_repourls,
             use_auth=self.build_conf.get_builder_use_auth(),
         )
+        build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         response = self._create_build_config_and_build(build_request, namespace)
         build_response = BuildResponse(response)
         logger.debug(build_response.json)

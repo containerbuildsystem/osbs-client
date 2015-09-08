@@ -45,3 +45,6 @@ SIMPLE_BUILD_TYPE = "simple"
 SERVICEACCOUNT_SECRET = "/var/run/secrets/kubernetes.io/serviceaccount"
 SERVICEACCOUNT_TOKEN = "token"
 SERVICEACCOUNT_CACRT = "ca.crt"
+
+# Where will secrets be mounted?
+SECRETS_PATH = "/var/run/secrets/atomic-reactor"

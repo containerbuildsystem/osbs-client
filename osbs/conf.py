@@ -102,6 +102,27 @@ class Configuration(object):
         else:
             return value
 
+    def get_openshift_required_version(self):
+        """
+        Get minimum version of openshift we require
+
+        :return: list, ints representing version parts, most significant first
+        """
+        verstring = self._get_value("openshift_required_version",
+                                    GENERAL_CONFIGURATION_SECTION,
+                                    "openshift_required_version",
+                                    can_miss=True)
+        if verstring:
+            try:
+                openshift_required_version = [int(x)
+                                              for x in verstring.split('.')]
+            except ValueError:
+                pass
+
+            return openshift_required_version
+
+        return None
+
     def get_openshift_base_uri(self):
         """
         https://<host>[:<port>]/
@@ -254,9 +275,19 @@ class Configuration(object):
                                default=self.get_use_auth(),
                                is_bool_val=True)
 
+    def get_pulp_secret(self):
+        secret = self._get_value("pulp_secret", self.conf_section,
+                                 "pulp_secret", can_miss=True)
+        if not secret:
+            secret = self._get_value("source_secret", self.conf_section,
+                                     "pulp_secret", can_miss=True)
+        return secret
+
     def get_source_secret(self):
-        return self._get_value("source_secret", self.conf_section,
-                               "source_secret", can_miss=True)
+        """
+        Compatibility name for get_pulp_secret()
+        """
+        return self.get_pulp_secret()
 
     def get_nfs_server_path(self):
         return self._get_value("nfs_server_path", self.conf_section,

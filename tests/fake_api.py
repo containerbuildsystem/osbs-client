@@ -261,6 +261,33 @@ use_auth = false
     return osbs
 
 
+@pytest.fixture
+def osbs106(openshift):
+    with NamedTemporaryFile(mode="wt") as fp:
+        fp.write("""
+[general]
+build_json_dir = {build_json_dir}
+openshift_required_version = 1.0.6
+[default]
+openshift_uri = /
+registry_uri = registry.example.com
+sources_command = fedpkg sources
+vendor = Example, Inc.
+build_host = localhost
+authoritative_registry = registry.example.com
+koji_root = http://koji.example.com/kojiroot
+koji_hub = http://koji.example.com/kojihub
+build_type = simple
+use_auth = false
+""".format (build_json_dir="inputs"))
+        fp.flush()
+        dummy_config = Configuration(fp.name)
+        osbs = OSBS(dummy_config, dummy_config)
+
+    osbs.os = openshift
+    return osbs
+
+
 class ResponseMapping(object):
     def __init__(self, version, lookup):
         self.version = version
