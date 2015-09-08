@@ -14,6 +14,7 @@ import six
 from osbs.constants import PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE, SIMPLE_BUILD_TYPE
 from osbs.build.build_request import BuildRequest, SimpleBuild, ProductionBuild
 from osbs.build.build_response import BuildResponse
+from osbs.build.pod_response import PodResponse
 from osbs.http import HttpResponse
 from osbs import utils
 
@@ -33,6 +34,15 @@ class TestOSBS(object):
         # All the timestamps are understood
         for build in response_list:
             assert build.get_time_created_in_seconds() != 0.0
+
+    def test_get_pod_for_build(self, osbs):
+        pod = osbs.get_pod_for_build(TEST_BUILD)
+        assert isinstance(pod, PodResponse)
+        images = pod.get_container_image_ids()
+        assert isinstance(images, dict)
+        assert 'buildroot:latest' in images
+        image_id = images['buildroot:latest']
+        assert not image_id.startswith("docker:")
 
     def test_create_prod_build(self, osbs):
         # TODO: test situation when a buildconfig already exists

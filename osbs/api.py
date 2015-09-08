@@ -17,6 +17,7 @@ from functools import wraps
 from .constants import SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE, PROD_WITH_SECRET_BUILD_TYPE
 from osbs.build.build_request import BuildManager
 from osbs.build.build_response import BuildResponse
+from osbs.build.pod_response import PodResponse
 from osbs.constants import DEFAULT_NAMESPACE, PROD_BUILD_TYPE
 from osbs.core import Openshift
 from osbs.exceptions import OsbsException, OsbsValidationException
@@ -51,7 +52,7 @@ logger = logging.getLogger(__name__)
 class OSBS(object):
     """
     Note: all API methods return osbs.http.Response object. This is, due to historical
-    reasons, untrue for list_builds and get_user, which return list of BuildResult objects
+    reasons, untrue for list_builds and get_user, which return list of BuildResponse objects
     and dict respectively.
     """
     @osbsapi
@@ -62,6 +63,7 @@ class OSBS(object):
         self.os = Openshift(openshift_api_url=self.os_conf.get_openshift_api_uri(),
                             openshift_api_version=self.os_conf.get_openshift_api_version(),
                             openshift_oauth_url=self.os_conf.get_openshift_oauth_api_uri(),
+                            k8s_api_url=self.os_conf.get_k8s_api_uri(),
                             verbose=self.os_conf.get_verbosity(),
                             username=self.os_conf.get_username(),
                             password=self.os_conf.get_password(),
@@ -102,6 +104,22 @@ class OSBS(object):
         response = self.os.cancel_build(build_id, namespace=namespace)
         build_response = BuildResponse(response)
         return build_response
+
+    @osbsapi
+    def get_pod_for_build(self, build_id, namespace=DEFAULT_NAMESPACE):
+        """
+        :return: PodResponse object for pod relating to the build
+        """
+        pods = self.os.list_pods(label='openshift.io/build.name=%s' % build_id,
+                                 namespace=namespace)
+        serialized_response = pods.json()
+        pod_list = [PodResponse(pod) for pod in serialized_response["items"]]
+        if not pod_list:
+            raise OsbsException("No pod for build")
+        elif len(pod_list) != 1:
+            raise OsbsException("Only one pod expected but %d returned",
+                                len(pod_list))
+        return pod_list[0]
 
     @osbsapi
     def get_build_request(self, build_type=None):
