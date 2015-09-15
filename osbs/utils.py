@@ -7,8 +7,10 @@ of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, absolute_import, unicode_literals
 
+import contextlib
 import copy
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -40,34 +42,40 @@ def deep_update(orig, new):
                 orig[k] = v
 
 
+@contextlib.contextmanager
 def checkout_git_repo(git_uri, git_ref, git_branch):
     tmpdir = tempfile.mkdtemp()
     try:
-        subprocess.check_call(['git', 'clone', git_uri,
-                               '-b', git_branch, tmpdir],
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE)
-    except subprocess.CalledProcessError as ex:
-        raise OsbsException("Unable to clone git repo '%s' "
-                            "branch '%s'" % (git_uri, git_branch),
-                            cause=ex, traceback=sys.exc_info()[2])
+        try:
+            subprocess.check_call(['git', 'clone', git_uri,
+                                  '-b', git_branch, tmpdir],
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as ex:
+            raise OsbsException("Unable to clone git repo '%s' "
+                                "branch '%s'" % (git_uri, git_branch),
+                                cause=ex, traceback=sys.exc_info()[2])
 
-    # Find the specific ref we want
-    try:
-        subprocess.check_call(['git', 'reset', '--hard', git_ref],
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE,
-                              cwd=tmpdir)
-    except subprocess.CalledProcessError as ex:
-        raise OsbsException("Unable to reset branch to '%s'" % git_ref,
-                            cause=ex, traceback=sys.exc_info()[2])
+        # Find the specific ref we want
+        try:
+            subprocess.check_call(['git', 'reset', '--hard', git_ref],
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE,
+                                  cwd=tmpdir)
+        except subprocess.CalledProcessError as ex:
+            raise OsbsException("Unable to reset branch to '%s'" % git_ref,
+                                cause=ex, traceback=sys.exc_info()[2])
 
-    return tmpdir
+        yield tmpdir
+
+    finally:
+        shutil.rmtree(tmpdir)
 
 
 def get_df_parser(git_uri, git_ref, git_branch):
-    code_dir = checkout_git_repo(git_uri, git_ref, git_branch)
-    return DockerfileParser(os.path.join(code_dir, 'Dockerfile'))
+    with checkout_git_repo(git_uri, git_ref, git_branch) as code_dir:
+        dfp = DockerfileParser(os.path.join(code_dir, 'Dockerfile'), cache_content=True)
+    return dfp
 
 
 def git_repo_humanish_part_from_uri(git_uri):
