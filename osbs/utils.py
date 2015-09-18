@@ -74,7 +74,7 @@ def checkout_git_repo(git_uri, git_ref, git_branch):
 
 def get_df_parser(git_uri, git_ref, git_branch):
     with checkout_git_repo(git_uri, git_ref, git_branch) as code_dir:
-        dfp = DockerfileParser(os.path.join(code_dir, 'Dockerfile'), cache_content=True)
+        dfp = DockerfileParser(os.path.join(code_dir), cache_content=True)
     return dfp
 
 
