@@ -396,6 +396,21 @@ class ProductionBuild(CommonBuild):
             # but still construct the unique tag
             self.template['spec']['output']['to']['name'] = self.spec.image_tag.value
 
+        # if we have pdc_uri and smtp_uri, configure sendmail plugin, else remove it
+        if self.spec.pdc_uri.value and self.spec.smtp_uri.value:
+            self.dj.dock_json_set_arg('exit_plugins', 'sendmail', 'url',
+                                      self.spec.openshift_uri.value)
+            self.dj.dock_json_set_arg('exit_plugins', 'sendmail', 'pdc_url',
+                                      self.spec.pdc_uri.value)
+            self.dj.dock_json_set_arg('exit_plugins', 'sendmail', 'smtp_url',
+                                      self.spec.smtp_uri.value)
+            # make sure we'll be able to authenticate to PDC
+            if 'pdc_secret_path' not in \
+                    self.dj.dock_json_get_plugin_conf('exit_plugins', 'sendmail')['args']:
+                raise OsbsValidationException('sendmail plugin configured, but no pdc_secret_path')
+        else:
+            self.dj.remove_plugin('exit_plugins', 'sendmail')
+
         # If NFS destination set, use it
         nfs_server_path = self.spec.nfs_server_path.value
         if nfs_server_path:

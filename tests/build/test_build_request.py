@@ -684,3 +684,49 @@ class TestBuildRequest(object):
         plugins = json.loads(plugins_json)
         assert plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push',
                                 'args', 'pulp_secret_path') == mount_path
+
+    def test_with_sendmail_plugin(self):
+        bm = BuildManager(INPUTS_PATH)
+        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        build_request.set_openshift_required_version([1, 0, 6])
+        secret_name = 'foo'
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'base_image': 'fedora:latest',
+            'name_label': 'fedora/resultingimage',
+            'registry_uri': "registry.example.com",
+            'openshift_uri': "http://openshift/",
+            'sources_command': "make",
+            'architecture': "x86_64",
+            'vendor': "Foo Vendor",
+            'build_host': "our.build.host.example.com",
+            'authoritative_registry': "registry.example.com",
+            'pdc_secret': secret_name,
+            'pdc_uri': 'pdc.example.com',
+            'smtp_uri': 'smtp.example.com',
+        }
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+        plugins = None
+        for e in build_json['spec']['strategy']['customStrategy']['env']:
+            if e['name'] == 'DOCK_PLUGINS':
+                plugins = json.loads(e['value'])
+                break
+        assert plugins is not None
+        pdc_secret = [secret for secret in
+                      build_json['spec']['strategy']['customStrategy']['secrets']
+                      if secret['secretSource']['name'] == secret_name]
+        mount_path = pdc_secret[0]['mountPath']
+        expected = {'args': {'from_address': 'osbs@example.com',
+                             'url': 'http://openshift/',
+                             'pdc_url': 'pdc.example.com',
+                             'pdc_secret_path': mount_path,
+                             'send_on': ['auto_fail'],
+                             'error_addresses': ['errors@example.com'],
+                             'smtp_url': 'smtp.example.com'},
+                    'name': 'sendmail'}
+        assert get_plugin(plugins, 'exit_plugins', 'sendmail') == expected

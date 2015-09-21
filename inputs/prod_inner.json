@@ -132,6 +132,17 @@
     },
     {
       "name": "remove_built_image"
+    },
+    {
+      "args": {
+        "send_on": ["auto_fail"],
+        "url": "{{OPENSHIFT_URI}}",
+        "pdc_url": "{{PDC_URL}}",
+        "smtp_url": "{{SMTP_URL}}",
+        "from_address": "osbs@example.com",
+        "error_addresses": ["errors@example.com"]
+      },
+      "name": "sendmail"
     }
   ]
 }

@@ -89,6 +89,10 @@ Some options are also mandatory.
 
 * `pdc_secret` (*optional*, `string`) - name of kubernetes secret to use for plugins communicating with PDC
 
+* `pdc_uri` (*optional*, `string`) - URI of PDC server instance, e.g. `pdc.mycompany.com`
+
+* `smtp_uri` (*optional*, `string`) - URI of SMTP server, e.g. `smtp.mycompany.com`
+
 * `nfs_server_path` (*optional*, `string`) — NFS server and path to use for storing built image (it is passed to `mount` command)
 
 * `nfs_dest_dir` (*optional*, `string`) — directory to create on provided NFS server where image will be stored
