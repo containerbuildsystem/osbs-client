@@ -43,10 +43,8 @@ def cmd_list_builds(args, osbs):
         for build in sorted(builds,
                             key=lambda x: x.get_time_created_in_seconds()):
             image = build.get_image_tag()
-            if args.USER:
-                # image can contain registry - we may have to parse it more intelligently
-                registry_and_namespace = image.split("/")[:-1]
-                if args.USER not in registry_and_namespace:
+            if args.FILTER:
+                if args.FILTER not in image:
                     continue
             b = {
                 "name": build.get_build_name(),
@@ -262,7 +260,7 @@ def cli():
     list_builds_parser = subparsers.add_parser(str_on_2_unicode_on_3('list-builds'), help='list builds in OSBS',
                                                description="list all builds in specified namespace "
                                                "(to list all builds in all namespaces, use --namespace=\"\")")
-    list_builds_parser.add_argument("USER", help="list builds only for specified username",
+    list_builds_parser.add_argument("FILTER", help="list only builds which contain provided string",
                                     nargs="?")
     list_builds_parser.set_defaults(func=cmd_list_builds)
 
