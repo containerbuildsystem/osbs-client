@@ -54,9 +54,10 @@ In your OSBS build instance configuration, use the following values:
 ```
 build_type = prod
 pulp_secret = mysecret
+pdc_secret = myothersecret
 ```
 
-The `pulp_secret` name must match the resource name specified in the JSON.
+`pulp_secret` and `pdc_secret` names must match the resource names specified in the JSON.
 
 ## Fetching the secrets within the build root
 

@@ -274,6 +274,7 @@ class OSBS(object):
             authoritative_registry=self.build_conf.get_authoritative_registry(),
             yum_repourls=yum_repourls,
             pulp_secret=self.build_conf.get_pulp_secret(),
+            pdc_secret=self.build_conf.get_pdc_secret(),
             use_auth=self.build_conf.get_builder_use_auth(),
             pulp_registry=self.os_conf.get_pulp_registry(),
             nfs_server_path=self.os_conf.get_nfs_server_path(),

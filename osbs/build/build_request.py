@@ -243,6 +243,7 @@ class ProductionBuild(CommonBuild):
         these parameters are accepted:
 
         :param pulp_secret: str, resource name of pulp secret
+        :param pdc_secret: str, resource name of pdc secret
         :param koji_target: str, koji tag with packages used to build the image
         :param kojiroot: str, URL from which koji packages are fetched
         :param kojihub: str, URL of the koji hub
@@ -259,6 +260,44 @@ class ProductionBuild(CommonBuild):
         """
         logger.debug("setting params '%s' for %s", kwargs, self.spec)
         self.spec.set_params(**kwargs)
+
+    def set_secrets(self, secrets):
+        """
+        :param secrets: dict, {(plugin type, plugin name, argument name): secret name}
+            for example {('exit_plugins', 'sendmail', 'pdc_secret_path'): 'pdc_secret', ...}
+        """
+        secret_set = False
+        for (plugin, secret) in secrets.items():
+            if not isinstance(plugin, tuple) or len(plugin) != 3:
+                raise ValueError('got "%s" as secrets key, need 3-tuple' % plugin)
+            if secret is not None:
+                secret_set = True
+                if 'secrets' in self.template['spec']['strategy']['customStrategy']:
+                    # origin 1.0.6 and newer
+                    secret_path = os.path.join(SECRETS_PATH, secret)
+                    logger.info("Configuring %s secret at %s", secret, secret_path)
+                    custom = self.template['spec']['strategy']['customStrategy']
+                    custom['secrets'].append({
+                        'secretSource': {
+                            'name': secret,
+                        },
+                        'mountPath': secret_path,
+                    })
+                    self.dj.dock_json_set_arg(*(plugin + (secret_path,)))
+                else:
+                    # origin 1.0.5 and earlier
+                    logger.info("Configuring %s secret as sourceSecret", secret)
+                    if 'sourceSecret' not in self.template['spec']['source']:
+                        raise OsbsValidationException("JSON template does not allow secrets")
+
+                    self.template['spec']['source']['sourceSecret']['name'] = secret
+
+        if not secret_set:
+            # remove references to secret if no secret was set
+            if 'sourceSecret' in self.template['spec']['source']:
+                del self.template['spec']['source']['sourceSecret']
+            if 'secrets' in self.template['spec']['strategy']['customStrategy']:
+                del self.template['spec']['strategy']['customStrategy']['secrets']
 
     def render(self, validate=True):
         if validate:
@@ -347,40 +386,15 @@ class ProductionBuild(CommonBuild):
             self.dj.dock_json_set_arg('prebuild_plugins', 'bump_release',
                                       'git_ref', self.spec.git_ref.value)
 
-        # If there is a pulp secret, use it
+        self.set_secrets({('postbuild_plugins', 'pulp_push', 'pulp_secret_path'):
+                          self.spec.pulp_secret.value,
+                          ('exit_plugins', 'sendmail', 'pdc_secret_path'):
+                          self.spec.pdc_secret.value})
+
         if self.spec.pulp_secret.value:
-            name = self.spec.pulp_secret.value
-
-            if 'secrets' in self.template['spec']['strategy']['customStrategy']:
-                # origin 1.0.6 and newer
-                pulp_secret_path = os.path.join(SECRETS_PATH, name)
-                logger.info("Configuring pulp secret at %s", pulp_secret_path)
-                custom = self.template['spec']['strategy']['customStrategy']
-                custom['secrets'].append({
-                    'secretSource': {
-                        'name': name,
-                    },
-                    'mountPath': pulp_secret_path,
-                })
-                self.dj.dock_json_set_arg('postbuild_plugins', 'pulp_push',
-                                          'pulp_secret_path', pulp_secret_path)
-            else:
-                # origin 1.0.5 and earlier
-                logger.info("Configuring pulp secret as sourceSecret")
-                if 'sourceSecret' not in self.template['spec']['source']:
-                    raise OsbsValidationException("JSON template does not allow secrets")
-
-                self.template['spec']['source']['sourceSecret']['name'] = name
-
             # Don't push to docker registry, we're using pulp here
             # but still construct the unique tag
             self.template['spec']['output']['to']['name'] = self.spec.image_tag.value
-        else:
-            # Otherwise remove references to the secret
-            if 'sourceSecret' in self.template['spec']['source']:
-                del self.template['spec']['source']['sourceSecret']
-            if 'secrets' in self.template['spec']['strategy']['customStrategy']:
-                del self.template['spec']['strategy']['customStrategy']['secrets']
 
         # If NFS destination set, use it
         nfs_server_path = self.spec.nfs_server_path.value

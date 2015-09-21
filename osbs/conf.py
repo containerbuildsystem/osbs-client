@@ -284,6 +284,10 @@ class Configuration(object):
         """
         return self.get_pulp_secret()
 
+    def get_pdc_secret(self):
+        secret = self._get_value("pdc_secret", self.conf_section,
+                                 "pdc_secret", can_miss=True)
+
     def get_nfs_server_path(self):
         return self._get_value("nfs_server_path", self.conf_section,
                                "nfs_server_path", can_miss=True)

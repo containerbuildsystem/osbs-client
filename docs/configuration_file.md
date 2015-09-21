@@ -87,6 +87,8 @@ Some options are also mandatory.
 
 * `pulp_secret` (*optional*, `string`) — name of [kubernetes secret](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/design/secrets.md) to use for pulp plugin
 
+* `pdc_secret` (*optional*, `string`) - name of kubernetes secret to use for plugins communicating with PDC
+
 * `nfs_server_path` (*optional*, `string`) — NFS server and path to use for storing built image (it is passed to `mount` command)
 
 * `nfs_dest_dir` (*optional*, `string`) — directory to create on provided NFS server where image will be stored
