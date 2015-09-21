@@ -35,6 +35,7 @@ KLIST_TGT_RE = (r"\d\d/\d\d/\d{2,4}"
                 r" +"
                 r"krbtgt/(?P<realm>[-.A-Z0-9]+)@(?P=realm)")
 
+
 def run(cmd, extraenv=None):
     env = os.environ.copy()
     if extraenv:
@@ -47,6 +48,7 @@ def run(cmd, extraenv=None):
     stdout, stderr = p.communicate()
 
     return p.returncode, stdout, stderr
+
 
 def kerberos_ccache_init(principal, keytab_file, ccache_file=None):
     """

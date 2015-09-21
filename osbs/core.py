@@ -16,8 +16,8 @@ from osbs.constants import DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNNI
 from osbs.constants import WATCH_MODIFIED, WATCH_DELETED, WATCH_ERROR
 from osbs.constants import (SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
                             SERVICEACCOUNT_CACRT)
-from osbs.exceptions import OsbsResponseException, OsbsException, OsbsWatchBuildNotFound, \
-                            OsbsAuthException
+from osbs.exceptions import (OsbsResponseException, OsbsException,
+                             OsbsWatchBuildNotFound, OsbsAuthException)
 
 try:
     # py2
@@ -509,7 +509,7 @@ class Openshift(object):
         url = self._build_url("namespaces/%s/imagestreams/%s" % (namespace,
                                                                  name))
         imagestream_json = self._get(url).json()
-        logger.debug("imagestream: %r" % imagestream_json)
+        logger.debug("imagestream: %r", imagestream_json)
         spec = imagestream_json.get('spec', {})
         if 'dockerImageRepository' not in spec:
             raise OsbsException('No dockerImageRepository for image import')
@@ -523,9 +523,9 @@ class Openshift(object):
         check_response(response)
 
         # Watch for it to be updated
-        resourceVersion = imagestream_json['metadata']['resourceVersion']
+        resource_version = imagestream_json['metadata']['resourceVersion']
         url = self._build_url("watch/namespaces/%s/imagestreams/%s/" % (namespace, name),
-                              resourceVersion=resourceVersion)
+                              resourceVersion=resource_version)
         with self._get(url, stream=True, headers={'Connection': 'close'}) as response:
             check_response(response)
             for line in response.iter_lines():

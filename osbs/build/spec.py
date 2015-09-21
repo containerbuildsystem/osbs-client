@@ -129,7 +129,7 @@ class CommonSpec(BuildTypeSpec):
 
     def set_params(self, git_uri=None, git_ref=None, registry_uri=None, user=None,
                    component=None, openshift_uri=None,
-                   yum_repourls=None, use_auth=None, **kwargs):
+                   yum_repourls=None, use_auth=None):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
         self.user.value = user
@@ -187,7 +187,7 @@ class ProdSpec(CommonSpec):
     def set_params(self, sources_command=None, architecture=None, vendor=None,
                    build_host=None, authoritative_registry=None,
                    koji_target=None, kojiroot=None, kojihub=None,
-                   source_secret=None, # compatibility name for pulp_secret
+                   source_secret=None,  # compatibility name for pulp_secret
                    pulp_secret=None, pulp_registry=None, nfs_server_path=None,
                    nfs_dest_dir=None, git_branch=None, base_image=None,
                    name_label=None, git_push_url=None, git_push_username=None,

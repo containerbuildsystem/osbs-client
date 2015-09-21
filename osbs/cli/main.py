@@ -271,11 +271,13 @@ def cli():
     get_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
     get_build_parser.set_defaults(func=cmd_get_build)
 
-    cancel_build_parser = subparsers.add_parser(str_on_2_unicode_on_3('cancel-build'), help='cancel build specified by ID')
+    cancel_build_parser = subparsers.add_parser(str_on_2_unicode_on_3('cancel-build'),
+                                                help='cancel build specified by ID')
     cancel_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
     cancel_build_parser.set_defaults(func=cmd_cancel_build)
 
-    import_image_parser = subparsers.add_parser(str_on_2_unicode_on_3('import-image'), help='import tags for ImageStream')
+    import_image_parser = subparsers.add_parser(str_on_2_unicode_on_3('import-image'),
+                                                help='import tags for ImageStream')
     import_image_parser.add_argument("NAME", help="ImageStream name", nargs=1)
     import_image_parser.set_defaults(func=cmd_import_image)
 
@@ -334,8 +336,8 @@ def cli():
     build_parser.set_defaults(func=cmd_build)
 
     get_build_image_id = subparsers.add_parser(str_on_2_unicode_on_3('get-build-image-id'),
-                                                help='get build container image ID',
-                                                description='get build container images for a build in a namespace')
+                                               help='get build container image ID',
+                                               description='get build container images for a build in a namespace')
     get_build_image_id.add_argument("BUILD_ID", help="build ID", nargs=1)
     get_build_image_id.set_defaults(func=cmd_get_build_image_id)
 

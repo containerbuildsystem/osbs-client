@@ -97,7 +97,7 @@ class BuildRequest(object):
         except KeyError:
             raise RuntimeError("Unknown build type '{0}'".format(build_name))
 
-    def render(self):
+    def render(self, validate=True):
         """
         render input parameters into template
 
@@ -409,7 +409,6 @@ class ProductionBuild(CommonBuild):
         else:
             # If no pulp registry is specified, don't run the pulp plugin
             self.dj.remove_plugin("postbuild_plugins", "pulp_push")
-
 
         # Configure the import_image plugin
         if self.dj.dock_json_has_plugin_conf('postbuild_plugins', 'import_image'):

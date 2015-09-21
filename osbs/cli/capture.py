@@ -53,7 +53,7 @@ class ResponseSaver(object):
     def request(self, url, method, *args, **kwargs):
         filename = url
         if filename.startswith(self.openshift_api_uri):
-            filanem = filename[len(self.openshift_api_uri):]
+            filename = filename[len(self.openshift_api_uri):]
         filename = filename.replace('/', '_')
         path = os.path.join(self.capture_dir,
                             "{method}-{url}".format(method=method,
@@ -90,7 +90,7 @@ def setup_json_capture(osbs, os_conf, capture_dir):
         os.mkdir(capture_dir)
     except OSError:
         pass
-
-    osbs.os._con.request = ResponseSaver(capture_dir,
-                                         os_conf.get_openshift_api_uri(),
-                                         osbs.os._con.request).request
+    finally:
+        osbs.os._con.request = ResponseSaver(capture_dir,
+                                             os_conf.get_openshift_api_uri(),
+                                             osbs.os._con.request).request

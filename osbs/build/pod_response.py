@@ -7,7 +7,6 @@ of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, absolute_import, unicode_literals
 
-import json
 import logging
 
 from osbs.utils import graceful_chain_get

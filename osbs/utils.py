@@ -118,6 +118,7 @@ def get_imagestreamtag_from_image(image):
 
     return ret
 
+
 def get_time_from_rfc3339(rfc3339):
     """
     return time tuple from an RFC 3339-formatted time string

@@ -31,9 +31,8 @@ def osbs_with_capture(osbs, tmpdir):
 def test_json_capture_no_watch(osbs_with_capture, tmpdir):
     for visit in ["000", "001"]:
         osbs_with_capture.list_builds()
-        filename = "get-{p}namespaces_{n}_builds_-{v}.json"
-        path = os.path.join(str(tmpdir), filename.format(p=PREFIX,
-                                                         n=DEFAULT_NAMESPACE,
+        filename = "get-namespaces_{n}_builds_-{v}.json"
+        path = os.path.join(str(tmpdir), filename.format(n=DEFAULT_NAMESPACE,
                                                          v=visit))
         assert os.access(path, os.R_OK)
         with open(path) as fp:
@@ -43,9 +42,8 @@ def test_json_capture_no_watch(osbs_with_capture, tmpdir):
 
 def test_json_capture_watch(osbs_with_capture, tmpdir):
     osbs_with_capture.wait_for_build_to_finish(TEST_BUILD)
-    filename = "get-{p}watch_namespaces_{n}_builds_{b}_-000-000.json"
-    path = os.path.join(str(tmpdir), filename.format(p=PREFIX,
-                                                     n=DEFAULT_NAMESPACE,
+    filename = "get-watch_namespaces_{n}_builds_{b}_-000-000.json"
+    path = os.path.join(str(tmpdir), filename.format(n=DEFAULT_NAMESPACE,
                                                      b=TEST_BUILD))
     assert os.access(path, os.R_OK)
     with open(path) as fp:

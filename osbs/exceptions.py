@@ -68,6 +68,7 @@ class OsbsNetworkException(OsbsException):
 class OsbsAuthException(OsbsException):
     pass
 
+
 class OsbsValidationException(OsbsException):
     pass
 

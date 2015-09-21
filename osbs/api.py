@@ -175,7 +175,8 @@ class OSBS(object):
         # try polling for 60 seconds and then fail if build doesn't appear
         deadline = int(time.time()) + 60
         while int(time.time()) < deadline:
-            logger.debug('polling for build from BuildConfig "%s"' % build_config_id)
+            logger.debug('polling for build from BuildConfig "%s"',
+                         build_config_id)
             builds = self._get_running_builds_for_build_config(build_config_id, namespace)
             if len(builds) > 0:
                 return builds
@@ -185,6 +186,7 @@ class OSBS(object):
         raise OsbsException('Waited for new build from "%s", but none was automatically created' %
                             build_config_id)
 
+    @staticmethod
     def _panic_msg_for_more_running_builds(self, build_config_name, builds):
         # this should never happen, but if it does, we want to know all the builds
         #  that were running at the time
@@ -196,10 +198,10 @@ class OSBS(object):
     def _create_build_config_and_build(self, build_request, namespace):
         # TODO: test this method more thoroughly
         build_json = build_request.render()
-        apiVersion = build_json['apiVersion']
-        if apiVersion != self.os_conf.get_openshift_api_version():
+        api_version = build_json['apiVersion']
+        if api_version != self.os_conf.get_openshift_api_version():
             raise OsbsValidationException("BuildConfig template has incorrect apiVersion (%s)" %
-                                          apiVersion)
+                                          api_version)
 
         build_config_name = build_json['metadata']['name']
 
@@ -215,12 +217,12 @@ class OSBS(object):
                 msg = self._panic_msg_for_more_running_builds(build_config_name, running_builds)
             raise OsbsException(msg)
 
-        existing_bc = None
         try:
             # see if there's already a build config
             existing_bc = self.os.get_build_config(build_config_name)
         except OsbsException:
-            pass  # doesn't exist => do nothing
+            # doesn't exist
+            existing_bc = None
 
         build = None
         if existing_bc is not None:
@@ -247,9 +249,9 @@ class OSBS(object):
         return build
 
     @osbsapi
-    def create_prod_build(self, git_uri, git_ref, git_branch, user, component, target,
-                          architecture, yum_repourls=None, git_push_url=None,
-                          namespace=DEFAULT_NAMESPACE, **kwargs):
+    def create_prod_build(self, git_uri, git_ref, git_branch, user, component,
+                          target, architecture, yum_repourls=None,
+                          namespace=DEFAULT_NAMESPACE):
         df_parser = utils.get_df_parser(git_uri, git_ref, git_branch)
         build_request = self.get_build_request(PROD_BUILD_TYPE)
         build_request.set_params(
@@ -302,8 +304,8 @@ class OSBS(object):
                                       namespace=namespace, **kwargs)
 
     @osbsapi
-    def create_simple_build(self, git_uri, git_ref, user, component, yum_repourls=None,
-                            namespace=DEFAULT_NAMESPACE, **kwargs):
+    def create_simple_build(self, git_uri, git_ref, user, component,
+                            yum_repourls=None, namespace=DEFAULT_NAMESPACE):
         build_request = self.get_build_request(SIMPLE_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
@@ -400,6 +402,8 @@ class OSBS(object):
                                namespace=DEFAULT_NAMESPACE):
         response = self.os.update_labels_on_build(build_id, labels,
                                                   namespace=namespace)
+        return response
+
     @osbsapi
     def set_labels_on_build(self, build_id, labels, namespace=DEFAULT_NAMESPACE):
         response = self.os.set_labels_on_build(build_id, labels, namespace=namespace)
@@ -453,4 +457,5 @@ class OSBS(object):
         stream = json.load(open(img_stream_file))
         stream['metadata']['name'] = name
         stream['spec']['dockerImageRepository'] = docker_image_repository
-        return self.os.create_image_stream(json.dumps(stream), namespace=DEFAULT_NAMESPACE)
+        return self.os.create_image_stream(json.dumps(stream),
+                                           namespace=namespace)
