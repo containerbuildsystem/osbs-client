@@ -38,8 +38,12 @@ def cmd_list_builds(args, osbs):
             json_output.append(build.json)
         print_json_nicely(json_output)
     elif args.output == 'text':
-        cols_to_display = CLI_LIST_BUILDS_DEFAULT_COLS
-        data = [{"name": "BUILD ID", "status": "STATUS", "image": "IMAGE NAME"}]
+        if args.columns:
+            cols_to_display = args.columns.split(",")
+        else:
+            cols_to_display = CLI_LIST_BUILDS_DEFAULT_COLS
+        data = [{"name": "BUILD ID", "status": "STATUS", "image": "IMAGE NAME",
+                 "commit": "COMMIT", "time_created": "TIME CREATED"}]
         for build in sorted(builds,
                             key=lambda x: x.get_time_created_in_seconds()):
             image = build.get_image_tag()
@@ -49,7 +53,9 @@ def cmd_list_builds(args, osbs):
             b = {
                 "name": build.get_build_name(),
                 "status": build.status,
-                "image": image
+                "image": image,
+                "commit": build.get_commit_id(),
+                "time_created": build.get_time_created(),
             }
             data.append(b)
         tp = TablePrinter(data, cols_to_display)
@@ -262,6 +268,10 @@ def cli():
                                                "(to list all builds in all namespaces, use --namespace=\"\")")
     list_builds_parser.add_argument("FILTER", help="list only builds which contain provided string",
                                     nargs="?")
+    list_builds_parser.add_argument("--columns",
+                                    help="comma-separated list of columns to display, possible values: "
+                                         "name, status, image, commit, time_created")
+
     list_builds_parser.set_defaults(func=cmd_list_builds)
 
     watch_build_parser = subparsers.add_parser(str_on_2_unicode_on_3('watch-build'), help='wait till build finishes')
