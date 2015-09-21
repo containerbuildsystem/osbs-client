@@ -118,19 +118,19 @@ def get_imagestreamtag_from_image(image):
 
     return ret
 
-def get_time_from_rfc3399(rfc3399):
+def get_time_from_rfc3339(rfc3339):
     """
-    return time tuple from an RFC 3399-formatted time string
+    return time tuple from an RFC 3339-formatted time string
 
-    :param rfc3399: str, time in RFC 3399 format
+    :param rfc3339: str, time in RFC 3339 format
     :return: float, seconds since the Epoch
     """
 
     try:
-        # Decode the RFC 3399 date with no fractional seconds
+        # Decode the RFC 3339 date with no fractional seconds
         # (the format Origin provides)
-        time_tuple = strptime(rfc3399, '%Y-%m-%dT%H:%M:%SZ')
+        time_tuple = strptime(rfc3339, '%Y-%m-%dT%H:%M:%SZ')
     except ValueError:
-        raise RuntimeError("Time format not understood: %s" % rfc3399)
+        raise RuntimeError("Time format not understood: %s" % rfc3339)
 
     return timegm(time_tuple)
