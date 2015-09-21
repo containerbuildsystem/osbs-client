@@ -16,8 +16,9 @@ import sys
 import argparse
 from osbs import set_logging
 from osbs.api import OSBS
+from osbs.cli.render import TablePrinter
 from osbs.conf import Configuration
-from osbs.constants import DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION
+from osbs.constants import DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION, CLI_LIST_BUILDS_DEFAULT_COLS
 from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsAuthException, OsbsResponseException
 from osbs.cli.capture import setup_json_capture
 
@@ -37,8 +38,8 @@ def cmd_list_builds(args, osbs):
             json_output.append(build.json)
         print_json_nicely(json_output)
     elif args.output == 'text':
-        format_str = "{name:48} {status:16} {image:64}"
-        print(format_str.format(**{"name": "BUILD ID", "status": "STATUS", "image": "IMAGE NAME"}), file=sys.stderr)
+        cols_to_display = CLI_LIST_BUILDS_DEFAULT_COLS
+        data = [{"name": "BUILD ID", "status": "STATUS", "image": "IMAGE NAME"}]
         for build in sorted(builds,
                             key=lambda x: x.get_time_created_in_seconds()):
             image = build.get_image_tag()
@@ -52,7 +53,9 @@ def cmd_list_builds(args, osbs):
                 "status": build.status,
                 "image": image
             }
-            print(format_str.format(**b))
+            data.append(b)
+        tp = TablePrinter(data, cols_to_display)
+        tp.render()
 
 
 def cmd_get_build(args, osbs):
