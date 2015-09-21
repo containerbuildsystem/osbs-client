@@ -63,6 +63,9 @@ class BuildResponse(object):
     def is_pending(self):
         return self.status in BUILD_PENDING_STATES
 
+    def is_in_progress(self):
+        return self.status not in BUILD_FINISHED_STATES
+
     def get_build_name(self):
         return graceful_chain_get(self.json, "metadata", "name")
 

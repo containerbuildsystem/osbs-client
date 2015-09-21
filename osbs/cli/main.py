@@ -50,6 +50,8 @@ def cmd_list_builds(args, osbs):
             if args.FILTER:
                 if args.FILTER not in image:
                     continue
+            if args.running and not build.is_in_progress():
+                continue
             b = {
                 "name": build.get_build_name(),
                 "status": build.status,
@@ -271,6 +273,9 @@ def cli():
     list_builds_parser.add_argument("--columns",
                                     help="comma-separated list of columns to display, possible values: "
                                          "name, status, image, commit, time_created")
+    # this may be a bit confusing, but for users, "running" means not done but
+    # for us, "running" means scheduled on kubelet
+    list_builds_parser.add_argument("--running", help="list only running builds", action="store_true")
 
     list_builds_parser.set_defaults(func=cmd_list_builds)
 
