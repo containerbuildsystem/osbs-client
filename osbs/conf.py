@@ -113,13 +113,7 @@ class Configuration(object):
                                     "openshift_required_version",
                                     can_miss=True)
         if verstring:
-            try:
-                openshift_required_version = [int(x)
-                                              for x in verstring.split('.')]
-            except ValueError:
-                pass
-
-            return openshift_required_version
+            return [int(x) for x in verstring.split('.')]
 
         return None
 
