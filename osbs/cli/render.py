@@ -117,8 +117,11 @@ class TablePrinter(TableFormatter):
             if self.total_free_space <= 0:
                 self.total_free_space = None
             else:
-                self.default_column_space = self.total_free_space / self.col_count
+                self.default_column_space = self.total_free_space // self.col_count
                 self.default_column_space_remainder = self.total_free_space % self.col_count
+                logger.debug("total free space: %d, column space: %d, remainder: %d, columns: %d",
+                             self.total_free_space, self.default_column_space, self.default_column_space_remainder,
+                             self.col_count)
         else:
             self.total_free_space = None
 
@@ -147,6 +150,8 @@ class TablePrinter(TableFormatter):
             format_list.append(" {%s:%d} " % (col, col_width - 2))
             header_sepa_format_list.append("{%s:%d}" % (col, col_width))
             self.col_widths[col] = col_width
+
+        logger.debug("column widths %s", self.col_widths)
 
         self.format_str = "|".join(format_list)
 
@@ -180,7 +185,7 @@ class TablePrinter(TableFormatter):
             if self.default_column_space_remainder > 0:
                 sepa += 1
                 self.default_column_space_remainder -= 1
-            logger.debug("total: %d, remainder: %d, separator: %d", self.total_free_space,
+            logger.debug("remainder: %d, separator: %d",
                          self.default_column_space_remainder, sepa)
             return sepa
 
