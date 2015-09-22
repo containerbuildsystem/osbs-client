@@ -61,6 +61,12 @@ class TableFormatter(object):
         self._terminal_width = None
 
     def _longest_val_in_column(self, col):
+        """
+        get size of longest value in specific column
+
+        :param col: str, column name
+        :return int
+        """
         try:
             # +2 is for implicit separator
             return max([len(x[col]) for x in self.table if x[col]]) + 2
@@ -80,6 +86,10 @@ class TablePrinter(TableFormatter):
     Print one specific instance of a table
     """
     def __init__(self, table, col_list):
+        """
+        :param table: list of dicts, see TableFormatter
+        :param col_list: list of strs, columns to display
+        """
         super(TablePrinter, self).__init__(table)
         self.col_list = col_list
 
@@ -87,9 +97,14 @@ class TablePrinter(TableFormatter):
         self._count_sizes()
 
     def _init(self):
+        """
+        initialize all values based on provided input
+
+        :return: None
+        """
         self.col_count = len(self.col_list)
         # list of lengths of longest entries in columns
-        self.col_longest = self.slice_col_lengths()
+        self.col_longest = self.get_all_longest_col_lengths()
         self.data_length = sum(self.col_longest.values())
 
         if self.terminal_width > 0:
@@ -109,14 +124,16 @@ class TablePrinter(TableFormatter):
 
     def _count_sizes(self):
         """
-        count everything
+        count all values needed to display whole table
 
         <><---terminal-width-----------><>
 
         <> HEADER  | HEADER2  | HEADER3 <>
         <>---------+----------+---------<>
 
-        :return:
+        kudos to PostgreSQL developers
+
+        :return: None
         """
         format_list = []
         header_sepa_format_list = []
@@ -126,6 +143,7 @@ class TablePrinter(TableFormatter):
         for col in self.col_list:
             col_length = self.col_longest[col]
             col_width = col_length + self._separate()
+            # -2 is for implicit separator -- spaces around
             format_list.append(" {%s:%d} " % (col, col_width - 2))
             header_sepa_format_list.append("{%s:%d}" % (col, col_width))
             self.col_widths[col] = col_width
@@ -137,7 +155,12 @@ class TablePrinter(TableFormatter):
         for k in self.col_widths:
             self.header_data[k] = "-" * self.col_widths[k]
 
-    def slice_col_lengths(self):
+    def get_all_longest_col_lengths(self):
+        """
+        iterate over all columns and get their longest values
+
+        :return: dict, {"column_name": 132}
+        """
         response = {}
         for col in self.col_list:
             response[col] = self._longest_val_in_column(col)
@@ -157,12 +180,13 @@ class TablePrinter(TableFormatter):
             if self.default_column_space_remainder > 0:
                 sepa += 1
                 self.default_column_space_remainder -= 1
-            logger.debug("total: %d, remainder: %d, sepa: %d", self.total_free_space,
+            logger.debug("total: %d, remainder: %d, separator: %d", self.total_free_space,
                          self.default_column_space_remainder, sepa)
             return sepa
 
     def render(self):
         """
+        print provided table
 
         :return: None
         """

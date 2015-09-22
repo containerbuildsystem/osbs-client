@@ -39,7 +39,7 @@ def test_get_longest_val_in_col():
 
 def test_get_longest_col_vals():
     p = TablePrinter(SAMPLE_DATA, ["x", "y", "z"])
-    response = p.slice_col_lengths()
+    response = p.get_all_longest_col_lengths()
     assert response["x"] == len(LONGEST_VAL1) + 2
     assert response["y"] == len(LONGEST_VAL2) + 2
     assert response["z"] == len(LONGEST_VAL3) + 2
