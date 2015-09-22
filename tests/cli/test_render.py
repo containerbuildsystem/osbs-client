@@ -50,10 +50,23 @@ def test_print_table():
     p.render()
 
 
-def test_print_table_with_mocked_terminal():
+def test_print_table_with_mocked_terminal(capsys):
     (flexmock(osbs.cli.render)
         .should_receive('get_terminal_size')
         .and_return(25, 80)
         .once())
-    p = TablePrinter(SAMPLE_DATA, ["x", "y", "z"])
+    short_data = [{'x': 'Header1', 'y': 'Header2', 'z': 'Header3'},
+                  {'x': 'x' * 8, 'y': 'y' * 20, 'z': 'z' * 4}]
+    p = TablePrinter(short_data, ["x", "y", "z"])
     p.render()
+    out, err = capsys.readouterr()
+    expected_header = """
+ Header1               | Header2                          | Header3             
+-----------------------+----------------------------------+---------------------
+""".lstrip('\n')
+    expected_data = """
+ xxxxxxxx              | yyyyyyyyyyyyyyyyyyyy             | zzzz                
+""".lstrip('\n')
+
+    assert err == expected_header
+    assert out == expected_data
