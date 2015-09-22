@@ -8,6 +8,7 @@ of the BSD license. See the LICENSE file for details.
 from types import GeneratorType
 
 from flexmock import flexmock
+from pkg_resources import parse_version
 import pytest
 import six
 
@@ -68,7 +69,7 @@ class TestOSBS(object):
             .and_return(MockParser()))
         (flexmock(BuildRequest)
             .should_receive('set_openshift_required_version')
-            .with_args([1, 0, 6])
+            .with_args(parse_version('1.0.6'))
             .once())
         response = osbs106.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
                                              TEST_GIT_BRANCH, TEST_USER,
