@@ -16,8 +16,9 @@ import sys
 import argparse
 from osbs import set_logging
 from osbs.api import OSBS
+from osbs.cli.render import TablePrinter
 from osbs.conf import Configuration
-from osbs.constants import DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION
+from osbs.constants import DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION, CLI_LIST_BUILDS_DEFAULT_COLS
 from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsAuthException, OsbsResponseException
 from osbs.cli.capture import setup_json_capture
 
@@ -37,22 +38,30 @@ def cmd_list_builds(args, osbs):
             json_output.append(build.json)
         print_json_nicely(json_output)
     elif args.output == 'text':
-        format_str = "{name:48} {status:16} {image:64}"
-        print(format_str.format(**{"name": "BUILD ID", "status": "STATUS", "image": "IMAGE NAME"}), file=sys.stderr)
+        if args.columns:
+            cols_to_display = args.columns.split(",")
+        else:
+            cols_to_display = CLI_LIST_BUILDS_DEFAULT_COLS
+        data = [{"name": "BUILD ID", "status": "STATUS", "image": "IMAGE NAME",
+                 "commit": "COMMIT", "time_created": "TIME CREATED"}]
         for build in sorted(builds,
                             key=lambda x: x.get_time_created_in_seconds()):
             image = build.get_image_tag()
-            if args.USER:
-                # image can contain registry - we may have to parse it more intelligently
-                registry_and_namespace = image.split("/")[:-1]
-                if args.USER not in registry_and_namespace:
+            if args.FILTER:
+                if args.FILTER not in image:
                     continue
+            if args.running and not build.is_in_progress():
+                continue
             b = {
                 "name": build.get_build_name(),
                 "status": build.status,
-                "image": image
+                "image": image,
+                "commit": build.get_commit_id(),
+                "time_created": build.get_time_created(),
             }
-            print(format_str.format(**b))
+            data.append(b)
+        tp = TablePrinter(data, cols_to_display)
+        tp.render()
 
 
 def cmd_get_build(args, osbs):
@@ -259,8 +268,15 @@ def cli():
     list_builds_parser = subparsers.add_parser(str_on_2_unicode_on_3('list-builds'), help='list builds in OSBS',
                                                description="list all builds in specified namespace "
                                                "(to list all builds in all namespaces, use --namespace=\"\")")
-    list_builds_parser.add_argument("USER", help="list builds only for specified username",
+    list_builds_parser.add_argument("FILTER", help="list only builds which contain provided string",
                                     nargs="?")
+    list_builds_parser.add_argument("--columns",
+                                    help="comma-separated list of columns to display, possible values: "
+                                         "name, status, image, commit, time_created")
+    # this may be a bit confusing, but for users, "running" means not done but
+    # for us, "running" means scheduled on kubelet
+    list_builds_parser.add_argument("--running", help="list only running builds", action="store_true")
+
     list_builds_parser.set_defaults(func=cmd_list_builds)
 
     watch_build_parser = subparsers.add_parser(str_on_2_unicode_on_3('watch-build'), help='wait till build finishes')
