@@ -101,9 +101,11 @@ class TablePrinter(TableFormatter):
             self.total_free_space = (self.terminal_width - self.data_length) - self.col_count + 1
             if self.total_free_space <= 0:
                 self.total_free_space = None
+            else:
+                self.default_column_space = self.total_free_space / self.col_count
+                self.default_column_space_remainder = self.total_free_space % self.col_count
         else:
             self.total_free_space = None
-        self.current_free_space = self.total_free_space
 
     def _count_sizes(self):
         """
@@ -123,7 +125,7 @@ class TablePrinter(TableFormatter):
 
         for col in self.col_list:
             col_length = self.col_longest[col]
-            col_width = col_length + self.separate()
+            col_width = col_length + self._separate()
             format_list.append(" {%s:%d} " % (col, col_width - 2))
             header_sepa_format_list.append("{%s:%d}" % (col, col_width))
             self.col_widths[col] = col_width
@@ -141,7 +143,7 @@ class TablePrinter(TableFormatter):
             response[col] = self._longest_val_in_column(col)
         return response
 
-    def separate(self):
+    def _separate(self):
         """
         get a width of separator for current column
 
@@ -150,12 +152,13 @@ class TablePrinter(TableFormatter):
         if self.total_free_space is None:
             return 0
         else:
-            sepa = self.total_free_space / self.col_count
-            m = self.current_free_space % self.col_count
-            if m:
+            sepa = self.default_column_space
+            # we need to distribute remainders
+            if self.default_column_space_remainder > 0:
                 sepa += 1
-            self.current_free_space -= sepa
-            # substract vertical lines, their count is: ((# of columns) - 1)
+                self.default_column_space_remainder -= 1
+            logger.debug("total: %d, remainder: %d, sepa: %d", self.total_free_space,
+                         self.default_column_space_remainder, sepa)
             return sepa
 
     def render(self):
