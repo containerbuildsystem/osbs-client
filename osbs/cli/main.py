@@ -42,8 +42,16 @@ def cmd_list_builds(args, osbs):
             cols_to_display = args.columns.split(",")
         else:
             cols_to_display = CLI_LIST_BUILDS_DEFAULT_COLS
-        data = [{"name": "BUILD ID", "status": "STATUS", "image": "IMAGE NAME",
-                 "commit": "COMMIT", "time_created": "TIME CREATED"}]
+        data = [{
+            "base_image": "BASE IMAGE NAME",
+            "base_image_id": "BASE IMAGE ID",
+            "commit": "COMMIT",
+            "image": "IMAGE NAME",
+            "image_id": "IMAGE ID",
+            "name": "BUILD ID",
+            "status": "STATUS",
+            "time_created": "TIME CREATED",
+        }]
         for build in sorted(builds,
                             key=lambda x: x.get_time_created_in_seconds()):
             image = build.get_image_tag()
@@ -53,10 +61,13 @@ def cmd_list_builds(args, osbs):
             if args.running and not build.is_in_progress():
                 continue
             b = {
+                "base_image": build.get_base_image_name() or '',
+                "base_image_id": build.get_base_image_id() or '',
+                "commit": build.get_commit_id(),
+                "image": image,
+                "image_id": build.get_image_id() or '',
                 "name": build.get_build_name(),
                 "status": build.status,
-                "image": image,
-                "commit": build.get_commit_id(),
                 "time_created": build.get_time_created(),
             }
             data.append(b)
@@ -109,6 +120,14 @@ COMMIT ID
 
 {commit_id}
 
+BASE IMAGE ID (FROM {base_image})
+
+{base_image_id}
+
+IMAGE ID
+
+{image_id}
+
 REPOSITORIES
 
 {repositories}"""
@@ -122,6 +141,9 @@ REPOSITORIES
             "packages": build.get_rpm_packages(),
             "repositories": repositories_str,
             "commit_id": build.get_commit_id(),
+            "base_image": build.get_base_image_name() or '(unset)',
+            "base_image_id": build.get_base_image_id() or '(unset)',
+            "image_id": build.get_image_id() or '(unset)',
         }
         print(template.format(**context))
 
@@ -272,7 +294,8 @@ def cli():
                                     nargs="?")
     list_builds_parser.add_argument("--columns",
                                     help="comma-separated list of columns to display, possible values: "
-                                         "name, status, image, commit, time_created")
+                                    "base_image, base_image_id, commit, image, image_id, "
+                                    "name, status, time_created")
     # this may be a bit confusing, but for users, "running" means not done but
     # for us, "running" means scheduled on kubelet
     list_builds_parser.add_argument("--running", help="list only running builds", action="store_true")

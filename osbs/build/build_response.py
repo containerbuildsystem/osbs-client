@@ -150,3 +150,14 @@ class BuildResponse(object):
 
     def get_tar_metadata_filename(self):
         return graceful_chain_get(self.get_tar_metadata(), "filename")
+
+    def get_image_id(self):
+        return graceful_chain_get(self.get_annotations_or_labels(), "image-id")
+
+    def get_base_image_id(self):
+        return graceful_chain_get(self.get_annotations_or_labels(),
+                                  "base-image-id")
+
+    def get_base_image_name(self):
+        return graceful_chain_get(self.get_annotations_or_labels(),
+                                  "base-image-name")
