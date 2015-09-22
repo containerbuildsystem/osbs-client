@@ -9,6 +9,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 
 import logging
 import os
+from pkg_resources import parse_version
 
 try:
     # py2
@@ -106,14 +107,14 @@ class Configuration(object):
         """
         Get minimum version of openshift we require
 
-        :return: list, ints representing version parts, most significant first
+        :return: None, or else an object instance that allows comparisons
         """
         verstring = self._get_value("openshift_required_version",
                                     GENERAL_CONFIGURATION_SECTION,
                                     "openshift_required_version",
                                     can_miss=True)
         if verstring:
-            return [int(x) for x in verstring.split('.')]
+            return parse_version(verstring)
 
         return None
 

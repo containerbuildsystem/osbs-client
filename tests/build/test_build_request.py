@@ -8,6 +8,7 @@ of the BSD license. See the LICENSE file for details.
 import copy
 import json
 import os
+from pkg_resources import parse_version
 import shutil
 
 from osbs.build.build_request import BuildManager, BuildRequest, ProductionBuild
@@ -622,7 +623,7 @@ class TestBuildRequest(object):
         }
 
         # Default required version (0.5.4), implicitly and explicitly
-        for required in (None, [0, 5, 4]):
+        for required in (None, parse_version('0.5.4')):
             build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
             if required is not None:
                 build_request.set_openshift_required_version(required)
@@ -656,7 +657,7 @@ class TestBuildRequest(object):
         # Set required version to 1.0.6
 
         build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
-        build_request.set_openshift_required_version([1, 0, 6])
+        build_request.set_openshift_required_version(parse_version('1.0.6'))
         build_json = build_request.render()
         # Not using the sourceSecret scheme
         assert 'sourceSecret' not in build_json['spec']['source']

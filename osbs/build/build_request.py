@@ -10,6 +10,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 import json
 import logging
 import os
+from pkg_resources import parse_version
 
 try:
     # py2
@@ -53,7 +54,7 @@ class BuildRequest(object):
         self._inner_template = None  # dock json
         self._dj = None
         self._resource_limits = None
-        self._openshift_required_version = [0, 5, 4]
+        self._openshift_required_version = parse_version('0.5.4')
 
     def set_params(self, **kwargs):
         """
@@ -216,7 +217,7 @@ class CommonBuild(BuildRequest):
 
         # For Origin 1.0.6 we'll use the 'secrets' array; for earlier
         # versions we'll just use 'sourceSecret'
-        if self._openshift_required_version < [1, 0, 6]:
+        if self._openshift_required_version < parse_version('1.0.6'):
             if 'secrets' in self.template['spec']['strategy']['customStrategy']:
                 del self.template['spec']['strategy']['customStrategy']['secrets']
         else:
