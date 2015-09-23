@@ -9,11 +9,9 @@ from __future__ import print_function, absolute_import, unicode_literals
 
 import sys
 import logging
-from subprocess import CalledProcessError
-try:
-    from subprocess import check_output
-except ImportError:
-    from osbs.utils import backported_check_output as check_output
+
+from osbs.exceptions import OsbsException
+from osbs.utils import run_command
 
 
 logger = logging.getLogger(__name__)
@@ -26,8 +24,8 @@ def get_terminal_size():
     :return: tuple, (int, int)
     """
     try:
-        rows, columns = check_output(['stty', 'size']).split()
-    except CalledProcessError:
+        rows, columns = run_command(['stty', 'size']).split()
+    except OsbsException:
         # not attached to terminal
         logger.info("not attached to terminal")
         return 0, 0

@@ -55,28 +55,25 @@ def deep_update(orig, new):
 @contextlib.contextmanager
 def checkout_git_repo(git_uri, git_ref, git_branch):
     tmpdir = tempfile.mkdtemp()
+    repo_path = os.path.join(tmpdir, "repo")
     try:
         try:
-            subprocess.check_call(['git', 'clone', git_uri,
-                                  '-b', git_branch, tmpdir],
-                                  stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE)
-        except subprocess.CalledProcessError as ex:
+            # when you clone into an empty directory and cloning process fails
+            # git will remove the empty directory (why?!)
+            run_command(['git', 'clone', git_uri, '-b', git_branch, repo_path])
+        except OsbsException as ex:
             raise OsbsException("Unable to clone git repo '%s' "
                                 "branch '%s'" % (git_uri, git_branch),
                                 cause=ex, traceback=sys.exc_info()[2])
 
         # Find the specific ref we want
         try:
-            subprocess.check_call(['git', 'reset', '--hard', git_ref],
-                                  stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE,
-                                  cwd=tmpdir)
-        except subprocess.CalledProcessError as ex:
+            run_command(['git', 'reset', '--hard', git_ref], cwd=repo_path)
+        except OsbsException as ex:
             raise OsbsException("Unable to reset branch to '%s'" % git_ref,
                                 cause=ex, traceback=sys.exc_info()[2])
 
-        yield tmpdir
+        yield repo_path
 
     finally:
         shutil.rmtree(tmpdir)
@@ -152,23 +149,22 @@ def get_time_from_rfc3339(rfc3339):
         return timegm(time_tuple)
 
 
-def backported_check_output(*popenargs, **kwargs):
+def run_command(*popenargs, **kwargs):
     """
     Run command with arguments and return its output as a byte string.
 
-    Backported from Python 2.7 as it's implemented as pure python on stdlib.
-
-    https://gist.github.com/edufelipe/1027906
+    This is originally taken from subprocess.py of python 2.7
     """
-    process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+    process = subprocess.Popen(stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                               *popenargs, **kwargs)
     output, _ = process.communicate()
     retcode = process.poll()
     if retcode:
         cmd = kwargs.get("args")
         if cmd is None:
             cmd = popenargs[0]
-        error = subprocess.CalledProcessError(retcode, cmd)
-        error.output = output
-        raise error
+        raise OsbsException(
+            message="Command %s returned %s\n\n%s" % (cmd, retcode, output)
+        )
     return output
 
