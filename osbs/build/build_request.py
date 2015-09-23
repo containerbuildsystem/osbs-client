@@ -388,7 +388,7 @@ class ProductionBuild(CommonBuild):
             self.dj.dock_json_set_arg('postbuild_plugins', 'cp_built_image_to_nfs',
                                       'nfs_server_path', nfs_server_path)
             self.dj.dock_json_set_arg('postbuild_plugins', 'cp_built_image_to_nfs',
-                                      'nfs_dest_dir', self.spec.nfs_dest_dir.value)
+                                      'dest_dir', self.spec.nfs_dest_dir.value)
         else:
             # Otherwise, don't run the NFS plugin
             self.dj.remove_plugin("postbuild_plugins", "cp_built_image_to_nfs")
