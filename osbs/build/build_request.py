@@ -284,8 +284,10 @@ class ProductionBuild(CommonBuild):
                         'mountPath': secret_path,
                     })
                     self.dj.dock_json_set_arg(*(plugin + (secret_path,)))
-                else:
-                    # origin 1.0.5 and earlier
+                elif plugin[1] == 'pulp_push':
+                    # setting pulp_push secret for origin 1.0.5 and earlier
+                    #  we only use this way to preserve backwards compat for pulp_push plugin,
+                    #  other plugins must use the new secrets way above
                     logger.info("Configuring %s secret as sourceSecret", secret)
                     if 'sourceSecret' not in self.template['spec']['source']:
                         raise OsbsValidationException("JSON template does not allow secrets")
@@ -404,6 +406,8 @@ class ProductionBuild(CommonBuild):
                                       self.spec.pdc_uri.value)
             self.dj.dock_json_set_arg('exit_plugins', 'sendmail', 'smtp_url',
                                       self.spec.smtp_uri.value)
+            self.dj.dock_json_set_arg('exit_plugins', 'sendmail', 'submitter',
+                                      self.spec.user.value)
             # make sure we'll be able to authenticate to PDC
             if 'pdc_secret_path' not in \
                     self.dj.dock_json_get_plugin_conf('exit_plugins', 'sendmail')['args']:

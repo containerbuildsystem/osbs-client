@@ -727,6 +727,7 @@ class TestBuildRequest(object):
                              'pdc_secret_path': mount_path,
                              'send_on': ['auto_fail'],
                              'error_addresses': ['errors@example.com'],
-                             'smtp_url': 'smtp.example.com'},
+                             'smtp_url': 'smtp.example.com',
+                             'submitter': 'john-foo'},
                     'name': 'sendmail'}
         assert get_plugin(plugins, 'exit_plugins', 'sendmail') == expected
