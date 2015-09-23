@@ -688,7 +688,7 @@ class TestBuildRequest(object):
     def test_with_sendmail_plugin(self):
         bm = BuildManager(INPUTS_PATH)
         build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
-        build_request.set_openshift_required_version([1, 0, 6])
+        build_request.set_openshift_required_version(parse_version('1.0.6'))
         secret_name = 'foo'
         kwargs = {
             'git_uri': TEST_GIT_URI,
