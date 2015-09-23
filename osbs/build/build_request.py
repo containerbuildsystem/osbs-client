@@ -314,6 +314,8 @@ class ProductionBuild(CommonBuild):
         :param vendor: str, vendor name
         :param build_host: str, host the build will run on
         :param authoritative_registry: str, the docker registry authoritative for this image
+        :param distribution_scope: str, distribution scope for this image
+                                   (private, authoritative-source-only, restricted, public)
         :param use_auth: bool, use auth from atomic-reactor?
         :param git_push_url: str, URL for git push
         """
@@ -447,10 +449,11 @@ class ProductionBuild(CommonBuild):
 
     def render_add_labels_in_dockerfile(self):
         implicit_labels = {
-            'Architecture': self.spec.architecture.value,
-            'Vendor': self.spec.vendor.value,
-            'Build_Host': self.spec.build_host.value,
-            'Authoritative_Registry': self.spec.authoritative_registry.value,
+            'architecture': self.spec.architecture.value,
+            'vendor': self.spec.vendor.value,
+            'com.redhat.build-host': self.spec.build_host.value,
+            'authoritative-source': self.spec.authoritative_registry.value,
+            'distribution-scope': self.spec.distribution_scope.value,
         }
 
         self.dj.dock_json_merge_arg('prebuild_plugins',

@@ -189,6 +189,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
             'yum_repourls': ["http://example.com/my.repo"],
             'registry_api_versions': ['v1'],
         }
@@ -245,10 +246,11 @@ class TestBuildRequest(object):
                                   "args", "labels")
 
         assert labels is not None
-        assert labels['Architecture'] is not None
-        assert labels['Authoritative_Registry'] is not None
-        assert labels['Build_Host'] is not None
-        assert labels['Vendor'] is not None
+        assert labels['architecture'] is not None
+        assert labels['authoritative-source'] is not None
+        assert labels['com.redhat.build-host'] is not None
+        assert labels['vendor'] is not None
+        assert labels['distribution-scope'] is not None
 
     def test_render_prod_request(self):
         bm = BuildManager(INPUTS_PATH)
@@ -274,6 +276,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
         }
         build_request.set_params(**kwargs)
@@ -331,10 +334,11 @@ class TestBuildRequest(object):
                                   "args", "labels")
 
         assert labels is not None
-        assert labels['Architecture'] is not None
-        assert labels['Authoritative_Registry'] is not None
-        assert labels['Build_Host'] is not None
-        assert labels['Vendor'] is not None
+        assert labels['architecture'] is not None
+        assert labels['authoritative-source'] is not None
+        assert labels['com.redhat.build-host'] is not None
+        assert labels['vendor'] is not None
+        assert labels['distribution-scope'] is not None
 
     def test_render_prod_without_koji_request(self):
         bm = BuildManager(INPUTS_PATH)
@@ -358,6 +362,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
         }
         build_request.set_params(**kwargs)
@@ -412,10 +417,11 @@ class TestBuildRequest(object):
                                   "args", "labels")
 
         assert labels is not None
-        assert labels['Architecture'] is not None
-        assert labels['Authoritative_Registry'] is not None
-        assert labels['Build_Host'] is not None
-        assert labels['Vendor'] is not None
+        assert labels['architecture'] is not None
+        assert labels['authoritative-source'] is not None
+        assert labels['com.redhat.build-host'] is not None
+        assert labels['vendor'] is not None
+        assert labels['distribution-scope'] is not None
 
     def test_render_prod_with_secret_request(self):
         bm = BuildManager(INPUTS_PATH)
@@ -442,6 +448,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
             'source_secret': 'mysecret',
         }
@@ -508,6 +515,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
             'registry_api_versions': registry_api_versions,
             'source_secret': 'mysecret',
         }
@@ -593,6 +601,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
         }
         build_request = bm.get_build_request_by_type("prod")
@@ -665,6 +674,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
             'pulp_registry': "foo",
         }
         build_request.set_params(**kwargs)
@@ -736,6 +746,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
             'git_push_url': push_url.format(username='', component=TEST_COMPONENT),
             'git_push_username': 'example',
@@ -811,6 +822,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
             'pulp_registry': 'foo',
             'pulp_secret': secret_name,
@@ -900,6 +912,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
             'pdc_secret': secret_name,
             'pdc_url': 'https://pdc.example.com',

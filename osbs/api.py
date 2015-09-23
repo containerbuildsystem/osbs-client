@@ -275,6 +275,7 @@ class OSBS(object):
             vendor=self.build_conf.get_vendor(),
             build_host=self.build_conf.get_build_host(),
             authoritative_registry=self.build_conf.get_authoritative_registry(),
+            distribution_scope=self.build_conf.get_distribution_scope(),
             yum_repourls=yum_repourls,
             pulp_secret=self.build_conf.get_pulp_secret(),
             pdc_secret=self.build_conf.get_pdc_secret(),

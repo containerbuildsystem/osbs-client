@@ -202,6 +202,7 @@ class ProdSpec(CommonSpec):
     vendor = BuildParam("vendor")
     build_host = BuildParam("build_host")
     authoritative_registry = BuildParam("authoritative_registry ")
+    distribution_scope = BuildParam("distribution_scope")
     registry_api_versions = BuildParam("registry_api_versions")
     koji_target = BuildParam("koji_target", allow_none=True)
     kojiroot = BuildParam("kojiroot", allow_none=True)
@@ -226,6 +227,7 @@ class ProdSpec(CommonSpec):
             self.vendor,
             self.build_host,
             self.authoritative_registry,
+            self.distribution_scope,
             self.registry_api_versions,
             self.koji_target,
             self.kojiroot,
@@ -241,7 +243,7 @@ class ProdSpec(CommonSpec):
         ]
 
     def set_params(self, sources_command=None, architecture=None, vendor=None,
-                   build_host=None, authoritative_registry=None,
+                   build_host=None, authoritative_registry=None, distribution_scope=None,
                    koji_target=None, kojiroot=None, kojihub=None,
                    source_secret=None,  # compatibility name for pulp_secret
                    pulp_secret=None, pulp_registry=None, pdc_secret=None, pdc_url=None,
@@ -256,6 +258,7 @@ class ProdSpec(CommonSpec):
         self.vendor.value = vendor
         self.build_host.value = build_host
         self.authoritative_registry.value = authoritative_registry
+        self.distribution_scope.value = distribution_scope
         self.registry_api_versions.value = registry_api_versions
         self.koji_target.value = koji_target
         self.kojiroot.value = kojiroot

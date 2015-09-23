@@ -274,6 +274,9 @@ class Configuration(object):
         return self._get_value("authoritative_registry", self.conf_section,
                                "authoritative_registry")
 
+    def get_distribution_scope(self):
+        return self._get_value("distribution_scope", self.conf_section, "distribution_scope")
+
     def get_architecture(self):
         return self._get_value("arch", self.conf_section, "architecture")
 

@@ -77,13 +77,15 @@ Some options are also mandatory.
 
 * `build_type` (**mandatory**, `string`) — name of build type to use for building the image
 
-* `vendor` (*optional*, `string`) — content of Vendor label to be set
+* `vendor` (*optional*, `string`) — content of `vendor` label to be set
 
-* `build_host` (*optional*, `string`) — content of Build\_Host label to be set
+* `build_host` (*optional*, `string`) — content of `com.redhat.build-host` label to be set
 
-* `architecture` (*optional*, `string`) — content of Architecture label to be set
+* `architecture` (*optional*, `string`) — content of `architecture` label to be set
 
-* `authoritative_registry` (*optional*, `string`) — content of Authoritative\_Registry label to be set
+* `authoritative_registry` (*optional*, `string`) — content of `authoritative-source` label to be set
+
+* `distribution_scope` (*optional*, `string`) - content of `distribution-scope` label to be set - possible values are `private`, `authoritative-source-only`, `restricted`, and `public`
 
 * `use_auth` (*optional*, `boolean`) — by default, osbs-client is trying to authenticate against OpenShift master to get OAuth token; you may disable the process with this option
 
