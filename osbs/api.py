@@ -275,7 +275,7 @@ class OSBS(object):
             yum_repourls=yum_repourls,
             pulp_secret=self.build_conf.get_pulp_secret(),
             pdc_secret=self.build_conf.get_pdc_secret(),
-            pdc_uri=self.build_conf.get_pdc_uri(),
+            pdc_url=self.build_conf.get_pdc_url(),
             smtp_uri=self.build_conf.get_smtp_uri(),
             use_auth=self.build_conf.get_builder_use_auth(),
             pulp_registry=self.os_conf.get_pulp_registry(),

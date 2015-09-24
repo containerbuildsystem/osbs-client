@@ -706,7 +706,7 @@ class TestBuildRequest(object):
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
             'pdc_secret': secret_name,
-            'pdc_uri': 'pdc.example.com',
+            'pdc_url': 'https://pdc.example.com',
             'smtp_uri': 'smtp.example.com',
         }
         build_request.set_params(**kwargs)
@@ -723,11 +723,11 @@ class TestBuildRequest(object):
         mount_path = pdc_secret[0]['mountPath']
         expected = {'args': {'from_address': 'osbs@example.com',
                              'url': 'http://openshift/',
-                             'pdc_url': 'pdc.example.com',
+                             'pdc_url': 'https://pdc.example.com',
                              'pdc_secret_path': mount_path,
                              'send_on': ['auto_fail'],
                              'error_addresses': ['errors@example.com'],
-                             'smtp_url': 'smtp.example.com',
+                             'smtp_uri': 'smtp.example.com',
                              'submitter': 'john-foo'},
                     'name': 'sendmail'}
         assert get_plugin(plugins, 'exit_plugins', 'sendmail') == expected

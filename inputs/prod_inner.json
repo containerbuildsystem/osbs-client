@@ -138,7 +138,7 @@
         "send_on": ["auto_fail"],
         "url": "{{OPENSHIFT_URI}}",
         "pdc_url": "{{PDC_URL}}",
-        "smtp_url": "{{SMTP_URL}}",
+        "smtp_uri": "{{SMTP_URI}}",
         "from_address": "osbs@example.com",
         "error_addresses": ["errors@example.com"]
       },

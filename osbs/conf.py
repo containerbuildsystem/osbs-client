@@ -288,8 +288,8 @@ class Configuration(object):
         secret = self._get_value("pdc_secret", self.conf_section,
                                  "pdc_secret", can_miss=True)
 
-    def get_pdc_uri(self):
-        return self._get_value("pdc_uri", self.conf_section, "pdc_uri", can_miss=True)
+    def get_pdc_url(self):
+        return self._get_value("pdc_url", self.conf_section, "pdc_url", can_miss=True)
 
     def get_smtp_uri(self):
         return self._get_value("smtp_uri", self.conf_section, "smtp_uri", can_miss=True)

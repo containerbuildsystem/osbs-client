@@ -398,13 +398,13 @@ class ProductionBuild(CommonBuild):
             # but still construct the unique tag
             self.template['spec']['output']['to']['name'] = self.spec.image_tag.value
 
-        # if we have pdc_uri and smtp_uri, configure sendmail plugin, else remove it
-        if self.spec.pdc_uri.value and self.spec.smtp_uri.value:
+        # if we have pdc_url and smtp_uri, configure sendmail plugin, else remove it
+        if self.spec.pdc_url.value and self.spec.smtp_uri.value:
             self.dj.dock_json_set_arg('exit_plugins', 'sendmail', 'url',
                                       self.spec.openshift_uri.value)
             self.dj.dock_json_set_arg('exit_plugins', 'sendmail', 'pdc_url',
-                                      self.spec.pdc_uri.value)
-            self.dj.dock_json_set_arg('exit_plugins', 'sendmail', 'smtp_url',
+                                      self.spec.pdc_url.value)
+            self.dj.dock_json_set_arg('exit_plugins', 'sendmail', 'smtp_uri',
                                       self.spec.smtp_uri.value)
             self.dj.dock_json_set_arg('exit_plugins', 'sendmail', 'submitter',
                                       self.spec.user.value)

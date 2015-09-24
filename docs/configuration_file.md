@@ -89,7 +89,7 @@ Some options are also mandatory.
 
 * `pdc_secret` (*optional*, `string`) - name of kubernetes secret to use for plugins communicating with PDC
 
-* `pdc_uri` (*optional*, `string`) - URI of PDC server instance, e.g. `pdc.mycompany.com`
+* `pdc_url` (*optional*, `string`) - URL of PDC server instance, e.g. `https://pdc.mycompany.com`
 
 * `smtp_uri` (*optional*, `string`) - URI of SMTP server, e.g. `smtp.mycompany.com`
 

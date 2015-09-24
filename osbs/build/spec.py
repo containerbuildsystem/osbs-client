@@ -162,7 +162,7 @@ class ProdSpec(CommonSpec):
     pulp_secret = BuildParam("pulp_secret", allow_none=True)
     pulp_registry = BuildParam("pulp_registry", allow_none=True)
     pdc_secret = BuildParam("pdc_secret", allow_none=True)
-    pdc_uri = BuildParam("pdc_uri", allow_none=True)
+    pdc_url = BuildParam("pdc_url", allow_none=True)
     smtp_uri = BuildParam("smtp_uri", allow_none=True)
     nfs_server_path = BuildParam("nfs_server_path", allow_none=True)
     nfs_dest_dir = BuildParam("nfs_dest_dir", allow_none=True)
@@ -183,7 +183,7 @@ class ProdSpec(CommonSpec):
             self.pulp_secret,
             self.pulp_registry,
             self.pdc_secret,
-            self.pdc_uri,
+            self.pdc_url,
             self.smtp_uri,
             self.nfs_server_path,
             self.git_push_url,
@@ -194,7 +194,7 @@ class ProdSpec(CommonSpec):
                    build_host=None, authoritative_registry=None,
                    koji_target=None, kojiroot=None, kojihub=None,
                    source_secret=None,  # compatibility name for pulp_secret
-                   pulp_secret=None, pulp_registry=None, pdc_secret=None, pdc_uri=None,
+                   pulp_secret=None, pulp_registry=None, pdc_secret=None, pdc_url=None,
                    smtp_uri=None, nfs_server_path=None,
                    nfs_dest_dir=None, git_branch=None, base_image=None,
                    name_label=None, git_push_url=None, git_push_username=None,
@@ -211,7 +211,7 @@ class ProdSpec(CommonSpec):
         self.pulp_secret.value = pulp_secret or source_secret
         self.pulp_registry.value = pulp_registry
         self.pdc_secret.value = pdc_secret
-        self.pdc_uri.value = pdc_uri
+        self.pdc_url.value = pdc_url
         self.smtp_uri.value = smtp_uri
         self.nfs_server_path.value = nfs_server_path
         self.nfs_dest_dir.value = nfs_dest_dir
