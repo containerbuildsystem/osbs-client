@@ -261,6 +261,14 @@ def cmd_get_build_image_id(args, osbs):
             print(format_str.format(tag=name, image=image_id))
 
 
+def cmd_pause_builds(args, osbs):
+    osbs.pause_builds(namespace=args.namespace)
+
+
+def cmd_resume_builds(args, osbs):
+    osbs.resume_builds(namespace=args.namespace)
+
+
 def str_on_2_unicode_on_3(s):
     """
     argparse is way too awesome when doing repr() on choices when printing usage
@@ -379,6 +387,16 @@ def cli():
                                                description='get build container images for a build in a namespace')
     get_build_image_id.add_argument("BUILD_ID", help="build ID", nargs=1)
     get_build_image_id.set_defaults(func=cmd_get_build_image_id)
+
+    pause_builds = subparsers.add_parser(str_on_2_unicode_on_3('pause-builds'),
+                                         help='stop scheduling new builds (admin)',
+                                         description='stop scheduling new builds and wait until running builds finish')
+    pause_builds.set_defaults(func=cmd_pause_builds)
+
+    resume_builds = subparsers.add_parser(str_on_2_unicode_on_3('resume-builds'),
+                                          help='resume scheduling new builds (admin)',
+                                          description='allow builds to be scheduled again after pause-builds')
+    resume_builds.set_defaults(func=cmd_resume_builds)
 
     parser.add_argument("--openshift-uri", action='store', metavar="URL",
                         help="openshift URL to remote API")
