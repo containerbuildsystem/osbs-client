@@ -9,6 +9,11 @@ Python module and command line client for OpenShift Build Service.
 
 It is able to query OpenShift v3 for various stuff related to building images. It can initiate builds, list builds, get info about builds, get build logs... All of this can be done from command line and from python.
 
+## Getting Started
+
+We have [a guide](https://github.com/projectatomic/osbs-client/blob/master/docs/development-setup.md) how to setup OpenShift in a docker container so you can try it out.
+
+
 ## Configuration
 
 You should set up a configuration file for your instance, sample:
