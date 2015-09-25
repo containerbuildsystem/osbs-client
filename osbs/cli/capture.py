@@ -73,8 +73,8 @@ class ResponseSaver(object):
             logger.debug("capturing to %s.json", path)
             with open(path + ".json", "w") as outf:
                 try:
-                    json.dump(response.json(), outf, sort_keys=True,
-                              indent=4)
+                    json.dump(json.loads(response.content), outf,
+                              sort_keys=True, indent=4)
                 except ValueError:
                     outf.write(response.content)
 
