@@ -162,6 +162,11 @@ class Openshift(object):
         headers, kwargs = self._request_args(with_auth, **kwargs)
         return self._con.put(url, headers=headers, verify_ssl=self.verify_ssl, **kwargs)
 
+    def _delete(self, url, with_auth=True, **kwargs):
+        headers, hwargs = self._request_args(with_auth, **kwargs)
+        return self._con.delete(url, headers=headers, verify_ssl=self.verify_ssl,
+                                **kwargs)
+
     def get_oauth_token(self):
         url = self.os_oauth_url + "?response_type=token&client_id=openshift-challenging-client"
         if self.use_auth:
@@ -334,6 +339,35 @@ class Openshift(object):
         url = self._build_url("namespaces/%s/builds/%s/" % (namespace, build_id))
         response = self._get(url)
         check_response(response)
+        return response
+
+    def create_resource_quota(self, name, quota_json,
+                              namespace=DEFAULT_NAMESPACE):
+        """
+        Prevent builds being scheduled and wait for running builds to finish.
+
+        :return:
+        """
+
+        url = self._build_k8s_url("namespaces/%s/resourcequotas/" % namespace)
+        response = self._post(url, data=json.dumps(quota_json),
+                              headers={"Content-Type": "application/json"})
+        if response.status_code == httplib.CONFLICT:
+            url = self._build_k8s_url("namespaces/%s/resourcequotas/%s" %
+                                      (namespace, name))
+            response = self._put(url, data=json.dumps(quota_json),
+                                 headers={"Content-Type": "application/json"})
+
+        check_response(response)
+        return response
+
+    def delete_resource_quota(self, name, namespace=DEFAULT_NAMESPACE):
+        url = self._build_k8s_url("namespaces/%s/resourcequotas/%s" %
+                                  (namespace, name))
+        response = self._delete(url)
+        if response.status_code != httplib.NOT_FOUND:
+            check_response(response)
+
         return response
 
     def wait(self, build_id, states, namespace=DEFAULT_NAMESPACE):

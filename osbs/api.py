@@ -463,3 +463,35 @@ class OSBS(object):
         stream['spec']['dockerImageRepository'] = docker_image_repository
         return self.os.create_image_stream(json.dumps(stream),
                                            namespace=namespace)
+
+    @osbsapi
+    def pause_builds(self, namespace=DEFAULT_NAMESPACE):
+        # First, set quota so 0 pods are allowed to be running
+        quota_file = os.path.join(self.os_conf.get_build_json_store(),
+                                  'pause_quota.json')
+        with open(quota_file) as fp:
+            quota_json = json.load(fp)
+
+        name = quota_json['metadata']['name']
+        self.os.create_resource_quota(name, quota_json, namespace=namespace)
+
+        # Now wait for running builds to finish
+        while True:
+            builds = self.list_builds(namespace=namespace)
+            running_builds = [build for build in builds if build.is_running()]
+            if not running_builds:
+                break
+
+            name = running_builds[0].get_build_name()
+            logger.info("waiting for build to finish: %s", name)
+            self.wait_for_build_to_finish(name, namespace=namespace)
+
+    @osbsapi
+    def resume_builds(self, namespace=DEFAULT_NAMESPACE):
+        quota_file = os.path.join(self.os_conf.get_build_json_store(),
+                                  'pause_quota.json')
+        with open(quota_file) as fp:
+            quota_json = json.load(fp)
+
+        name = quota_json['metadata']['name']
+        self.os.delete_resource_quota(name, namespace=namespace)
