@@ -285,8 +285,8 @@ class Configuration(object):
         return self.get_pulp_secret()
 
     def get_pdc_secret(self):
-        secret = self._get_value("pdc_secret", self.conf_section,
-                                 "pdc_secret", can_miss=True)
+        return self._get_value("pdc_secret", self.conf_section,
+                                "pdc_secret", can_miss=True)
 
     def get_pdc_url(self):
         return self._get_value("pdc_url", self.conf_section, "pdc_url", can_miss=True)
