@@ -22,9 +22,11 @@ from tempfile import NamedTemporaryFile
 
 try:
     # py2
+    import httplib
     import urlparse
 except ImportError:
     # py3
+    import http.client as httplib
     import urllib.parse as urlparse
 
 
@@ -137,9 +139,10 @@ class Connection(object):
             (OAPI_PREFIX + "namespaces/default/buildconfigs/%s" % TEST_BUILD_CONFIG,
              OAPI_PREFIX + "namespaces/default/buildconfigs/%s/" % TEST_BUILD_CONFIG): {
                  "get": {
-                     "custom_callback": self.buildconfig_not_found,
+                     "custom_callback":
+                         self.with_status_code(httplib.NOT_FOUND),
                      # Empty file (no response content as the status is 404
-                     "file": "not_found_build-config-component-master.json",
+                     "file": None,
                  }
              },
 
@@ -161,6 +164,27 @@ class Connection(object):
                     "file": "pods.json",
                 },
             },
+
+            API_PREFIX + "namespaces/default/resourcequotas/": {
+                # Make the POST fail so we can test PUT
+                "post": {
+                    "custom_callback": self.with_status_code(httplib.CONFLICT),
+
+                    # Reponse is not really empty but it isn't relevant to
+                    # the testing
+                    "file": None,
+                },
+            },
+
+            API_PREFIX + "namespaces/default/resourcequotas/pause": {
+                "put": {
+                    "file": None,
+                },
+
+                "delete": {
+                    "file": None,  # not really empty but not relevant
+                },
+            },
         }
 
 
@@ -176,10 +200,14 @@ class Connection(object):
         }
 
     @staticmethod
-    def buildconfig_not_found(key, content):
-        return {
-            "status_code": 404,
-        }
+    def with_status_code(status_code):
+        def custom_func(key, content):
+            return {
+                "content": content,
+                "status_code": status_code,
+            }
+
+        return custom_func
 
     def get_definition_for(self, key):
         """
@@ -225,6 +253,9 @@ class Connection(object):
 
     def put(self, url, *args, **kwargs):
         return self.request(url, "put", *args, **kwargs)
+
+    def delete(self, url, *args, **kwargs):
+        return self.request(url, "delete", *args, **kwargs)
 
 
 @pytest.fixture(params=["0.5.4", "1.0.4"])
@@ -306,7 +337,11 @@ class ResponseMapping(object):
         file_name = value_to_use[method]["file"]
         logger.debug("API response content: %s", file_name)
         custom_callback = value_to_use[method].get("custom_callback", None)
-        content = self.get_response_content(file_name)
+        if file_name is None:
+            content = b''
+        else:
+            content = self.get_response_content(file_name)
+
         if custom_callback:
             logger.debug("Custom API callback: %s", custom_callback)
             return custom_callback(key, content)

@@ -152,6 +152,12 @@ class TestOSBS(object):
         with pytest.raises(StopIteration):
             assert next(logs)
 
+    def test_pause_builds(self, osbs):
+        osbs.pause_builds()
+
+    def test_resume_builds(self, osbs):
+        osbs.resume_builds()
+
     @pytest.mark.parametrize('decode_docker_logs', [True, False])
     def test_build_logs_api_from_docker(self, osbs, decode_docker_logs):
         logs = osbs.get_docker_build_logs(TEST_BUILD, decode_logs=decode_docker_logs)
