@@ -41,10 +41,9 @@ build_host=localhost
 """)
         f.flush()
         f.seek(0)
-        with pytest.raises(OsbsException):
-            os_conf = Configuration(conf_file=f.name,
-                                    conf_section="default")
-            os_conf.get_build_type()
+        os_conf = Configuration(conf_file=f.name,
+                                conf_section="default")
+        assert os_conf.get_build_type() is None
 
 def test_no_inputs():
     with NamedTemporaryFile(mode='w+') as f:

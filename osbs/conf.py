@@ -20,8 +20,8 @@ except ImportError:
     import configparser
     from urllib.parse import urljoin
 
-from osbs.constants import DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION, GENERAL_CONFIGURATION_SECTION
-from osbs.exceptions import OsbsException
+from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
+                            GENERAL_CONFIGURATION_SECTION)
 
 
 logger = logging.getLogger(__name__)
@@ -59,7 +59,7 @@ class Configuration(object):
         self.args = cli_args
         self.kwargs = kwargs
 
-    def _get_value(self, args_key, conf_section, conf_key, can_miss=False, default=None, is_bool_val=False):
+    def _get_value(self, args_key, conf_section, conf_key, default=None, is_bool_val=False):
         # FIXME: this is too bloated: split it into separate classes
         # and implement it as mixins
         def get_value_from_kwargs():
@@ -84,10 +84,8 @@ class Configuration(object):
             value = func()
             if value is not None:
                 break
-        else:  # we didn't breaked
-            if can_miss:
-                return default
-            raise OsbsException("value '%s' not found" % args_key)
+        else:  # we didn't break
+            return default
 
         if is_bool_val:
             try:
@@ -111,8 +109,7 @@ class Configuration(object):
         """
         verstring = self._get_value("openshift_required_version",
                                     GENERAL_CONFIGURATION_SECTION,
-                                    "openshift_required_version",
-                                    can_miss=True)
+                                    "openshift_required_version")
         if verstring:
             return parse_version(verstring)
 
@@ -164,118 +161,109 @@ class Configuration(object):
         return urljoin(base_uri, "/oauth/authorize")  # MUST NOT END WITH SLASH
 
     def get_verbosity(self):
-        val = self._get_value("verbose", GENERAL_CONFIGURATION_SECTION, "verbose", can_miss=True, is_bool_val=True)
-        return val
+        return self._get_value("verbose", GENERAL_CONFIGURATION_SECTION, "verbose",
+                               is_bool_val=True)
 
     def get_git_uri(self):
-        val = self._get_value("git_url", self.conf_section, "git_url", can_miss=True)
-        return val
+        return self._get_value("git_url", self.conf_section, "git_url")
 
     def get_git_ref(self):
-        val = self._get_value("git_commit", self.conf_section, "git_commit", can_miss=True)
-        return val
+        return self._get_value("git_commit", self.conf_section, "git_commit")
 
     def get_git_branch(self):
-        val = self._get_value("git_branch", self.conf_section, "git_branch", can_miss=True)
-        return val
+        return self._get_value("git_branch", self.conf_section, "git_branch")
 
     def get_user(self):
         """ user namespace when tagging and pushing image """
-        val = self._get_value("user", self.conf_section, "user", can_miss=True)
-        return val
+        return self._get_value("user", self.conf_section, "user")
 
     def get_component(self):
-        val = self._get_value("component", self.conf_section, "component", can_miss=True)
-        return val
+        return self._get_value("component", self.conf_section, "component")
 
     def get_yum_repourls(self):
-        val = self._get_value("yum_repourls", self.conf_section, "yum_repourls", can_miss=True)
-        return val
+        return self._get_value("yum_repourls", self.conf_section, "yum_repourls")
 
     def get_namespace(self):
-        val = self._get_value("namespace", self.conf_section, "namespace", can_miss=True)
-        return val
+        return self._get_value("namespace", self.conf_section, "namespace")
 
     def get_kojiroot(self):
-        return self._get_value("koji_root", self.conf_section, "koji_root", can_miss=True)
+        return self._get_value("koji_root", self.conf_section, "koji_root")
 
     def get_kojihub(self):
-        return self._get_value("koji_hub", self.conf_section, "koji_hub", can_miss=True)
+        return self._get_value("koji_hub", self.conf_section, "koji_hub")
 
     def get_koji_target(self):
-        val = self._get_value("target", self.conf_section, "target", can_miss=True)
-        return val
+        return self._get_value("target", self.conf_section, "target")
 
     def get_sources_command(self):
-        return self._get_value("sources_command", self.conf_section, "sources_command", can_miss=True)
+        return self._get_value("sources_command", self.conf_section, "sources_command")
 
     def get_username(self):
-        return self._get_value("username", self.conf_section, "username", can_miss=True)
+        return self._get_value("username", self.conf_section, "username")
 
     def get_password(self):
-        return self._get_value("password", self.conf_section, "password", can_miss=True)
+        return self._get_value("password", self.conf_section, "password")
 
     def get_client_cert(self):
-        return self._get_value("client_cert", self.conf_section, "client_cert", can_miss=True)
+        return self._get_value("client_cert", self.conf_section, "client_cert")
 
     def get_client_key(self):
-        return self._get_value("client_key", self.conf_section, "client_key", can_miss=True)
+        return self._get_value("client_key", self.conf_section, "client_key")
 
     def get_use_kerberos(self):
-        return self._get_value("use_kerberos", self.conf_section, "use_kerberos", can_miss=True, is_bool_val=True)
+        return self._get_value("use_kerberos", self.conf_section, "use_kerberos", is_bool_val=True)
 
     def get_kerberos_keytab(self):
-        return self._get_value("kerberos_keytab", self.conf_section, "kerberos_keytab", can_miss=True)
+        return self._get_value("kerberos_keytab", self.conf_section, "kerberos_keytab")
 
     def get_kerberos_principal(self):
-        return self._get_value("kerberos_principal", self.conf_section, "kerberos_principal", can_miss=True)
+        return self._get_value("kerberos_principal", self.conf_section, "kerberos_principal")
 
     def get_kerberos_ccache(self):
-        return self._get_value("kerberos_ccache", self.conf_section, "kerberos_ccache", can_miss=True)
+        return self._get_value("kerberos_ccache", self.conf_section, "kerberos_ccache")
 
     def get_registry_uri(self):
-        return self._get_value("registry_uri", self.conf_section, "registry_uri", can_miss=True)
+        return self._get_value("registry_uri", self.conf_section, "registry_uri")
 
     def get_pulp_registry(self):
-        return self._get_value("pulp_registry_name", self.conf_section, "pulp_registry_name", can_miss=True)
+        return self._get_value("pulp_registry_name", self.conf_section, "pulp_registry_name")
 
     def get_build_json_store(self):
         return self._get_value("build_json_dir", GENERAL_CONFIGURATION_SECTION, "build_json_dir")
 
     def get_verify_ssl(self):
         return self._get_value("verify_ssl", self.conf_section, "verify_ssl",
-                               default=True, can_miss=True, is_bool_val=True)
+                               default=True, is_bool_val=True)
 
     def get_build_type(self):
         return self._get_value("build_type", self.conf_section, "build_type")
 
     def get_vendor(self):
-        return self._get_value("vendor", self.conf_section, "vendor", can_miss=True)
+        return self._get_value("vendor", self.conf_section, "vendor")
 
     def get_build_host(self):
-        return self._get_value("build_host", self.conf_section, "build_host", can_miss=True)
+        return self._get_value("build_host", self.conf_section, "build_host")
 
     def get_authoritative_registry(self):
-        return self._get_value("authoritative_registry", self.conf_section, "authoritative_registry", can_miss=True)
+        return self._get_value("authoritative_registry", self.conf_section,
+                               "authoritative_registry")
 
     def get_architecture(self):
-        return self._get_value("arch", self.conf_section, "architecture", can_miss=True)
+        return self._get_value("arch", self.conf_section, "architecture")
 
     def get_use_auth(self):
-        return self._get_value("use_auth", self.conf_section, "use_auth", can_miss=True, is_bool_val=True)
+        return self._get_value("use_auth", self.conf_section, "use_auth", is_bool_val=True)
 
     def get_builder_use_auth(self):
         return self._get_value("builder_use_auth", self.conf_section,
-                               "builder_use_auth", can_miss=True,
+                               "builder_use_auth",
                                default=self.get_use_auth(),
                                is_bool_val=True)
 
     def get_pulp_secret(self):
-        secret = self._get_value("pulp_secret", self.conf_section,
-                                 "pulp_secret", can_miss=True)
+        secret = self._get_value("pulp_secret", self.conf_section, "pulp_secret")
         if not secret:
-            secret = self._get_value("source_secret", self.conf_section,
-                                     "pulp_secret", can_miss=True)
+            secret = self._get_value("source_secret", self.conf_section, "pulp_secret")
         return secret
 
     def get_source_secret(self):
@@ -285,39 +273,31 @@ class Configuration(object):
         return self.get_pulp_secret()
 
     def get_pdc_secret(self):
-        return self._get_value("pdc_secret", self.conf_section,
-                                "pdc_secret", can_miss=True)
+        return self._get_value("pdc_secret", self.conf_section, "pdc_secret")
 
     def get_pdc_url(self):
-        return self._get_value("pdc_url", self.conf_section, "pdc_url", can_miss=True)
+        return self._get_value("pdc_url", self.conf_section, "pdc_url")
 
     def get_smtp_uri(self):
-        return self._get_value("smtp_uri", self.conf_section, "smtp_uri", can_miss=True)
+        return self._get_value("smtp_uri", self.conf_section, "smtp_uri")
 
     def get_nfs_server_path(self):
-        return self._get_value("nfs_server_path", self.conf_section,
-                               "nfs_server_path", can_miss=True)
+        return self._get_value("nfs_server_path", self.conf_section, "nfs_server_path")
 
     def get_nfs_destination_dir(self):
-        return self._get_value("nfs_dest_dir", self.conf_section,
-                               "nfs_dest_dir", can_miss=True)
+        return self._get_value("nfs_dest_dir", self.conf_section, "nfs_dest_dir")
 
     def get_cpu_limit(self):
-        return self._get_value("cpu_limit", self.conf_section,
-                               "cpu_limit", can_miss=True)
+        return self._get_value("cpu_limit", self.conf_section, "cpu_limit")
 
     def get_memory_limit(self):
-        return self._get_value("memory_limit", self.conf_section,
-                               "memory_limit", can_miss=True)
+        return self._get_value("memory_limit", self.conf_section, "memory_limit")
 
     def get_storage_limit(self):
-        return self._get_value("storage_limit", self.conf_section,
-                               "storage_limit", can_miss=True)
+        return self._get_value("storage_limit", self.conf_section, "storage_limit")
 
     def get_git_push_url(self):
-        return self._get_value("git_push_url", self.conf_section,
-                               "git_push_url", can_miss=True)
+        return self._get_value("git_push_url", self.conf_section, "git_push_url")
 
     def get_git_push_username(self):
-        return self._get_value("git_push_username", self.conf_section,
-                               "git_push_username", can_miss=True)
+        return self._get_value("git_push_username", self.conf_section, "git_push_username")
