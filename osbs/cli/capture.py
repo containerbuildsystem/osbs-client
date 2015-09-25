@@ -44,9 +44,10 @@ class ResponseSaver(object):
     Wrap HttpSession.request() and save responses.
     """
 
-    def __init__(self, capture_dir, openshift_api_uri, fn):
+    def __init__(self, capture_dir, openshift_api_uri, k8s_api_uri, fn):
         self.capture_dir = capture_dir
         self.openshift_api_uri = openshift_api_uri
+        self.k8s_api_uri = k8s_api_uri
         self.fn = fn
         self.visited = {}
 
@@ -54,6 +55,8 @@ class ResponseSaver(object):
         filename = url
         if filename.startswith(self.openshift_api_uri):
             filename = filename[len(self.openshift_api_uri):]
+        if filename.startswith(self.k8s_api_uri):
+            filename = filename[len(self.k8s_api_uri):]
         filename = filename.replace('/', '_')
         path = os.path.join(self.capture_dir,
                             "{method}-{url}".format(method=method,
@@ -93,4 +96,5 @@ def setup_json_capture(osbs, os_conf, capture_dir):
     finally:
         osbs.os._con.request = ResponseSaver(capture_dir,
                                              os_conf.get_openshift_api_uri(),
+                                             os_conf.get_k8s_api_uri(),
                                              osbs.os._con.request).request
