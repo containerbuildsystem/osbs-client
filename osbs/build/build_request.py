@@ -164,10 +164,12 @@ class CommonBuild(BuildRequest):
 
         :param git_uri: str, URL of source git repository
         :param git_ref: str, what git tree to build (default: master)
-        :param registry_uri: str, URL of docker registry where built image is pushed
+        :param registry_uri: str, URI of docker registry where built image is pushed
+        :param source_registry_uri: str, URI of docker registry from which image is pulled
         :param user: str, user part of resulting image name
         :param component: str, component part of the image name
         :param openshift_uri: str, URL of openshift instance for the build
+        :param builder_openshift_url: str, url of OpenShift where builder will connect
         :param yum_repourls: list of str, URLs to yum repo files to include
         :param use_auth: bool, use auth from atomic-reactor?
         """
@@ -201,7 +203,7 @@ class CommonBuild(BuildRequest):
 
         if self.dj.dock_json_has_plugin_conf('prebuild_plugins', 'check_and_set_rebuild'):
             self.dj.dock_json_set_arg('prebuild_plugins', 'check_and_set_rebuild', 'url',
-                                      self.spec.openshift_uri.value)
+                                      self.spec.builder_openshift_url.value)
             if self.spec.use_auth.value is not None:
                 self.dj.dock_json_set_arg('prebuild_plugins', 'check_and_set_rebuild',
                                           'use_auth', self.spec.use_auth.value)
@@ -309,7 +311,7 @@ class ProductionBuild(CommonBuild):
         self.dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts",
                                   "command", self.spec.sources_command.value)
         self.dj.dock_json_set_arg('prebuild_plugins', "pull_base_image",
-                                  "parent_registry", self.spec.registry_uri.value)
+                                  "parent_registry", self.spec.source_registry_uri.value)
 
         implicit_labels = {
             'Architecture': self.spec.architecture.value,
@@ -323,11 +325,11 @@ class ProductionBuild(CommonBuild):
 
         try:
             self.dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3",
-                                      "url", self.spec.openshift_uri.value)
+                                      "url", self.spec.builder_openshift_url.value)
         except RuntimeError:
             # For compatibility with older osbs.conf files
             self.dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3",
-                                      "url", self.spec.openshift_uri.value)
+                                      "url", self.spec.builder_openshift_url.value)
 
         # If there are no triggers set, there is no point in running
         # the check_and_set_rebuild, bump_release, or import_image plugins.
@@ -401,7 +403,7 @@ class ProductionBuild(CommonBuild):
         # if we have pdc_url and smtp_uri, configure sendmail plugin, else remove it
         if self.spec.pdc_url.value and self.spec.smtp_uri.value:
             self.dj.dock_json_set_arg('exit_plugins', 'sendmail', 'url',
-                                      self.spec.openshift_uri.value)
+                                      self.spec.builder_openshift_url.value)
             self.dj.dock_json_set_arg('exit_plugins', 'sendmail', 'pdc_url',
                                       self.spec.pdc_url.value)
             self.dj.dock_json_set_arg('exit_plugins', 'sendmail', 'smtp_uri',
@@ -451,7 +453,7 @@ class ProductionBuild(CommonBuild):
             self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'docker_image_repo',
                                       self.spec.imagestream_url.value)
             self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'url',
-                                      self.spec.openshift_uri.value)
+                                      self.spec.builder_openshift_url.value)
             if self.spec.use_auth.value is not None:
                 self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'use_auth',
                                           self.spec.use_auth.value)
@@ -488,11 +490,11 @@ class SimpleBuild(CommonBuild):
         super(SimpleBuild, self).render()
         try:
             self.dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3", "url",
-                                      self.spec.openshift_uri.value)
+                                      self.spec.builder_openshift_url.value)
         except RuntimeError:
             # For compatibility with older osbs.conf files
             self.dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url",
-                                      self.spec.openshift_uri.value)
+                                      self.spec.builder_openshift_url.value)
 
         self.dj.write_dock_json()
         self.build_json = self.template

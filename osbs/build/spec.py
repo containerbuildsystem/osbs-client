@@ -112,7 +112,9 @@ class CommonSpec(BuildTypeSpec):
     user = UserParam()
     component = BuildParam('component')
     registry_uri = BuildParam('registry_uri')
+    source_registry_uri = BuildParam('source_registry_uri')
     openshift_uri = BuildParam('openshift_uri')
+    builder_openshift_url = BuildParam('builder_openshift_url')
     name = BuildIDParam()
     yum_repourls = BuildParam("yum_repourls")
     use_auth = BuildParam("use_auth", allow_none=True)
@@ -128,17 +130,24 @@ class CommonSpec(BuildTypeSpec):
         ]
 
     def set_params(self, git_uri=None, git_ref=None, registry_uri=None, user=None,
-                   component=None, openshift_uri=None,
-                   yum_repourls=None, use_auth=None):
+                   component=None, openshift_uri=None, source_registry_uri=None,
+                   yum_repourls=None, use_auth=None, builder_openshift_url=None):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
         self.user.value = user
         self.component.value = component
-        # We only want the hostname[:port]
-        self.registry_uri.value = re.sub(r'^https?://([^/]*)/?.*',
-                                         lambda m: m.groups()[0],
-                                         registry_uri)
+
+        def ditch_http_prefix(val):
+            if not val:
+                return val
+            # We only want the hostname[:port]
+            return re.sub(r'^https?://([^/]*)/?.*',
+                          lambda m: m.groups()[0],
+                          val)
+        self.registry_uri.value = ditch_http_prefix(registry_uri)
+        self.source_registry_uri.value = ditch_http_prefix(source_registry_uri)
         self.openshift_uri.value = openshift_uri
+        self.builder_openshift_url.value = builder_openshift_url
         if not (yum_repourls is None or isinstance(yum_repourls, list)):
             raise OsbsValidationException("yum_repourls must be a list")
         self.yum_repourls.value = yum_repourls or []

@@ -273,7 +273,7 @@ def osbs(openshift):
 [general]
 build_json_dir = {build_json_dir}
 [default]
-openshift_uri = /
+openshift_url = /
 registry_uri = registry.example.com
 sources_command = fedpkg sources
 vendor = Example, Inc.
@@ -300,7 +300,7 @@ def osbs106(openshift):
 build_json_dir = {build_json_dir}
 openshift_required_version = 1.0.6
 [default]
-openshift_uri = /
+openshift_url = /
 registry_uri = registry.example.com
 sources_command = fedpkg sources
 vendor = Example, Inc.

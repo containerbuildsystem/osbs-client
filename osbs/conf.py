@@ -9,6 +9,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 
 import logging
 import os
+import warnings
 from pkg_resources import parse_version
 
 try:
@@ -121,7 +122,13 @@ class Configuration(object):
 
         :return: str
         """
-        return self._get_value("openshift_uri", self.conf_section, "openshift_uri")
+        deprecated_key = "openshift_uri"
+        key = "openshift_url"
+        val = self._get_value(deprecated_key, self.conf_section, deprecated_key)
+        if val is not None:
+            warnings.warn("%r is deprecated, use %r instead" % (deprecated_key, key))
+            return val
+        return self._get_value(key, self.conf_section, key)
 
     @staticmethod
     def get_openshift_api_version():
@@ -225,6 +232,9 @@ class Configuration(object):
     def get_registry_uri(self):
         return self._get_value("registry_uri", self.conf_section, "registry_uri")
 
+    def get_source_registry_uri(self):
+        return self._get_value("source_registry_uri", self.conf_section, "source_registry_uri")
+
     def get_pulp_registry(self):
         return self._get_value("pulp_registry_name", self.conf_section, "pulp_registry_name")
 
@@ -259,6 +269,10 @@ class Configuration(object):
                                "builder_use_auth",
                                default=self.get_use_auth(),
                                is_bool_val=True)
+
+    def get_builder_openshift_url(self):
+        """ url of OpenShift where builder will connect """
+        return self._get_value("builder_openshift_url", self.conf_section, "builder_openshift_url")
 
     def get_pulp_secret(self):
         secret = self._get_value("pulp_secret", self.conf_section, "pulp_secret")

@@ -67,6 +67,8 @@ Some options are also mandatory.
 
 * `registry_uri` (*optional*, `string`) — docker registry URI to use for pulling and pushing images
 
+* `source_registry_uri` (*optional*, `string`) — URI of docker registry from which image is pulled
+
 * `pulp_registry_name` (*optional*, `string`) — name of pulp registry within dockpulp config
 
 * `verify_ssl` (*optional*, `boolean`) — verify SSL certificates during secure connection?
@@ -84,6 +86,8 @@ Some options are also mandatory.
 * `use_auth` (*optional*, `boolean`) — by default, osbs-client is trying to authenticate against OpenShift master to get OAuth token; you may disable the process with this option
 
 * `builder_use_auth` (*optional*, `boolean`) — whether atomic-reactor plugins which in turn use osbs-client from within the build pod should try to authenticate against OpenShift master; defaults to `use_auth`
+
+* `builder_openshift_url` (*optional*, `string`) — url of OpenShift where builder will connect
 
 * `pulp_secret` (*optional*, `string`) — name of [kubernetes secret](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/design/secrets.md) to use for pulp plugin
 
