@@ -272,7 +272,12 @@ class Configuration(object):
 
     def get_builder_openshift_url(self):
         """ url of OpenShift where builder will connect """
-        return self._get_value("builder_openshift_url", self.conf_section, "builder_openshift_url")
+        key = "builder_openshift_url"
+        url = self._get_value(key, self.conf_section, key)
+        if url is None:
+            logger.warning("%r not found, falling back to get_openshift_base_uri()", key)
+            url = self.get_openshift_base_uri()
+        return url
 
     def get_pulp_secret(self):
         secret = self._get_value("pulp_secret", self.conf_section, "pulp_secret")
