@@ -67,6 +67,8 @@ Some options are also mandatory.
 
 * `registry_uri` (*optional*, `string`) — docker registry URI to use for pulling and pushing images
 
+* `registry_api_versions` (*optional*, `string`) — comma-separated list of docker registry HTTP API versions to support, defaults to `v1,v2`
+
 * `source_registry_uri` (*optional*, `string`) — URI of docker registry from which image is pulled
 
 * `pulp_registry_name` (*optional*, `string`) — name of pulp registry within dockpulp config

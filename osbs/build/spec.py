@@ -164,6 +164,7 @@ class ProdSpec(CommonSpec):
     vendor = BuildParam("vendor")
     build_host = BuildParam("build_host")
     authoritative_registry = BuildParam("authoritative_registry ")
+    registry_api_versions = BuildParam("registry_api_versions")
     koji_target = BuildParam("koji_target", allow_none=True)
     kojiroot = BuildParam("kojiroot", allow_none=True)
     kojihub = BuildParam("kojihub", allow_none=True)
@@ -186,6 +187,7 @@ class ProdSpec(CommonSpec):
             self.vendor,
             self.build_host,
             self.authoritative_registry,
+            self.registry_api_versions,
             self.koji_target,
             self.kojiroot,
             self.kojihub,
@@ -207,13 +209,14 @@ class ProdSpec(CommonSpec):
                    smtp_uri=None, nfs_server_path=None,
                    nfs_dest_dir=None, git_branch=None, base_image=None,
                    name_label=None, git_push_url=None, git_push_username=None,
-                   **kwargs):
+                   registry_api_versions=None, **kwargs):
         super(ProdSpec, self).set_params(**kwargs)
         self.sources_command.value = sources_command
         self.architecture.value = architecture
         self.vendor.value = vendor
         self.build_host.value = build_host
         self.authoritative_registry.value = authoritative_registry
+        self.registry_api_versions.value = registry_api_versions
         self.koji_target.value = koji_target
         self.kojiroot.value = kojiroot
         self.kojihub.value = kojihub
