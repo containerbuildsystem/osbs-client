@@ -264,6 +264,7 @@ class OSBS(object):
             name_label=df_parser.labels['Name'],
             registry_uri=self.build_conf.get_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
+            builder_openshift_url=self.os_conf.get_builder_openshift_url(),
             kojiroot=self.build_conf.get_kojiroot(),
             kojihub=self.build_conf.get_kojihub(),
             sources_command=self.build_conf.get_sources_command(),
