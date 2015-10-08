@@ -31,16 +31,16 @@
       "name": "bump_release"
     },
     {
-      "name": "change_from_in_dockerfile"
-    },
-    {
-      "name": "add_dockerfile"
-    },
-    {
       "args": {
         "labels": "{{IMPLICIT_LABELS}}"
       },
       "name": "add_labels_in_dockerfile"
+    },
+    {
+      "name": "change_from_in_dockerfile"
+    },
+    {
+      "name": "add_dockerfile"
     },
     {
       "args": {
