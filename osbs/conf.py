@@ -232,6 +232,13 @@ class Configuration(object):
     def get_registry_uri(self):
         return self._get_value("registry_uri", self.conf_section, "registry_uri")
 
+    def get_registry_api_versions(self):
+        value = self._get_value("registry_api_versions",
+                                   self.conf_section,
+                                   "registry_api_versions",
+                                   default='v1,v2')
+        return value.split(',')
+
     def get_source_registry_uri(self):
         return self._get_value("source_registry_uri", self.conf_section, "source_registry_uri")
 

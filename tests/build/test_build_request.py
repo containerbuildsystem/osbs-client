@@ -174,6 +174,7 @@ class TestBuildRequest(object):
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
             'yum_repourls': ["http://example.com/my.repo"],
+            'registry_api_versions': ['v1'],
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -251,6 +252,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
+            'registry_api_versions': ['v1'],
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -328,6 +330,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
+            'registry_api_versions': ['v1'],
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -405,6 +408,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
+            'registry_api_versions': ['v1'],
             'source_secret': 'mysecret',
         }
         build_request.set_params(**kwargs)
@@ -453,6 +457,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
+            'registry_api_versions': ['v1'],
         }
         build_request = bm.get_build_request_by_type("prod")
 
@@ -573,6 +578,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
+            'registry_api_versions': ['v1'],
             'git_push_url': push_url.format(username='', component=TEST_COMPONENT),
             'git_push_username': 'example',
         }
@@ -631,6 +637,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
+            'registry_api_versions': ['v1'],
             'pulp_registry': 'foo',
             'pulp_secret': secret_name,
         }
@@ -719,6 +726,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
+            'registry_api_versions': ['v1'],
             'pdc_secret': secret_name,
             'pdc_url': 'https://pdc.example.com',
             'smtp_uri': 'smtp.example.com',
