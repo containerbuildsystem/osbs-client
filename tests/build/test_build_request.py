@@ -147,6 +147,8 @@ class TestBuildRequest(object):
 
         assert plugin_value_get(plugins, "exit_plugins", "store_metadata_in_osv3", "args", "url") == \
             "http://openshift/"
+        assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
+                                "registries", "registry.example.com:5000") == {"insecure": True}
 
     def test_render_prod_request_with_repo(self):
         bm = BuildManager(INPUTS_PATH)
@@ -207,6 +209,8 @@ class TestBuildRequest(object):
                                 "args", "parent_registry") == "registry.example.com"
         assert plugin_value_get(plugins, "exit_plugins", "store_metadata_in_osv3",
                                 "args", "url") == "http://openshift/"
+        assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
+                                "registries", "registry.example.com") == {"insecure": True}
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "koji")
         with pytest.raises(NoSuchPluginException):
@@ -291,6 +295,8 @@ class TestBuildRequest(object):
                                 "args", "target") == "koji-target"
         assert plugin_value_get(plugins, "prebuild_plugins", "koji",
                                 "args", "hub") == "http://hub/"
+        assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
+                                "registries", "registry.example.com") == {"insecure": True}
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
         with pytest.raises(NoSuchPluginException):
@@ -363,6 +369,8 @@ class TestBuildRequest(object):
                                 "parent_registry") == "registry.example.com"
         assert plugin_value_get(plugins, "exit_plugins", "store_metadata_in_osv3",
                                 "args", "url") == "http://openshift/"
+        assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
+                                "registries", "registry.example.com") == {"insecure": True}
 
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "koji")
@@ -435,6 +443,8 @@ class TestBuildRequest(object):
         assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
+        assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
+                                "registries") == {}
 
     def test_render_with_yum_repourls(self):
         bm = BuildManager(INPUTS_PATH)
@@ -617,6 +627,8 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins,
                                 "postbuild_plugins", "import_image", "args",
                                 "url") == kwargs["openshift_uri"]
+        assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
+                                "registries", "registry.example.com") == {"insecure": True}
 
     def test_render_prod_request_new_secrets(self, tmpdir):
         bm = BuildManager(INPUTS_PATH)
