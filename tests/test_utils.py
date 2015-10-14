@@ -21,10 +21,10 @@ import osbs.kerberos_ccache
 
 
 def test_buildconfig_update():
-    x = {'a': 'a', 'b': {'b1': 'B1', 'b2': 'B2'}, 'd': 'D'}
-    y = {'a': 'A', 'b': {'b1': 'newB1', 'b3': 'B3'}, 'c': 'C'}
+    x = {'a': 'a', 'strategy': {'b1': 'B1', 'b2': 'B2', 'b11': {'x': 'y'}}, 'd': 'D'}
+    y = {'a': 'A', 'strategy': {'b1': 'newB1', 'b3': 'B3', 'b11': {}}, 'c': 'C'}
     buildconfig_update(x, y)
-    assert x == {'a': 'A', 'b': {'b1': 'newB1', 'b3': 'B3'}, 'c': 'C'}
+    assert x == {'a': 'A', 'strategy': {'b1': 'newB1', 'b3': 'B3', 'b11': {}}, 'c': 'C', 'd': 'D'}
 
 
 @pytest.mark.parametrize(('uri', 'humanish'), [
