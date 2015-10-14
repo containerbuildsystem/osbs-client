@@ -43,11 +43,22 @@ def graceful_chain_get(d, *args):
     return t
 
 
-def deep_update(orig, new):
+def buildconfig_update(orig, new):
+    """Performs update of given `orig` BuildConfig with values from `new` BuildConfig.
+    Both BuildConfigs have to be represented as `dict`s.
+
+    This function:
+    - adds all key/value pairs to `orig` from `new` that are missing
+    - replaces values in `orig` for keys that are in both
+    - removes key/value pairs from `orig` for keys that are not in `new`
+    """
     if isinstance(orig, dict) and isinstance(new, dict):
+        missing = set(orig.keys()) - set(new.keys())
+        for k in missing:
+            orig.pop(k)
         for k, v in new.items():
             if isinstance(orig.get(k, None), dict) and isinstance(v, dict):
-                deep_update(orig[k], v)
+                buildconfig_update(orig[k], v)
             else:
                 orig[k] = v
 
