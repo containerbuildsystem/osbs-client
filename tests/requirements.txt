@@ -1,3 +1,4 @@
 flexmock
 pytest
+pytest-capturelog
 six

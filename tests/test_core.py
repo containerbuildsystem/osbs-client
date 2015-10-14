@@ -9,9 +9,63 @@ import six
 
 from osbs.http import HttpResponse
 from osbs.constants import BUILD_FINISHED_STATES
+from osbs.exceptions import OsbsResponseException
+from osbs.core import check_response
 
 from tests.constants import TEST_BUILD, TEST_LABEL, TEST_LABEL_VALUE
 from tests.fake_api import openshift
+import pytest
+
+try:
+    # py2
+    import httplib
+except ImportError:
+    # py3
+    import http.client as httplib
+
+
+class Response(object):
+    def __init__(self, status_code, content=None, iterable=None):
+        self.status_code = status_code
+        self.iterable = iterable
+        if content is not None:
+            self.content = content
+
+    def iter_lines(self):
+        for line in self.iterable:
+            yield line
+
+
+class TestCheckResponse(object):
+    @pytest.mark.parametrize('content', [None, 'OK'])
+    @pytest.mark.parametrize('status_code', [httplib.OK, httplib.CREATED])
+    def test_check_response_ok(self, status_code, content):
+        response = Response(status_code, content=content)
+        check_response(response)
+
+    def test_check_response_bad_stream(self, caplog):
+        iterable = ['iter', 'lines']
+        status_code = httplib.CONFLICT
+        response = Response(status_code, iterable=iterable)
+        with pytest.raises(OsbsResponseException):
+            check_response(response)
+
+        logged = [l.getMessage() for l in caplog.records()]
+        assert len(logged) == 1
+        assert logged[0] == '[{code}] {message}'.format(code=status_code,
+                                                        message='iterlines')
+
+    def test_check_response_bad_nostream(self, caplog):
+        status_code = httplib.CONFLICT
+        content = 'content'
+        response = Response(status_code, content=content)
+        with pytest.raises(OsbsResponseException):
+            check_response(response)
+
+        logged = [l.getMessage() for l in caplog.records()]
+        assert len(logged) == 1
+        assert logged[0] == '[{code}] {message}'.format(code=status_code,
+                                                        message=content)
 
 
 class TestOpenshift(object):
