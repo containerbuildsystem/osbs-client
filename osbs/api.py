@@ -285,6 +285,7 @@ class OSBS(object):
             nfs_dest_dir=self.build_conf.get_nfs_destination_dir(),
             git_push_url=self.build_conf.get_git_push_url(),
             git_push_username=self.build_conf.get_git_push_username(),
+            builder_build_json_dir=self.build_conf.get_builder_build_json_store()
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         response = self._create_build_config_and_build(build_request, namespace)

@@ -465,6 +465,8 @@ class ProductionBuild(CommonBuild):
                                       self.spec.imagestream_url.value)
             self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'url',
                                       self.spec.builder_openshift_url.value)
+            self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'build_json_dir',
+                                      self.spec.builder_build_json_dir.value)
             if self.spec.use_auth.value is not None:
                 self.dj.dock_json_set_arg('postbuild_plugins', 'import_image', 'use_auth',
                                           self.spec.use_auth.value)

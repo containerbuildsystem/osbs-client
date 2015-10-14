@@ -122,7 +122,8 @@
         "imagestream": "{{IMAGESTREAM}}",
         "docker_image_repo": "{{DOCKER_IMAGE_REPO}}",
         "url": "{{OPENSHIFT_URI}}",
-        "verify_ssl": false
+        "verify_ssl": false,
+        "build_json_dir": "{{PATH}}"
       },
       "name": "import_image"
     }

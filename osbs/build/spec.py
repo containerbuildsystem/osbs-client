@@ -178,6 +178,7 @@ class ProdSpec(CommonSpec):
     nfs_dest_dir = BuildParam("nfs_dest_dir", allow_none=True)
     git_push_url = BuildParam("git_push_url", allow_none=True)
     git_push_username = BuildParam("git_push_username", allow_none=True)
+    builder_build_json_dir = BuildParam("builder_build_json_dir", allow_none=True)
 
     def __init__(self):
         super(ProdSpec, self).__init__()
@@ -209,6 +210,7 @@ class ProdSpec(CommonSpec):
                    smtp_uri=None, nfs_server_path=None,
                    nfs_dest_dir=None, git_branch=None, base_image=None,
                    name_label=None, git_push_url=None, git_push_username=None,
+                   builder_build_json_dir=None,
                    registry_api_versions=None, **kwargs):
         super(ProdSpec, self).set_params(**kwargs)
         self.sources_command.value = sources_command
@@ -234,6 +236,7 @@ class ProdSpec(CommonSpec):
         self.name.value = "{repo}-{branch}".format(repo=repo,
                                                    branch=git_branch)
         self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
+        self.builder_build_json_dir.value = builder_build_json_dir
         self.imagestream_name.value = name_label.replace('/', '-')
         self.imagestream_url.value = os.path.join(self.registry_uri.value,
                                                   name_label)

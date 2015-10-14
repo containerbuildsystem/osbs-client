@@ -286,6 +286,15 @@ class Configuration(object):
             url = self.get_openshift_base_uri()
         return url
 
+    def get_builder_build_json_store(self):
+        key = "builder_build_json_dir"
+        builder_build_json_dir = self._get_value(key, self.conf_section, key)
+        if builder_build_json_dir is None:
+            fallback_key = "build_json_dir"
+            logger.warning("%r not found, falling back %r", key, fallback_key)
+            builder_build_json_dir = self._get_value(fallback_key, self.conf_section, fallback_key)
+        return builder_build_json_dir
+
     def get_pulp_secret(self):
         secret = self._get_value("pulp_secret", self.conf_section, "pulp_secret")
         if not secret:
