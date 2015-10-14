@@ -14,6 +14,14 @@
   ],
   "postbuild_plugins": [
     {
+      "name": "tag_and_push",
+      "args": {
+        "registries": {
+          "{{REGISTRY_URI}}": { "insecure": true }
+        }
+      }
+    },
+    {
       "args": {
         "image_id": "BUILT_IMAGE_ID"
       },

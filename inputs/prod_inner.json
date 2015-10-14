@@ -96,7 +96,12 @@
       "name": "tag_by_labels"
     },
     {
-      "name": "tag_and_push"
+      "name": "tag_and_push",
+      "args": {
+        "registries": {
+          "{{REGISTRY_URI}}": { "insecure": true }
+        }
+      }
     },
     {
       "name": "pulp_push",

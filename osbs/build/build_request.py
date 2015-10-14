@@ -192,6 +192,17 @@ class CommonBuild(BuildRequest):
 
         tag_with_registry = self.spec.registry_uri.value + "/" + self.spec.image_tag.value
         self.template['spec']['output']['to']['name'] = tag_with_registry
+
+        if self.dj.dock_json_has_plugin_conf('postbuild_plugins', 'tag_and_push'):
+            push_conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins', 'tag_and_push')
+            registries = push_conf.setdefault('args', {}).setdefault('registries', {})
+            placeholder = '{{REGISTRY_URI}}'
+
+            if placeholder in registries:
+                if self.spec.registry_uri.value:
+                    registries[self.spec.registry_uri.value] = registries[placeholder]
+                del registries[placeholder]
+
         if 'triggers' in self.template['spec']:
             self.template['spec']['triggers']\
                 [0]['imageChange']['from']['name'] = self.spec.trigger_imagestreamtag.value
