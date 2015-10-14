@@ -226,7 +226,7 @@ class OSBS(object):
 
         build = None
         if existing_bc is not None:
-            utils.deep_update(existing_bc, build_json)
+            utils.buildconfig_update(existing_bc, build_json)
             logger.debug('build config for %s already exists, updating...', build_config_name)
             self.os.update_build_config(build_config_name, json.dumps(existing_bc), namespace)
         else:
