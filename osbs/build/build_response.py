@@ -161,3 +161,8 @@ class BuildResponse(object):
     def get_base_image_name(self):
         return graceful_chain_get(self.get_annotations_or_labels(),
                                   "base-image-name")
+
+    def get_digests(self):
+        digests_json = graceful_chain_get(self.get_annotations_or_labels(), "digests")
+        if digests_json:
+            return json.loads(digests_json)

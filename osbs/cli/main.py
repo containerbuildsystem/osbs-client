@@ -98,6 +98,16 @@ Unique
             }
             repositories_str = repositories_template.format(**repositories_context)
 
+        digests_list = build.get_digests()
+        if digests_list is not None:
+            try:
+                digests_str = "\n".join(["{registry}/{repository}:{tag} {digest}".format(**dig)
+                                         for dig in digests_list])
+            except (TypeError, KeyError):
+                digests_str = "(invalid value)"
+        else:
+            digests_str = "(unset)"
+
         template = """\
 BUILD ID: {build_id}
 STATUS: {status}
@@ -130,7 +140,11 @@ IMAGE ID
 
 REPOSITORIES
 
-{repositories}"""
+{repositories}
+
+V2 DIGESTS
+
+{digests}"""
         context = {
             "build_id": build.get_build_name(),
             "status": build.status,
@@ -144,6 +158,7 @@ REPOSITORIES
             "base_image": build.get_base_image_name() or '(unset)',
             "base_image_id": build.get_base_image_id() or '(unset)',
             "image_id": build.get_image_id() or '(unset)',
+            "digests": digests_str,
         }
         print(template.format(**context))
 
