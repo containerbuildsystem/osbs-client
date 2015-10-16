@@ -41,7 +41,7 @@ def check_response(response):
         if hasattr(response, 'content'):
             content = response.content
         else:
-            content = reduce(lambda s1, s2: s1 + s2, response.iter_lines(), '')
+            content = ''.join(response.iter_lines())
 
         logger.error("[%s] %s", response.status_code, content)
         raise OsbsResponseException(message=content, status_code=response.status_code)
