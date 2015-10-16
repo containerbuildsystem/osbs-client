@@ -321,6 +321,7 @@ class OSBS(object):
             component=component,
             registry_uri=self.build_conf.get_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
+            builder_openshift_url=self.os_conf.get_builder_openshift_url(),
             yum_repourls=yum_repourls,
             use_auth=self.build_conf.get_builder_use_auth(),
         )
