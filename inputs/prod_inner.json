@@ -141,7 +141,7 @@
     },
     {
       "args": {
-        "send_on": ["auto_fail"],
+        "send_on": ["auto_fail", "auto_success"],
         "url": "{{OPENSHIFT_URI}}",
         "pdc_url": "{{PDC_URL}}",
         "smtp_uri": "{{SMTP_URI}}",

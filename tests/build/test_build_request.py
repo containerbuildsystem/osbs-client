@@ -759,7 +759,7 @@ class TestBuildRequest(object):
                              'url': 'http://openshift/',
                              'pdc_url': 'https://pdc.example.com',
                              'pdc_secret_path': mount_path,
-                             'send_on': ['auto_fail'],
+                             'send_on': ['auto_fail', 'auto_success'],
                              'error_addresses': ['errors@example.com'],
                              'smtp_uri': 'smtp.example.com',
                              'submitter': 'john-foo'},
