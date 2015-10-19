@@ -4,12 +4,12 @@
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 # set to 0 to create a normal release
 %global postrelease 0
-%global release 2
+%global release 1
 
 %global osbs_obsolete_vr 0.14-2
 
 Name:           osbs-client
-Version:        0.14
+Version:        0.15
 %if "x%{postrelease}" != "x0"
 Release:        %{release}.%{postrelease}.git.%{shortcommit}%{?dist}
 %else
@@ -147,6 +147,9 @@ ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 %endif # with_python3
 
 %changelog
+* Mon Oct 19 2015 Tomas Tomecek <ttomecek@redhat.com> - 0.15-1
+- new upstream release: 0.15
+
 * Thu Aug 06 2015 bkabrda <bkabrda@redhat.com> - 0.14-2
 - renamed to osbs-client
 
