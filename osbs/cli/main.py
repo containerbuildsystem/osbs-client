@@ -417,6 +417,8 @@ def cli():
                         help="openshift URL to remote API")
     parser.add_argument("--registry-uri", action='store', metavar="URL",
                         help="registry where images should be pushed")
+    parser.add_argument("--source-registry-uri", action='store', metavar="URL",
+                        help="registry with base images")
     parser.add_argument("--config", action='store', metavar="PATH",
                         help="path to configuration file", default=DEFAULT_CONFIGURATION_FILE)
     parser.add_argument("--instance", "-i", action='store', metavar="SECTION_NAME",

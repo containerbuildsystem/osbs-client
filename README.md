@@ -32,7 +32,9 @@ koji_hub = http://koji.fedoraproject.org/kojihub
 # in case of using artifacts plugin, you should provide a command
 # how to fetch artifacts
 sources_command = fedpkg sources
-# from where should be images pulled and where should be pushed?
+# from where should be images pulled
+source_registry_uri = your.registry.example.com
+# and where should be pushed?
 registry_uri = your.registry.example.com
 verify_ssl = false
 build_type = simple
