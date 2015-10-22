@@ -165,7 +165,7 @@ class CommonBuild(BuildRequest):
 
         :param git_uri: str, URL of source git repository
         :param git_ref: str, what git tree to build (default: master)
-        :param registry_uri: str, URI of docker registry where built image is pushed
+        :param registry_uris: list, URI of docker registry where built image is pushed (str)
         :param source_registry_uri: str, URI of docker registry from which image is pulled
         :param user: str, user part of resulting image name
         :param component: str, component part of the image name
@@ -191,7 +191,9 @@ class CommonBuild(BuildRequest):
         self.template['spec']['source']['git']['uri'] = self.spec.git_uri.value
         self.template['spec']['source']['git']['ref'] = self.spec.git_ref.value
 
-        tag_with_registry = self.spec.registry_uri.value + "/" + self.spec.image_tag.value
+        primary_registry_uri = self.spec.registry_uris.value[0].uri
+        tag_with_registry = '{0}/{1}'.format(primary_registry_uri,
+                                             self.spec.image_tag.value)
         self.template['spec']['output']['to']['name'] = tag_with_registry
 
         if self.dj.dock_json_has_plugin_conf('postbuild_plugins', 'tag_and_push'):
@@ -200,8 +202,13 @@ class CommonBuild(BuildRequest):
             placeholder = '{{REGISTRY_URI}}'
 
             if placeholder in registries:
-                if self.spec.registry_uri.value:
-                    registries[self.spec.registry_uri.value] = registries[placeholder]
+                for registry in self.spec.registry_uris.value:
+                    if not registry.uri:
+                        continue
+
+                    regdict = registries[placeholder].copy()
+                    registries[registry.uri] = regdict
+
                 del registries[placeholder]
 
         if 'triggers' in self.template['spec']:

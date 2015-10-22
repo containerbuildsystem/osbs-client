@@ -10,6 +10,7 @@ Specifications of build types.
 """
 from __future__ import print_function, absolute_import, unicode_literals
 
+from collections import namedtuple
 import logging
 import datetime
 import os
@@ -88,6 +89,34 @@ class BuildIDParam(BuildParam):
         BuildParam.value.fset(self, val)
 
 
+class RegistryURIsParam(BuildParam):
+    """
+    Build parameter for a list of registry URIs
+
+    Each registry has a URI (hostname) and a version (str).
+    """
+
+    name = "registry_uris"
+    RegistryURI = namedtuple("RegistryURI", ['uri', 'version'])
+
+    def __init__(self):
+        super(RegistryURIsParam, self).__init__(self.name)
+
+    @BuildParam.value.setter
+    def value(self, val):  # pylint: disable=W0221
+        registry_uris = []
+        for uri in val:
+            if '/' in uri:
+                (hostname, version) = uri.split('/', 1)
+            else:
+                hostname = uri
+                version = 'v1'
+
+            registry_uris.append(self.RegistryURI(hostname, version))
+
+        BuildParam.value.fset(self, registry_uris)
+
+
 class BuildTypeSpec(object):
     """ Abstract baseclass for specification of a buildtype """
     required_params = None
@@ -111,7 +140,7 @@ class CommonSpec(BuildTypeSpec):
     git_ref = BuildParam('git_ref', default=DEFAULT_GIT_REF)
     user = UserParam()
     component = BuildParam('component')
-    registry_uri = BuildParam('registry_uri')
+    registry_uris = RegistryURIsParam()
     source_registry_uri = BuildParam('source_registry_uri')
     openshift_uri = BuildParam('openshift_uri')
     builder_openshift_url = BuildParam('builder_openshift_url')
@@ -125,11 +154,13 @@ class CommonSpec(BuildTypeSpec):
             self.git_ref,
             self.user,
             self.component,
-            self.registry_uri,
+            self.registry_uris,
             self.openshift_uri,
         ]
 
-    def set_params(self, git_uri=None, git_ref=None, registry_uri=None, user=None,
+    def set_params(self, git_uri=None, git_ref=None,
+                   registry_uri=None,  # compatibility name for registry_uris
+                   registry_uris=None, user=None,
                    component=None, openshift_uri=None, source_registry_uri=None,
                    yum_repourls=None, use_auth=None, builder_openshift_url=None):
         self.git_uri.value = git_uri
@@ -144,7 +175,14 @@ class CommonSpec(BuildTypeSpec):
             return re.sub(r'^https?://([^/]*)/?.*',
                           lambda m: m.groups()[0],
                           val)
-        self.registry_uri.value = ditch_http_prefix(registry_uri)
+
+        # registry_uri is the compatibility name for registry_uris
+        if registry_uri is not None:
+            assert registry_uris is None
+            registry_uris = [registry_uri]
+
+        self.registry_uris.value = [ditch_http_prefix(uri)
+                                    for uri in registry_uris or []]
         self.source_registry_uri.value = ditch_http_prefix(source_registry_uri)
         self.openshift_uri.value = openshift_uri
         self.builder_openshift_url.value = builder_openshift_url
@@ -238,7 +276,8 @@ class ProdSpec(CommonSpec):
         self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
         self.builder_build_json_dir.value = builder_build_json_dir
         self.imagestream_name.value = name_label.replace('/', '-')
-        self.imagestream_url.value = os.path.join(self.registry_uri.value,
+        primary_registry_uri = self.registry_uris.value[0].uri
+        self.imagestream_url.value = os.path.join(primary_registry_uri,
                                                   name_label)
         timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         self.image_tag.value = "%s/%s:%s-%s" % (
