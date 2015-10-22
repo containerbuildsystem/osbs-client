@@ -219,6 +219,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "pulp_push")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "exit_plugins", "koji_promote")
         assert 'sourceSecret' not in build_json["spec"]["source"]
         assert plugin_value_get(plugins, "prebuild_plugins", "add_yum_repo_by_url",
                                 "args", "repourls") == ["http://example.com/my.repo"]
@@ -303,6 +305,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "pulp_push")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "exit_plugins", "koji_promote")
         assert 'sourceSecret' not in build_json["spec"]["source"]
 
         labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile",
@@ -380,6 +384,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "pulp_push")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "exit_plugins", "koji_promote")
         assert 'sourceSecret' not in build_json["spec"]["source"]
 
         labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile",
@@ -443,6 +449,8 @@ class TestBuildRequest(object):
         assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "exit_plugins", "koji_promote")
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries") == {}
 
@@ -597,6 +605,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "pulp_push")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "exit_plugins", "koji_promote")
 
     def test_render_prod_with_pulp_no_auth(self):
         """
@@ -683,6 +693,9 @@ class TestBuildRequest(object):
             'registry_uri': "registry.example.com",
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
+            'koji_target': "koji-target",
+            'kojiroot': "http://root/",
+            'kojihub': "http://hub/",
             'sources_command': "make",
             'architecture': "x86_64",
             'vendor': "Foo Vendor",
@@ -735,6 +748,11 @@ class TestBuildRequest(object):
                                 "url") == kwargs["openshift_uri"]
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries", "registry.example.com") == {"insecure": True}
+        assert get_plugin(plugins, "exit_plugins", "koji_promote")
+        assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
+                                "args", "kojihub") == kwargs["kojihub"]
+        assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
+                                "args", "url") == kwargs["openshift_uri"]
 
     def test_render_prod_request_new_secrets(self, tmpdir):
         bm = BuildManager(INPUTS_PATH)

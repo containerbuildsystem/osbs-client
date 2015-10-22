@@ -137,6 +137,14 @@
       "name": "store_metadata_in_osv3"
     },
     {
+      "name": "koji_promote",
+      "args": {
+        "kojihub": "{{KOJI_HUB}}",
+        "url": "{{OPENSHIFT_URI}}",
+        "verify_ssl": false
+      }
+    },
+    {
       "name": "remove_built_image"
     },
     {

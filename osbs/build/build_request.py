@@ -229,6 +229,11 @@ class CommonBuild(BuildRequest):
                                           'use_auth', self.spec.use_auth.value)
 
         if self.spec.use_auth.value is not None:
+            if self.dj.dock_json_has_plugin_conf('exit_plugins',
+                                                 'koji_promote'):
+                self.dj.dock_json_set_arg('exit_plugins', 'koji_promote',
+                                          'use_auth', self.spec.use_auth.value)
+
             try:
                 self.dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3",
                                           "use_auth", self.spec.use_auth.value)
@@ -395,6 +400,10 @@ class ProductionBuild(CommonBuild):
         self.dj.dock_json_merge_arg('prebuild_plugins', "add_labels_in_dockerfile",
                                     "labels", implicit_labels)
 
+        if self.dj.dock_json_has_plugin_conf('exit_plugins', 'koji_promote'):
+            self.dj.dock_json_set_arg('exit_plugins', 'koji_promote', 'url',
+                                      self.spec.builder_openshift_url.value)
+
         try:
             self.dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3",
                                       "url", self.spec.builder_openshift_url.value)
@@ -404,12 +413,14 @@ class ProductionBuild(CommonBuild):
                                       "url", self.spec.builder_openshift_url.value)
 
         # If there are no triggers set, there is no point in running
-        # the check_and_set_rebuild, bump_release, or import_image plugins.
+        # the check_and_set_rebuild, bump_release, import_image, or
+        # koji_promote plugins.
         triggers = self.template['spec'].get('triggers', [])
         if len(triggers) == 0:
             for when, which in [("prebuild_plugins", "check_and_set_rebuild"),
                                 ("prebuild_plugins", "bump_release"),
-                                ("postbuild_plugins", "import_image")]:
+                                ("postbuild_plugins", "import_image"),
+                                ("exit_plugins", "koji_promote")]:
                 logger.info("removing %s from request because there are no triggers",
                             which)
                 self.dj.remove_plugin(when, which)
@@ -431,6 +442,16 @@ class ProductionBuild(CommonBuild):
                                       "target", self.spec.koji_target.value)
             self.dj.dock_json_set_arg('prebuild_plugins', "koji", "root", self.spec.kojiroot.value)
             self.dj.dock_json_set_arg('prebuild_plugins', "koji", "hub", self.spec.kojihub.value)
+
+        if self.dj.dock_json_has_plugin_conf('exit_plugins',
+                                             'koji_promote'):
+            if self.spec.kojihub.value:
+                self.dj.dock_json_set_arg('exit_plugins', 'koji_promote',
+                                          'kojihub', self.spec.kojihub.value)
+            else:
+                logger.info("removing koji_promote from request as no kojihub "
+                            "specified")
+                self.dj.remove_plugin("exit_plugins", "koji_promote")
 
         # If the bump_release plugin is present, configure it
         if self.dj.dock_json_has_plugin_conf('prebuild_plugins',
