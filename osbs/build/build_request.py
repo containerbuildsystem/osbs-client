@@ -207,6 +207,7 @@ class CommonBuild(BuildRequest):
                         continue
 
                     regdict = registries[placeholder].copy()
+                    regdict['version'] = registry.version
                     registries[registry.uri] = regdict
 
                 del registries[placeholder]
@@ -322,6 +323,47 @@ class ProductionBuild(CommonBuild):
             if 'secrets' in self.template['spec']['strategy']['customStrategy']:
                 del self.template['spec']['strategy']['customStrategy']['secrets']
 
+    def adjust_for_registry_api_versions(self):
+        """
+        Enable/disable plugins depending on supported registry API versions
+        """
+
+        versions = self.spec.registry_api_versions.value
+
+        if self.dj.dock_json_has_plugin_conf('postbuild_plugins',
+                                             'tag_and_push'):
+            push_conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins',
+                                                          'tag_and_push')
+            try:
+                tag_and_push_registries = push_conf['args']['registries']
+            except KeyError:
+                tag_and_push_registries = None
+        else:
+            tag_and_push_registries = None
+
+        def remove_tag_and_push_registries(version):
+            registries = [uri
+                          for uri, regdict in tag_and_push_registries.items()
+                          if regdict['version'] == version]
+            for registry in registries:
+                logger.info("removing %s registry: %s", version, registry)
+                del tag_and_push_registries[registry]
+
+        if 'v1' not in versions:
+            # remove extra tag_and_push config
+            remove_tag_and_push_registries('v1')
+
+        if 'v2' not in versions:
+            # remove extra tag_and_push config
+            remove_tag_and_push_registries('v2')
+
+        # Remove 'version' from tag_and_push plugin config as it's no
+        # longer needed
+        if tag_and_push_registries:
+            for regdict in tag_and_push_registries.values():
+                if 'version' in regdict:
+                    del regdict['version']
+
     def render(self, validate=True):
         if validate:
             self.spec.validate()
@@ -360,6 +402,9 @@ class ProductionBuild(CommonBuild):
                 logger.info("removing %s from request because there are no triggers",
                             which)
                 self.dj.remove_plugin(when, which)
+
+        # Enable/disable plugins as needed for target registry API versions
+        self.adjust_for_registry_api_versions()
 
         # if there is yum repo specified, don't pick stuff from koji
         if self.spec.yum_repourls.value:
@@ -525,6 +570,21 @@ class SimpleBuild(CommonBuild):
             # For compatibility with older osbs.conf files
             self.dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url",
                                       self.spec.builder_openshift_url.value)
+
+        # Remove 'version' from tag_and_push plugin config as it's no
+        # longer needed
+        if self.dj.dock_json_has_plugin_conf('postbuild_plugins',
+                                             'tag_and_push'):
+            push_conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins',
+                                                          'tag_and_push')
+            try:
+                registries = push_conf['args']['registries']
+            except KeyError:
+                pass
+            else:
+                for regdict in registries.values():
+                    if 'version' in regdict:
+                        del regdict['version']
 
         self.dj.write_dock_json()
         self.build_json = self.template
