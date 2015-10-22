@@ -244,7 +244,7 @@ class ProdSpec(CommonSpec):
         self.image_tag.value = "%s/%s:%s-%s" % (
             self.user.value,
             self.component.value,
-            self.koji_target.value,
+            self.koji_target.value or 'none',
             timestamp
         )
 
