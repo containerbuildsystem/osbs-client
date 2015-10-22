@@ -541,7 +541,22 @@ class TestBuildRequest(object):
         with pytest.raises(OsbsValidationException):
             build_request.render()
 
-    def test_render_prod_request_with_trigger(self, tmpdir):
+    @pytest.mark.parametrize('params', [
+        # Wrong way round
+        {
+            'git_ref': TEST_GIT_BRANCH,
+            'git_branch': TEST_GIT_REF,
+            'should_raise': True,
+        },
+
+        # Right way round
+        {
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'should_raise': False,
+        },
+    ])
+    def test_render_prod_request_with_trigger(self, tmpdir, params):
         # Make temporary copies of the JSON files
         for basename in ['prod.json', 'prod_inner.json']:
             shutil.copy(os.path.join(INPUTS_PATH, basename),
@@ -574,8 +589,8 @@ class TestBuildRequest(object):
         push_url = "ssh://{username}git.example.com/git/{component}.git"
         kwargs = {
             'git_uri': TEST_GIT_URI,
-            'git_ref': TEST_GIT_REF,
-            'git_branch': TEST_GIT_REF,
+            'git_ref': params['git_ref'],
+            'git_branch': params['git_branch'],
             'user': "john-foo",
             'component': TEST_COMPONENT,
             'base_image': 'fedora:latest',
@@ -593,7 +608,13 @@ class TestBuildRequest(object):
             'git_push_username': 'example',
         }
         build_request.set_params(**kwargs)
-        build_json = build_request.render()
+        if params['should_raise']:
+            with pytest.raises(OsbsValidationException):
+                build_request.render()
+
+            return
+        else:
+            build_json = build_request.render()
 
         assert "triggers" in build_json["spec"]
         assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == 'fedora:latest'

@@ -25,6 +25,7 @@ from osbs.constants import PROD_BUILD_TYPE, SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI
 from osbs.constants import PROD_WITH_SECRET_BUILD_TYPE
 from osbs.constants import SECRETS_PATH
 from osbs.exceptions import OsbsException, OsbsValidationException
+from osbs.utils import looks_like_git_hash
 
 
 build_classes = {}
@@ -397,6 +398,15 @@ class ProductionBuild(CommonBuild):
             # started with.
             logger.info("bump_release configured so setting source git ref to %s",
                         self.spec.git_branch.value)
+
+            if looks_like_git_hash(self.spec.git_branch.value):
+                raise OsbsValidationException("git_branch parameter requires "
+                                              "branch name not hash")
+
+            if not looks_like_git_hash(self.spec.git_ref.value):
+                raise OsbsValidationException("git_ref parameter requires "
+                                              "hash not branch name")
+
             self.template['spec']['source']['git']['ref'] = self.spec.git_branch.value
             self.dj.dock_json_set_arg('prebuild_plugins', 'bump_release',
                                       'git_ref', self.spec.git_ref.value)
