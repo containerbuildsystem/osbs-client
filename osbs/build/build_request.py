@@ -361,6 +361,10 @@ class ProductionBuild(CommonBuild):
             remove_tag_and_push_registries('v1')
 
         if 'v2' not in versions:
+            # Remove v2-only plugins
+            logger.info("removing v2-only plugin: sync_pulp")
+            self.dj.remove_plugin('postbuild_plugins', 'sync_pulp')
+
             # remove extra tag_and_push config
             remove_tag_and_push_registries('v2')
 
