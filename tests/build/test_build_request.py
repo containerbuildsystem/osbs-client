@@ -446,6 +446,91 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries") == {}
 
+    @pytest.mark.parametrize('registry_api_versions', [
+        ['v1', 'v2'],
+        ['v2'],
+    ])
+    def test_render_prod_request_v1_v2(self, registry_api_versions):
+        bm = BuildManager(INPUTS_PATH)
+        build_request = bm.get_build_request_by_type(PROD_WITH_SECRET_BUILD_TYPE)
+        name_label = "fedora/resultingimage"
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'base_image': 'fedora:latest',
+            'name_label': name_label,
+            'registry_uris': ["registry1.example.com/v1",  # first is primary
+                              "registry2.example.com/v2"],
+            'pulp_registry': "registry.example.com",
+            'nfs_server_path': "server:path",
+            'source_registry_uri': "registry.example.com",
+            'openshift_uri': "http://openshift/",
+            'builder_openshift_url': "http://openshift/",
+            'koji_target': "koji-target",
+            'kojiroot': "http://root/",
+            'kojihub': "http://hub/",
+            'sources_command': "make",
+            'architecture': "x86_64",
+            'vendor': "Foo Vendor",
+            'build_host': "our.build.host.example.com",
+            'authoritative_registry': "registry.example.com",
+            'registry_api_versions': registry_api_versions,
+            'source_secret': 'mysecret',
+        }
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+
+        assert build_json["metadata"]["name"] == TEST_BUILD_CONFIG
+        assert "triggers" not in build_json["spec"]
+        assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
+        assert build_json["spec"]["source"]["git"]["ref"] == TEST_GIT_REF
+
+        # Pulp used, so no direct registry output
+        assert build_json["spec"]["output"]["to"]["name"].startswith(
+            "john-foo/component:"
+        )
+
+        env_vars = build_json['spec']['strategy']['customStrategy']['env']
+        plugins_json = None
+        for d in env_vars:
+            if d['name'] == 'DOCK_PLUGINS':
+                plugins_json = d['value']
+                break
+
+        assert plugins_json is not None
+        plugins = json.loads(plugins_json)
+
+        expected_registries = {
+            "registry2.example.com": {"insecure": True},
+        }
+
+        if 'v1' in registry_api_versions:
+            expected_registries['registry1.example.com'] = {'insecure': True}
+
+        assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push",
+                                "args", "registries") == expected_registries
+
+        if 'v1' in registry_api_versions:
+            assert get_plugin(plugins, "postbuild_plugins",
+                              "compress")
+            assert get_plugin(plugins, "postbuild_plugins",
+                              "cp_built_image_to_nfs")
+            assert get_plugin(plugins, "postbuild_plugins",
+                              "pulp_push")
+        else:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "postbuild_plugins",
+                           "compress")
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "postbuild_plugins",
+                           "cp_built_image_to_nfs")
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "postbuild_plugins",
+                           "pulp_push")
+
     def test_render_with_yum_repourls(self):
         bm = BuildManager(INPUTS_PATH)
         kwargs = {

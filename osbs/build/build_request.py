@@ -350,6 +350,13 @@ class ProductionBuild(CommonBuild):
                 del tag_and_push_registries[registry]
 
         if 'v1' not in versions:
+            # Remove v1-only plugins
+            for phase, name in [('postbuild_plugins', 'compress'),
+                                ('postbuild_plugins', 'cp_built_image_to_nfs'),
+                                ('postbuild_plugins', 'pulp_push')]:
+                logger.info("removing v1-only plugin: %s", name)
+                self.dj.remove_plugin(phase, name)
+
             # remove extra tag_and_push config
             remove_tag_and_push_registries('v1')
 
@@ -492,7 +499,9 @@ class ProductionBuild(CommonBuild):
 
         # If NFS destination set, use it
         nfs_server_path = self.spec.nfs_server_path.value
-        if nfs_server_path:
+        if (self.dj.dock_json_has_plugin_conf('postbuild_plugins',
+                                              'cp_built_image_to_nfs') and
+                nfs_server_path):
             self.dj.dock_json_set_arg('postbuild_plugins', 'cp_built_image_to_nfs',
                                       'nfs_server_path', nfs_server_path)
             self.dj.dock_json_set_arg('postbuild_plugins', 'cp_built_image_to_nfs',
@@ -503,7 +512,9 @@ class ProductionBuild(CommonBuild):
 
         # If a pulp registry is specified, use the pulp plugin
         pulp_registry = self.spec.pulp_registry.value
-        if pulp_registry:
+        if (self.dj.dock_json_has_plugin_conf('postbuild_plugins',
+                                              'pulp_push') and
+                pulp_registry):
             self.dj.dock_json_set_arg('postbuild_plugins', 'pulp_push',
                                       'pulp_registry_name', pulp_registry)
 
