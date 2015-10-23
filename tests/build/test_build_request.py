@@ -346,7 +346,7 @@ class TestBuildRequest(object):
         assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
         assert build_json["spec"]["source"]["git"]["ref"] == TEST_GIT_REF
         assert build_json["spec"]["output"]["to"]["name"].startswith(
-            "registry.example.com/john-foo/component:"
+            "registry.example.com/john-foo/component:none-"
         )
 
         env_vars = build_json['spec']['strategy']['customStrategy']['env']
