@@ -11,6 +11,7 @@ import contextlib
 import copy
 import os
 import shutil
+import string
 import subprocess
 import sys
 import tempfile
@@ -93,6 +94,10 @@ def checkout_git_repo(git_uri, git_ref, git_branch):
 
     finally:
         shutil.rmtree(tmpdir)
+
+
+def looks_like_git_hash(git_ref):
+    return all(ch in string.hexdigits for ch in git_ref) and len(git_ref) == 40
 
 
 def get_df_parser(git_uri, git_ref, git_branch):
