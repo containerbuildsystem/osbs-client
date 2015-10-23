@@ -24,7 +24,7 @@ Source0:        https://github.com/projectatomic/osbs-client/archive/%{commit}/o
 
 BuildArch:      noarch
 
-Requires:       python-osbs-client
+Requires:       python-osbs-client = %{version}-%{release}
 
 BuildRequires:  python2-devel
 BuildRequires:  python-setuptools
@@ -83,7 +83,7 @@ This package contains osbs Python 3 bindings.
 
 
 %prep
-%setup -qn osbs-%{commit}
+%setup -qn %{name}-%{commit}
 
 %if 0%{?with_python3}
 rm -rf %{py3dir}
