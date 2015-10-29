@@ -254,10 +254,13 @@ class CommonBuild(BuildRequest):
         self.template['spec']['source']['git']['uri'] = self.spec.git_uri.value
         self.template['spec']['source']['git']['ref'] = self.spec.git_ref.value
 
-        primary_registry_uri = self.spec.registry_uris.value[0].uri
-        tag_with_registry = '{0}/{1}'.format(primary_registry_uri,
-                                             self.spec.image_tag.value)
-        self.template['spec']['output']['to']['name'] = tag_with_registry
+        if len(self.spec.registry_uris.value) > 0:
+            primary_registry_uri = self.spec.registry_uris.value[0].uri
+            tag_with_registry = '{0}/{1}'.format(primary_registry_uri,
+                                                 self.spec.image_tag.value)
+            self.template['spec']['output']['to']['name'] = tag_with_registry
+        else:
+            self.template['spec']['output']['to']['name'] = self.spec.image_tag.value
 
         self.render_tag_and_push_registries()
 

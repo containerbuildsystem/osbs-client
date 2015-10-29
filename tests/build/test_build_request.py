@@ -110,7 +110,12 @@ class TestBuildRequest(object):
         None,
         "some_tag",
     ])
-    def test_render_simple_request(self, tag):
+    @pytest.mark.parametrize('registry_uris', [
+        [],
+        ["registry.example.com:5000"],
+        ["registry.example.com:5000", "localhost:6000"],
+    ])
+    def test_render_simple_request(self, tag, registry_uris):
         bm = BuildManager(INPUTS_PATH)
         build_request = bm.get_build_request_by_type("simple")
         name_label = "fedora/resultingimage"
@@ -119,7 +124,7 @@ class TestBuildRequest(object):
             'git_ref': TEST_GIT_REF,
             'user': "john-foo",
             'component': TEST_COMPONENT,
-            'registry_uri': "http://registry.example.com:5000",
+            'registry_uris': registry_uris,
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
             'tag': tag,
@@ -132,13 +137,10 @@ class TestBuildRequest(object):
         assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
         assert build_json["spec"]["source"]["git"]["ref"] == TEST_GIT_REF
 
-        if tag:
-            assert build_json["spec"]["output"]["to"]["name"] == \
-                ("registry.example.com:5000/john-foo/component:%s" % tag)
-        else:
-            assert build_json["spec"]["output"]["to"]["name"].startswith(
-                "registry.example.com:5000/john-foo/component:20"
-            )
+        expected_output = "john-foo/component:%s" % (tag if tag else "20")
+        if registry_uris:
+            expected_output = registry_uris[0] + "/" + expected_output
+        assert build_json["spec"]["output"]["to"]["name"].startswith(expected_output)
 
         env_vars = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None
@@ -157,8 +159,10 @@ class TestBuildRequest(object):
 
         assert plugin_value_get(plugins, "exit_plugins", "store_metadata_in_osv3", "args", "url") == \
             "http://openshift/"
-        assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
-                                "registries", "registry.example.com:5000") == {"insecure": True}
+
+        for r in registry_uris:
+            assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
+                                    "registries", r) == {"insecure": True}
 
     def test_render_prod_request_with_repo(self):
         bm = BuildManager(INPUTS_PATH)
