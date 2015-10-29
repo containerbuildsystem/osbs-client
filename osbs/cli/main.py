@@ -174,6 +174,7 @@ def cmd_build(args, osbs):
         git_branch=osbs.build_conf.get_git_branch(),
         user=osbs.build_conf.get_user(),
         component=osbs.build_conf.get_component(),
+        tag=osbs.build_conf.get_tag(),
         target=osbs.build_conf.get_koji_target(),
         architecture=osbs.build_conf.get_architecture(),
         yum_repourls=osbs.build_conf.get_yum_repourls(),
@@ -383,6 +384,8 @@ def cli():
                               help="prefix for docker image repository")
     build_parser.add_argument("-c", "--component", action='store', required=True,
                               help="name of component")
+    build_parser.add_argument("-A", "--tag", action='store', required=False,
+                              help="tag of the built image (simple builds only)")
     build_parser.add_argument("--no-logs", action='store_true', required=False, default=False,
                               help="don't print logs after submitting build")
     build_parser.add_argument("--add-yum-repo", action='append', metavar="URL",

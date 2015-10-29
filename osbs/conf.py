@@ -187,6 +187,9 @@ class Configuration(object):
     def get_component(self):
         return self._get_value("component", self.conf_section, "component")
 
+    def get_tag(self):
+        return self._get_value("tag", self.conf_section, "tag")
+
     def get_yum_repourls(self):
         return self._get_value("yum_repourls", self.conf_section, "yum_repourls")
 

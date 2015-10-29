@@ -311,7 +311,7 @@ class OSBS(object):
                                       namespace=namespace, **kwargs)
 
     @osbsapi
-    def create_simple_build(self, git_uri, git_ref, user, component,
+    def create_simple_build(self, git_uri, git_ref, user, component, tag,
                             yum_repourls=None, namespace=DEFAULT_NAMESPACE,
                             **kwargs):
         build_request = self.get_build_request(SIMPLE_BUILD_TYPE)
@@ -320,6 +320,7 @@ class OSBS(object):
             git_ref=git_ref,
             user=user,
             component=component,
+            tag=tag,
             registry_uris=self.build_conf.get_registry_uris(),
             source_registry_uri=self.build_conf.get_source_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),

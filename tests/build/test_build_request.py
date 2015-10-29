@@ -106,7 +106,11 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "postbuild_plugins", "store_metadata_in_osv3", "args", "url") == \
             "http://openshift/"
 
-    def test_render_simple_request(self):
+    @pytest.mark.parametrize('tag', [
+        None,
+        "some_tag",
+    ])
+    def test_render_simple_request(self, tag):
         bm = BuildManager(INPUTS_PATH)
         build_request = bm.get_build_request_by_type("simple")
         name_label = "fedora/resultingimage"
@@ -118,6 +122,7 @@ class TestBuildRequest(object):
             'registry_uri': "http://registry.example.com:5000",
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
+            'tag': tag,
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -126,9 +131,14 @@ class TestBuildRequest(object):
         assert "triggers" not in build_json["spec"]
         assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
         assert build_json["spec"]["source"]["git"]["ref"] == TEST_GIT_REF
-        assert build_json["spec"]["output"]["to"]["name"].startswith(
-            "registry.example.com:5000/john-foo/component:"
-        )
+
+        if tag:
+            assert build_json["spec"]["output"]["to"]["name"] == \
+                ("registry.example.com:5000/john-foo/component:%s" % tag)
+        else:
+            assert build_json["spec"]["output"]["to"]["name"].startswith(
+                "registry.example.com:5000/john-foo/component:20"
+            )
 
         env_vars = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None

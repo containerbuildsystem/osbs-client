@@ -291,8 +291,13 @@ class ProdSpec(CommonSpec):
 class SimpleSpec(CommonSpec):
     image_tag = BuildParam("image_tag")
 
-    def set_params(self, **kwargs):
+    def set_params(self, tag=None, **kwargs):
         super(SimpleSpec, self).set_params(**kwargs)
         timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         self.name.value = "build-%s" % timestamp
-        self.image_tag.value = "%s/%s:%s" % (self.user.value, self.component.value, timestamp)
+
+        self.image_tag.value = "%s/%s:%s" % (
+            self.user.value,
+            self.component.value,
+            tag or timestamp
+        )
