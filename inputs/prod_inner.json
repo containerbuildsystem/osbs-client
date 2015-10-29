@@ -112,6 +112,14 @@
       }
     },
     {
+      "name": "pulp_sync",
+      "args": {
+        "pulp_registry_name": "{{PULP_REGISTRY_NAME}}",
+        "docker_registry": "{{DOCKER_REGISTRY}}",
+        "dockpulp_loglevel": "INFO"
+      }
+    },
+    {
       "args": {
         "image_id": "BUILT_IMAGE_ID"
       },

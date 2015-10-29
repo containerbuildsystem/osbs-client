@@ -228,6 +228,8 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_push")
         with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "postbuild_plugins", "pulp_sync")
+        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "koji_promote")
@@ -314,6 +316,8 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_push")
         with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "postbuild_plugins", "pulp_sync")
+        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "koji_promote")
@@ -393,6 +397,8 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_push")
         with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "postbuild_plugins", "pulp_sync")
+        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "koji_promote")
@@ -456,6 +462,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "prebuild_plugins", "bump_release")
         assert get_plugin(plugins, "prebuild_plugins", "koji")
         assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
@@ -472,6 +480,7 @@ class TestBuildRequest(object):
         bm = BuildManager(INPUTS_PATH)
         build_request = bm.get_build_request_by_type(PROD_WITH_SECRET_BUILD_TYPE)
         name_label = "fedora/resultingimage"
+        pulp_env = 'dev'
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -482,7 +491,7 @@ class TestBuildRequest(object):
             'name_label': name_label,
             'registry_uris': ["registry1.example.com/v1",  # first is primary
                               "registry2.example.com/v2"],
-            'pulp_registry': "registry.example.com",
+            'pulp_registry': pulp_env,
             'nfs_server_path': "server:path",
             'source_registry_uri': "registry.example.com",
             'openshift_uri': "http://openshift/",
@@ -538,6 +547,8 @@ class TestBuildRequest(object):
                               "cp_built_image_to_nfs")
             assert get_plugin(plugins, "postbuild_plugins",
                               "pulp_push")
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         else:
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, "postbuild_plugins",
@@ -548,6 +559,14 @@ class TestBuildRequest(object):
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, "postbuild_plugins",
                            "pulp_push")
+
+            assert get_plugin(plugins, "postbuild_plugins", "pulp_sync")
+            assert plugin_value_get(plugins, "postbuild_plugins", "pulp_sync",
+                                    "args", "pulp_registry_name") == pulp_env
+            docker_registry = plugin_value_get(plugins, "postbuild_plugins",
+                                               "pulp_sync", "args",
+                                               "docker_registry")
+            assert docker_registry == 'registry2.example.com'
 
     def test_render_with_yum_repourls(self):
         bm = BuildManager(INPUTS_PATH)
@@ -613,6 +632,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_push")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
