@@ -164,7 +164,11 @@ class TestBuildRequest(object):
             assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                     "registries", r) == {"insecure": True}
 
-    def test_render_prod_request_with_repo(self):
+    @pytest.mark.parametrize('architecture', [
+        None,
+        'x86_64',
+    ])
+    def test_render_prod_request_with_repo(self, architecture):
         bm = BuildManager(INPUTS_PATH)
         build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
         name_label = "fedora/resultingimage"
@@ -185,7 +189,7 @@ class TestBuildRequest(object):
             'kojiroot': "http://root/",
             'kojihub': "http://hub/",
             'sources_command': "make",
-            'architecture': "x86_64",
+            'architecture': architecture,
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
@@ -246,11 +250,14 @@ class TestBuildRequest(object):
                                   "args", "labels")
 
         assert labels is not None
-        assert labels['architecture'] is not None
         assert labels['authoritative-source'] is not None
         assert labels['com.redhat.build-host'] is not None
         assert labels['vendor'] is not None
         assert labels['distribution-scope'] is not None
+        if architecture:
+            assert labels['architecture'] is not None
+        else:
+            assert 'architecture' not in labels
 
     def test_render_prod_request(self):
         bm = BuildManager(INPUTS_PATH)
