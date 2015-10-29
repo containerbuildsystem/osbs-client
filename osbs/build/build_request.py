@@ -165,7 +165,7 @@ class CommonBuild(BuildRequest):
 
         :param git_uri: str, URL of source git repository
         :param git_ref: str, what git tree to build (default: master)
-        :param registry_uri: str, URI of docker registry where built image is pushed
+        :param registry_uris: list, URI of docker registry where built image is pushed (str)
         :param source_registry_uri: str, URI of docker registry from which image is pulled
         :param user: str, user part of resulting image name
         :param component: str, component part of the image name
@@ -191,7 +191,9 @@ class CommonBuild(BuildRequest):
         self.template['spec']['source']['git']['uri'] = self.spec.git_uri.value
         self.template['spec']['source']['git']['ref'] = self.spec.git_ref.value
 
-        tag_with_registry = self.spec.registry_uri.value + "/" + self.spec.image_tag.value
+        primary_registry_uri = self.spec.registry_uris.value[0].uri
+        tag_with_registry = '{0}/{1}'.format(primary_registry_uri,
+                                             self.spec.image_tag.value)
         self.template['spec']['output']['to']['name'] = tag_with_registry
 
         if self.dj.dock_json_has_plugin_conf('postbuild_plugins', 'tag_and_push'):
@@ -200,8 +202,14 @@ class CommonBuild(BuildRequest):
             placeholder = '{{REGISTRY_URI}}'
 
             if placeholder in registries:
-                if self.spec.registry_uri.value:
-                    registries[self.spec.registry_uri.value] = registries[placeholder]
+                for registry in self.spec.registry_uris.value:
+                    if not registry.uri:
+                        continue
+
+                    regdict = registries[placeholder].copy()
+                    regdict['version'] = registry.version
+                    registries[registry.uri] = regdict
+
                 del registries[placeholder]
 
         if 'triggers' in self.template['spec']:
@@ -315,6 +323,58 @@ class ProductionBuild(CommonBuild):
             if 'secrets' in self.template['spec']['strategy']['customStrategy']:
                 del self.template['spec']['strategy']['customStrategy']['secrets']
 
+    def adjust_for_registry_api_versions(self):
+        """
+        Enable/disable plugins depending on supported registry API versions
+        """
+
+        versions = self.spec.registry_api_versions.value
+
+        if self.dj.dock_json_has_plugin_conf('postbuild_plugins',
+                                             'tag_and_push'):
+            push_conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins',
+                                                          'tag_and_push')
+            try:
+                tag_and_push_registries = push_conf['args']['registries']
+            except KeyError:
+                tag_and_push_registries = None
+        else:
+            tag_and_push_registries = None
+
+        def remove_tag_and_push_registries(version):
+            registries = [uri
+                          for uri, regdict in tag_and_push_registries.items()
+                          if regdict['version'] == version]
+            for registry in registries:
+                logger.info("removing %s registry: %s", version, registry)
+                del tag_and_push_registries[registry]
+
+        if 'v1' not in versions:
+            # Remove v1-only plugins
+            for phase, name in [('postbuild_plugins', 'compress'),
+                                ('postbuild_plugins', 'cp_built_image_to_nfs'),
+                                ('postbuild_plugins', 'pulp_push')]:
+                logger.info("removing v1-only plugin: %s", name)
+                self.dj.remove_plugin(phase, name)
+
+            # remove extra tag_and_push config
+            remove_tag_and_push_registries('v1')
+
+        if 'v2' not in versions:
+            # Remove v2-only plugins
+            logger.info("removing v2-only plugin: sync_pulp")
+            self.dj.remove_plugin('postbuild_plugins', 'sync_pulp')
+
+            # remove extra tag_and_push config
+            remove_tag_and_push_registries('v2')
+
+        # Remove 'version' from tag_and_push plugin config as it's no
+        # longer needed
+        if tag_and_push_registries:
+            for regdict in tag_and_push_registries.values():
+                if 'version' in regdict:
+                    del regdict['version']
+
     def render(self, validate=True):
         if validate:
             self.spec.validate()
@@ -353,6 +413,9 @@ class ProductionBuild(CommonBuild):
                 logger.info("removing %s from request because there are no triggers",
                             which)
                 self.dj.remove_plugin(when, which)
+
+        # Enable/disable plugins as needed for target registry API versions
+        self.adjust_for_registry_api_versions()
 
         # if there is yum repo specified, don't pick stuff from koji
         if self.spec.yum_repourls.value:
@@ -440,7 +503,9 @@ class ProductionBuild(CommonBuild):
 
         # If NFS destination set, use it
         nfs_server_path = self.spec.nfs_server_path.value
-        if nfs_server_path:
+        if (self.dj.dock_json_has_plugin_conf('postbuild_plugins',
+                                              'cp_built_image_to_nfs') and
+                nfs_server_path):
             self.dj.dock_json_set_arg('postbuild_plugins', 'cp_built_image_to_nfs',
                                       'nfs_server_path', nfs_server_path)
             self.dj.dock_json_set_arg('postbuild_plugins', 'cp_built_image_to_nfs',
@@ -451,7 +516,9 @@ class ProductionBuild(CommonBuild):
 
         # If a pulp registry is specified, use the pulp plugin
         pulp_registry = self.spec.pulp_registry.value
-        if pulp_registry:
+        if (self.dj.dock_json_has_plugin_conf('postbuild_plugins',
+                                              'pulp_push') and
+                pulp_registry):
             self.dj.dock_json_set_arg('postbuild_plugins', 'pulp_push',
                                       'pulp_registry_name', pulp_registry)
 
@@ -518,6 +585,21 @@ class SimpleBuild(CommonBuild):
             # For compatibility with older osbs.conf files
             self.dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url",
                                       self.spec.builder_openshift_url.value)
+
+        # Remove 'version' from tag_and_push plugin config as it's no
+        # longer needed
+        if self.dj.dock_json_has_plugin_conf('postbuild_plugins',
+                                             'tag_and_push'):
+            push_conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins',
+                                                          'tag_and_push')
+            try:
+                registries = push_conf['args']['registries']
+            except KeyError:
+                pass
+            else:
+                for regdict in registries.values():
+                    if 'version' in regdict:
+                        del regdict['version']
 
         self.dj.write_dock_json()
         self.build_json = self.template

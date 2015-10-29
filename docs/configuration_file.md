@@ -65,7 +65,7 @@ Some options are also mandatory.
 
 * `kerberos_ccache` (*optional*, `string`) - location of credential cache to use when `kerberos_keytab` is set (please refer to [kerberos documentation](http://web.mit.edu/Kerberos/krb5-latest/doc/basic/ccache_def.html) for list of credential cache types)
 
-* `registry_uri` (*optional*, `string`) — docker registry URI to use for pulling and pushing images
+* `registry_uri` (*optional*, `string`) — docker registry URI to use for pulling and pushing images. More than one can be specified by separating them with commas, and the registry API version for each can be specified by affixing '/v1' or '/v2' onto the end of the registry URI
 
 * `registry_api_versions` (*optional*, `string`) — comma-separated list of docker registry HTTP API versions to support, defaults to `v1,v2`
 

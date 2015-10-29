@@ -229,8 +229,10 @@ class Configuration(object):
     def get_kerberos_ccache(self):
         return self._get_value("kerberos_ccache", self.conf_section, "kerberos_ccache")
 
-    def get_registry_uri(self):
-        return self._get_value("registry_uri", self.conf_section, "registry_uri")
+    def get_registry_uris(self):
+        return self._get_value("registry_uri",
+                               self.conf_section,
+                               "registry_uri").split(',')
 
     def get_registry_api_versions(self):
         value = self._get_value("registry_api_versions",
