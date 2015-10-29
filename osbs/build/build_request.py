@@ -400,6 +400,16 @@ class ProductionBuild(CommonBuild):
             # remove extra tag_and_push config
             self.remove_tag_and_push_registries(tag_and_push_registries, 'v1')
 
+            # Enable metadata-only imports to Koji
+            try:
+                koji_promote = self.dj.dock_json_get_plugin_conf('exit_plugins',
+                                                                 'koji_promote')
+            except (KeyError, IndexError):
+                pass
+            else:
+                args = koji_promote.setdefault('args', {})
+                args['metadata_only'] = True
+
         if 'v2' not in versions:
             # Remove v2-only plugins
             logger.info("removing v2-only plugin: sync_pulp")
