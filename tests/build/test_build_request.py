@@ -788,6 +788,9 @@ class TestBuildRequest(object):
                                 "args", "kojihub") == kwargs["kojihub"]
         assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
                                 "args", "url") == kwargs["openshift_uri"]
+        with pytest.raises(KeyError):
+            plugin_value_get(plugins, 'exit_plugins', 'koji_promote',
+                             'args', 'metadata_only')  # v1 enabled by default
 
     def test_render_prod_request_new_secrets(self, tmpdir):
         bm = BuildManager(INPUTS_PATH)
