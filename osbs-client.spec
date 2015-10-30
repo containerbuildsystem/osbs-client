@@ -50,7 +50,10 @@ Requires:       python-dockerfile-parse
 Requires:       python-pycurl
 Requires:       python-setuptools
 Requires:       krb5-workstation
-#Requires:       python-requests
+
+%if 0%{?rhel} && 0%{?rhel} <= 6
+Requires:       python-argparse
+%endif
 
 Provides:       python-osbs = %{version}-%{release}
 Obsoletes:      python-osbs < %{osbs_obsolete_vr}
@@ -70,7 +73,6 @@ Requires:       python3-pycurl
 Requires:       python3-dateutil
 Requires:       python3-setuptools
 Requires:       krb5-workstation
-#Requires:       python3-requests
 
 Provides:       python3-osbs = %{version}-%{release}
 Obsoletes:      python3-osbs < %{osbs_obsolete_vr}
