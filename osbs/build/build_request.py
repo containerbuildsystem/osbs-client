@@ -323,16 +323,18 @@ class ProductionBuild(CommonBuild):
     def set_secret_for_plugin(self, plugin, secret):
         if 'secrets' in self.template['spec']['strategy']['customStrategy']:
             # origin 1.0.6 and newer
-            secret_path = os.path.join(SECRETS_PATH, secret)
-            logger.info("Configuring %s secret at %s", secret, secret_path)
-            custom = self.template['spec']['strategy']['customStrategy']
-            custom['secrets'].append({
-                'secretSource': {
-                    'name': secret,
-                },
-                'mountPath': secret_path,
-            })
-            self.dj.dock_json_set_arg(*(plugin + (secret_path,)))
+            if self.dj.dock_json_has_plugin_conf(plugin[0], plugin[1]):
+                secret_path = os.path.join(SECRETS_PATH, secret)
+                logger.info("Configuring %s secret at %s", secret, secret_path)
+                custom = self.template['spec']['strategy']['customStrategy']
+                custom['secrets'].append({
+                    'secretSource': {
+                        'name': secret,
+                    },
+                    'mountPath': secret_path,
+                })
+                self.dj.dock_json_set_arg(*(plugin + (secret_path,)))
+
         elif plugin[1] == 'pulp_push':
             # setting pulp_push secret for origin 1.0.5 and earlier
             #  we only use this way to preserve backwards compat for pulp_push plugin,
@@ -392,7 +394,10 @@ class ProductionBuild(CommonBuild):
         except (KeyError, IndexError):
             tag_and_push_registries = {}
 
-        if 'v1' not in versions:
+        if 'v1' in versions:
+            logger.info("removing v2-only plugin: pulp_sync")
+            self.dj.remove_plugin('postbuild_plugins', 'pulp_sync')
+        else:
             # Remove v1-only plugins
             for phase, name in [('postbuild_plugins', 'compress'),
                                 ('postbuild_plugins', 'cp_built_image_to_nfs'),
@@ -404,10 +409,6 @@ class ProductionBuild(CommonBuild):
             self.remove_tag_and_push_registries(tag_and_push_registries, 'v1')
 
         if 'v2' not in versions:
-            # Remove v2-only plugins
-            logger.info("removing v2-only plugin: sync_pulp")
-            self.dj.remove_plugin('postbuild_plugins', 'sync_pulp')
-
             # remove extra tag_and_push config
             self.remove_tag_and_push_registries(tag_and_push_registries, 'v2')
 
@@ -594,6 +595,43 @@ class ProductionBuild(CommonBuild):
             # If no pulp registry is specified, don't run the pulp plugin
             self.dj.remove_plugin("postbuild_plugins", "pulp_push")
 
+    def render_pulp_sync(self):
+        """
+        If a pulp registry is specified, use the pulp plugin
+        """
+        pulp_registry = self.spec.pulp_registry.value
+        docker_v2_registries = [registry
+                                for registry in self.spec.registry_uris.value
+                                if registry.version == 'v2']
+
+        if (self.dj.dock_json_has_plugin_conf('postbuild_plugins',
+                                              'pulp_sync') and
+                pulp_registry and
+                docker_v2_registries):
+            self.dj.dock_json_set_arg('postbuild_plugins', 'pulp_sync',
+                                      'pulp_registry_name', pulp_registry)
+
+            # First specified v2 registry is the one
+            # we'll tell pulp to sync from
+            docker_registry = docker_v2_registries[0].uri
+            logger.info("using docker v2 registry %s for pulp_sync",
+                        docker_registry)
+
+            self.dj.dock_json_set_arg('postbuild_plugins', 'pulp_sync',
+                                      'docker_registry', docker_registry)
+
+            # Verify we have either a secret or username/password
+            if self.spec.pulp_secret.value is None:
+                conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins',
+                                                         'pulp_sync')
+                args = conf.get('args', {})
+                if 'username' not in args:
+                    raise OsbsValidationException("Pulp registry specified "
+                                                  "but no auth config")
+        else:
+            # If no pulp registry is specified, don't run the pulp plugin
+            self.dj.remove_plugin("postbuild_plugins", "pulp_sync")
+
     def render_import_image(self, use_auth=None):
         """
         Configure the import_image plugin
@@ -638,6 +676,11 @@ class ProductionBuild(CommonBuild):
                            'pulp_secret_path'):
                           self.spec.pulp_secret.value,
 
+                          ('postbuild_plugins',
+                           'pulp_sync',
+                           'pulp_secret_path'):
+                          self.spec.pulp_secret.value,
+
                           ('exit_plugins', 'sendmail', 'pdc_secret_path'):
                           self.spec.pdc_secret.value})
 
@@ -654,6 +697,7 @@ class ProductionBuild(CommonBuild):
         self.render_cp_built_image_to_nfs()
         self.render_import_image(use_auth=use_auth)
         self.render_pulp_push()
+        self.render_pulp_sync()
         self.render_koji_promote(use_auth=use_auth)
         self.render_sendmail()
 
