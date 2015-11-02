@@ -411,10 +411,7 @@ class ProductionBuild(CommonBuild):
         except (KeyError, IndexError):
             tag_and_push_registries = {}
 
-        if 'v1' in versions:
-            logger.info("removing v2-only plugin: pulp_sync")
-            self.dj.remove_plugin('postbuild_plugins', 'pulp_sync')
-        else:
+        if 'v1' not in versions:
             # Remove v1-only plugins
             for phase, name in [('postbuild_plugins', 'compress'),
                                 ('postbuild_plugins', 'cp_built_image_to_nfs'),
@@ -436,6 +433,10 @@ class ProductionBuild(CommonBuild):
                 args['metadata_only'] = True
 
         if 'v2' not in versions:
+            # Remove v2-only plugins
+            logger.info("removing v2-only plugin: pulp_sync")
+            self.dj.remove_plugin('postbuild_plugins', 'pulp_sync')
+
             # remove extra tag_and_push config
             self.remove_tag_and_push_registries(tag_and_push_registries, 'v2')
 
