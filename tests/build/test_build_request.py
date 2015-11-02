@@ -483,6 +483,47 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries") == {}
 
+    def test_render_prod_request_requires_newer(self):
+        """
+        We should get an OsbsValidationException when trying to use the
+        docker v2 API without requiring OpenShift 1.0.6, as
+        configuring the pulp_sync plugin requires the new-style
+        secrets.
+        """
+        bm = BuildManager(INPUTS_PATH)
+        build_request = bm.get_build_request_by_type(PROD_WITH_SECRET_BUILD_TYPE)
+        name_label = "fedora/resultingimage"
+        kwargs = {
+            'pulp_registry': 'env',
+            'pulp_secret': 'pulpsecret',
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'base_image': 'fedora:latest',
+            'name_label': name_label,
+            'registry_uris': ["registry1.example.com/v1",  # first is primary
+                              "registry2.example.com/v2"],
+            'nfs_server_path': "server:path",
+            'source_registry_uri': "registry.example.com",
+            'openshift_uri': "http://openshift/",
+            'builder_openshift_url': "http://openshift/",
+            'koji_target': "koji-target",
+            'kojiroot': "http://root/",
+            'kojihub': "http://hub/",
+            'sources_command': "make",
+            'architecture': "x86_64",
+            'vendor': "Foo Vendor",
+            'build_host': "our.build.host.example.com",
+            'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
+            'registry_api_versions': ['v2'],  # to use pulp_sync
+        }
+        build_request.set_params(**kwargs)
+        with pytest.raises(OsbsValidationException):
+            build_request.render()
+
     @pytest.mark.parametrize('registry_api_versions', [
         ['v1', 'v2'],
         ['v2'],
@@ -490,6 +531,7 @@ class TestBuildRequest(object):
     def test_render_prod_request_v1_v2(self, registry_api_versions):
         bm = BuildManager(INPUTS_PATH)
         build_request = bm.get_build_request_by_type(PROD_WITH_SECRET_BUILD_TYPE)
+        build_request.set_openshift_required_version(parse_version('1.0.6'))
         name_label = "fedora/resultingimage"
         pulp_env = 'dev'
         kwargs = {
