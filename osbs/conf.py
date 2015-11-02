@@ -254,6 +254,9 @@ class Configuration(object):
     def get_pulp_registry(self):
         return self._get_value("pulp_registry_name", self.conf_section, "pulp_registry_name")
 
+    def get_pulp_sync_registry(self):
+        return self._get_value("pulp_sync_registry_name", self.conf_section, "pulp_sync_registry_name")
+
     def get_build_json_store(self):
         return self._get_value("build_json_dir", GENERAL_CONFIGURATION_SECTION, "build_json_dir")
 
@@ -318,6 +321,9 @@ class Configuration(object):
         Compatibility name for get_pulp_secret()
         """
         return self.get_pulp_secret()
+
+    def get_pulp_sync_secret(self):
+        return self._get_value("pulp_sync_secret", self.conf_section, "pulp_sync_secret")
 
     def get_pdc_secret(self):
         return self._get_value("pdc_secret", self.conf_section, "pdc_secret")

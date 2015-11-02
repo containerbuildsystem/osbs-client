@@ -209,7 +209,9 @@ class ProdSpec(CommonSpec):
     kojihub = BuildParam("kojihub", allow_none=True)
     image_tag = BuildParam("image_tag")
     pulp_secret = BuildParam("pulp_secret", allow_none=True)
+    pulp_sync_secret = BuildParam("pulp_sync_secret", allow_none=True)
     pulp_registry = BuildParam("pulp_registry", allow_none=True)
+    pulp_sync_registry = BuildParam("pulp_sync_registry", allow_none=True)
     pdc_secret = BuildParam("pdc_secret", allow_none=True)
     pdc_url = BuildParam("pdc_url", allow_none=True)
     smtp_uri = BuildParam("smtp_uri", allow_none=True)
@@ -232,7 +234,9 @@ class ProdSpec(CommonSpec):
             self.kojiroot,
             self.kojihub,
             self.pulp_secret,
+            self.pulp_sync_secret,
             self.pulp_registry,
+            self.pulp_sync_registry,
             self.pdc_secret,
             self.pdc_url,
             self.smtp_uri,
@@ -245,7 +249,9 @@ class ProdSpec(CommonSpec):
                    build_host=None, authoritative_registry=None, distribution_scope=None,
                    koji_target=None, kojiroot=None, kojihub=None,
                    source_secret=None,  # compatibility name for pulp_secret
-                   pulp_secret=None, pulp_registry=None, pdc_secret=None, pdc_url=None,
+                   pulp_secret=None, pulp_sync_secret=None,
+                   pulp_registry=None, pulp_sync_registry=None,
+                   pdc_secret=None, pdc_url=None,
                    smtp_uri=None, nfs_server_path=None,
                    nfs_dest_dir=None, git_branch=None, base_image=None,
                    name_label=None, git_push_url=None, git_push_username=None,
@@ -263,7 +269,9 @@ class ProdSpec(CommonSpec):
         self.kojiroot.value = kojiroot
         self.kojihub.value = kojihub
         self.pulp_secret.value = pulp_secret or source_secret
+        self.pulp_sync_secret.value = pulp_sync_secret
         self.pulp_registry.value = pulp_registry
+        self.pulp_sync_registry.value = pulp_sync_registry
         self.pdc_secret.value = pdc_secret
         self.pdc_url.value = pdc_url
         self.smtp_uri.value = smtp_uri

@@ -73,6 +73,8 @@ Some options are also mandatory.
 
 * `pulp_registry_name` (*optional*, `string`) — name of pulp registry within dockpulp config
 
+* `pulp_sync_registry_name` (*optional*, `string`) — name of pulp registry within dockpulp config for `pulp_sync`, if different to `pulp_registry_name`
+
 * `verify_ssl` (*optional*, `boolean`) — verify SSL certificates during secure connection?
 
 * `build_type` (**mandatory**, `string`) — name of build type to use for building the image
@@ -93,7 +95,9 @@ Some options are also mandatory.
 
 * `builder_openshift_url` (*optional*, `string`) — url of OpenShift where builder will connect
 
-* `pulp_secret` (*optional*, `string`) — name of [kubernetes secret](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/design/secrets.md) to use for pulp plugin
+* `pulp_secret` (*optional*, `string`) — name of [kubernetes secret](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/design/secrets.md) to use for pulp plugins
+
+* `pulp_sync_secret` (*optional*, `string`) — name of [kubernetes secret](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/design/secrets.md) to use for `pulp_sync` plugin, if different to `pulp_secret`
 
 * `pdc_secret` (*optional*, `string`) - name of kubernetes secret to use for plugins communicating with PDC
 
