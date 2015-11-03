@@ -250,7 +250,7 @@ class OSBS(object):
 
     @osbsapi
     def create_prod_build(self, git_uri, git_ref, git_branch, user, component,
-                          target, architecture, yum_repourls=None,
+                          target, architecture=None, yum_repourls=None,
                           namespace=DEFAULT_NAMESPACE, **kwargs):
         df_parser = utils.get_df_parser(git_uri, git_ref, git_branch)
         build_request = self.get_build_request(PROD_BUILD_TYPE)
@@ -297,7 +297,7 @@ class OSBS(object):
 
     @osbsapi
     def create_prod_with_secret_build(self, git_uri, git_ref, git_branch, user, component,
-                                      target, architecture, yum_repourls=None,
+                                      target, architecture=None, yum_repourls=None,
                                       namespace=DEFAULT_NAMESPACE, **kwargs):
         return self.create_prod_build(git_uri, git_ref, git_branch, user, component, target,
                                       architecture, yum_repourls=yum_repourls,
@@ -305,7 +305,7 @@ class OSBS(object):
 
     @osbsapi
     def create_prod_without_koji_build(self, git_uri, git_ref, git_branch, user, component,
-                                       architecture, yum_repourls=None,
+                                       architecture=None, yum_repourls=None,
                                        namespace=DEFAULT_NAMESPACE, **kwargs):
         return self.create_prod_build(git_uri, git_ref, git_branch, user, component, None,
                                       architecture, yum_repourls=yum_repourls,

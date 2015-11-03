@@ -449,12 +449,15 @@ class ProductionBuild(CommonBuild):
 
     def render_add_labels_in_dockerfile(self):
         implicit_labels = {
-            'architecture': self.spec.architecture.value,
             'vendor': self.spec.vendor.value,
             'com.redhat.build-host': self.spec.build_host.value,
             'authoritative-source': self.spec.authoritative_registry.value,
             'distribution-scope': self.spec.distribution_scope.value,
         }
+
+        architecture = self.spec.architecture.value
+        if architecture:
+            implicit_labels['architecture'] = architecture
 
         self.dj.dock_json_merge_arg('prebuild_plugins',
                                     "add_labels_in_dockerfile",

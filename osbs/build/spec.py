@@ -223,7 +223,6 @@ class ProdSpec(CommonSpec):
         super(ProdSpec, self).__init__()
         self.required_params += [
             self.sources_command,
-            self.architecture,
             self.vendor,
             self.build_host,
             self.authoritative_registry,
