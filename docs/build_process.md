@@ -28,6 +28,27 @@ This document mentions several components that communicate with each other:
  9. Assuming the build is successful, atomic-reactor pushes the built image into registry and runs post-build plugins. These can vary depending on type of build, but usually it means pushing image to Pulp or copying it to NFS or so.
  10. atomic-reactor's `ImportImagePlugin` is run, which checks whether ImageStream for *IM* exists. If not, it creates it. Then, either way, it imports newly built *IM* into the `ImageStream`. If there are already some other images that use *IM* as their base image, they get rebuilt.
 
+
+### docker registry v1 API (current workflow)
+
+You can choose if you want to push built image into:
+
+ * docker registry — can be configured with `registry_uri`
+
+ * pulp registry — can be configured with `pulp_registry_name`, atomic-reactor will `upload` image (as archive) and copies it into required repository
+
+
+### docker registry v2 API
+
+Since in v2 there is no file-like representation of an image, you can transport image only via registry protocol.
+
+In order to create a v2 form, you need an instance of [distribution](https://github.com/docker/distribution) registry. Once you push the built image there, it's up to you, if you want to move the v2 image into pulp registry. That process is called sync. Configuration is same as for v1 except that you should suffix value of `registry_uri` with `/v2`, e.g.:
+
+```
+registry_uri = registry.example.com/v2
+```
+
+
 ## OSBS Repo Configuration File
 
 OSBS repo config file is a file that resides in the top level of built Git repo. It is currently not mandatory. The default name is `.osbs-repo-config`.
