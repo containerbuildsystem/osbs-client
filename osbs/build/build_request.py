@@ -323,19 +323,30 @@ class ProductionBuild(CommonBuild):
         self.spec.set_params(**kwargs)
 
     def set_secret_for_plugin(self, plugin, secret):
+        has_plugin_conf = self.dj.dock_json_has_plugin_conf(plugin[0],
+                                                            plugin[1])
         if 'secrets' in self.template['spec']['strategy']['customStrategy']:
-            # origin 1.0.6 and newer
-            if self.dj.dock_json_has_plugin_conf(plugin[0], plugin[1]):
+            if has_plugin_conf:
+                # origin 1.0.6 and newer
                 secret_path = os.path.join(SECRETS_PATH, secret)
                 logger.info("Configuring %s secret at %s", secret, secret_path)
                 custom = self.template['spec']['strategy']['customStrategy']
-                custom['secrets'].append({
-                    'secretSource': {
-                        'name': secret,
-                    },
-                    'mountPath': secret_path,
-                })
+                existing = [secret_mount for secret_mount in custom['secrets']
+                            if secret_mount['secretSource']['name'] == secret]
+                if existing:
+                    logger.debug("secret %s already set", plugin[1])
+                else:
+                    custom['secrets'].append({
+                        'secretSource': {
+                            'name': secret,
+                        },
+                        'mountPath': secret_path,
+                    })
+
                 self.dj.dock_json_set_arg(*(plugin + (secret_path,)))
+            else:
+                logger.debug("not setting secret for unused plugin %s",
+                             plugin[1])
 
         elif plugin[1] == 'pulp_push':
             # setting pulp_push secret for origin 1.0.5 and earlier
@@ -346,6 +357,10 @@ class ProductionBuild(CommonBuild):
                 raise OsbsValidationException("JSON template does not allow secrets")
 
             self.template['spec']['source']['sourceSecret']['name'] = secret
+
+        elif has_plugin_conf:
+            raise OsbsValidationException("cannot set more than one secret "
+                                          "unless using OpenShift >= 1.0.6")
 
     def set_secrets(self, secrets):
         """
@@ -396,10 +411,7 @@ class ProductionBuild(CommonBuild):
         except (KeyError, IndexError):
             tag_and_push_registries = {}
 
-        if 'v1' in versions:
-            logger.info("removing v2-only plugin: pulp_sync")
-            self.dj.remove_plugin('postbuild_plugins', 'pulp_sync')
-        else:
+        if 'v1' not in versions:
             # Remove v1-only plugins
             for phase, name in [('postbuild_plugins', 'compress'),
                                 ('postbuild_plugins', 'cp_built_image_to_nfs'),
@@ -421,6 +433,10 @@ class ProductionBuild(CommonBuild):
                 args['metadata_only'] = True
 
         if 'v2' not in versions:
+            # Remove v2-only plugins
+            logger.info("removing v2-only plugin: pulp_sync")
+            self.dj.remove_plugin('postbuild_plugins', 'pulp_sync')
+
             # remove extra tag_and_push config
             self.remove_tag_and_push_registries(tag_and_push_registries, 'v2')
 
