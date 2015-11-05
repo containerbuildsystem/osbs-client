@@ -77,6 +77,7 @@ def test_get_time_from_rfc3339_valid(rfc3339, seconds, tz):
 def test_get_time_from_rfc3339_valid_alt_format(rfc3339, seconds, tz):
     os.environ['TZ'] = tz
     tzset()
+    assert get_time_from_rfc3339(rfc3339) == seconds
 
 
 @pytest.mark.parametrize('rfc3339', [
