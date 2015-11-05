@@ -1,10 +1,12 @@
-%global with_python3 0
+%if (0%{?fedora} >= 23 || 0%{?rhel} >= 8)
+%global with_python3 1
+%endif
 
 %global commit 49ef2c5d631b8a0c5f82a1d9354e6f7271ba5f12
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 # set to 0 to create a normal release
 %global postrelease 0
-%global release 1
+%global release 2
 
 %global osbs_obsolete_vr 0.14-2
 
@@ -149,6 +151,9 @@ ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 %endif # with_python3
 
 %changelog
+* Thu Nov 05 2015 Jiri Popelka <jpopelka@redhat.com> - 0.15-2
+- build for Python 3
+
 * Mon Oct 19 2015 Tomas Tomecek <ttomecek@redhat.com> - 0.15-1
 - new upstream release: 0.15
 
