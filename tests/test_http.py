@@ -13,6 +13,7 @@ import pytest
 
 import osbs.http as osbs_http
 from osbs.http import parse_headers, HttpSession, HttpStream
+from osbs.exceptions import OsbsNetworkException
 
 from tests.fake_api import Connection, ResponseMapping
 
@@ -22,6 +23,15 @@ logger = logging.getLogger(__file__)
 @pytest.fixture
 def s():
     return HttpSession(verbose=True)
+
+
+def has_connection():
+    # In case we run tests in an environment without internet connection.
+    try:
+        HttpStream("https://httpbin.org/get", "get")
+        return True
+    except OsbsNetworkException:
+        return False
 
 
 class TestParseHeaders(object):
@@ -40,6 +50,8 @@ class TestParseHeaders(object):
         assert headers["location"]
 
 
+@pytest.mark.skipif(not has_connection(),
+                    reason="requires internet connection")
 class TestHttpSession(object):
     def test_single_multi_secure_without_redirs(self, s):
         response_single = s.get("https://httpbin.org/get")
