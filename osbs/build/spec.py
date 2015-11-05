@@ -171,8 +171,8 @@ class CommonSpec(BuildTypeSpec):
         def ditch_http_prefix(val):
             if not val:
                 return val
-            # We only want the hostname[:port]
-            return re.sub(r'^https?://([^/]*)/?.*',
+            # We don't want the scheme
+            return re.sub(r'^https?://(.*)$',
                           lambda m: m.groups()[0],
                           val)
 

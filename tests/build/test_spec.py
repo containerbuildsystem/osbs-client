@@ -7,8 +7,9 @@ of the BSD license. See the LICENSE file for details.
 """
 import pytest
 
-from osbs.build.spec import BuildIDParam
+from osbs.build.spec import BuildIDParam, RegistryURIsParam, CommonSpec
 from osbs.exceptions import OsbsValidationException
+from tests.constants import TEST_USER
 
 
 class TestBuildIDParam(object):
@@ -24,3 +25,29 @@ class TestBuildIDParam(object):
         p = BuildIDParam()
         with pytest.raises(OsbsValidationException):
             p.value = r"\\\\@@@@||||"
+
+
+class TestRegistryURIsParam(object):
+    def test_registry_uris_param_api_implicit(self):
+        p = RegistryURIsParam()
+        p.value = ['registry.example.com:5000']
+
+        assert p.value[0].uri == 'registry.example.com:5000'
+        assert p.value[0].version == 'v1'
+
+    def test_registry_uris_param_v2(self):
+        p = RegistryURIsParam()
+        p.value = ['registry.example.com:5000/v2']
+
+        assert p.value[0].uri == 'registry.example.com:5000'
+        assert p.value[0].version == 'v2'
+
+
+class TestCommonSpec(object):
+    def test_registry_uris_param_v2(self):
+        spec = CommonSpec()
+        spec.set_params(registry_uris=['http://registry.example.com:5000/v2'],
+                        user=TEST_USER)
+        registry = spec.registry_uris.value[0]
+        assert registry.uri == 'registry.example.com:5000'
+        assert registry.version == 'v2'
