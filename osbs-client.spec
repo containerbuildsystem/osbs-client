@@ -2,6 +2,11 @@
 %global with_python3 1
 %endif
 
+%if 0%{?fedora}
+# rhel/epel has no flexmock, pytest-capturelog
+%global with_check 1
+%endif
+
 %global commit 49ef2c5d631b8a0c5f82a1d9354e6f7271ba5f12
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 # set to 0 to create a normal release
@@ -30,11 +35,28 @@ Requires:       python-osbs-client = %{version}-%{release}
 
 BuildRequires:  python2-devel
 BuildRequires:  python-setuptools
+%if 0%{?with_check}
+BuildRequires:  pytest
+BuildRequires:  python-pytest-capturelog
+BuildRequires:  python-flexmock
+BuildRequires:  python-six
+BuildRequires:  python-dockerfile-parse
+BuildRequires:  python-pycurl
+%endif # with_check
 
 %if 0%{?with_python3}
 BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
-%endif
+%if 0%{?with_check}
+BuildRequires:  python3-pytest
+BuildRequires:  python3-pytest-capturelog
+BuildRequires:  python3-flexmock
+BuildRequires:  python3-six
+BuildRequires:  python3-dockerfile-parse
+BuildRequires:  python3-pycurl
+%endif # with_check
+%endif # with_python3
+
 
 Provides:       osbs = %{version}-%{release}
 Obsoletes:      osbs < %{osbs_obsolete_vr}
@@ -120,6 +142,16 @@ mv %{buildroot}%{_bindir}/osbs %{buildroot}%{_bindir}/osbs2
 ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 
 
+%if 0%{?with_check}
+%check
+%if 0%{?with_python3}
+py.test-3 -vv tests
+%endif # with_python3
+
+py.test-2 -vv tests
+%endif # with_check
+
+
 %files
 %doc README.md
 %{_bindir}/osbs
@@ -153,6 +185,7 @@ ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 %changelog
 * Thu Nov 05 2015 Jiri Popelka <jpopelka@redhat.com> - 0.15-2
 - build for Python 3
+- %%check section
 
 * Mon Oct 19 2015 Tomas Tomecek <ttomecek@redhat.com> - 0.15-1
 - new upstream release: 0.15
