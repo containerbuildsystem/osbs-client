@@ -9,7 +9,13 @@ $ git clone git@github.com:projectatomic/osbs-client.git
 $ cd osbs-client
 ```
 
-We have a docker-compose config to run OpenShift:
+Install `docker-compose`:
+
+```
+$ dnf install -y docker-compose
+```
+
+Then you can start OpenShift with one simple command:
 
 ```
 $ docker-compose up -d
