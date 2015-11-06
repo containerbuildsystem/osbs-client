@@ -9,6 +9,9 @@ $ git clone git@github.com:projectatomic/osbs-client.git
 $ cd osbs-client
 ```
 
+
+## setup with docker-compose
+
 Install `docker-compose`:
 
 ```
@@ -20,6 +23,22 @@ Then you can start OpenShift with one simple command:
 ```
 $ docker-compose up -d
 ```
+
+
+## setup without docker-compose
+
+You don't need docker-compose to launch the container (it's just convenience); you can run the openshift container like this:
+
+```
+docker run -d --name "origin" \
+  --privileged --pid=host --net=host \
+  -v /:/rootfs:ro -v /var/run:/var/run:rw -v /sys:/sys -v /var/lib/docker:/var/lib/docker:rw \
+  -v /var/lib/openshift/openshift.local.volumes:/var/lib/openshift/openshift.local.volumes \
+  openshift/origin:v1.0.6 start
+```
+
+
+## building images
 
 In order to successfully build an image you need to have 3 things:
 
