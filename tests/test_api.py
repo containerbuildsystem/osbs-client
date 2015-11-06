@@ -52,7 +52,7 @@ class TestOSBS(object):
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
             .and_return(MockParser()))
         response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
                                           TEST_GIT_BRANCH, TEST_USER,
@@ -65,7 +65,7 @@ class TestOSBS(object):
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
             .and_return(MockParser()))
         (flexmock(BuildRequest)
             .should_receive('set_openshift_required_version')
@@ -83,7 +83,7 @@ class TestOSBS(object):
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
             .and_return(MockParser()))
         response = osbs.create_prod_with_secret_build(TEST_GIT_URI, TEST_GIT_REF,
                                                       TEST_GIT_BRANCH, TEST_USER,
@@ -98,7 +98,7 @@ class TestOSBS(object):
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
             .and_return(MockParser()))
         response = osbs.create_prod_without_koji_build(TEST_GIT_URI, TEST_GIT_REF,
                                                        TEST_GIT_BRANCH, TEST_USER,

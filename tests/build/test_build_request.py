@@ -888,6 +888,67 @@ class TestBuildRequest(object):
             plugin_value_get(plugins, 'exit_plugins', 'koji_promote',
                              'args', 'metadata_only')  # v1 enabled by default
 
+    @pytest.mark.parametrize('missing', [
+        'git_branch',
+        'git_push_url',
+    ])
+    def test_render_prod_request_trigger_missing_param(self, tmpdir, missing):
+        self.create_image_change_trigger_json(str(tmpdir))
+        bm = BuildManager(str(tmpdir))
+        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        push_url = "ssh://{username}git.example.com/git/{component}.git"
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'base_image': 'fedora:latest',
+            'name_label': 'fedora/resultingimage',
+            'registry_uri': "registry.example.com",
+            'openshift_uri': "http://openshift/",
+            'builder_openshift_url': "http://openshift/",
+            'koji_target': "koji-target",
+            'kojiroot': "http://root/",
+            'kojihub': "http://hub/",
+            'sources_command': "make",
+            'architecture': "x86_64",
+            'vendor': "Foo Vendor",
+            'build_host': "our.build.host.example.com",
+            'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
+            'registry_api_versions': ['v1'],
+            'git_push_url': push_url.format(username='', component=TEST_COMPONENT),
+            'git_push_username': 'example',
+        }
+
+        # Remove one of the parameters required for rebuild triggers
+        del kwargs[missing]
+
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+
+        # Verify the triggers are now disabled
+        assert "triggers" not in build_json["spec"]
+
+        strategy = build_json['spec']['strategy']['customStrategy']['env']
+        plugins_json = None
+        for d in strategy:
+            if d['name'] == 'DOCK_PLUGINS':
+                plugins_json = d['value']
+                break
+
+        # Verify the rebuild plugins are all disabled
+        plugins = json.loads(plugins_json)
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins", "bump_release")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "postbuild_plugins", "import_image")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "exit_plugins", "koji_promote")
+
     def test_render_prod_request_new_secrets(self, tmpdir):
         bm = BuildManager(INPUTS_PATH)
         secret_name = 'mysecret'
