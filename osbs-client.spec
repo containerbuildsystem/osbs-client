@@ -152,10 +152,10 @@ ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 %if 0%{?with_check}
 %check
 %if 0%{?with_python3}
-py.test-3 -vv tests
+LANG=en_US.utf8 py.test-%{python3_version} -vv tests
 %endif # with_python3
 
-py.test-2 -vv tests
+LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %endif # with_check
 
 
