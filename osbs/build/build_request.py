@@ -698,6 +698,13 @@ class ProductionBuild(CommonBuild):
         self.dj.dock_json_set_arg('prebuild_plugins', "pull_base_image",
                                   "parent_registry", self.spec.source_registry_uri.value)
 
+        # The rebuild trigger requires a git_branch parameter, but that
+        # parameter is optional. If it was not provided, remove the trigger.
+        if not self.spec.git_branch.value:
+            if 'triggers' in self.template['spec']:
+                logger.info("removing triggers as no git_branch specified")
+                del self.template['spec']['triggers']
+
         self.adjust_for_triggers()
 
         # Enable/disable plugins as needed for target registry API versions

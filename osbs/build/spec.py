@@ -193,7 +193,7 @@ class CommonSpec(BuildTypeSpec):
 
 
 class ProdSpec(CommonSpec):
-    git_branch = BuildParam('git_branch')
+    git_branch = BuildParam('git_branch', allow_none=True)
     trigger_imagestreamtag = BuildParam('trigger_imagestreamtag')
     imagestream_name = BuildParam('imagestream_name')
     imagestream_url = BuildParam('imagestream_url')
@@ -273,8 +273,9 @@ class ProdSpec(CommonSpec):
         self.git_push_username.value = git_push_username
         self.git_branch.value = git_branch
         repo = git_repo_humanish_part_from_uri(self.git_uri.value)
-        self.name.value = "{repo}-{branch}".format(repo=repo,
-                                                   branch=git_branch)
+        namefmt = "{repo}-{branch}"
+        self.name.value = namefmt.format(repo=repo,
+                                         branch=git_branch or 'unknown')
         self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
         self.builder_build_json_dir.value = builder_build_json_dir
         self.imagestream_name.value = name_label.replace('/', '-')
