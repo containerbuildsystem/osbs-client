@@ -757,29 +757,21 @@ class TestBuildRequest(object):
         with pytest.raises(OsbsValidationException):
             build_request.render()
 
-    @pytest.mark.parametrize('params', [
-        # Wrong way round
-        {
-            'git_ref': TEST_GIT_BRANCH,
-            'git_branch': TEST_GIT_REF,
-            'should_raise': True,
-        },
+    @staticmethod
+    def create_image_change_trigger_json(outdir):
+        """
+        Create JSON templates with an image change trigger added.
 
-        # Right way round
-        {
-            'git_ref': TEST_GIT_REF,
-            'git_branch': TEST_GIT_BRANCH,
-            'should_raise': False,
-        },
-    ])
-    def test_render_prod_request_with_trigger(self, tmpdir, params):
+        :param outdir: str, path to store modified templates
+        """
+
         # Make temporary copies of the JSON files
         for basename in ['prod.json', 'prod_inner.json']:
             shutil.copy(os.path.join(INPUTS_PATH, basename),
-                        os.path.join(str(tmpdir), basename))
+                        os.path.join(outdir, basename))
 
         # Create a build JSON description with an image change trigger
-        with open(os.path.join(str(tmpdir), 'prod.json'), 'r+') as prod_json:
+        with open(os.path.join(outdir, 'prod.json'), 'r+') as prod_json:
             build_json = json.load(prod_json)
 
             # Add the image change trigger
@@ -799,6 +791,23 @@ class TestBuildRequest(object):
             json.dump(build_json, prod_json)
             prod_json.truncate()
 
+    @pytest.mark.parametrize('params', [
+        # Wrong way round
+        {
+            'git_ref': TEST_GIT_BRANCH,
+            'git_branch': TEST_GIT_REF,
+            'should_raise': True,
+        },
+
+        # Right way round
+        {
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'should_raise': False,
+        },
+    ])
+    def test_render_prod_request_with_trigger(self, tmpdir, params):
+        self.create_image_change_trigger_json(str(tmpdir))
         bm = BuildManager(str(tmpdir))
         build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
         name_label = "fedora/resultingimage"
