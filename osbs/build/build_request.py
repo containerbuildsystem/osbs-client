@@ -11,6 +11,7 @@ import json
 import logging
 import os
 from pkg_resources import parse_version
+import re
 
 try:
     # py2
@@ -35,6 +36,15 @@ logger = logging.getLogger(__name__)
 def register_build_class(cls):
     build_classes[cls.key] = cls
     return cls
+
+
+def ditch_http_prefix(val):
+    if not val:
+        return val
+    # We don't want the scheme
+    return re.sub(r'^https?://(.*)$',
+                  lambda m: m.groups()[0],
+                  val)
 
 
 class BuildRequest(object):
@@ -199,9 +209,10 @@ class CommonBuild(BuildRequest):
                     if not registry.uri:
                         continue
 
+                    uri = ditch_http_prefix(registry.uri)
                     regdict = registries[placeholder].copy()
                     regdict['version'] = registry.version
-                    registries[registry.uri] = regdict
+                    registries[uri] = regdict
 
                 del registries[placeholder]
 
@@ -256,7 +267,8 @@ class CommonBuild(BuildRequest):
 
         if len(self.spec.registry_uris.value) > 0:
             primary_registry_uri = self.spec.registry_uris.value[0].uri
-            tag_with_registry = '{0}/{1}'.format(primary_registry_uri,
+            docker_uri = ditch_http_prefix(primary_registry_uri)
+            tag_with_registry = '{0}/{1}'.format(docker_uri,
                                                  self.spec.image_tag.value)
             self.template['spec']['output']['to']['name'] = tag_with_registry
         else:
@@ -643,8 +655,8 @@ class ProductionBuild(CommonBuild):
             self.dj.dock_json_set_arg('postbuild_plugins', 'pulp_sync',
                                       'pulp_registry_name', pulp_registry)
 
-            # First specified v2 registry is the one
-            # we'll tell pulp to sync from
+            # First specified v2 registry is the one we'll tell pulp
+            # to sync from. Keep the http prefix -- pulp wants it.
             docker_registry = docker_v2_registries[0].uri
             logger.info("using docker v2 registry %s for pulp_sync",
                         docker_registry)
@@ -695,8 +707,9 @@ class ProductionBuild(CommonBuild):
 
         self.dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts",
                                   "command", self.spec.sources_command.value)
+        docker_uri = ditch_http_prefix(self.spec.source_registry_uri.value)
         self.dj.dock_json_set_arg('prebuild_plugins', "pull_base_image",
-                                  "parent_registry", self.spec.source_registry_uri.value)
+                                  "parent_registry", docker_uri)
 
         self.adjust_for_triggers()
 

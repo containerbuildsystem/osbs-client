@@ -49,5 +49,5 @@ class TestCommonSpec(object):
         spec.set_params(registry_uris=['http://registry.example.com:5000/v2'],
                         user=TEST_USER)
         registry = spec.registry_uris.value[0]
-        assert registry.uri == 'registry.example.com:5000'
+        assert registry.uri == 'http://registry.example.com:5000'
         assert registry.version == 'v2'

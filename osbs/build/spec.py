@@ -20,7 +20,6 @@ from osbs.exceptions import OsbsValidationException
 from osbs.utils import (get_imagestreamtag_from_image,
                         git_repo_humanish_part_from_uri)
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -105,14 +104,18 @@ class RegistryURIsParam(BuildParam):
     @BuildParam.value.setter
     def value(self, val):  # pylint: disable=W0221
         registry_uris = []
-        for uri in val:
-            if '/' in uri:
-                (hostname, version) = uri.split('/', 1)
-            else:
-                hostname = uri
-                version = 'v1'
 
-            registry_uris.append(self.RegistryURI(hostname, version))
+        # Group 0: URI without path -- allowing empty value -- including:
+        # - Group 1: optional 'http://' / 'https://'
+        # Group 2: path, including:
+        # - Group 3: optional API version, 'v' followed by a number
+        versionre = re.compile(r'((https?://)?[^/]*)(/(v\d+))?$')
+
+        for uri in val:
+            groups = versionre.match(uri).groups()
+            registry_uri = groups[0]
+            version = groups[3] or 'v1'
+            registry_uris.append(self.RegistryURI(registry_uri, version))
 
         BuildParam.value.fset(self, registry_uris)
 
@@ -168,22 +171,13 @@ class CommonSpec(BuildTypeSpec):
         self.user.value = user
         self.component.value = component
 
-        def ditch_http_prefix(val):
-            if not val:
-                return val
-            # We don't want the scheme
-            return re.sub(r'^https?://(.*)$',
-                          lambda m: m.groups()[0],
-                          val)
-
         # registry_uri is the compatibility name for registry_uris
         if registry_uri is not None:
             assert registry_uris is None
             registry_uris = [registry_uri]
 
-        self.registry_uris.value = [ditch_http_prefix(uri)
-                                    for uri in registry_uris or []]
-        self.source_registry_uri.value = ditch_http_prefix(source_registry_uri)
+        self.registry_uris.value = registry_uris or []
+        self.source_registry_uri.value = source_registry_uri
         self.openshift_uri.value = openshift_uri
         self.builder_openshift_url.value = builder_openshift_url
         if not (yum_repourls is None or isinstance(yum_repourls, list)):
