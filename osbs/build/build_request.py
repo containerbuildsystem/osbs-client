@@ -348,8 +348,8 @@ class ProductionBuild(CommonBuild):
                 logger.debug("not setting secret for unused plugin %s",
                              plugin[1])
 
-        elif plugin[1] == 'pulp_push':
-            # setting pulp_push secret for origin 1.0.5 and earlier
+        elif plugin[1] in ('pulp_push', 'pulp_sync'):
+            # setting pulp_push/pulp_sync secret for origin 1.0.5 and earlier
             #  we only use this way to preserve backwards compat for pulp_push plugin,
             #  other plugins must use the new secrets way above
             logger.info("Configuring %s secret as sourceSecret", secret)
