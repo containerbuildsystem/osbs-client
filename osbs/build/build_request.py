@@ -302,11 +302,15 @@ class ProductionBuild(CommonBuild):
         these parameters are accepted:
 
         :param pulp_secret: str, resource name of pulp secret
+        :param pulp_sync_secret: str, resource name of secret for pulp_sync, if
+               different to pulp_secret
         :param pdc_secret: str, resource name of pdc secret
         :param koji_target: str, koji tag with packages used to build the image
         :param kojiroot: str, URL from which koji packages are fetched
         :param kojihub: str, URL of the koji hub
         :param pulp_registry: str, name of pulp registry in dockpulp.conf
+        :param pulp_sync_registry: str, name of pulp registry in dockpulp.conf
+               for pulp_sync, if different to pulp_registry
         :param nfs_server_path: str, NFS server and path
         :param nfs_dest_dir: str, directory to create on NFS server
         :param sources_command: str, command used to fetch dist-git sources
@@ -631,17 +635,18 @@ class ProductionBuild(CommonBuild):
         """
         If a pulp registry is specified, use the pulp plugin
         """
-        pulp_registry = self.spec.pulp_registry.value
+        pulp_sync_registry = (self.spec.pulp_sync_registry.value or
+                              self.spec.pulp_registry.value)
         docker_v2_registries = [registry
                                 for registry in self.spec.registry_uris.value
                                 if registry.version == 'v2']
 
         if (self.dj.dock_json_has_plugin_conf('postbuild_plugins',
                                               'pulp_sync') and
-                pulp_registry and
+                pulp_sync_registry and
                 docker_v2_registries):
             self.dj.dock_json_set_arg('postbuild_plugins', 'pulp_sync',
-                                      'pulp_registry_name', pulp_registry)
+                                      'pulp_registry_name', pulp_sync_registry)
 
             # First specified v2 registry is the one
             # we'll tell pulp to sync from
@@ -653,7 +658,8 @@ class ProductionBuild(CommonBuild):
                                       'docker_registry', docker_registry)
 
             # Verify we have either a secret or username/password
-            if self.spec.pulp_secret.value is None:
+            if (self.spec.pulp_sync_secret.value is None and
+                    self.spec.pulp_secret.value is None):
                 conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins',
                                                          'pulp_sync')
                 args = conf.get('args', {})
@@ -711,6 +717,7 @@ class ProductionBuild(CommonBuild):
                           ('postbuild_plugins',
                            'pulp_sync',
                            'pulp_secret_path'):
+                          self.spec.pulp_sync_secret.value or
                           self.spec.pulp_secret.value,
 
                           ('exit_plugins', 'sendmail', 'pdc_secret_path'):

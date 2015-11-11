@@ -531,11 +531,17 @@ class TestBuildRequest(object):
         with pytest.raises(OsbsValidationException):
             build_request.render()
 
+    @pytest.mark.parametrize('use_pulp_sync_config', [True, False])
     @pytest.mark.parametrize('registry_api_versions', [
         ['v1', 'v2'],
         ['v2'],
     ])
-    def test_render_prod_request_v1_v2(self, registry_api_versions):
+    def test_render_prod_request_v1_v2(self, use_pulp_sync_config,
+                                       registry_api_versions):
+        """
+        Verify the interaction of registry_api_versions and pulp_sync_*
+        configuration parameters.
+        """
         bm = BuildManager(INPUTS_PATH)
         build_request = bm.get_build_request_by_type(PROD_WITH_SECRET_BUILD_TYPE)
         build_request.set_openshift_required_version(parse_version('1.0.6'))
@@ -546,6 +552,14 @@ class TestBuildRequest(object):
             'pulp_registry': pulp_env,
             'pulp_secret': pulp_secret,
         }
+
+        if use_pulp_sync_config:
+            pulp_sync_env = 'v2pulp'
+            pulp_sync_secret = pulp_sync_env + 'secret'
+            kwargs.update({
+                'pulp_sync_registry': pulp_sync_env,
+                'pulp_sync_secret': pulp_sync_secret,
+            })
 
         kwargs.update({
             'git_uri': TEST_GIT_URI,
@@ -645,8 +659,12 @@ class TestBuildRequest(object):
                             if secret['mountPath'] == path]
             assert len(pulp_secrets) == 1
             secret = pulp_secrets[0]
-            assert env == pulp_env
-            assert secret['secretSource']['name'] == pulp_secret
+            if use_pulp_sync_config:
+                assert env == pulp_sync_env
+                assert secret['secretSource']['name'] == pulp_sync_secret
+            else:
+                assert env == pulp_env
+                assert secret['secretSource']['name'] == pulp_secret
 
             docker_registry = plugin_value_get(plugins, "postbuild_plugins",
                                                "pulp_sync", "args",
