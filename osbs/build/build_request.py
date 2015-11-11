@@ -585,6 +585,8 @@ class ProductionBuild(CommonBuild):
                 raise OsbsValidationException('sendmail plugin configured, '
                                               'but no pdc_secret_path')
         else:
+            logger.info("removing sendmail from request, "
+                        "requires pdc_url and smtp_uri")
             self.dj.remove_plugin('exit_plugins', 'sendmail')
 
     def render_cp_built_image_to_nfs(self):
@@ -602,6 +604,8 @@ class ProductionBuild(CommonBuild):
                                       'dest_dir', self.spec.nfs_dest_dir.value)
         else:
             # Otherwise, don't run the NFS plugin
+            logger.info("removing cp_built_image_to_nfs from request, "
+                        "requires nfs_server_path")
             self.dj.remove_plugin("postbuild_plugins", "cp_built_image_to_nfs")
 
     def render_pulp_push(self):
@@ -625,6 +629,8 @@ class ProductionBuild(CommonBuild):
                                                   "but no auth config")
         else:
             # If no pulp registry is specified, don't run the pulp plugin
+            logger.info("removing pulp_push from request, "
+                        "requires pulp_registry")
             self.dj.remove_plugin("postbuild_plugins", "pulp_push")
 
     def render_pulp_sync(self):
@@ -662,6 +668,8 @@ class ProductionBuild(CommonBuild):
                                                   "but no auth config")
         else:
             # If no pulp registry is specified, don't run the pulp plugin
+            logger.info("removing pulp_sync from request, "
+                        "requires pulp_registry and a v2 registry")
             self.dj.remove_plugin("postbuild_plugins", "pulp_sync")
 
     def render_import_image(self, use_auth=None):
