@@ -38,15 +38,6 @@ def register_build_class(cls):
     return cls
 
 
-def ditch_http_prefix(val):
-    if not val:
-        return val
-    # We don't want the scheme
-    return re.sub(r'^https?://(.*)$',
-                  lambda m: m.groups()[0],
-                  val)
-
-
 class BuildRequest(object):
     """
     Wraps logic for creating build inputs
@@ -209,10 +200,9 @@ class CommonBuild(BuildRequest):
                     if not registry.uri:
                         continue
 
-                    uri = ditch_http_prefix(registry.uri)
                     regdict = registries[placeholder].copy()
                     regdict['version'] = registry.version
-                    registries[uri] = regdict
+                    registries[registry.docker_uri] = regdict
 
                 del registries[placeholder]
 
@@ -266,9 +256,8 @@ class CommonBuild(BuildRequest):
         self.template['spec']['source']['git']['ref'] = self.spec.git_ref.value
 
         if len(self.spec.registry_uris.value) > 0:
-            primary_registry_uri = self.spec.registry_uris.value[0].uri
-            docker_uri = ditch_http_prefix(primary_registry_uri)
-            tag_with_registry = '{0}/{1}'.format(docker_uri,
+            primary_registry_uri = self.spec.registry_uris.value[0].docker_uri
+            tag_with_registry = '{0}/{1}'.format(primary_registry_uri,
                                                  self.spec.image_tag.value)
             self.template['spec']['output']['to']['name'] = tag_with_registry
         else:
@@ -707,7 +696,14 @@ class ProductionBuild(CommonBuild):
 
         self.dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts",
                                   "command", self.spec.sources_command.value)
-        docker_uri = ditch_http_prefix(self.spec.source_registry_uri.value)
+
+        # pull_base_image wants a docker URI so strip off the scheme part
+        docker_uri = self.spec.source_registry_uri.value
+        if docker_uri:
+            docker_uri = re.sub(r'^https?://(.*)$',
+                                lambda m: m.groups[0],
+                                docker_uri)
+
         self.dj.dock_json_set_arg('prebuild_plugins', "pull_base_image",
                                   "parent_registry", docker_uri)
 

@@ -92,11 +92,15 @@ class RegistryURIsParam(BuildParam):
     """
     Build parameter for a list of registry URIs
 
-    Each registry has a URI (hostname) and a version (str).
+    Each registry has a full URI, a docker URI, and a version (str).
     """
 
     name = "registry_uris"
-    RegistryURI = namedtuple("RegistryURI", ['uri', 'version'])
+    RegistryURI = namedtuple("RegistryURI", [
+        'uri',         # full URI including scheme part
+        'docker_uri',  # hostname and port
+        'version',     # registry API version, 'v1' or 'v2'
+    ])
 
     def __init__(self):
         super(RegistryURIsParam, self).__init__(self.name)
@@ -107,15 +111,18 @@ class RegistryURIsParam(BuildParam):
 
         # Group 0: URI without path -- allowing empty value -- including:
         # - Group 1: optional 'http://' / 'https://'
-        # Group 2: path, including:
-        # - Group 3: optional API version, 'v' followed by a number
-        versionre = re.compile(r'((https?://)?[^/]*)(/(v\d+))?$')
+        # - Group 2: hostname and port
+        # Group 3: path, including:
+        # - Group 4: optional API version, 'v' followed by a number
+        versionre = re.compile(r'((https?://)?([^/]*))(/(v\d+))?$')
 
         for uri in val:
             groups = versionre.match(uri).groups()
             registry_uri = groups[0]
-            version = groups[3] or 'v1'
-            registry_uris.append(self.RegistryURI(registry_uri, version))
+            version = groups[4] or 'v1'
+            registry_uris.append(self.RegistryURI(registry_uri,
+                                                  groups[2],
+                                                  version))
 
         BuildParam.value.fset(self, registry_uris)
 
