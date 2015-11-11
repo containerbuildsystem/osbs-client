@@ -493,16 +493,13 @@ class TestBuildRequest(object):
     def test_render_prod_request_requires_newer(self):
         """
         We should get an OsbsValidationException when trying to use the
-        docker v2 API without requiring OpenShift 1.0.6, as
-        configuring the pulp_sync plugin requires the new-style
-        secrets.
+        sendmail plugin without requiring OpenShift 1.0.6, as
+        configuring the plugin requires the new-style secrets.
         """
         bm = BuildManager(INPUTS_PATH)
         build_request = bm.get_build_request_by_type(PROD_WITH_SECRET_BUILD_TYPE)
         name_label = "fedora/resultingimage"
         kwargs = {
-            'pulp_registry': 'env',
-            'pulp_secret': 'pulpsecret',
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
             'git_branch': TEST_GIT_BRANCH,
@@ -525,7 +522,9 @@ class TestBuildRequest(object):
             'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
-            'registry_api_versions': ['v2'],  # to use pulp_sync
+            'pdc_secret': 'foo',
+            'pdc_url': 'https://pdc.example.com',
+            'smtp_uri': 'smtp.example.com',
         }
         build_request.set_params(**kwargs)
         with pytest.raises(OsbsValidationException):
@@ -535,10 +534,11 @@ class TestBuildRequest(object):
         ['v1', 'v2'],
         ['v2'],
     ])
-    def test_render_prod_request_v1_v2(self, registry_api_versions):
+    @pytest.mark.parametrize('openshift_version', ['1.0.0', '1.0.6'])
+    def test_render_prod_request_v1_v2(self, registry_api_versions, openshift_version):
         bm = BuildManager(INPUTS_PATH)
         build_request = bm.get_build_request_by_type(PROD_WITH_SECRET_BUILD_TYPE)
-        build_request.set_openshift_required_version(parse_version('1.0.6'))
+        build_request.set_openshift_required_version(parse_version(openshift_version))
         name_label = "fedora/resultingimage"
         pulp_env = 'v1pulp'
         pulp_secret = pulp_env + 'secret'
@@ -605,7 +605,22 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push",
                                 "args", "registries") == expected_registries
 
-        secrets = build_json['spec']['strategy']['customStrategy']['secrets']
+        if openshift_version == '1.0.0':
+            assert 'secrets' not in build_json['spec']['strategy']['customStrategy']
+            assert build_json['spec']['source']['sourceSecret']['name'] == pulp_secret
+        else:
+            assert 'sourceSecret' not in build_json['spec']['source']
+            secrets = build_json['spec']['strategy']['customStrategy']['secrets']
+            for version, plugin in [('v1', 'pulp_push'), ('v2', 'pulp_sync')]:
+                if version not in registry_api_versions:
+                    continue
+
+                path = plugin_value_get(plugins, "postbuild_plugins", plugin,
+                                        "args", "pulp_secret_path")
+                pulp_secrets = [secret for secret in secrets if secret['mountPath'] == path]
+                assert len(pulp_secrets) == 1
+                assert pulp_secrets[0]['secretSource']['name'] == pulp_secret
+
         if 'v1' in registry_api_versions:
             assert get_plugin(plugins, "postbuild_plugins",
                               "compress")
@@ -615,13 +630,6 @@ class TestBuildRequest(object):
                               "pulp_push")
             assert plugin_value_get(plugins, "postbuild_plugins", "pulp_push",
                                     "args", "pulp_registry_name") == pulp_env
-
-            path = plugin_value_get(plugins, "postbuild_plugins", "pulp_push",
-                                    "args", "pulp_secret_path")
-            pulp_secrets = [secret for secret in secrets
-                            if secret['mountPath'] == path]
-            assert len(pulp_secrets) == 1
-            assert pulp_secrets[0]['secretSource']['name'] == pulp_secret
         else:
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, "postbuild_plugins",
@@ -637,16 +645,7 @@ class TestBuildRequest(object):
             assert get_plugin(plugins, "postbuild_plugins", "pulp_sync")
             env = plugin_value_get(plugins, "postbuild_plugins", "pulp_sync",
                                    "args", "pulp_registry_name")
-            path = plugin_value_get(plugins, "postbuild_plugins", "pulp_sync",
-                                    "args", "pulp_secret_path")
-
-            strategy = build_json['spec']['strategy']['customStrategy']
-            pulp_secrets = [secret for secret in strategy['secrets']
-                            if secret['mountPath'] == path]
-            assert len(pulp_secrets) == 1
-            secret = pulp_secrets[0]
             assert env == pulp_env
-            assert secret['secretSource']['name'] == pulp_secret
 
             docker_registry = plugin_value_get(plugins, "postbuild_plugins",
                                                "pulp_sync", "args",

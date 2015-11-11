@@ -348,13 +348,17 @@ class ProductionBuild(CommonBuild):
                 logger.debug("not setting secret for unused plugin %s",
                              plugin[1])
 
-        elif plugin[1] == 'pulp_push':
-            # setting pulp_push secret for origin 1.0.5 and earlier
+        elif plugin[1] in ('pulp_push', 'pulp_sync'):
+            # setting pulp_push/pulp_sync secret for origin 1.0.5 and earlier
             #  we only use this way to preserve backwards compat for pulp_push plugin,
             #  other plugins must use the new secrets way above
             logger.info("Configuring %s secret as sourceSecret", secret)
             if 'sourceSecret' not in self.template['spec']['source']:
                 raise OsbsValidationException("JSON template does not allow secrets")
+
+            old_secret = self.template['spec']['source']['sourceSecret'].get('name')
+            if old_secret and old_secret != secret and not old_secret.startswith("{{"):
+                raise OsbsValidationException("Not possible to set two different source secrets")
 
             self.template['spec']['source']['sourceSecret']['name'] = secret
 
