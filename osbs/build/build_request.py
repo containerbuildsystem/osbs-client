@@ -356,6 +356,10 @@ class ProductionBuild(CommonBuild):
             if 'sourceSecret' not in self.template['spec']['source']:
                 raise OsbsValidationException("JSON template does not allow secrets")
 
+            old_secret = self.template['spec']['source']['sourceSecret'].get('name')
+            if old_secret and old_secret != secret and not old_secret.startswith("{{"):
+                raise OsbsValidationException("Not possible to set two different source secrets")
+
             self.template['spec']['source']['sourceSecret']['name'] = secret
 
         elif has_plugin_conf:
