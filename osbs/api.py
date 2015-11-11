@@ -249,10 +249,27 @@ class OSBS(object):
         return build
 
     @osbsapi
-    def create_prod_build(self, git_uri, git_ref, git_branch, user, component,
-                          target, architecture=None, yum_repourls=None,
+    def create_prod_build(self, git_uri, git_ref,
+                          git_branch,  # may be None
+                          user, component,
+                          target,      # may be None
+                          architecture=None, yum_repourls=None,
                           namespace=DEFAULT_NAMESPACE, **kwargs):
-        df_parser = utils.get_df_parser(git_uri, git_ref, git_branch)
+        """
+        Create a production build
+
+        :param git_uri: str, URI of git repository
+        :param git_ref: str, reference to commit
+        :param git_branch: str, branch name (may be None)
+        :param user: str, user name
+        :param component: str, component name
+        :param target: str, koji target (may be None)
+        :param architecture: str, build architecture
+        :param yum_repourls: list, URLs for yum repos
+        :param namespace: str, OpenShift namespace
+        :return: BuildResponse instance
+        """
+        df_parser = utils.get_df_parser(git_uri, git_ref, git_branch=git_branch)
         build_request = self.get_build_request(PROD_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,

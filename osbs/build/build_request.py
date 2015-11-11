@@ -706,6 +706,20 @@ class ProductionBuild(CommonBuild):
         self.dj.dock_json_set_arg('prebuild_plugins', "pull_base_image",
                                   "parent_registry", self.spec.source_registry_uri.value)
 
+        # The rebuild trigger requires git_branch and git_push_url
+        # parameters, but those parameters are optional. If either was
+        # not provided, remove the trigger.
+        remove_triggers = False
+        for param_name in ['git_branch', 'git_push_url']:
+            param = getattr(self.spec, param_name)
+            if not param.value:
+                logger.info("removing triggers as no %s specified", param_name)
+                remove_triggers = True
+                # Continue the loop so we log everything that's missing
+
+        if remove_triggers and 'triggers' in self.template['spec']:
+            del self.template['spec']['triggers']
+
         self.adjust_for_triggers()
 
         # Enable/disable plugins as needed for target registry API versions

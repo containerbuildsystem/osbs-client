@@ -70,14 +70,19 @@ def buildconfig_update(orig, new, remove_nonexistent_keys=False):
 
 
 @contextlib.contextmanager
-def checkout_git_repo(git_uri, git_ref, git_branch):
+def checkout_git_repo(git_uri, git_ref, git_branch=None):
     tmpdir = tempfile.mkdtemp()
     repo_path = os.path.join(tmpdir, "repo")
     try:
         try:
             # when you clone into an empty directory and cloning process fails
             # git will remove the empty directory (why?!)
-            run_command(['git', 'clone', git_uri, '-b', git_branch, repo_path])
+            args = ['git', 'clone', git_uri]
+            if git_branch:
+                args += ['-b', git_branch]
+
+            args.append(repo_path)
+            run_command(args)
         except OsbsException as ex:
             raise OsbsException("Unable to clone git repo '%s' "
                                 "branch '%s'" % (git_uri, git_branch),
@@ -100,7 +105,7 @@ def looks_like_git_hash(git_ref):
     return all(ch in string.hexdigits for ch in git_ref) and len(git_ref) == 40
 
 
-def get_df_parser(git_uri, git_ref, git_branch):
+def get_df_parser(git_uri, git_ref, git_branch=None):
     with checkout_git_repo(git_uri, git_ref, git_branch) as code_dir:
         dfp = DockerfileParser(os.path.join(code_dir), cache_content=True)
     return dfp
