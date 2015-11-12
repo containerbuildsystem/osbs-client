@@ -11,7 +11,6 @@ import json
 import logging
 import os
 from pkg_resources import parse_version
-import re
 
 try:
     # py2
@@ -698,14 +697,9 @@ class ProductionBuild(CommonBuild):
                                   "command", self.spec.sources_command.value)
 
         # pull_base_image wants a docker URI so strip off the scheme part
-        docker_uri = self.spec.source_registry_uri.value
-        if docker_uri:
-            docker_uri = re.sub(r'^https?://(.*)$',
-                                lambda m: m.groups[0],
-                                docker_uri)
-
-        self.dj.dock_json_set_arg('prebuild_plugins', "pull_base_image",
-                                  "parent_registry", docker_uri)
+        source_registry = self.spec.source_registry_uri.value
+        self.dj.dock_json_set_arg('prebuild_plugins', "pull_base_image", "parent_registry",
+                                  source_registry.docker_uri if source_registry else None)
 
         self.adjust_for_triggers()
 

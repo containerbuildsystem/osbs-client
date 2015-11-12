@@ -10,7 +10,6 @@ Specifications of build types.
 """
 from __future__ import print_function, absolute_import, unicode_literals
 
-from collections import namedtuple
 import logging
 import datetime
 import os
@@ -18,7 +17,8 @@ import re
 from osbs.constants import DEFAULT_GIT_REF
 from osbs.exceptions import OsbsValidationException
 from osbs.utils import (get_imagestreamtag_from_image,
-                        git_repo_humanish_part_from_uri)
+                        git_repo_humanish_part_from_uri,
+                        RegistryURI)
 
 logger = logging.getLogger(__name__)
 
@@ -96,35 +96,25 @@ class RegistryURIsParam(BuildParam):
     """
 
     name = "registry_uris"
-    RegistryURI = namedtuple("RegistryURI", [
-        'uri',         # full URI including scheme part
-        'docker_uri',  # hostname and port
-        'version',     # registry API version, 'v1' or 'v2'
-    ])
 
     def __init__(self):
         super(RegistryURIsParam, self).__init__(self.name)
 
     @BuildParam.value.setter
     def value(self, val):  # pylint: disable=W0221
-        registry_uris = []
-
-        # Group 0: URI without path -- allowing empty value -- including:
-        # - Group 1: optional 'http://' / 'https://'
-        # - Group 2: hostname and port
-        # Group 3: path, including:
-        # - Group 4: optional API version, 'v' followed by a number
-        versionre = re.compile(r'((https?://)?([^/]*))(/(v\d+))?$')
-
-        for uri in val:
-            groups = versionre.match(uri).groups()
-            registry_uri = groups[0]
-            version = groups[4] or 'v1'
-            registry_uris.append(self.RegistryURI(registry_uri,
-                                                  groups[2],
-                                                  version))
-
+        registry_uris = [RegistryURI(uri) for uri in val]
         BuildParam.value.fset(self, registry_uris)
+
+
+class SourceRegistryURIParam(BuildParam):
+    name = "source_registry_uri"
+
+    def __init__(self):
+        super(SourceRegistryURIParam, self).__init__(self.name)
+
+    @BuildParam.value.setter
+    def value(self, val):  # pylint: disable=W0221
+        BuildParam.value.fset(self, RegistryURI(val) if val else None)
 
 
 class BuildTypeSpec(object):
@@ -151,7 +141,7 @@ class CommonSpec(BuildTypeSpec):
     user = UserParam()
     component = BuildParam('component')
     registry_uris = RegistryURIsParam()
-    source_registry_uri = BuildParam('source_registry_uri')
+    source_registry_uri = SourceRegistryURIParam()
     openshift_uri = BuildParam('openshift_uri')
     builder_openshift_url = BuildParam('builder_openshift_url')
     name = BuildIDParam()
