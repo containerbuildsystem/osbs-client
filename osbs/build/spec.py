@@ -269,7 +269,7 @@ class ProdSpec(CommonSpec):
         self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
         self.builder_build_json_dir.value = builder_build_json_dir
         self.imagestream_name.value = name_label.replace('/', '-')
-        primary_registry_uri = self.registry_uris.value[0].uri
+        primary_registry_uri = self.registry_uris.value[0].docker_uri
         self.imagestream_url.value = os.path.join(primary_registry_uri,
                                                   name_label)
         timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
