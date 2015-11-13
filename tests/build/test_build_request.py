@@ -555,8 +555,12 @@ class TestBuildRequest(object):
             'component': TEST_COMPONENT,
             'base_image': 'fedora:latest',
             'name_label': name_label,
-            'registry_uris': ["registry1.example.com/v1",  # first is primary
-                              "registry2.example.com/v2"],
+            'registry_uris': [
+                # first is primary
+                "http://registry1.example.com:5000/v1",
+
+                "http://registry2.example.com:5000/v2"
+            ],
             'nfs_server_path': "server:path",
             'source_registry_uri': "registry.example.com",
             'openshift_uri': "http://openshift/",
@@ -595,12 +599,15 @@ class TestBuildRequest(object):
         assert plugins_json is not None
         plugins = json.loads(plugins_json)
 
+        # tag_and_push configuration. Must not have the scheme part.
         expected_registries = {
-            "registry2.example.com": {"insecure": True},
+            'registry2.example.com:5000': {'insecure': True},
         }
 
         if 'v1' in registry_api_versions:
-            expected_registries['registry1.example.com'] = {'insecure': True}
+            expected_registries['registry1.example.com:5000'] = {
+                'insecure': True,
+            }
 
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push",
                                 "args", "registries") == expected_registries
@@ -650,7 +657,9 @@ class TestBuildRequest(object):
             docker_registry = plugin_value_get(plugins, "postbuild_plugins",
                                                "pulp_sync", "args",
                                                "docker_registry")
-            assert docker_registry == 'registry2.example.com'
+
+            # pulp_sync config must have the scheme part to satisfy pulp.
+            assert docker_registry == 'http://registry2.example.com:5000'
         else:
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, "postbuild_plugins", "pulp_sync")
@@ -819,7 +828,7 @@ class TestBuildRequest(object):
             'component': TEST_COMPONENT,
             'base_image': 'fedora:latest',
             'name_label': name_label,
-            'registry_uri': "registry.example.com",
+            'registry_uri': "http://registry.example.com",
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
             'koji_target': "koji-target",
@@ -870,6 +879,7 @@ class TestBuildRequest(object):
                                 "postbuild_plugins", "import_image", "args",
                                 "imagestream") == name_label.replace('/', '-')
         expected_repo = os.path.join(kwargs["registry_uri"], name_label)
+        expected_repo = expected_repo.replace('http://', '')
         assert plugin_value_get(plugins,
                                 "postbuild_plugins", "import_image", "args",
                                 "docker_image_repo") == expected_repo

@@ -10,7 +10,6 @@ Specifications of build types.
 """
 from __future__ import print_function, absolute_import, unicode_literals
 
-from collections import namedtuple
 import logging
 import datetime
 import os
@@ -18,8 +17,8 @@ import re
 from osbs.constants import DEFAULT_GIT_REF
 from osbs.exceptions import OsbsValidationException
 from osbs.utils import (get_imagestreamtag_from_image,
-                        git_repo_humanish_part_from_uri)
-
+                        git_repo_humanish_part_from_uri,
+                        RegistryURI)
 
 logger = logging.getLogger(__name__)
 
@@ -93,28 +92,29 @@ class RegistryURIsParam(BuildParam):
     """
     Build parameter for a list of registry URIs
 
-    Each registry has a URI (hostname) and a version (str).
+    Each registry has a full URI, a docker URI, and a version (str).
     """
 
     name = "registry_uris"
-    RegistryURI = namedtuple("RegistryURI", ['uri', 'version'])
 
     def __init__(self):
         super(RegistryURIsParam, self).__init__(self.name)
 
     @BuildParam.value.setter
     def value(self, val):  # pylint: disable=W0221
-        registry_uris = []
-        for uri in val:
-            if '/' in uri:
-                (hostname, version) = uri.split('/', 1)
-            else:
-                hostname = uri
-                version = 'v1'
-
-            registry_uris.append(self.RegistryURI(hostname, version))
-
+        registry_uris = [RegistryURI(uri) for uri in val]
         BuildParam.value.fset(self, registry_uris)
+
+
+class SourceRegistryURIParam(BuildParam):
+    name = "source_registry_uri"
+
+    def __init__(self):
+        super(SourceRegistryURIParam, self).__init__(self.name)
+
+    @BuildParam.value.setter
+    def value(self, val):  # pylint: disable=W0221
+        BuildParam.value.fset(self, RegistryURI(val) if val else None)
 
 
 class BuildTypeSpec(object):
@@ -141,7 +141,7 @@ class CommonSpec(BuildTypeSpec):
     user = UserParam()
     component = BuildParam('component')
     registry_uris = RegistryURIsParam()
-    source_registry_uri = BuildParam('source_registry_uri')
+    source_registry_uri = SourceRegistryURIParam()
     openshift_uri = BuildParam('openshift_uri')
     builder_openshift_url = BuildParam('builder_openshift_url')
     name = BuildIDParam()
@@ -168,22 +168,13 @@ class CommonSpec(BuildTypeSpec):
         self.user.value = user
         self.component.value = component
 
-        def ditch_http_prefix(val):
-            if not val:
-                return val
-            # We don't want the scheme
-            return re.sub(r'^https?://(.*)$',
-                          lambda m: m.groups()[0],
-                          val)
-
         # registry_uri is the compatibility name for registry_uris
         if registry_uri is not None:
             assert registry_uris is None
             registry_uris = [registry_uri]
 
-        self.registry_uris.value = [ditch_http_prefix(uri)
-                                    for uri in registry_uris or []]
-        self.source_registry_uri.value = ditch_http_prefix(source_registry_uri)
+        self.registry_uris.value = registry_uris or []
+        self.source_registry_uri.value = source_registry_uri
         self.openshift_uri.value = openshift_uri
         self.builder_openshift_url.value = builder_openshift_url
         if not (yum_repourls is None or isinstance(yum_repourls, list)):
@@ -279,7 +270,7 @@ class ProdSpec(CommonSpec):
         self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
         self.builder_build_json_dir.value = builder_build_json_dir
         self.imagestream_name.value = name_label.replace('/', '-')
-        primary_registry_uri = self.registry_uris.value[0].uri
+        primary_registry_uri = self.registry_uris.value[0].docker_uri
         self.imagestream_url.value = os.path.join(primary_registry_uri,
                                                   name_label)
         timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')

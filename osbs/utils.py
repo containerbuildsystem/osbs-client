@@ -10,6 +10,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 import contextlib
 import copy
 import os
+import re
 import shutil
 import string
 import subprocess
@@ -30,6 +31,25 @@ except ImportError:
 
 from dockerfile_parse import DockerfileParser
 from osbs.exceptions import OsbsException
+
+
+class RegistryURI(object):
+    # Group 0: URI without path -- allowing empty value -- including:
+    # - Group 1: optional 'http://' / 'https://'
+    # - Group 2: hostname and port
+    # Group 3: path, including:
+    # - Group 4: optional API version, 'v' followed by a number
+    versionre = re.compile(r'((https?://)?([^/]*))(/(v\d+))?$')
+
+    def __init__(self, uri):
+        groups = self.versionre.match(uri).groups()
+        self.docker_uri = groups[2]
+        self.version = groups[4] or 'v1'
+        self.scheme = groups[1] or ''
+
+    @property
+    def uri(self):
+        return self.scheme + self.docker_uri
 
 
 def graceful_chain_get(d, *args):

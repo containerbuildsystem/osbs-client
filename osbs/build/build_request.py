@@ -201,7 +201,7 @@ class CommonBuild(BuildRequest):
 
                     regdict = registries[placeholder].copy()
                     regdict['version'] = registry.version
-                    registries[registry.uri] = regdict
+                    registries[registry.docker_uri] = regdict
 
                 del registries[placeholder]
 
@@ -255,7 +255,7 @@ class CommonBuild(BuildRequest):
         self.template['spec']['source']['git']['ref'] = self.spec.git_ref.value
 
         if len(self.spec.registry_uris.value) > 0:
-            primary_registry_uri = self.spec.registry_uris.value[0].uri
+            primary_registry_uri = self.spec.registry_uris.value[0].docker_uri
             tag_with_registry = '{0}/{1}'.format(primary_registry_uri,
                                                  self.spec.image_tag.value)
             self.template['spec']['output']['to']['name'] = tag_with_registry
@@ -653,8 +653,8 @@ class ProductionBuild(CommonBuild):
             self.dj.dock_json_set_arg('postbuild_plugins', 'pulp_sync',
                                       'pulp_registry_name', pulp_registry)
 
-            # First specified v2 registry is the one
-            # we'll tell pulp to sync from
+            # First specified v2 registry is the one we'll tell pulp
+            # to sync from. Keep the http prefix -- pulp wants it.
             docker_registry = docker_v2_registries[0].uri
             logger.info("using docker v2 registry %s for pulp_sync",
                         docker_registry)
@@ -707,8 +707,11 @@ class ProductionBuild(CommonBuild):
 
         self.dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts",
                                   "command", self.spec.sources_command.value)
-        self.dj.dock_json_set_arg('prebuild_plugins', "pull_base_image",
-                                  "parent_registry", self.spec.source_registry_uri.value)
+
+        # pull_base_image wants a docker URI so strip off the scheme part
+        source_registry = self.spec.source_registry_uri.value
+        self.dj.dock_json_set_arg('prebuild_plugins', "pull_base_image", "parent_registry",
+                                  source_registry.docker_uri if source_registry else None)
 
         # The rebuild trigger requires git_branch and git_push_url
         # parameters, but those parameters are optional. If either was
