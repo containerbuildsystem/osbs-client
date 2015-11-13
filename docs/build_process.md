@@ -44,8 +44,38 @@ Since in v2 there is no file-like representation of an image, you can transport 
 
 In order to create a v2 form, you need an instance of [distribution](https://github.com/docker/distribution) registry. Once you push the built image there, it's up to you, if you want to move the v2 image into pulp registry. That process is called sync. Configuration is same as for v1 except that you should suffix value of `registry_uri` with `/v2`, e.g.:
 
-```
+```ini
 registry_uri = registry.example.com/v2
+```
+
+Configuration of pulp registry where images should be synced can be done via:
+
+```ini
+pulp_sync_registry_name = stage-pulp
+```
+
+If this is not specified, value of `pulp_registry_name` is used.
+
+Sync command is requested with setting `registry_api_versions` to `v2`.
+
+
+### Parallel v1 and v2 builds
+
+It's possible to implement your workflow so your build emits images in multiple hybrid registries: pulp v1, pulp v2, v1 upstream registry, v2 upstream registry. Use configuration mentioned in the two sections above.
+
+This is how you can configure your workflow to make your image available via v1 and v2 crane API:
+
+```ini
+# upstream docker registry -- distribution, which implements v2 API
+registry_uri = registry.example.com/v2
+# configuration for pulp where we sync from distribution
+pulp_sync_registry_name = stage-pulp
+pulp_sync_secret = stage-pulp-secret
+# configuration for pulp where we upload v1 image directly
+pulp_registry_name = stage-pulp2
+pulp_secret = stage-pulp2-secret
+# we want to do v1 and v2 "pushes" to pulp
+registry_api_versions = v1,v2
 ```
 
 
@@ -55,7 +85,7 @@ OSBS repo config file is a file that resides in the top level of built Git repo.
 
 Currently, only `[autorebuild]` section is supported and `enabled` argument inside that. The `enabled` argument is a boolean, recognized values are 0, false, 1 and true (case insensitive). For example:
 
-```
+```ini
 [autorebuild]
 enabled=1
 ```
