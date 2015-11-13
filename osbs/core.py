@@ -43,7 +43,7 @@ def check_response(response):
         else:
             content = ''.join(response.iter_lines())
 
-        logger.error("[%s] %s", response.status_code, content)
+        logger.error("[%d] %s", response.status_code, content)
         raise OsbsResponseException(message=content, status_code=response.status_code)
 
 
