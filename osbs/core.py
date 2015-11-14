@@ -532,6 +532,7 @@ class Openshift(object):
         url = self._build_url("namespaces/%s/imagestreams/" % namespace)
         response = self._post(url, data=stream_json,
                               headers={"Content-Type": "application/json"})
+        check_response(response)
         return response
 
     def import_image(self, name, namespace=DEFAULT_NAMESPACE):
