@@ -828,7 +828,7 @@ class TestBuildRequest(object):
             'component': TEST_COMPONENT,
             'base_image': 'fedora:latest',
             'name_label': name_label,
-            'registry_uri': "http://registry.example.com",
+            'registry_uri': "https://registry.example.com",
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
             'koji_target': "koji-target",
@@ -879,7 +879,7 @@ class TestBuildRequest(object):
                                 "postbuild_plugins", "import_image", "args",
                                 "imagestream") == name_label.replace('/', '-')
         expected_repo = os.path.join(kwargs["registry_uri"], name_label)
-        expected_repo = expected_repo.replace('http://', '')
+        expected_repo = expected_repo.replace('https://', '')
         assert plugin_value_get(plugins,
                                 "postbuild_plugins", "import_image", "args",
                                 "docker_image_repo") == expected_repo

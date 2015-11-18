@@ -270,9 +270,23 @@ class ProdSpec(CommonSpec):
         self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
         self.builder_build_json_dir.value = builder_build_json_dir
         self.imagestream_name.value = name_label.replace('/', '-')
-        primary_registry_uri = self.registry_uris.value[0].docker_uri
-        self.imagestream_url.value = os.path.join(primary_registry_uri,
+        # The ImageStream should take tags from the source registry
+        # or, if no source registry is set, the first listed secure
+        # registry
+        imagestream_reg = self.source_registry_uri.value
+        if not imagestream_reg:
+            secure = [registry for registry in self.registry_uris.value
+                      if not registry.uri.startswith('http://')]
+            if not secure:
+                raise OsbsValidationException("no secure registry "
+                                              "URIs configured")
+
+            imagestream_reg = secure[0]
+
+        self.imagestream_url.value = os.path.join(imagestream_reg.docker_uri,
                                                   name_label)
+        logger.debug("setting 'imagestream_url' to '%s'",
+                     self.imagestream_url.value)
         timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         self.image_tag.value = "%s/%s:%s-%s" % (
             self.user.value,
