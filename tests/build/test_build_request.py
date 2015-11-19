@@ -221,6 +221,9 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
         with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins",
+                       "stop_autorebuild_if_disabled")
+        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "bump_release")
         assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts",
                                 "args", "command") == "make"
@@ -310,6 +313,9 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
         with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins",
+                       "stop_autorebuild_if_disabled")
+        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "bump_release")
         assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts",
                                 "args", "command") == "make"
@@ -396,6 +402,9 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
         with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins",
+                       "stop_autorebuild_if_disabled")
+        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "bump_release")
         assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts",
                                 "args", "command") == "make"
@@ -476,6 +485,9 @@ class TestBuildRequest(object):
 
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins",
+                       "stop_autorebuild_if_disabled")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "bump_release")
         assert get_plugin(plugins, "prebuild_plugins", "koji")
@@ -722,6 +734,9 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
         with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins",
+                       "stop_autorebuild_if_disabled")
+        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "bump_release")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "koji")
@@ -865,6 +880,8 @@ class TestBuildRequest(object):
 
         plugins = json.loads(plugins_json)
         assert get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
+        assert get_plugin(plugins, "prebuild_plugins",
+                          "stop_autorebuild_if_disabled")
         assert plugin_value_get(plugins, "prebuild_plugins",
                                 "check_and_set_rebuild", "args",
                                 "url") == kwargs["openshift_uri"]
@@ -951,6 +968,9 @@ class TestBuildRequest(object):
         plugins = json.loads(plugins_json)
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins",
+                       "stop_autorebuild_if_disabled")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "bump_release")
         with pytest.raises(NoSuchPluginException):

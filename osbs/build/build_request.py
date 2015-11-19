@@ -460,6 +460,7 @@ class ProductionBuild(CommonBuild):
         triggers = self.template['spec'].get('triggers', [])
         if len(triggers) == 0:
             for when, which in [("prebuild_plugins", "check_and_set_rebuild"),
+                                ("prebuild_plugins", "stop_autorebuild_if_disabled"),
                                 ("prebuild_plugins", "bump_release"),
                                 ("postbuild_plugins", "import_image"),
                                 ("exit_plugins", "koji_promote")]:
