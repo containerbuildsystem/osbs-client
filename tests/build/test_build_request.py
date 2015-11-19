@@ -245,6 +245,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "koji_promote")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "exit_plugins", "sendmail")
         assert 'sourceSecret' not in build_json["spec"]["source"]
         assert plugin_value_get(plugins, "prebuild_plugins", "add_yum_repo_by_url",
                                 "args", "repourls") == ["http://example.com/my.repo"]
@@ -288,6 +290,8 @@ class TestBuildRequest(object):
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
+            'pdc_url': 'https://pdc.example.com',
+            'smtp_uri': 'smtp.example.com',
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -341,6 +345,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "koji_promote")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "exit_plugins", "sendmail")
         assert 'sourceSecret' not in build_json["spec"]["source"]
 
         labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile",
@@ -427,6 +433,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "koji_promote")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "exit_plugins", "sendmail")
         assert 'sourceSecret' not in build_json["spec"]["source"]
 
         labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile",
@@ -499,6 +507,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "koji_promote")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "exit_plugins", "sendmail")
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries") == {}
 
@@ -750,6 +760,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "koji_promote")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "exit_plugins", "sendmail")
 
     def test_render_prod_with_pulp_no_auth(self):
         """
@@ -833,8 +845,13 @@ class TestBuildRequest(object):
         self.create_image_change_trigger_json(str(tmpdir))
         bm = BuildManager(str(tmpdir))
         build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        # We're using both pulp and sendmail, both of which require a
+        # Kubernetes secret. This isn't supported until OpenShift
+        # Origin 1.0.6.
+        build_request.set_openshift_required_version(parse_version('1.0.6'))
         name_label = "fedora/resultingimage"
         push_url = "ssh://{username}git.example.com/git/{component}.git"
+        pdc_secret_name = 'foo'
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': params['git_ref'],
@@ -858,6 +875,9 @@ class TestBuildRequest(object):
             'registry_api_versions': ['v1'],
             'git_push_url': push_url.format(username='', component=TEST_COMPONENT),
             'git_push_username': 'example',
+            'pdc_secret': pdc_secret_name,
+            'pdc_url': 'https://pdc.example.com',
+            'smtp_uri': 'smtp.example.com',
         }
         build_request.set_params(**kwargs)
         if params['should_raise']:
@@ -913,6 +933,21 @@ class TestBuildRequest(object):
         with pytest.raises(KeyError):
             plugin_value_get(plugins, 'exit_plugins', 'koji_promote',
                              'args', 'metadata_only')  # v1 enabled by default
+
+        pdc_secret = [secret for secret in
+                      build_json['spec']['strategy']['customStrategy']['secrets']
+                      if secret['secretSource']['name'] == pdc_secret_name]
+        mount_path = pdc_secret[0]['mountPath']
+        expected = {'args': {'from_address': 'osbs@example.com',
+                             'url': 'http://openshift/',
+                             'pdc_url': 'https://pdc.example.com',
+                             'pdc_secret_path': mount_path,
+                             'send_on': ['auto_fail', 'auto_success'],
+                             'error_addresses': ['errors@example.com'],
+                             'smtp_uri': 'smtp.example.com',
+                             'submitter': 'john-foo'},
+                    'name': 'sendmail'}
+        assert get_plugin(plugins, 'exit_plugins', 'sendmail') == expected
 
     @pytest.mark.parametrize('missing', [
         'git_branch',
@@ -977,6 +1012,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "koji_promote")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "exit_plugins", "sendmail")
 
     def test_render_prod_request_new_secrets(self, tmpdir):
         bm = BuildManager(INPUTS_PATH)
@@ -1065,53 +1102,3 @@ class TestBuildRequest(object):
         plugins = json.loads(plugins_json)
         assert plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push',
                                 'args', 'pulp_secret_path') == mount_path
-
-    def test_with_sendmail_plugin(self):
-        bm = BuildManager(INPUTS_PATH)
-        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
-        build_request.set_openshift_required_version(parse_version('1.0.6'))
-        secret_name = 'foo'
-        kwargs = {
-            'git_uri': TEST_GIT_URI,
-            'git_ref': TEST_GIT_REF,
-            'git_branch': TEST_GIT_BRANCH,
-            'user': "john-foo",
-            'component': TEST_COMPONENT,
-            'base_image': 'fedora:latest',
-            'name_label': 'fedora/resultingimage',
-            'registry_uri': "registry.example.com",
-            'openshift_uri': "http://openshift/",
-            'builder_openshift_url': "http://openshift/",
-            'sources_command': "make",
-            'architecture': "x86_64",
-            'vendor': "Foo Vendor",
-            'build_host': "our.build.host.example.com",
-            'authoritative_registry': "registry.example.com",
-            'distribution_scope': "authoritative-source-only",
-            'registry_api_versions': ['v1'],
-            'pdc_secret': secret_name,
-            'pdc_url': 'https://pdc.example.com',
-            'smtp_uri': 'smtp.example.com',
-        }
-        build_request.set_params(**kwargs)
-        build_json = build_request.render()
-        plugins = None
-        for e in build_json['spec']['strategy']['customStrategy']['env']:
-            if e['name'] == 'DOCK_PLUGINS':
-                plugins = json.loads(e['value'])
-                break
-        assert plugins is not None
-        pdc_secret = [secret for secret in
-                      build_json['spec']['strategy']['customStrategy']['secrets']
-                      if secret['secretSource']['name'] == secret_name]
-        mount_path = pdc_secret[0]['mountPath']
-        expected = {'args': {'from_address': 'osbs@example.com',
-                             'url': 'http://openshift/',
-                             'pdc_url': 'https://pdc.example.com',
-                             'pdc_secret_path': mount_path,
-                             'send_on': ['auto_fail', 'auto_success'],
-                             'error_addresses': ['errors@example.com'],
-                             'smtp_uri': 'smtp.example.com',
-                             'submitter': 'john-foo'},
-                    'name': 'sendmail'}
-        assert get_plugin(plugins, 'exit_plugins', 'sendmail') == expected

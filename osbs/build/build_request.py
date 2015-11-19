@@ -463,7 +463,8 @@ class ProductionBuild(CommonBuild):
                                 ("prebuild_plugins", "stop_autorebuild_if_disabled"),
                                 ("prebuild_plugins", "bump_release"),
                                 ("postbuild_plugins", "import_image"),
-                                ("exit_plugins", "koji_promote")]:
+                                ("exit_plugins", "koji_promote"),
+                                ("exit_plugins", "sendmail")]:
                 logger.info("removing %s from request because there are no triggers",
                             which)
                 self.dj.remove_plugin(when, which)
@@ -576,6 +577,9 @@ class ProductionBuild(CommonBuild):
         if we have pdc_url and smtp_uri, configure sendmail plugin,
         else remove it
         """
+        if not self.dj.dock_json_has_plugin_conf('exit_plugins', 'sendmail'):
+            return
+
         if self.spec.pdc_url.value and self.spec.smtp_uri.value:
             self.dj.dock_json_set_arg('exit_plugins', 'sendmail', 'url',
                                       self.spec.builder_openshift_url.value)
