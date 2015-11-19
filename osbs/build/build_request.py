@@ -553,9 +553,11 @@ class ProductionBuild(CommonBuild):
                                       'git_ref', self.spec.git_ref.value)
 
     def render_koji_promote(self, use_auth=None):
-        if (self.dj.dock_json_has_plugin_conf('exit_plugins',
-                                              'koji_promote') and
-                self.spec.kojihub.value):
+        if not self.dj.dock_json_has_plugin_conf('exit_plugins',
+                                                 'koji_promote'):
+            return
+
+        if self.spec.kojihub.value:
             self.dj.dock_json_set_arg('exit_plugins', 'koji_promote', 'url',
                                       self.spec.builder_openshift_url.value)
             self.dj.dock_json_set_arg('exit_plugins', 'koji_promote',
@@ -598,10 +600,12 @@ class ProductionBuild(CommonBuild):
         """
         If NFS destination set, use it
         """
+        if not self.dj.dock_json_has_plugin_conf('postbuild_plugins',
+                                                 'cp_built_image_to_nfs'):
+            return
+
         nfs_server_path = self.spec.nfs_server_path.value
-        if (self.dj.dock_json_has_plugin_conf('postbuild_plugins',
-                                              'cp_built_image_to_nfs') and
-                nfs_server_path):
+        if nfs_server_path:
             self.dj.dock_json_set_arg('postbuild_plugins', 'cp_built_image_to_nfs',
                                       'nfs_server_path', nfs_server_path)
             self.dj.dock_json_set_arg('postbuild_plugins',
@@ -617,10 +621,12 @@ class ProductionBuild(CommonBuild):
         """
         If a pulp registry is specified, use the pulp plugin
         """
+        if not self.dj.dock_json_has_plugin_conf('postbuild_plugins',
+                                                 'pulp_push'):
+            return
+
         pulp_registry = self.spec.pulp_registry.value
-        if (self.dj.dock_json_has_plugin_conf('postbuild_plugins',
-                                              'pulp_push') and
-                pulp_registry):
+        if pulp_registry:
             self.dj.dock_json_set_arg('postbuild_plugins', 'pulp_push',
                                       'pulp_registry_name', pulp_registry)
 
@@ -642,15 +648,16 @@ class ProductionBuild(CommonBuild):
         """
         If a pulp registry is specified, use the pulp plugin
         """
+        if not self.dj.dock_json_has_plugin_conf('postbuild_plugins',
+                                                 'pulp_sync'):
+            return
+
         pulp_registry = self.spec.pulp_registry.value
         docker_v2_registries = [registry
                                 for registry in self.spec.registry_uris.value
                                 if registry.version == 'v2']
 
-        if (self.dj.dock_json_has_plugin_conf('postbuild_plugins',
-                                              'pulp_sync') and
-                pulp_registry and
-                docker_v2_registries):
+        if pulp_registry and docker_v2_registries:
             self.dj.dock_json_set_arg('postbuild_plugins', 'pulp_sync',
                                       'pulp_registry_name', pulp_registry)
 
