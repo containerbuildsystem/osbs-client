@@ -255,14 +255,14 @@ class TestBuildRequest(object):
                                   "args", "labels")
 
         assert labels is not None
-        assert labels['authoritative-source'] is not None
-        assert labels['com.redhat.build-host'] is not None
-        assert labels['vendor'] is not None
+        assert labels['Authoritative_Registry'] is not None
+        assert labels['Build_Host'] is not None
+        assert labels['Vendor'] is not None
         assert labels['distribution-scope'] is not None
         if architecture:
-            assert labels['architecture'] is not None
+            assert labels['Architecture'] is not None
         else:
-            assert 'architecture' not in labels
+            assert 'Architecture' not in labels
 
     def test_render_prod_request(self):
         bm = BuildManager(INPUTS_PATH)
@@ -353,10 +353,10 @@ class TestBuildRequest(object):
                                   "args", "labels")
 
         assert labels is not None
-        assert labels['architecture'] is not None
-        assert labels['authoritative-source'] is not None
-        assert labels['com.redhat.build-host'] is not None
-        assert labels['vendor'] is not None
+        assert labels['Architecture'] is not None
+        assert labels['Authoritative_Registry'] is not None
+        assert labels['Build_Host'] is not None
+        assert labels['Vendor'] is not None
         assert labels['distribution-scope'] is not None
 
     def test_render_prod_without_koji_request(self):
@@ -441,10 +441,10 @@ class TestBuildRequest(object):
                                   "args", "labels")
 
         assert labels is not None
-        assert labels['architecture'] is not None
-        assert labels['authoritative-source'] is not None
-        assert labels['com.redhat.build-host'] is not None
-        assert labels['vendor'] is not None
+        assert labels['Architecture'] is not None
+        assert labels['Authoritative_Registry'] is not None
+        assert labels['Build_Host'] is not None
+        assert labels['Vendor'] is not None
         assert labels['distribution-scope'] is not None
 
     def test_render_prod_with_secret_request(self):
