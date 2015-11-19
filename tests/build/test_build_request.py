@@ -826,7 +826,11 @@ class TestBuildRequest(object):
             json.dump(build_json, prod_json)
             prod_json.truncate()
 
-    @pytest.mark.parametrize('params', [
+    @pytest.mark.parametrize(('registry_uri', 'insecure_registry'), [
+        ("https://registry.example.com", False),
+        ("http://registry.example.com", True),
+    ])
+    @pytest.mark.parametrize('branchref', [
         # Wrong way round
         {
             'git_ref': TEST_GIT_BRANCH,
@@ -841,7 +845,8 @@ class TestBuildRequest(object):
             'should_raise': False,
         },
     ])
-    def test_render_prod_request_with_trigger(self, tmpdir, params):
+    def test_render_prod_request_with_trigger(self, tmpdir, branchref,
+                                              registry_uri, insecure_registry):
         self.create_image_change_trigger_json(str(tmpdir))
         bm = BuildManager(str(tmpdir))
         build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
@@ -854,13 +859,13 @@ class TestBuildRequest(object):
         pdc_secret_name = 'foo'
         kwargs = {
             'git_uri': TEST_GIT_URI,
-            'git_ref': params['git_ref'],
-            'git_branch': params['git_branch'],
+            'git_ref': branchref['git_ref'],
+            'git_branch': branchref['git_branch'],
             'user': "john-foo",
             'component': TEST_COMPONENT,
             'base_image': 'fedora:latest',
             'name_label': name_label,
-            'registry_uri': "https://registry.example.com",
+            'registry_uri': registry_uri,
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
             'koji_target': "koji-target",
@@ -880,7 +885,7 @@ class TestBuildRequest(object):
             'smtp_uri': 'smtp.example.com',
         }
         build_request.set_params(**kwargs)
-        if params['should_raise']:
+        if branchref['should_raise']:
             with pytest.raises(OsbsValidationException):
                 build_request.render()
 
@@ -917,12 +922,23 @@ class TestBuildRequest(object):
                                 "imagestream") == name_label.replace('/', '-')
         expected_repo = os.path.join(kwargs["registry_uri"], name_label)
         expected_repo = expected_repo.replace('https://', '')
+        expected_repo = expected_repo.replace('http://', '')
         assert plugin_value_get(plugins,
                                 "postbuild_plugins", "import_image", "args",
                                 "docker_image_repo") == expected_repo
         assert plugin_value_get(plugins,
                                 "postbuild_plugins", "import_image", "args",
                                 "url") == kwargs["openshift_uri"]
+        if insecure_registry:
+            assert plugin_value_get(plugins,
+                                    "postbuild_plugins", "import_image", "args",
+                                    "insecure_registry")
+        else:
+            with pytest.raises(KeyError):
+                plugin_value_get(plugins,
+                                 "postbuild_plugins", "import_image", "args",
+                                 "insecure_registry")
+
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries", "registry.example.com") == {"insecure": True}
         assert get_plugin(plugins, "exit_plugins", "koji_promote")
