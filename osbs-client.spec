@@ -12,6 +12,9 @@
 
 %if (0%{?fedora} >= 22 || 0%{?rhel} >= 8)
 %global with_python3 1
+%global binaries_py_version %{python3_version}
+%else
+%global binaries_py_version %{python2_version}
 %endif
 
 %if 0%{?fedora}
@@ -136,13 +139,14 @@ This package contains osbs Python 3 bindings.
 %install
 %if 0%{?with_python3}
 %py3_install
-mv %{buildroot}%{_bindir}/osbs %{buildroot}%{_bindir}/osbs3
+mv %{buildroot}%{_bindir}/osbs %{buildroot}%{_bindir}/osbs-%{python3_version}
+ln -s  %{_bindir}/osbs-%{python3_version} %{buildroot}%{_bindir}/osbs-3
 %endif # with_python3
 
 %py2_install
-mv %{buildroot}%{_bindir}/osbs %{buildroot}%{_bindir}/osbs2
-ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
-
+mv %{buildroot}%{_bindir}/osbs %{buildroot}%{_bindir}/osbs-%{python2_version}
+ln -s  %{_bindir}/osbs-%{python2_version} %{buildroot}%{_bindir}/osbs-2
+ln -s  %{_bindir}/osbs-%{binaries_py_version} %{buildroot}%{_bindir}/osbs
 
 %if 0%{?with_check}
 %check
@@ -163,7 +167,8 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %doc README.md
 %{!?_licensedir:%global license %%doc}
 %license LICENSE
-%{_bindir}/osbs2
+%{_bindir}/osbs-%{python2_version}
+%{_bindir}/osbs-2
 %{python2_sitelib}/osbs*
 %dir %{_datadir}/osbs
 %{_datadir}/osbs/*.json
@@ -174,7 +179,8 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %doc README.md
 %{!?_licensedir:%global license %%doc}
 %license LICENSE
-%{_bindir}/osbs3
+%{_bindir}/osbs-%{python3_version}
+%{_bindir}/osbs-3
 %{python3_sitelib}/osbs*
 %dir %{_datadir}/osbs
 %{_datadir}/osbs/*.json
@@ -185,6 +191,7 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 - use py_build & py_install macros
 - use python_provide macro
 - do not use py3dir
+- ship executables per packaging guidelines
 
 * Thu Nov 05 2015 Jiri Popelka <jpopelka@redhat.com> - 0.15-2
 - build for Python 3
