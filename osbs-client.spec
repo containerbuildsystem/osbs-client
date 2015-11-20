@@ -124,28 +124,18 @@ This package contains osbs Python 3 bindings.
 %prep
 %setup -qn %{name}-%{commit}
 
-%if 0%{?with_python3}
-rm -rf %{py3dir}
-cp -a . %{py3dir}
-find %{py3dir} -name '*.py' | xargs sed -i '1s|^#!python|#!%{__python3}|'
-%endif # with_python3
-
 
 %build
 %py2_build
 
 %if 0%{?with_python3}
-pushd %{py3dir}
 %py3_build
-popd
 %endif # with_python3
 
 
 %install
 %if 0%{?with_python3}
-pushd %{py3dir}
 %py3_install
-popd
 mv %{buildroot}%{_bindir}/osbs %{buildroot}%{_bindir}/osbs3
 %endif # with_python3
 
@@ -194,6 +184,7 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 * Fri Nov 20 2015 Jiri Popelka <jpopelka@redhat.com> - 0.15-3
 - use py_build & py_install macros
 - use python_provide macro
+- do not use py3dir
 
 * Thu Nov 05 2015 Jiri Popelka <jpopelka@redhat.com> - 0.15-2
 - build for Python 3
