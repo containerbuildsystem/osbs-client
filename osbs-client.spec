@@ -86,13 +86,13 @@ Requires:       python-dockerfile-parse
 Requires:       python-pycurl
 Requires:       python-setuptools
 Requires:       krb5-workstation
-
 %if 0%{?rhel} && 0%{?rhel} <= 6
 Requires:       python-argparse
 %endif
 
 Provides:       python-osbs = %{version}-%{release}
 Obsoletes:      python-osbs < %{osbs_obsolete_vr}
+%{?python_provide:%python_provide python-osbs-client}
 
 %description -n python-osbs-client
 It is able to query OpenShift v3 for various stuff related to building images.
@@ -112,6 +112,7 @@ Requires:       krb5-workstation
 
 Provides:       python3-osbs = %{version}-%{release}
 Obsoletes:      python3-osbs < %{osbs_obsolete_vr}
+%{?python_provide:%python_provide python3-osbs-client}
 
 %description -n python3-osbs-client
 It is able to query OpenShift v3 for various stuff related to building images.
@@ -192,6 +193,7 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %changelog
 * Fri Nov 20 2015 Jiri Popelka <jpopelka@redhat.com> - 0.15-3
 - use py_build & py_install macros
+- use python_provide macro
 
 * Thu Nov 05 2015 Jiri Popelka <jpopelka@redhat.com> - 0.15-2
 - build for Python 3
