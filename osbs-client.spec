@@ -5,6 +5,11 @@
 %{!?python2_version: %global python2_version %(%{__python2} -c "import sys; sys.stdout.write(sys.version[:3])")}
 %endif
 
+%if 0%{?rhel} && 0%{?rhel} <= 7
+%{!?py2_build: %global py2_build %{__python2} setup.py build}
+%{!?py2_install: %global py2_install %{__python2} setup.py install --skip-build --root %{buildroot}}
+%endif
+
 %if (0%{?fedora} >= 22 || 0%{?rhel} >= 8)
 %global with_python3 1
 %endif
@@ -18,7 +23,7 @@
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 # set to 0 to create a normal release
 %global postrelease 0
-%global release 2
+%global release 3
 
 %global osbs_obsolete_vr 0.14-2
 
@@ -126,12 +131,11 @@ find %{py3dir} -name '*.py' | xargs sed -i '1s|^#!python|#!%{__python3}|'
 
 
 %build
-# build python package
-%{__python} setup.py build
+%py2_build
 
 %if 0%{?with_python3}
 pushd %{py3dir}
-%{__python3} setup.py build
+%py3_build
 popd
 %endif # with_python3
 
@@ -139,12 +143,12 @@ popd
 %install
 %if 0%{?with_python3}
 pushd %{py3dir}
-%{__python3} setup.py install --skip-build --root %{buildroot}
+%py3_install
 popd
 mv %{buildroot}%{_bindir}/osbs %{buildroot}%{_bindir}/osbs3
 %endif # with_python3
 
-%{__python} setup.py install --skip-build --root %{buildroot}
+%py2_install
 mv %{buildroot}%{_bindir}/osbs %{buildroot}%{_bindir}/osbs2
 ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
 
@@ -186,6 +190,9 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %endif # with_python3
 
 %changelog
+* Fri Nov 20 2015 Jiri Popelka <jpopelka@redhat.com> - 0.15-3
+- use py_build & py_install macros
+
 * Thu Nov 05 2015 Jiri Popelka <jpopelka@redhat.com> - 0.15-2
 - build for Python 3
 - %%check section
