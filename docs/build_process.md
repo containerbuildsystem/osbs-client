@@ -33,7 +33,11 @@ This document mentions several components that communicate with each other:
 
 You can choose if you want to push built image into:
 
- * docker registry — can be configured with `registry_uri`
+ * upstream docker registry — can be configured with `registry_uri` — you can suffix it with `/v1` to make reactor sure it's talking to `v1` registry:
+
+    ```ini
+    registry_uri = registry.example.com/v1
+    ```
 
  * pulp registry — can be configured with `pulp_registry_name`, atomic-reactor will `upload` image (as archive) and copies it into required repository
 
@@ -56,14 +60,14 @@ pulp_sync_registry_name = stage-pulp
 
 If this is not specified, value of `pulp_registry_name` is used.
 
-Sync command is requested with setting `registry_api_versions` to `v2`.
+pulp sync command (the way to get image from distribution to pulp) is requested when `v2` is in `registry_api_versions`.
 
 
 ### Parallel v1 and v2 builds
 
 It's possible to implement your workflow so your build emits images in multiple hybrid registries: pulp v1, pulp v2, v1 upstream registry, v2 upstream registry. Use configuration mentioned in the two sections above.
 
-This is how you can configure your workflow to make your image available via v1 and v2 crane API:
+This is how you can configure your workflow to make your image available via v1 and v2 crane API (crane is pulp component which provides registry API):
 
 ```ini
 # upstream docker registry -- distribution, which implements v2 API
