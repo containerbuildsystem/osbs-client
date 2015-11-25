@@ -712,6 +712,10 @@ class ProductionBuild(CommonBuild):
                 self.dj.dock_json_set_arg('postbuild_plugins', 'import_image',
                                           'use_auth', use_auth)
 
+            if self.spec.imagestream_insecure_registry.value:
+                self.dj.dock_json_set_arg('postbuild_plugins', 'import_image',
+                                          'insecure_registry', True)
+
     def render(self, validate=True):
         if validate:
             self.spec.validate()
