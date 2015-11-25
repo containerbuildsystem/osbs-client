@@ -481,11 +481,30 @@ class OSBS(object):
         return self.os.get_image_stream(stream_id, namespace)
 
     @osbsapi
-    def create_image_stream(self, name, docker_image_repository, namespace=DEFAULT_NAMESPACE):
+    def create_image_stream(self, name, docker_image_repository,
+                            insecure_registry=False,
+                            namespace=DEFAULT_NAMESPACE):
+        """
+        Create an ImageStream object
+
+        Raises exception on error
+
+        :param name: str, name of ImageStream
+        :param docker_image_repository: str, pull spec for docker image
+               repository
+        :param insecure_registry: bool, whether plain HTTP should be used
+        :param namespace: str, Kubernetes namespace
+        :return: response
+        """
         img_stream_file = os.path.join(self.os_conf.get_build_json_store(), 'image_stream.json')
         stream = json.load(open(img_stream_file))
         stream['metadata']['name'] = name
         stream['spec']['dockerImageRepository'] = docker_image_repository
+        if insecure_registry:
+            stream['metadata'].setdefault('annotations', {})
+            insecure_annotation = 'openshift.io/image.insecureRepository'
+            stream['metadata']['annotations'][insecure_annotation] = 'true'
+
         return self.os.create_image_stream(json.dumps(stream),
                                            namespace=namespace)
 
