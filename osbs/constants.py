@@ -53,4 +53,7 @@ SERVICEACCOUNT_CACRT = "ca.crt"
 # Where will secrets be mounted?
 SECRETS_PATH = "/var/run/secrets/atomic-reactor"
 
+# Backup/restore
+BACKUP_RESOURCES = ('buildconfigs', 'imagestreams', 'builds',)
+
 CLI_LIST_BUILDS_DEFAULT_COLS = ["name", "status", "image"]

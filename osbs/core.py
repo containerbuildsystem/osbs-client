@@ -595,6 +595,19 @@ class Openshift(object):
                         logger.info("ImageStream updated")
                         break
 
+    def dump_resource(self, resource_type, namespace=DEFAULT_NAMESPACE):
+        url = self._build_url("namespaces/%s/%s" % (namespace, resource_type))
+        response = self._get(url)
+        check_response(response)
+        return response
+
+    def restore_resource(self, resource_type, resource, namespace=DEFAULT_NAMESPACE):
+        url = self._build_url("namespaces/%s/%s" % (namespace, resource_type))
+        response = self._post(url, data=json.dumps(resource),
+                              headers={"Content-Type": "application/json"})
+        check_response(response)
+        return response
+
 
 if __name__ == '__main__':
     o = Openshift(openshift_api_url="https://localhost:8443/oapi/v1/",
