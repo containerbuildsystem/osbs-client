@@ -1,5 +1,6 @@
 origin:
   image: "openshift/origin:v1.0.6"
+  container_name: "osbs"
   net: "host"
   privileged: true
   volumes:
