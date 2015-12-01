@@ -21,7 +21,7 @@ from osbs.conf import Configuration
 from osbs.constants import DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION, CLI_LIST_BUILDS_DEFAULT_COLS
 from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsAuthException, OsbsResponseException
 from osbs.cli.capture import setup_json_capture
-
+from osbs.utils import strip_registry_from_image
 
 logger = logging.getLogger('osbs')
 
@@ -47,6 +47,7 @@ def cmd_list_builds(args, osbs):
             "base_image_id": "BASE IMAGE ID",
             "commit": "COMMIT",
             "image": "IMAGE NAME",
+            "unique_image": "UNIQUE IMAGE NAME",
             "image_id": "IMAGE ID",
             "name": "BUILD ID",
             "status": "STATUS",
@@ -54,7 +55,11 @@ def cmd_list_builds(args, osbs):
         }]
         for build in sorted(builds,
                             key=lambda x: x.get_time_created_in_seconds()):
-            image = build.get_image_tag()
+            unique_image = build.get_image_tag()
+            try:
+                image = strip_registry_from_image(build.get_repositories()["primary"][0])
+            except (TypeError, KeyError, IndexError):
+                image = ""  # "" or unique_image? failed builds don't have that ^
             if args.FILTER:
                 if args.FILTER not in image:
                     continue
@@ -65,6 +70,7 @@ def cmd_list_builds(args, osbs):
                 "base_image_id": build.get_base_image_id() or '',
                 "commit": build.get_commit_id(),
                 "image": image,
+                "unique_image": unique_image,
                 "image_id": build.get_image_id() or '',
                 "name": build.get_build_name(),
                 "status": build.status,
@@ -318,7 +324,7 @@ def cli():
                                     nargs="?")
     list_builds_parser.add_argument("--columns",
                                     help="comma-separated list of columns to display, possible values: "
-                                    "base_image, base_image_id, commit, image, image_id, "
+                                    "base_image, base_image_id, commit, image, unique_image, image_id, "
                                     "name, status, time_created")
     # this may be a bit confusing, but for users, "running" means not done but
     # for us, "running" means scheduled on kubelet

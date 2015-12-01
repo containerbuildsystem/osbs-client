@@ -15,7 +15,7 @@ from time import tzset
 from osbs.utils import (buildconfig_update,
                         get_imagestreamtag_from_image,
                         git_repo_humanish_part_from_uri,
-                        get_time_from_rfc3339)
+                        get_time_from_rfc3339, strip_registry_from_image)
 from osbs.exceptions import OsbsException
 import osbs.kerberos_ccache
 
@@ -35,6 +35,19 @@ def test_buildconfig_update():
 ])
 def test_git_repo_humanish_part_from_uri(uri, humanish):
     assert git_repo_humanish_part_from_uri(uri) == humanish
+
+
+@pytest.mark.parametrize(('img', 'expected'), [
+    ('fedora23', 'fedora23'),
+    ('fedora23:sometag', 'fedora23:sometag'),
+    ('fedora23/python', 'fedora23/python'),
+    ('fedora23/python:sometag', 'fedora23/python:sometag'),
+    ('docker.io/fedora23', 'fedora23'),
+    ('docker.io/fedora23/python', 'fedora23/python'),
+    ('docker.io/fedora23/python:sometag', 'fedora23/python:sometag'),
+])
+def test_strip_registry_from_image(img, expected):
+    assert strip_registry_from_image(img) == expected
 
 
 @pytest.mark.parametrize(('img', 'expected'), [
