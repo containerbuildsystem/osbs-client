@@ -165,7 +165,7 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 
 %files -n python-osbs-client
 %doc README.md
-%{!?_licensedir:%global license %%doc}
+%{!?_licensedir:%global license %doc}
 %license LICENSE
 %{_bindir}/osbs-%{python2_version}
 %{_bindir}/osbs-2
@@ -177,7 +177,7 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %if 0%{?with_python3}
 %files -n python3-osbs-client
 %doc README.md
-%{!?_licensedir:%global license %%doc}
+%{!?_licensedir:%global license %doc}
 %license LICENSE
 %{_bindir}/osbs-%{python3_version}
 %{_bindir}/osbs-3
