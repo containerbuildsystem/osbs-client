@@ -59,7 +59,7 @@ def graceful_chain_get(d, *args):
     for arg in args:
         try:
             t = t[arg]
-        except (AttributeError, KeyError):
+        except (IndexError, KeyError):
             return None
     return t
 
