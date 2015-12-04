@@ -163,3 +163,26 @@ class TestOSBS(object):
         logs = osbs.get_docker_build_logs(TEST_BUILD, decode_logs=decode_docker_logs)
         assert isinstance(logs, tuple(list(six.string_types) + [bytes]))
         assert logs.split('\n')[0].find("Step ") != -1
+
+    def test_backup(self, osbs):
+        osbs.dump_resource("builds")
+
+    def test_restore(self, osbs):
+        build = {
+            "status": {
+                "phase": "Complete",
+                "completionTimestamp": "2015-09-16T19:37:35Z",
+                "startTimestamp": "2015-09-16T19:25:55Z",
+                "duration": 700000000000
+            },
+            "spec": {},
+            "metadata": {
+                "name": "aos-f5-router-docker-20150916-152551",
+                "namespace": "default",
+                "resourceVersion": "141714",
+                "creationTimestamp": "2015-09-16T19:25:52Z",
+                "selfLink": "/oapi/v1/namespaces/default/builds/aos-f5-router-docker-20150916-152551",
+                "uid": "be5dbec5-5ca8-11e5-af58-6cae8b5467ca"
+            }
+        }
+        osbs.restore_resource("builds", {"items": [build], "kind": "BuildList", "apiVersion": "v1"})

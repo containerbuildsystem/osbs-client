@@ -64,7 +64,8 @@ class Connection(object):
         # The files are captured using the command line tool's
         # --capture-dir parameter, and edited as needed.
         self.DEFINITION = {
-            OAPI_PREFIX + "namespaces/default/builds/": {
+            (OAPI_PREFIX + "namespaces/default/builds",
+             OAPI_PREFIX + "namespaces/default/builds/"): {
                 "get": {
                     # Contains a list of builds
                     "file": "builds_list.json",
