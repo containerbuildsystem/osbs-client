@@ -18,7 +18,8 @@ from osbs import set_logging
 from osbs.api import OSBS
 from osbs.cli.render import TablePrinter
 from osbs.conf import Configuration
-from osbs.constants import DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION, CLI_LIST_BUILDS_DEFAULT_COLS
+from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
+                            CLI_LIST_BUILDS_DEFAULT_COLS, PY3)
 from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsAuthException, OsbsResponseException
 from osbs.cli.capture import setup_json_capture
 from osbs.utils import strip_registry_from_image
@@ -299,7 +300,7 @@ def str_on_2_unicode_on_3(s):
     :return: str on 2, unicode on 3
     """
 
-    if sys.version_info[0] <= 2:
+    if not PY3:
         return str(s)
     else:  # 3+
         if not isinstance(s, str):

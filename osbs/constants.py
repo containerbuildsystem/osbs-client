@@ -7,6 +7,10 @@ of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, absolute_import, unicode_literals
 
+import sys
+
+PY3 = sys.version_info[0] >= 3
+
 BUILD_JSON_STORE = "/usr/share/osbs/"
 DEFAULT_GIT_REF = "master"
 DEFAULT_CONFIGURATION_FILE = "/etc/osbs.conf"
