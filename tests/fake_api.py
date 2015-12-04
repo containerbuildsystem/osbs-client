@@ -190,7 +190,7 @@ class Connection(object):
 
     @staticmethod
     def process_authorize(key, content):
-        match = re.findall(b"[Ll]ocation: (.+)", content)
+        match = re.findall("[Ll]ocation: (.+)", content.decode("utf-8"))
         headers = {
             "location": match[0],
         }

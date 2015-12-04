@@ -135,7 +135,7 @@ class TestOSBS(object):
         assert isinstance(response, HttpResponse)
 
     def test_get_token_api(self, osbs):
-        assert isinstance(osbs.get_token(), bytes)
+        assert isinstance(osbs.get_token(), six.string_types)
 
     def test_get_user_api(self, osbs):
         assert 'name' in osbs.get_user()['metadata']
