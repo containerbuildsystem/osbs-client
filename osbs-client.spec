@@ -5,8 +5,16 @@
 %{!?python2_version: %global python2_version %(%{__python2} -c "import sys; sys.stdout.write(sys.version[:3])")}
 %endif
 
+%if 0%{?rhel} && 0%{?rhel} <= 7
+%{!?py2_build: %global py2_build %{__python2} setup.py build}
+%{!?py2_install: %global py2_install %{__python2} setup.py install --skip-build --root %{buildroot}}
+%endif
+
 %if (0%{?fedora} >= 22 || 0%{?rhel} >= 8)
 %global with_python3 1
+%global binaries_py_version %{python3_version}
+%else
+%global binaries_py_version %{python2_version}
 %endif
 
 %if 0%{?fedora}
@@ -18,7 +26,7 @@
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 # set to 0 to create a normal release
 %global postrelease 0
-%global release 2
+%global release 3
 
 %global osbs_obsolete_vr 0.14-2
 
@@ -81,13 +89,13 @@ Requires:       python-dockerfile-parse
 Requires:       python-pycurl
 Requires:       python-setuptools
 Requires:       krb5-workstation
-
 %if 0%{?rhel} && 0%{?rhel} <= 6
 Requires:       python-argparse
 %endif
 
 Provides:       python-osbs = %{version}-%{release}
 Obsoletes:      python-osbs < %{osbs_obsolete_vr}
+%{?python_provide:%python_provide python-osbs-client}
 
 %description -n python-osbs-client
 It is able to query OpenShift v3 for various stuff related to building images.
@@ -107,6 +115,7 @@ Requires:       krb5-workstation
 
 Provides:       python3-osbs = %{version}-%{release}
 Obsoletes:      python3-osbs < %{osbs_obsolete_vr}
+%{?python_provide:%python_provide python3-osbs-client}
 
 %description -n python3-osbs-client
 It is able to query OpenShift v3 for various stuff related to building images.
@@ -118,36 +127,26 @@ This package contains osbs Python 3 bindings.
 %prep
 %setup -qn %{name}-%{commit}
 
-%if 0%{?with_python3}
-rm -rf %{py3dir}
-cp -a . %{py3dir}
-find %{py3dir} -name '*.py' | xargs sed -i '1s|^#!python|#!%{__python3}|'
-%endif # with_python3
-
 
 %build
-# build python package
-%{__python} setup.py build
+%py2_build
 
 %if 0%{?with_python3}
-pushd %{py3dir}
-%{__python3} setup.py build
-popd
+%py3_build
 %endif # with_python3
 
 
 %install
 %if 0%{?with_python3}
-pushd %{py3dir}
-%{__python3} setup.py install --skip-build --root %{buildroot}
-popd
-mv %{buildroot}%{_bindir}/osbs %{buildroot}%{_bindir}/osbs3
+%py3_install
+mv %{buildroot}%{_bindir}/osbs %{buildroot}%{_bindir}/osbs-%{python3_version}
+ln -s  %{_bindir}/osbs-%{python3_version} %{buildroot}%{_bindir}/osbs-3
 %endif # with_python3
 
-%{__python} setup.py install --skip-build --root %{buildroot}
-mv %{buildroot}%{_bindir}/osbs %{buildroot}%{_bindir}/osbs2
-ln -s  %{_bindir}/osbs2 %{buildroot}%{_bindir}/osbs
-
+%py2_install
+mv %{buildroot}%{_bindir}/osbs %{buildroot}%{_bindir}/osbs-%{python2_version}
+ln -s  %{_bindir}/osbs-%{python2_version} %{buildroot}%{_bindir}/osbs-2
+ln -s  %{_bindir}/osbs-%{binaries_py_version} %{buildroot}%{_bindir}/osbs
 
 %if 0%{?with_check}
 %check
@@ -166,9 +165,10 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 
 %files -n python-osbs-client
 %doc README.md
-%{!?_licensedir:%global license %%doc}
+%{!?_licensedir:%global license %doc}
 %license LICENSE
-%{_bindir}/osbs2
+%{_bindir}/osbs-%{python2_version}
+%{_bindir}/osbs-2
 %{python2_sitelib}/osbs*
 %dir %{_datadir}/osbs
 %{_datadir}/osbs/*.json
@@ -177,15 +177,22 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %if 0%{?with_python3}
 %files -n python3-osbs-client
 %doc README.md
-%{!?_licensedir:%global license %%doc}
+%{!?_licensedir:%global license %doc}
 %license LICENSE
-%{_bindir}/osbs3
+%{_bindir}/osbs-%{python3_version}
+%{_bindir}/osbs-3
 %{python3_sitelib}/osbs*
 %dir %{_datadir}/osbs
 %{_datadir}/osbs/*.json
 %endif # with_python3
 
 %changelog
+* Fri Nov 20 2015 Jiri Popelka <jpopelka@redhat.com> - 0.15-3
+- use py_build & py_install macros
+- use python_provide macro
+- do not use py3dir
+- ship executables per packaging guidelines
+
 * Thu Nov 05 2015 Jiri Popelka <jpopelka@redhat.com> - 0.15-2
 - build for Python 3
 - %%check section
