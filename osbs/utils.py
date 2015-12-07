@@ -9,14 +9,19 @@ from __future__ import print_function, absolute_import, unicode_literals
 
 import contextlib
 import copy
+import logging
 import os
+import os.path
 import re
 import shutil
 import string
 import subprocess
 import sys
 import tempfile
+import tarfile
+from collections import namedtuple
 from datetime import datetime
+from io import BytesIO
 
 try:
     # py3
@@ -32,6 +37,7 @@ except ImportError:
 from dockerfile_parse import DockerfileParser
 from osbs.exceptions import OsbsException
 
+logger = logging.getLogger(__name__)
 
 class RegistryURI(object):
     # Group 0: URI without path -- allowing empty value -- including:
@@ -52,6 +58,59 @@ class RegistryURI(object):
         return self.scheme + self.docker_uri
 
 
+class TarWriter(object):
+    def __init__(self, outfile, directory=None):
+        mode = "w|bz2"
+        if hasattr(outfile, "write"):
+            self.tarfile = tarfile.open(fileobj=outfile, mode=mode)
+        else:
+            self.tarfile = tarfile.open(name=outfile, mode=mode)
+        self.directory = directory or ""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, typ, val, tb):
+        self.tarfile.close()
+
+    def write_file(self, name, content):
+        buf = BytesIO(content)
+        arcname = os.path.join(self.directory, name)
+
+        ti = tarfile.TarInfo(arcname)
+        ti.size = len(content)
+        self.tarfile.addfile(ti, fileobj=buf)
+
+
+class TarReader(object):
+    TarFile = namedtuple('TarFile', ['filename', 'fileobj'])
+
+    def __init__(self, infile):
+        mode = "r|bz2"
+        if hasattr(infile, "read"):
+            self.tarfile = tarfile.open(fileobj=infile, mode=mode)
+        else:
+            self.tarfile = tarfile.open(name=infile, mode=mode)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.next()
+
+    def next(self):
+        ti = self.tarfile.next()
+
+        if ti is None:
+            self.close()
+            raise StopIteration()
+
+        return self.TarFile(ti.name, self.tarfile.extractfile(ti))
+
+    def close(self):
+        self.tarfile.close()
+
+
 def graceful_chain_get(d, *args):
     if not d:
         return None
@@ -59,9 +118,23 @@ def graceful_chain_get(d, *args):
     for arg in args:
         try:
             t = t[arg]
-        except (AttributeError, KeyError):
+        except (IndexError, KeyError):
             return None
     return t
+
+
+def graceful_chain_del(d, *args):
+    if not d:
+        return
+    for arg in args[:-1]:
+        try:
+            d = d[arg]
+        except (IndexError, KeyError):
+            return
+    try:
+        del d[args[-1]]
+    except (IndexError, KeyError):
+        pass
 
 
 def buildconfig_update(orig, new, remove_nonexistent_keys=False):
@@ -119,6 +192,17 @@ def checkout_git_repo(git_uri, git_ref, git_branch=None):
 
     finally:
         shutil.rmtree(tmpdir)
+
+
+@contextlib.contextmanager
+def paused_builds(osbs, namespace):
+    logger.info("pausing builds")
+    osbs.pause_builds(namespace=namespace)
+    try:
+        yield osbs
+    finally:
+        logger.info("resuming builds")
+        osbs.resume_builds(namespace=namespace)
 
 
 def looks_like_git_hash(git_ref):

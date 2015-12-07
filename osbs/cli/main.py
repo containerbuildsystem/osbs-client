@@ -12,16 +12,20 @@ import json
 import logging
 
 from os import uname
+import codecs
+import time
+import os.path
 import sys
 import argparse
 from osbs import set_logging
 from osbs.api import OSBS
 from osbs.cli.render import TablePrinter
 from osbs.conf import Configuration
-from osbs.constants import DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION, CLI_LIST_BUILDS_DEFAULT_COLS
+from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
+                            CLI_LIST_BUILDS_DEFAULT_COLS, PY3, BACKUP_RESOURCES)
 from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsAuthException, OsbsResponseException
 from osbs.cli.capture import setup_json_capture
-from osbs.utils import strip_registry_from_image
+from osbs.utils import strip_registry_from_image, paused_builds, TarReader, TarWriter
 
 logger = logging.getLogger('osbs')
 
@@ -291,6 +295,50 @@ def cmd_resume_builds(args, osbs):
     osbs.resume_builds(namespace=args.namespace)
 
 
+def cmd_backup(args, osbs):
+    dirname = time.strftime("osbs-backup-{0}-{1}-%Y-%m-%d-%H%M%S"
+                            .format(args.instance, args.namespace))
+    if args.filename == '-':
+        outfile = sys.stdout.buffer if PY3 else sys.stdout
+    elif args.filename:
+        outfile = args.filename
+    else:
+        outfile = dirname + ".tar.bz2"
+
+    with paused_builds(osbs, args.namespace):
+        with TarWriter(outfile, dirname) as t:
+            for resource_type in BACKUP_RESOURCES:
+                logger.info("dumping %s", resource_type)
+                resources = osbs.dump_resource(resource_type, namespace=args.namespace)
+                t.write_file(resource_type + ".json", json.dumps(resources).encode('ascii'))
+
+    if not hasattr(outfile, "write"):
+        logger.info("backup archive created: %s", outfile)
+
+
+def cmd_restore(args, osbs):
+    if args.BACKUP_ARCHIVE == '-':
+        infile = sys.stdin.buffer if PY3 else sys.stdin
+    else:
+        infile = args.BACKUP_ARCHIVE
+    asciireader = codecs.getreader('ascii')
+
+    with paused_builds(osbs, args.namespace):
+        for f in TarReader(infile):
+            resource_type = os.path.basename(f.filename).split('.')[0]
+            if resource_type not in BACKUP_RESOURCES:
+                logger.warning("Unknown resource type for %s, skipping", f.filename)
+                continue
+
+            logger.info("restoring %s", resource_type)
+            osbs.restore_resource(resource_type, json.load(asciireader(f.fileobj)),
+                                                 continue_on_error=args.continue_on_error,
+                                                 namespace=args.namespace)
+            f.fileobj.close()
+
+    logger.info("backup recovery complete!")
+
+
 def str_on_2_unicode_on_3(s):
     """
     argparse is way too awesome when doing repr() on choices when printing usage
@@ -299,7 +347,7 @@ def str_on_2_unicode_on_3(s):
     :return: str on 2, unicode on 3
     """
 
-    if sys.version_info[0] <= 2:
+    if not PY3:
         return str(s)
     else:  # 3+
         if not isinstance(s, str):
@@ -421,6 +469,20 @@ def cli():
                                           help='resume scheduling new builds (admin)',
                                           description='allow builds to be scheduled again after pause-builds')
     resume_builds.set_defaults(func=cmd_resume_builds)
+
+    backup_builder = subparsers.add_parser(str_on_2_unicode_on_3('backup-builder'),
+                                           help='dump builder data (admin)',
+                                           description='create backup of all OSBS data')
+    backup_builder.add_argument("-f", "--filename", help="name of the resulting tar.bz2 file (use - for stdout)")
+    backup_builder.set_defaults(func=cmd_backup)
+
+    restore_builder = subparsers.add_parser(str_on_2_unicode_on_3('restore-builder'),
+                                            help='restore builder data (admin)',
+                                            description='restore OSBS data from backup')
+    restore_builder.add_argument("BACKUP_ARCHIVE", help="name of the tar.bz2 archive to restore (use - for stdin)")
+    restore_builder.add_argument("--continue-on-error", action='store_true',
+                                 help="don't stop when restoring a resource fails")
+    restore_builder.set_defaults(func=cmd_restore)
 
     parser.add_argument("--openshift-uri", action='store', metavar="URL",
                         help="openshift URL to remote API")

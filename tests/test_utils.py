@@ -7,6 +7,7 @@ of the BSD license. See the LICENSE file for details.
 """
 from flexmock import flexmock
 import os
+import os.path
 import pytest
 import datetime
 import sys
@@ -15,7 +16,8 @@ from time import tzset
 from osbs.utils import (buildconfig_update,
                         get_imagestreamtag_from_image,
                         git_repo_humanish_part_from_uri,
-                        get_time_from_rfc3339, strip_registry_from_image)
+                        get_time_from_rfc3339, strip_registry_from_image,
+                        TarWriter, TarReader)
 from osbs.exceptions import OsbsException
 import osbs.kerberos_ccache
 
@@ -190,3 +192,17 @@ def test_kinit_fails(custom_ccache):
     with pytest.raises(OsbsException):
         osbs.kerberos_ccache.kerberos_ccache_init(PRINCIPAL, KEYTAB_PATH,
                                                   CCACHE_PATH if custom_ccache else None)
+
+@pytest.mark.parametrize("prefix", ["", "some/thing"])
+def test_tarfile(tmpdir, prefix):
+    filename = str(tmpdir.join("archive.tar.bz2"))
+
+    with TarWriter(filename, directory=prefix) as t:
+        t.write_file("a/b.c", b"foobar")
+
+    assert os.path.exists(filename)
+
+    for f in TarReader(filename):
+        assert f.filename == os.path.join(prefix, "a/b.c")
+        content = f.fileobj.read()
+        assert content == b"foobar"

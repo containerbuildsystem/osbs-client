@@ -539,3 +539,40 @@ class OSBS(object):
 
         name = quota_json['metadata']['name']
         self.os.delete_resource_quota(name, namespace=namespace)
+
+    # implements subset of OpenShift's export logic in pkg/cmd/cli/cmd/exporter.go
+    @staticmethod
+    def _prepare_resource(resource_type, resource):
+        utils.graceful_chain_del(resource, 'metadata', 'resourceVersion')
+
+        if resource_type == 'buildconfigs':
+            utils.graceful_chain_del(resource, 'status', 'lastVersion')
+
+            triggers = utils.graceful_chain_get(resource, 'spec', 'triggers') or ()
+            for t in triggers:
+                utils.graceful_chain_del(t, 'imageChange', 'lastTrigerredImageID')
+
+    @osbsapi
+    def dump_resource(self, resource_type, namespace=DEFAULT_NAMESPACE):
+        return self.os.dump_resource(resource_type, namespace=namespace).json()
+
+    @osbsapi
+    def restore_resource(self, resource_type, resources, continue_on_error=False,
+                         namespace=DEFAULT_NAMESPACE):
+        nfailed = 0
+        for r in resources["items"]:
+            name = utils.graceful_chain_get(r, 'metadata', 'name') or '(no name)'
+            logger.debug("restoring %s/%s", resource_type, name)
+            try:
+                self._prepare_resource(resource_type, r)
+                self.os.restore_resource(resource_type, r, namespace=namespace)
+            except Exception:
+                if continue_on_error:
+                    logger.exception("failed to restore %s/%s", resource_type, name)
+                    nfailed += 1
+                else:
+                    raise
+
+        if continue_on_error:
+            ntotal = len(resources["items"])
+            logger.info("restored %s/%s %s", ntotal - nfailed, ntotal, resource_type)
