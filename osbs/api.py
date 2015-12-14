@@ -466,6 +466,12 @@ class OSBS(object):
 
     @osbsapi
     def import_image(self, name, namespace=DEFAULT_NAMESPACE):
+        """
+        Import image tags from a Docker registry into an ImageStream
+
+        :return: bool, whether new tags were imported
+        """
+
         return self.os.import_image(name, namespace=namespace)
 
     @osbsapi
