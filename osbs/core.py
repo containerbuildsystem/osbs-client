@@ -538,6 +538,8 @@ class Openshift(object):
     def import_image(self, name, namespace=DEFAULT_NAMESPACE):
         """
         Import image tags from a Docker registry into an ImageStream
+
+        :return: bool, whether new tags were imported
         """
 
         # Get the JSON for the ImageStream
@@ -548,6 +550,10 @@ class Openshift(object):
         spec = imagestream_json.get('spec', {})
         if 'dockerImageRepository' not in spec:
             raise OsbsException('No dockerImageRepository for image import')
+
+        # Note the tags before import
+        oldtags = imagestream_json.get('status', {}).get('tags', [])
+        logger.debug("tags before import: %r", oldtags)
 
         # Mark it as needing import
         imagestream_json['metadata'].setdefault('annotations', {})
@@ -593,7 +599,14 @@ class Openshift(object):
                     logger.info("ImageStream annotations: %r", annotations)
                     if annotations.get(check_annotation, False):
                         logger.info("ImageStream updated")
-                        break
+
+                        # Find out if there are new tags
+                        status = obj.get('status', {})
+                        newtags = status.get('tags', [])
+                        logger.debug("tags after import: %r", newtags)
+                        return newtags != oldtags
+
+        return False
 
     def dump_resource(self, resource_type, namespace=DEFAULT_NAMESPACE):
         url = self._build_url("namespaces/%s/%s" % (namespace, resource_type))
