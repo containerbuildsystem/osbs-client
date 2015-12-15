@@ -120,11 +120,13 @@ PRINCIPAL = 'prin@IPAL'
 @pytest.mark.parametrize("custom_ccache", [True, False])
 def test_kinit_nocache(custom_ccache):
     flexmock(osbs.kerberos_ccache).should_receive('run') \
-                                  .with_args(['klist']) \
+                                  .with_args(['klist'], extraenv=object) \
                                   .and_return(1, "", "") \
                                   .once()
     flexmock(osbs.kerberos_ccache).should_receive('run') \
-                                  .with_args(['kinit', '-k', '-t', KEYTAB_PATH, PRINCIPAL]) \
+                                  .with_args(['kinit', '-k', '-t',
+                                              KEYTAB_PATH, PRINCIPAL],
+                                             extraenv=object) \
                                   .and_return(0, "", "") \
                                   .once()
     flexmock(os.environ).should_receive('__setitem__') \
@@ -141,11 +143,13 @@ def test_kinit_recentcache(custom_ccache):
     klist_out = yesterday.strftime(KLIST_TEMPLATE)
 
     flexmock(osbs.kerberos_ccache).should_receive('run') \
-                                  .with_args(['klist']) \
+                                  .with_args(['klist'], extraenv=object) \
                                   .and_return(0, klist_out, "") \
                                   .once()
     flexmock(osbs.kerberos_ccache).should_receive('run') \
-                                  .with_args(['kinit', '-k', '-t', KEYTAB_PATH, PRINCIPAL]) \
+                                  .with_args(['kinit', '-k', '-t',
+                                              KEYTAB_PATH, PRINCIPAL],
+                                             extraenv=object) \
                                   .and_return(0, "", "") \
                                   .once()
     flexmock(os.environ).should_receive('__setitem__') \
@@ -162,11 +166,13 @@ def test_kinit_newcache(custom_ccache):
     klist_out = tomorrow.strftime(KLIST_TEMPLATE)
 
     flexmock(osbs.kerberos_ccache).should_receive('run') \
-                                  .with_args(['klist']) \
+                                  .with_args(['klist'], extraenv=object) \
                                   .and_return(0, klist_out, "") \
                                   .once()
     flexmock(osbs.kerberos_ccache).should_receive('run') \
-                                  .with_args(['kinit', '-k', '-t', KEYTAB_PATH, PRINCIPAL]) \
+                                  .with_args(['kinit', '-k', '-t',
+                                              KEYTAB_PATH, PRINCIPAL],
+                                             extraenv=object) \
                                   .never()
     flexmock(os.environ).should_receive('__setitem__') \
                         .with_args("KRB5CCNAME", CCACHE_PATH) \
@@ -178,11 +184,13 @@ def test_kinit_newcache(custom_ccache):
 @pytest.mark.parametrize("custom_ccache", [True, False])
 def test_kinit_fails(custom_ccache):
     flexmock(osbs.kerberos_ccache).should_receive('run') \
-                                  .with_args(['klist']) \
+                                  .with_args(['klist'], extraenv=object) \
                                   .and_return(1, "", "") \
                                   .once()
     flexmock(osbs.kerberos_ccache).should_receive('run') \
-                                  .with_args(['kinit', '-k', '-t', KEYTAB_PATH, PRINCIPAL]) \
+                                  .with_args(['kinit', '-k', '-t',
+                                              KEYTAB_PATH, PRINCIPAL],
+                                             extraenv=object) \
                                   .and_return(1, "error", "error") \
                                   .once()
     flexmock(os.environ).should_receive('__setitem__') \
