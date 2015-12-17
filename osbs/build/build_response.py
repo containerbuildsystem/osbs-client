@@ -21,20 +21,12 @@ logger = logging.getLogger(__name__)
 class BuildResponse(object):
     """ class which wraps json from http response from OpenShift """
 
-    def __init__(self, request, build_json=None):
+    def __init__(self, build_json):
         """
-        :param request: http.Request
-        :param build_json: dict
+        :param build_json: dict from JSON of OpenShift Build object
         """
-        self._json = build_json
-        self.request = request
+        self.json = build_json
         self._status = None
-
-    @property
-    def json(self):
-        if self._json is None:
-            self._json = self.request.json()
-        return self._json
 
     @property
     def status(self):

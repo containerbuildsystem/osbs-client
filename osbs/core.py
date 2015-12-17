@@ -227,7 +227,7 @@ class Openshift(object):
 
     def cancel_build(self, build_id, namespace=DEFAULT_NAMESPACE):
         response = self.get_build(build_id, namespace=namespace)
-        br = BuildResponse(response)
+        br = BuildResponse(response.json())
         br.status = BUILD_CANCELLED_STATE
         url = self._build_url("namespaces/%s/builds/%s/" % (namespace, build_id))
         return self._put(url, data=json.dumps(br.json),
@@ -305,7 +305,7 @@ class Openshift(object):
         if follow or wait_if_missing:
             build_json = self.wait_for_build_to_get_scheduled(build_id, namespace=namespace)
 
-        br = BuildResponse(None, build_json=build_json)
+        br = BuildResponse(build_json)
 
         # When build is in new or pending state, openshift responds with 500
         if br.is_pending():

@@ -90,19 +90,19 @@ class OSBS(object):
         serialized_response = response.json()
         build_list = []
         for build in serialized_response["items"]:
-            build_list.append(BuildResponse(None, build))
+            build_list.append(BuildResponse(build))
         return build_list
 
     @osbsapi
     def get_build(self, build_id, namespace=DEFAULT_NAMESPACE):
         response = self.os.get_build(build_id, namespace=namespace)
-        build_response = BuildResponse(response)
+        build_response = BuildResponse(response.json())
         return build_response
 
     @osbsapi
     def cancel_build(self, build_id, namespace=DEFAULT_NAMESPACE):
         response = self.os.cancel_build(build_id, namespace=namespace)
-        build_response = BuildResponse(response)
+        build_response = BuildResponse(response.json())
         return build_response
 
     @osbsapi
@@ -157,7 +157,7 @@ class OSBS(object):
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         build = build_request.render()
         response = self.os.create_build(json.dumps(build), namespace=namespace)
-        build_response = BuildResponse(response)
+        build_response = BuildResponse(response.json())
         return build_response
 
     def _get_running_builds_for_build_config(self, build_config_id, namespace=DEFAULT_NAMESPACE):
@@ -166,7 +166,7 @@ class OSBS(object):
             namespace=namespace).json()['items']
         running = []
         for b in all_builds_for_bc:
-            br = BuildResponse(request=None, build_json=b)
+            br = BuildResponse(b)
             if br.is_pending() or br.is_running():
                 running.append(br)
         return running
@@ -243,9 +243,10 @@ class OSBS(object):
                         raise OsbsException(
                             self._panic_msg_for_more_running_builds(build_config_name, builds))
                     else:
-                        build = builds[0].request
+                        build = builds[0]
         if build is None:
-            build = self.os.start_build(build_config_name, namespace=namespace)
+            response = self.os.start_build(build_config_name, namespace=namespace)
+            build = BuildResponse(response.json())
         return build
 
     @osbsapi
@@ -308,9 +309,8 @@ class OSBS(object):
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         response = self._create_build_config_and_build(build_request, namespace)
-        build_response = BuildResponse(response)
-        logger.debug(build_response.json)
-        return build_response
+        logger.debug(response.json)
+        return response
 
     @osbsapi
     def create_prod_with_secret_build(self, git_uri, git_ref, git_branch, user, component,
@@ -348,9 +348,8 @@ class OSBS(object):
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         response = self._create_build_config_and_build(build_request, namespace)
-        build_response = BuildResponse(response)
-        logger.debug(build_response.json)
-        return build_response
+        logger.debug(response.json)
+        return response
 
     @osbsapi
     def create_build(self, namespace=DEFAULT_NAMESPACE, **kwargs):
@@ -405,9 +404,9 @@ class OSBS(object):
         """
         if not build_json:
             build = self.os.get_build(build_id, namespace=namespace)
-            build_response = BuildResponse(build)
+            build_response = BuildResponse(build.json())
         else:
-            build_response = BuildResponse(None, build_json)
+            build_response = BuildResponse(build_json)
 
         if build_response.is_finished():
             logs = build_response.get_logs(decode_logs=decode_logs)
@@ -417,13 +416,13 @@ class OSBS(object):
     @osbsapi
     def wait_for_build_to_finish(self, build_id, namespace=DEFAULT_NAMESPACE):
         response = self.os.wait_for_build_to_finish(build_id, namespace=namespace)
-        build_response = BuildResponse(None, response)
+        build_response = BuildResponse(response)
         return build_response
 
     @osbsapi
     def wait_for_build_to_get_scheduled(self, build_id, namespace=DEFAULT_NAMESPACE):
         response = self.os.wait_for_build_to_get_scheduled(build_id, namespace=namespace)
-        build_response = BuildResponse(None, response)
+        build_response = BuildResponse(response)
         return build_response
 
     @osbsapi
