@@ -63,6 +63,7 @@ BuildRequires:  python-pycurl
 BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
 %if 0%{?with_check}
+BuildRequires:  python3-dateutil
 BuildRequires:  python3-pytest
 BuildRequires:  python3-pytest-capturelog
 BuildRequires:  python3-flexmock
