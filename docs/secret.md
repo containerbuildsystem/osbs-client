@@ -1,6 +1,6 @@
 # Using Kubernetes Secrets
 
-The `prod` build type allows you to provide some secret content to the build using [Kubernetes Secret Volumes](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/secrets.md).
+The `prod` build type allows you to provide some secret content to the build using [Kubernetes Secret Volumes](http://kubernetes.io/v1.1/docs/user-guide/secrets.html).
 
 This is useful when the build workflow requires keys, certificates, etc, which should not be part of the buildroot image.
 
