@@ -46,7 +46,11 @@ Source0:        https://github.com/projectatomic/osbs-client/archive/%{commit}/o
 
 BuildArch:      noarch
 
+%if 0%{?with_python3}
+Requires:       python3-osbs-client = %{version}-%{release}
+%else
 Requires:       python-osbs-client = %{version}-%{release}
+%endif
 
 BuildRequires:  python2-devel
 BuildRequires:  python-setuptools
