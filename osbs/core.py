@@ -370,6 +370,30 @@ class Openshift(object):
 
         return response
 
+    def watch_resource(self, namespace, resource_type, resource_name, **request_args):
+        path = "watch/namespaces/%s/%s/%s/" % (namespace, resource_type, resource_name)
+        url = self._build_url(path, **request_args)
+
+        with self._get(url, stream=True, headers={'Connection': 'close'}) as response:
+            check_response(response)
+            for line in response.iter_lines():
+                logger.debug(line)
+                try:
+                    j = json.loads(line)
+                except ValueError:
+                    logger.error("Cannot decode watch event: %s", line)
+                    continue
+
+                if 'object' not in j:
+                    logger.error("Watch event has no 'object': %s", j)
+                    continue
+
+                if 'type' not in j:
+                    logger.error("Watch event has no 'type': %s", j)
+                    continue
+
+                yield (j['type'].lower(), j['object'])
+
     def wait(self, build_id, states, namespace=DEFAULT_NAMESPACE):
         """
         :param build_id: wait for build to finish
@@ -377,41 +401,32 @@ class Openshift(object):
         :return:
         """
         logger.info("watching build '%s'", build_id)
-        url = self._build_url("watch/namespaces/%s/builds/%s/" % (namespace, build_id))
-        with self._get(url, stream=True, headers={'Connection': 'close'}) as response:
-            check_response(response)
-            for line in response.iter_lines():
-                j = json.loads(line)
-                logger.debug(line)
-                obj = j.get("object", None)
-                if obj is None:
-                    logger.error("'object' is None")
-                    continue
-                try:
-                    obj_name = obj["metadata"]["name"]
-                except KeyError:
-                    logger.error("'object' doesn't have any name")
-                    continue
-                try:
-                    obj_status = obj["status"]["phase"]
-                except KeyError:
-                    logger.error("'object' doesn't have any status")
-                    continue
+        for changetype, obj in self.watch_resource(namespace, "builds", build_id):
+            try:
+                obj_name = obj["metadata"]["name"]
+            except KeyError:
+                logger.error("'object' doesn't have any name")
+                continue
+            try:
+                obj_status = obj["status"]["phase"]
+            except KeyError:
+                logger.error("'object' doesn't have any status")
+                continue
+            else:
+                obj_status_lower = obj_status.lower()
+            logger.info("object has changed: '%s', status: '%s', name: '%s'",
+                        changetype, obj_status, obj_name)
+            if obj_name == build_id:
+                logger.info("matching build found")
+                logger.debug("is %s in %s?", repr(obj_status_lower), states)
+                if obj_status_lower in states:
+                    logger.debug("Yes, build is in the state I'm waiting for.")
+                    return obj
                 else:
-                    obj_status_lower = obj_status.lower()
-                logger.info("object has changed: '%s', status: '%s', name: '%s'",
-                            j['type'], obj_status, obj_name)
-                if obj_name == build_id:
-                    logger.info("matching build found")
-                    logger.debug("is %s in %s?", repr(obj_status_lower), states)
-                    if obj_status_lower in states:
-                        logger.debug("Yes, build is in the state I'm waiting for.")
-                        return obj
-                    else:
-                        logger.debug("No, build is not in the state I'm "
-                                     "waiting for.")
-                else:
-                    logger.info("The build %r isn't me %r", obj_name, build_id)
+                    logger.debug("No, build is not in the state I'm "
+                                 "waiting for.")
+            else:
+                logger.info("The build %r isn't me %r", obj_name, build_id)
 
         # I'm not sure how we can end up here since there are two possible scenarios:
         #   1. our object was found and we are returning in the loop
@@ -565,46 +580,30 @@ class Openshift(object):
 
         # Watch for it to be updated
         resource_version = imagestream_json['metadata']['resourceVersion']
-        url = self._build_url("watch/namespaces/%s/imagestreams/%s/" % (namespace, name),
-                              resourceVersion=resource_version)
-        with self._get(url, stream=True, headers={'Connection': 'close'}) as response:
-            check_response(response)
-            for line in response.iter_lines():
-                j = json.loads(line)
-                logger.debug(line)
-                if 'object' not in j:
-                    logger.error("no 'object'")
-                    continue
+        for changetype, obj in self.watch_resource(namespace, "imagestreams", name,
+                                                   resourceVersion=resource_version):
+            logger.info("Change type: %r", changetype)
+            if changetype == WATCH_DELETED:
+                logger.info("Watched ImageStream was deleted")
+                break
 
-                if 'type' not in j:
-                    logger.error("no 'type'")
-                    continue
+            if changetype == WATCH_ERROR:
+                logger.error("Error watching ImageStream")
+                break
 
-                changetype = j['type']
-                logger.info("Change type: %r", changetype)
-                changetype = changetype.lower()
-                if changetype == WATCH_DELETED:
-                    logger.info("Watched ImageStream was deleted")
-                    break
+            if changetype == WATCH_MODIFIED:
+                logger.info("ImageStream modified")
+                metadata = obj.get('metadata', {})
+                annotations = metadata.get('annotations', {})
+                logger.info("ImageStream annotations: %r", annotations)
+                if annotations.get(check_annotation, False):
+                    logger.info("ImageStream updated")
 
-                if changetype == WATCH_ERROR:
-                    logger.error("Error watching ImageStream")
-                    break
-
-                if changetype == WATCH_MODIFIED:
-                    logger.info("ImageStream modified")
-                    obj = j['object']
-                    metadata = obj.get('metadata', {})
-                    annotations = metadata.get('annotations', {})
-                    logger.info("ImageStream annotations: %r", annotations)
-                    if annotations.get(check_annotation, False):
-                        logger.info("ImageStream updated")
-
-                        # Find out if there are new tags
-                        status = obj.get('status', {})
-                        newtags = status.get('tags', [])
-                        logger.debug("tags after import: %r", newtags)
-                        return newtags != oldtags
+                    # Find out if there are new tags
+                    status = obj.get('status', {})
+                    newtags = status.get('tags', [])
+                    logger.debug("tags after import: %r", newtags)
+                    return newtags != oldtags
 
         return False
 
