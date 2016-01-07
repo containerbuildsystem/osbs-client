@@ -171,21 +171,6 @@ class OSBS(object):
                 running.append(br)
         return running
 
-    def _poll_for_builds_from_buildconfig(self, build_config_id, namespace=DEFAULT_NAMESPACE):
-        # try polling for 60 seconds and then fail if build doesn't appear
-        deadline = int(time.time()) + 60
-        while int(time.time()) < deadline:
-            logger.debug('polling for build from BuildConfig "%s"',
-                         build_config_id)
-            builds = self._get_running_builds_for_build_config(build_config_id, namespace)
-            if len(builds) > 0:
-                return builds
-            # wait for 5 seconds before trying again
-            time.sleep(5)
-
-        raise OsbsException('Waited for new build from "%s", but none was automatically created' %
-                            build_config_id)
-
     @staticmethod
     def _panic_msg_for_more_running_builds(self, build_config_name, builds):
         # this should never happen, but if it does, we want to know all the builds
@@ -232,18 +217,16 @@ class OSBS(object):
         else:
             # if it doesn't exist, then create it
             logger.debug('build config for %s doesn\'t exist, creating...', build_config_name)
-            self.os.create_build_config(json.dumps(build_json), namespace=namespace)
+            bc = self.os.create_build_config(json.dumps(build_json), namespace=namespace).json()
             # if there's an "ImageChangeTrigger" on the BuildConfig and "From" is of type
             #  "ImageStreamTag", the build will be scheduled automatically
             #  see https://github.com/projectatomic/osbs-client/issues/205
             if build_request.is_auto_instantiated():
-                builds = self._poll_for_builds_from_buildconfig(build_config_name, namespace)
-                if len(builds) > 0:
-                    if len(builds) > 1:
-                        raise OsbsException(
-                            self._panic_msg_for_more_running_builds(build_config_name, builds))
-                    else:
-                        build = builds[0]
+                prev_version = bc['status']['lastVersion']
+                build_id = self.os.wait_for_new_build_config_instance(build_config_name,
+                                                                      prev_version, namespace)
+                build = BuildResponse(self.os.get_build(build_id, namespace).json())
+
         if build is None:
             response = self.os.start_build(build_config_name, namespace=namespace)
             build = BuildResponse(response.json())

@@ -8,6 +8,7 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import print_function, unicode_literals, absolute_import
 import json
 import os
+import numbers
 
 import logging
 from osbs.kerberos_ccache import kerberos_ccache_init
@@ -18,6 +19,7 @@ from osbs.constants import (SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
                             SERVICEACCOUNT_CACRT)
 from osbs.exceptions import (OsbsResponseException, OsbsException,
                              OsbsWatchBuildNotFound, OsbsAuthException)
+from osbs.utils import graceful_chain_get
 
 try:
     # py2
@@ -279,6 +281,24 @@ class Openshift(object):
         :return:
         """
         return self.instantiate_build_config(build_config_id, namespace=namespace)
+
+    def wait_for_new_build_config_instance(self, build_config_id, prev_version, namespace=DEFAULT_NAMESPACE):
+        logger.info("waiting for build config %s to get instantiated", build_config_id)
+        for changetype, obj in self.watch_resource(namespace, "buildconfigs", build_config_id):
+            if changetype == WATCH_MODIFIED:
+                version = graceful_chain_get(obj, 'status', 'lastVersion')
+                if not isinstance(version, numbers.Integral):
+                    logger.error("BuildConfig %s has unexpected lastVersion: %s", build_config_id, version)
+                    continue
+
+                if version > prev_version:
+                    return "%s-%s" % (build_config_id, version)
+
+            if changetype == WATCH_DELETED:
+                logger.error("BuildConfig deleted while waiting for new build instance")
+                break
+
+        raise OsbsResponseException("New BuildConfig instance not found")
 
     def logs(self, build_id, follow=False, build_json=None, wait_if_missing=False,
              namespace=DEFAULT_NAMESPACE):
