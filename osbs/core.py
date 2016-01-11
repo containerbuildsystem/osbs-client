@@ -55,11 +55,13 @@ class Openshift(object):
                  k8s_api_url=None,
                  verbose=False, username=None, password=None, use_kerberos=False,
                  kerberos_keytab=None, kerberos_principal=None, kerberos_ccache=None,
-                 client_cert=None, client_key=None, verify_ssl=True, use_auth=None):
+                 client_cert=None, client_key=None, verify_ssl=True, use_auth=None,
+                 namespace=DEFAULT_NAMESPACE):
         self.os_api_url = openshift_api_url
         self.k8s_api_url = k8s_api_url
         self._os_api_version = openshift_api_version
         self._os_oauth_url = openshift_oauth_url
+        self.namespace = namespace
         self.verbose = verbose
         self.verify_ssl = verify_ssl
         self._con = HttpSession(verbose=self.verbose)
@@ -114,12 +116,16 @@ class Openshift(object):
     def os_oauth_url(self):
         return self._os_oauth_url
 
-    def _build_k8s_url(self, url, **query):
+    def _build_k8s_url(self, url, _prepend_namespace=True, **query):
+        if _prepend_namespace:
+            url = "namespaces/%s/%s" % (self.namespace, url)
         if query:
             url += ("?" + urlencode(query))
         return urlparse.urljoin(self.k8s_api_url, url)
 
-    def _build_url(self, url, **query):
+    def _build_url(self, url, _prepend_namespace=True, **query):
+        if _prepend_namespace:
+            url = "namespaces/%s/%s" % (self.namespace, url)
         if query:
             url += ("?" + urlencode(query))
         return urlparse.urljoin(self.os_api_url, url)
@@ -213,59 +219,58 @@ class Openshift(object):
         :param username: str, name of user to get info about, default="~"
         :return: dict
         """
-        url = self._build_url("users/%s/" % username)
+        url = self._build_url("users/%s/" % username, _prepend_namespace=False)
         response = self._get(url)
         check_response(response)
         return response
 
-    def create_build(self, build_json, namespace=DEFAULT_NAMESPACE):
+    def create_build(self, build_json):
         """
         :return:
         """
-        url = self._build_url("namespaces/%s/builds/" % namespace)
+        url = self._build_url("builds/")
         logger.debug(build_json)
         return self._post(url, data=build_json,
                           headers={"Content-Type": "application/json"})
 
-    def cancel_build(self, build_id, namespace=DEFAULT_NAMESPACE):
-        response = self.get_build(build_id, namespace=namespace)
+    def cancel_build(self, build_id):
+        response = self.get_build(build_id)
         br = BuildResponse(response.json())
         br.status = BUILD_CANCELLED_STATE
-        url = self._build_url("namespaces/%s/builds/%s/" % (namespace, build_id))
+        url = self._build_url("builds/%s/" % build_id)
         return self._put(url, data=json.dumps(br.json),
                          headers={"Content-Type": "application/json"})
 
-    def list_pods(self, label=None, namespace=DEFAULT_NAMESPACE):
+    def list_pods(self, label=None):
         kwargs = {}
         if label is not None:
             kwargs['labelSelector'] = label
-        url = self._build_k8s_url("namespaces/%s/pods/" % namespace, **kwargs)
+        url = self._build_k8s_url("pods/", **kwargs)
         return self._get(url)
 
-    def get_build_config(self, build_config_id, namespace=DEFAULT_NAMESPACE):
-        url = self._build_url("namespaces/%s/buildconfigs/%s/" % (namespace, build_config_id))
+    def get_build_config(self, build_config_id):
+        url = self._build_url("buildconfigs/%s/" % build_config_id)
         response = self._get(url)
         build_config = response.json()
         return build_config
 
-    def create_build_config(self, build_config_json, namespace=DEFAULT_NAMESPACE):
+    def create_build_config(self, build_config_json):
         """
         :return:
         """
-        url = self._build_url("namespaces/%s/buildconfigs/" % namespace)
+        url = self._build_url("buildconfigs/")
         return self._post(url, data=build_config_json,
                           headers={"Content-Type": "application/json"})
 
-    def update_build_config(self, build_config_id, build_config_json, namespace=DEFAULT_NAMESPACE):
-        url = self._build_url("namespaces/%s/buildconfigs/%s" % (namespace, build_config_id))
+    def update_build_config(self, build_config_id, build_config_json):
+        url = self._build_url("buildconfigs/%s" % build_config_id)
         response = self._put(url, data=build_config_json,
                              headers={"Content-Type": "application/json"})
         check_response(response)
         return response
 
-    def instantiate_build_config(self, build_config_id, namespace=DEFAULT_NAMESPACE):
-        url = self._build_url("namespaces/%s/buildconfigs/%s/instantiate" %
-                              (namespace, build_config_id))
+    def instantiate_build_config(self, build_config_id):
+        url = self._build_url("buildconfigs/%s/instantiate" % build_config_id)
         data = json.dumps({
             "kind": "BuildRequest",
             "apiVersion": self._os_api_version,
@@ -276,15 +281,15 @@ class Openshift(object):
         return self._post(url, data=data,
                           headers={"Content-Type": "application/json"})
 
-    def start_build(self, build_config_id, namespace=DEFAULT_NAMESPACE):
+    def start_build(self, build_config_id):
         """
         :return:
         """
-        return self.instantiate_build_config(build_config_id, namespace=namespace)
+        return self.instantiate_build_config(build_config_id)
 
-    def wait_for_new_build_config_instance(self, build_config_id, prev_version, namespace=DEFAULT_NAMESPACE):
+    def wait_for_new_build_config_instance(self, build_config_id, prev_version):
         logger.info("waiting for build config %s to get instantiated", build_config_id)
-        for changetype, obj in self.watch_resource(namespace, "buildconfigs", build_config_id):
+        for changetype, obj in self.watch_resource("buildconfigs", build_config_id):
             if changetype == WATCH_MODIFIED:
                 version = graceful_chain_get(obj, 'status', 'lastVersion')
                 if not isinstance(version, numbers.Integral):
@@ -300,8 +305,7 @@ class Openshift(object):
 
         raise OsbsResponseException("New BuildConfig instance not found")
 
-    def logs(self, build_id, follow=False, build_json=None, wait_if_missing=False,
-             namespace=DEFAULT_NAMESPACE):
+    def logs(self, build_id, follow=False, build_json=None, wait_if_missing=False):
         """
         provide logs from build
 
@@ -309,12 +313,11 @@ class Openshift(object):
         :param follow: bool, fetch logs as they come?
         :param build_json: dict, to save one get-build query
         :param wait_if_missing: bool, if build doesn't exist, wait
-        :param namespace: str
         :return: None, str or iterator
         """
         # does build exist?
         try:
-            build_json = build_json or self.get_build(build_id, namespace=namespace).json()
+            build_json = build_json or self.get_build(build_id).json()
         except OsbsResponseException as ex:
             if ex.status_code == 404:
                 if not wait_if_missing:
@@ -323,7 +326,7 @@ class Openshift(object):
                 raise
 
         if follow or wait_if_missing:
-            build_json = self.wait_for_build_to_get_scheduled(build_id, namespace=namespace)
+            build_json = self.wait_for_build_to_get_scheduled(build_id)
 
         br = BuildResponse(build_json)
 
@@ -331,7 +334,7 @@ class Openshift(object):
         if br.is_pending():
             return
 
-        buildlogs_url = self._build_url("namespaces/%s/builds/%s/log/" % (namespace, build_id),
+        buildlogs_url = self._build_url("builds/%s/log/" % build_id,
                                         follow=(1 if follow else 0))
         response = self._get(buildlogs_url, stream=follow, headers={'Connection': 'close'})
         check_response(response)
@@ -340,7 +343,7 @@ class Openshift(object):
             return response.iter_lines()
         return response.content
 
-    def list_builds(self, build_config_id=None, namespace=DEFAULT_NAMESPACE):
+    def list_builds(self, build_config_id=None):
         """
 
         :return:
@@ -348,51 +351,48 @@ class Openshift(object):
         query = {}
         if build_config_id is not None:
             query['labelSelector'] = '%s=%s' % ('buildconfig', build_config_id)
-        url = self._build_url("namespaces/%s/builds/" % namespace, **query)
+        url = self._build_url("builds/", **query)
         return self._get(url)
 
-    def get_build(self, build_id, namespace=DEFAULT_NAMESPACE):
+    def get_build(self, build_id):
         """
 
         :return:
         """
-        url = self._build_url("namespaces/%s/builds/%s/" % (namespace, build_id))
+        url = self._build_url("builds/%s/" % build_id)
         response = self._get(url)
         check_response(response)
         return response
 
-    def create_resource_quota(self, name, quota_json,
-                              namespace=DEFAULT_NAMESPACE):
+    def create_resource_quota(self, name, quota_json):
         """
         Prevent builds being scheduled and wait for running builds to finish.
 
         :return:
         """
 
-        url = self._build_k8s_url("namespaces/%s/resourcequotas/" % namespace)
+        url = self._build_k8s_url("resourcequotas/")
         response = self._post(url, data=json.dumps(quota_json),
                               headers={"Content-Type": "application/json"})
         if response.status_code == httplib.CONFLICT:
-            url = self._build_k8s_url("namespaces/%s/resourcequotas/%s" %
-                                      (namespace, name))
+            url = self._build_k8s_url("resourcequotas/%s" % name)
             response = self._put(url, data=json.dumps(quota_json),
                                  headers={"Content-Type": "application/json"})
 
         check_response(response)
         return response
 
-    def delete_resource_quota(self, name, namespace=DEFAULT_NAMESPACE):
-        url = self._build_k8s_url("namespaces/%s/resourcequotas/%s" %
-                                  (namespace, name))
+    def delete_resource_quota(self, name):
+        url = self._build_k8s_url("resourcequotas/%s" % name)
         response = self._delete(url)
         if response.status_code != httplib.NOT_FOUND:
             check_response(response)
 
         return response
 
-    def watch_resource(self, namespace, resource_type, resource_name, **request_args):
-        path = "watch/namespaces/%s/%s/%s/" % (namespace, resource_type, resource_name)
-        url = self._build_url(path, **request_args)
+    def watch_resource(self, resource_type, resource_name, **request_args):
+        path = "watch/namespaces/%s/%s/%s/" % (self.namespace, resource_type, resource_name)
+        url = self._build_url(path, _prepend_namespace=False, **request_args)
 
         with self._get(url, stream=True, headers={'Connection': 'close'}) as response:
             check_response(response)
@@ -414,14 +414,14 @@ class Openshift(object):
 
                 yield (j['type'].lower(), j['object'])
 
-    def wait(self, build_id, states, namespace=DEFAULT_NAMESPACE):
+    def wait(self, build_id, states):
         """
         :param build_id: wait for build to finish
 
         :return:
         """
         logger.info("watching build '%s'", build_id)
-        for changetype, obj in self.watch_resource(namespace, "builds", build_id):
+        for changetype, obj in self.watch_resource("builds", build_id):
             try:
                 obj_name = obj["metadata"]["name"]
             except KeyError:
@@ -456,11 +456,10 @@ class Openshift(object):
         check_response(response)
         raise OsbsWatchBuildNotFound("build '%s' was not found and response stream ended" % build_id)
 
-    def wait_for_build_to_finish(self, build_id, namespace=DEFAULT_NAMESPACE):
+    def wait_for_build_to_finish(self, build_id):
         for retry in range(1, 10):
             try:
-                build_response = self.wait(build_id, BUILD_FINISHED_STATES,
-                                           namespace)
+                build_response = self.wait(build_id, BUILD_FINISHED_STATES)
                 return build_response
             except OsbsWatchBuildNotFound:
                 # this is woraround for https://github.com/openshift/origin/issues/2348
@@ -468,9 +467,8 @@ class Openshift(object):
                 continue
         raise OsbsException("Failed to wait for a build: %s" % build_id)
 
-    def wait_for_build_to_get_scheduled(self, build_id, namespace=DEFAULT_NAMESPACE):
-        build_response = self.wait(build_id, BUILD_FINISHED_STATES + BUILD_RUNNING_STATES,
-                                   namespace)
+    def wait_for_build_to_get_scheduled(self, build_id):
+        build_response = self.wait(build_id, BUILD_FINISHED_STATES + BUILD_RUNNING_STATES)
         return build_response
 
     @staticmethod
@@ -482,8 +480,7 @@ class Openshift(object):
     def _replace_metadata_things(metadata, things, values):
         metadata[things] = values
 
-    def adjust_attributes_on_object(self, collection, name, things, values,
-                                    how, namespace=DEFAULT_NAMESPACE):
+    def adjust_attributes_on_object(self, collection, name, things, values, how):
         """
         adjust labels or annotations on object
 
@@ -496,81 +493,66 @@ class Openshift(object):
         :param values: dict, values to set
         :param how: callable, how to adjust the values e.g.
                     self._replace_metadata_things
-        :param namespace: str
         :return:
         """
-        url = self._build_url("namespaces/%s/%s/%s" % (namespace, collection,
-                                                       name))
+        url = self._build_url("%s/%s" % (collection, name))
         build_json = self._get(url).json()
         how(build_json['metadata'], things, values)
         response = self._put(url, data=json.dumps(build_json), use_json=True)
         check_response(response)
         return response
 
-    def update_labels_on_build(self, build_id, labels,
-                               namespace=DEFAULT_NAMESPACE):
+    def update_labels_on_build(self, build_id, labels):
         return self.adjust_attributes_on_object('builds', build_id,
                                                 'labels', labels,
-                                                self._update_metadata_things,
-                                                namespace=namespace)
+                                                self._update_metadata_things)
 
-    def set_labels_on_build(self, build_id, labels,
-                            namespace=DEFAULT_NAMESPACE):
+    def set_labels_on_build(self, build_id, labels):
         return self.adjust_attributes_on_object('builds', build_id,
                                                 'labels', labels,
-                                                self._replace_metadata_things,
-                                                namespace=namespace)
+                                                self._replace_metadata_things)
 
-    def update_labels_on_build_config(self, build_config_id, labels,
-                                      namespace=DEFAULT_NAMESPACE):
+    def update_labels_on_build_config(self, build_config_id, labels):
         return self.adjust_attributes_on_object('buildconfigs', build_config_id,
                                                 'labels', labels,
-                                                self._update_metadata_things,
-                                                namespace=namespace)
+                                                self._update_metadata_things)
 
-    def set_labels_on_build_config(self, build_config_id, labels,
-                                   namespace=DEFAULT_NAMESPACE):
+    def set_labels_on_build_config(self, build_config_id, labels):
         return self.adjust_attributes_on_object('buildconfigs', build_config_id,
                                                 'labels', labels,
-                                                self._replace_metadata_things,
-                                                namespace=namespace)
+                                                self._replace_metadata_things)
 
-    def update_annotations_on_build(self, build_id, annotations,
-                                    namespace=DEFAULT_NAMESPACE):
+    def update_annotations_on_build(self, build_id, annotations):
         """
         set annotations on build object
 
         :param build_id: str, id of build
         :param annotations: dict, annotations to set
-        :param namespace: str
         :return:
         """
         return self.adjust_attributes_on_object('builds', build_id,
                                                 'annotations', annotations,
-                                                self._update_metadata_things,
-                                                namespace=namespace)
+                                                self._update_metadata_things)
 
-    def set_annotations_on_build(self, build_id, annotations,
-                                 namespace=DEFAULT_NAMESPACE):
+    def set_annotations_on_build(self, build_id, annotations):
         return self.adjust_attributes_on_object('builds', build_id,
                                                 'annotations', annotations,
-                                                self._replace_metadata_things,
-                                                namespace=namespace)
+                                                self._replace_metadata_things)
 
-    def get_image_stream(self, stream_id, namespace=DEFAULT_NAMESPACE):
-        url = self._build_url("namespaces/%s/imagestreams/%s" % (namespace, stream_id))
+    def get_image_stream(self, stream_id):
+        url = self._build_url("imagestreams/%s" % stream_id)
         response = self._get(url)
         check_response(response)
         return response
 
-    def create_image_stream(self, stream_json, namespace=DEFAULT_NAMESPACE):
-        url = self._build_url("namespaces/%s/imagestreams/" % namespace)
+    def create_image_stream(self, stream_json):
+        url = self._build_url("imagestreams/")
         response = self._post(url, data=stream_json,
                               headers={"Content-Type": "application/json"})
         check_response(response)
         return response
 
-    def import_image(self, name, namespace=DEFAULT_NAMESPACE):
+    def import_image(self, name):
         """
         Import image tags from a Docker registry into an ImageStream
 
@@ -578,8 +560,7 @@ class Openshift(object):
         """
 
         # Get the JSON for the ImageStream
-        url = self._build_url("namespaces/%s/imagestreams/%s" % (namespace,
-                                                                 name))
+        url = self._build_url("imagestreams/%s" % name)
         imagestream_json = self._get(url).json()
         logger.debug("imagestream: %r", imagestream_json)
         spec = imagestream_json.get('spec', {})
@@ -600,7 +581,7 @@ class Openshift(object):
 
         # Watch for it to be updated
         resource_version = imagestream_json['metadata']['resourceVersion']
-        for changetype, obj in self.watch_resource(namespace, "imagestreams", name,
+        for changetype, obj in self.watch_resource("imagestreams", name,
                                                    resourceVersion=resource_version):
             logger.info("Change type: %r", changetype)
             if changetype == WATCH_DELETED:
@@ -627,14 +608,14 @@ class Openshift(object):
 
         return False
 
-    def dump_resource(self, resource_type, namespace=DEFAULT_NAMESPACE):
-        url = self._build_url("namespaces/%s/%s" % (namespace, resource_type))
+    def dump_resource(self, resource_type):
+        url = self._build_url("%s" % resource_type)
         response = self._get(url)
         check_response(response)
         return response
 
-    def restore_resource(self, resource_type, resource, namespace=DEFAULT_NAMESPACE):
-        url = self._build_url("namespaces/%s/%s" % (namespace, resource_type))
+    def restore_resource(self, resource_type, resource):
+        url = self._build_url("%s" % resource_type)
         response = self._post(url, data=json.dumps(resource),
                               headers={"Content-Type": "application/json"})
         check_response(response)

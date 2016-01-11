@@ -22,7 +22,7 @@ except ImportError:
     from urllib.parse import urljoin
 
 from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
-                            GENERAL_CONFIGURATION_SECTION)
+                            GENERAL_CONFIGURATION_SECTION, DEFAULT_NAMESPACE)
 
 
 logger = logging.getLogger(__name__)
@@ -194,7 +194,8 @@ class Configuration(object):
         return self._get_value("yum_repourls", self.conf_section, "yum_repourls")
 
     def get_namespace(self):
-        return self._get_value("namespace", self.conf_section, "namespace")
+        return self._get_value("namespace", self.conf_section, "namespace",
+                               default=DEFAULT_NAMESPACE)
 
     def get_kojiroot(self):
         return self._get_value("koji_root", self.conf_section, "koji_root")

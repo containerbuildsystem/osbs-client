@@ -22,7 +22,7 @@ from osbs.api import OSBS
 from osbs.cli.render import TablePrinter
 from osbs.conf import Configuration
 from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
-                            CLI_LIST_BUILDS_DEFAULT_COLS, PY3, BACKUP_RESOURCES)
+                            CLI_LIST_BUILDS_DEFAULT_COLS, PY3, BACKUP_RESOURCES, DEFAULT_NAMESPACE)
 from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsAuthException, OsbsResponseException
 from osbs.cli.capture import setup_json_capture
 from osbs.utils import strip_registry_from_image, paused_builds, TarReader, TarWriter
@@ -35,7 +35,7 @@ def print_json_nicely(decoded_json):
 
 
 def cmd_list_builds(args, osbs):
-    builds = osbs.list_builds(namespace=args.namespace)
+    builds = osbs.list_builds()
     if args.output == 'json':
         json_output = []
         for build in builds:
@@ -86,7 +86,7 @@ def cmd_list_builds(args, osbs):
 
 
 def cmd_get_build(args, osbs):
-    build = osbs.get_build(args.BUILD_ID[0], namespace=args.namespace)
+    build = osbs.get_build(args.BUILD_ID[0])
     build_json = build.json
     if args.output == 'json':
         print_json_nicely(build_json)
@@ -174,7 +174,7 @@ V2 DIGESTS
 
 
 def cmd_cancel_build(args, osbs):
-    osbs.cancel_build(args.BUILD_ID[0], namespace=args.namespace)
+    osbs.cancel_build(args.BUILD_ID[0])
 
 
 def cmd_build(args, osbs):
@@ -188,14 +188,12 @@ def cmd_build(args, osbs):
         target=osbs.build_conf.get_koji_target(),
         architecture=osbs.build_conf.get_architecture(),
         yum_repourls=osbs.build_conf.get_yum_repourls(),
-        namespace=osbs.build_conf.get_namespace(),
     )
     build_id = build.get_build_name()
     # we need to wait for kubelet to schedule the build, otherwise it's 500
-    namespace = osbs.build_conf.get_namespace()
-    build = osbs.wait_for_build_to_get_scheduled(build_id, namespace=namespace)
+    build = osbs.wait_for_build_to_get_scheduled(build_id)
     if not args.no_logs:
-        build_logs = osbs.get_build_logs(build_id, follow=True, namespace=namespace)
+        build_logs = osbs.get_build_logs(build_id, follow=True)
         if not isinstance(build_logs, collections.Iterable):
             logger.error("'%s' is not iterable; can't display logs", build_logs)
             return
@@ -222,11 +220,10 @@ def cmd_build_logs(args, osbs):
         return
 
     if args.from_docker_build:
-        logs = osbs.get_docker_build_logs(build_id, namespace=args.namespace)
+        logs = osbs.get_docker_build_logs(build_id)
     else:
         logs = osbs.get_build_logs(build_id, follow=follow,
-                                   wait_if_missing=args.wait_if_missing,
-                                   namespace=args.namespace)
+                                   wait_if_missing=args.wait_if_missing)
         if follow:
             for line in logs:
                 print(line)
@@ -235,7 +232,7 @@ def cmd_build_logs(args, osbs):
 
 
 def cmd_watch_build(args, osbs):
-    build_response = osbs.wait_for_build_to_finish(args.BUILD_ID[0], namespace=args.namespace)
+    build_response = osbs.wait_for_build_to_finish(args.BUILD_ID[0])
     if args.output == 'text':
         pass
     elif args.output == 'json':
@@ -275,7 +272,7 @@ def cmd_get_user(args, osbs):
 
 
 def cmd_get_build_image_id(args, osbs):
-    pod = osbs.get_pod_for_build(args.BUILD_ID[0], namespace=args.namespace)
+    pod = osbs.get_pod_for_build(args.BUILD_ID[0])
     if args.output == 'json':
         json_output = pod.get_container_image_ids()
         print_json_nicely(json_output)
@@ -288,11 +285,11 @@ def cmd_get_build_image_id(args, osbs):
 
 
 def cmd_pause_builds(args, osbs):
-    osbs.pause_builds(namespace=args.namespace)
+    osbs.pause_builds()
 
 
 def cmd_resume_builds(args, osbs):
-    osbs.resume_builds(namespace=args.namespace)
+    osbs.resume_builds()
 
 
 def cmd_backup(args, osbs):
@@ -305,11 +302,11 @@ def cmd_backup(args, osbs):
     else:
         outfile = dirname + ".tar.bz2"
 
-    with paused_builds(osbs, args.namespace):
+    with paused_builds(osbs):
         with TarWriter(outfile, dirname) as t:
             for resource_type in BACKUP_RESOURCES:
                 logger.info("dumping %s", resource_type)
-                resources = osbs.dump_resource(resource_type, namespace=args.namespace)
+                resources = osbs.dump_resource(resource_type)
                 t.write_file(resource_type + ".json", json.dumps(resources).encode('ascii'))
 
     if not hasattr(outfile, "write"):
@@ -323,7 +320,7 @@ def cmd_restore(args, osbs):
         infile = args.BACKUP_ARCHIVE
     asciireader = codecs.getreader('ascii')
 
-    with paused_builds(osbs, args.namespace):
+    with paused_builds(osbs):
         for f in TarReader(infile):
             resource_type = os.path.basename(f.filename).split('.')[0]
             if resource_type not in BACKUP_RESOURCES:
@@ -332,8 +329,7 @@ def cmd_restore(args, osbs):
 
             logger.info("restoring %s", resource_type)
             osbs.restore_resource(resource_type, json.load(asciireader(f.fileobj)),
-                                                 continue_on_error=args.continue_on_error,
-                                                 namespace=args.namespace)
+                                                 continue_on_error=args.continue_on_error)
             f.fileobj.close()
 
     logger.info("backup recovery complete!")
@@ -366,8 +362,7 @@ def cli():
     subparsers = parser.add_subparsers(help='commands')
 
     list_builds_parser = subparsers.add_parser(str_on_2_unicode_on_3('list-builds'), help='list builds in OSBS',
-                                               description="list all builds in specified namespace "
-                                               "(to list all builds in all namespaces, use --namespace=\"\")")
+                                               description="list all builds in the namespace")
     list_builds_parser.add_argument("FILTER", help="list only builds which contain provided string",
                                     nargs="?")
     list_builds_parser.add_argument("--columns",
@@ -518,9 +513,8 @@ def cli():
                         help="don't supply oauth tokens to requests")
     parser.add_argument("--output", choices=["json", "text"], default="text",
                         help="pick output type (default=text)")
-    parser.add_argument("--namespace", help="name of namespace to query against "
-                                            "(you may require blank namespace with --namespace=\"\")",
-                        metavar="NAMESPACE", action="store", default="default")
+    parser.add_argument("--namespace", help="name of namespace to query against",
+                        metavar="NAMESPACE", action="store", default=DEFAULT_NAMESPACE)
     parser.add_argument("--capture-dir", metavar="DIR", action="store",
                         help="capture JSON responses and save them in DIR")
     args = parser.parse_args()

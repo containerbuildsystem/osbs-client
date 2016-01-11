@@ -12,8 +12,7 @@ from pkg_resources import parse_version
 import pytest
 import six
 
-from osbs.constants import (PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE,
-                            SIMPLE_BUILD_TYPE, DEFAULT_NAMESPACE)
+from osbs.constants import PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE, SIMPLE_BUILD_TYPE
 from osbs.build.build_request import BuildRequest, SimpleBuild, ProductionBuild
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
@@ -79,8 +78,7 @@ class TestOSBS(object):
                        user=TEST_USER,
                        component=TEST_COMPONENT,
                        target=None,
-                       architecture=TEST_ARCH,
-                       namespace=DEFAULT_NAMESPACE)
+                       architecture=TEST_ARCH)
             .once()
             .and_return(None))
         response = osbs.create_build(git_uri=TEST_GIT_URI,

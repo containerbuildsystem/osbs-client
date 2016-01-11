@@ -195,14 +195,14 @@ def checkout_git_repo(git_uri, git_ref, git_branch=None):
 
 
 @contextlib.contextmanager
-def paused_builds(osbs, namespace):
+def paused_builds(osbs):
     logger.info("pausing builds")
-    osbs.pause_builds(namespace=namespace)
+    osbs.pause_builds()
     try:
         yield osbs
     finally:
         logger.info("resuming builds")
-        osbs.resume_builds(namespace=namespace)
+        osbs.resume_builds()
 
 
 def looks_like_git_hash(git_ref):

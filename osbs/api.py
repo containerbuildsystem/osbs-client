@@ -12,13 +12,14 @@ import logging
 import os
 import sys
 import time
+import warnings
 from functools import wraps
 
 from .constants import SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE, PROD_WITH_SECRET_BUILD_TYPE
 from osbs.build.build_request import BuildManager
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
-from osbs.constants import DEFAULT_NAMESPACE, PROD_BUILD_TYPE
+from osbs.constants import PROD_BUILD_TYPE
 from osbs.core import Openshift
 from osbs.exceptions import OsbsException, OsbsValidationException
 # import utils in this way, so that we can mock standalone functions with flexmock
@@ -29,6 +30,9 @@ from osbs import utils
 def osbsapi(func):
     @wraps(func)
     def catch_exceptions(*args, **kwargs):
+        # XXX: remove this in the future
+        if kwargs.pop("namespace", None):
+            warnings.warn("OSBS.%s: the 'namespace' argument is no longer supported" % func.__name__)
         try:
             return func(*args, **kwargs)
         except OsbsException:
@@ -74,7 +78,8 @@ class OSBS(object):
                             kerberos_principal=self.os_conf.get_kerberos_principal(),
                             kerberos_ccache=self.os_conf.get_kerberos_ccache(),
                             use_auth=self.os_conf.get_use_auth(),
-                            verify_ssl=self.os_conf.get_verify_ssl())
+                            verify_ssl=self.os_conf.get_verify_ssl(),
+                            namespace=self.os_conf.get_namespace())
         self._bm = None
 
     # some calls might not need build manager so let's make it lazy
@@ -85,8 +90,8 @@ class OSBS(object):
         return self._bm
 
     @osbsapi
-    def list_builds(self, namespace=DEFAULT_NAMESPACE):
-        response = self.os.list_builds(namespace=namespace)
+    def list_builds(self):
+        response = self.os.list_builds()
         serialized_response = response.json()
         build_list = []
         for build in serialized_response["items"]:
@@ -94,24 +99,23 @@ class OSBS(object):
         return build_list
 
     @osbsapi
-    def get_build(self, build_id, namespace=DEFAULT_NAMESPACE):
-        response = self.os.get_build(build_id, namespace=namespace)
+    def get_build(self, build_id):
+        response = self.os.get_build(build_id)
         build_response = BuildResponse(response.json())
         return build_response
 
     @osbsapi
-    def cancel_build(self, build_id, namespace=DEFAULT_NAMESPACE):
-        response = self.os.cancel_build(build_id, namespace=namespace)
+    def cancel_build(self, build_id):
+        response = self.os.cancel_build(build_id)
         build_response = BuildResponse(response.json())
         return build_response
 
     @osbsapi
-    def get_pod_for_build(self, build_id, namespace=DEFAULT_NAMESPACE):
+    def get_pod_for_build(self, build_id):
         """
         :return: PodResponse object for pod relating to the build
         """
-        pods = self.os.list_pods(label='openshift.io/build.name=%s' % build_id,
-                                 namespace=namespace)
+        pods = self.os.list_pods(label='openshift.io/build.name=%s' % build_id)
         serialized_response = pods.json()
         pod_list = [PodResponse(pod) for pod in serialized_response["items"]]
         if not pod_list:
@@ -146,24 +150,21 @@ class OSBS(object):
         return build_request
 
     @osbsapi
-    def create_build_from_buildrequest(self, build_request, namespace=DEFAULT_NAMESPACE):
+    def create_build_from_buildrequest(self, build_request):
         """
         render provided build_request and submit build from it
 
         :param build_request: instance of build.build_request.BuildRequest
-        :param namespace: str, place/context where the build should be executed
         :return: instance of build.build_response.BuildResponse
         """
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         build = build_request.render()
-        response = self.os.create_build(json.dumps(build), namespace=namespace)
+        response = self.os.create_build(json.dumps(build))
         build_response = BuildResponse(response.json())
         return build_response
 
-    def _get_running_builds_for_build_config(self, build_config_id, namespace=DEFAULT_NAMESPACE):
-        all_builds_for_bc = self.os.list_builds(
-            build_config_id=build_config_id,
-            namespace=namespace).json()['items']
+    def _get_running_builds_for_build_config(self, build_config_id):
+        all_builds_for_bc = self.os.list_builds(build_config_id=build_config_id).json()['items']
         running = []
         for b in all_builds_for_bc:
             br = BuildResponse(b)
@@ -180,7 +181,7 @@ class OSBS(object):
             (build_config_name, builds)
         return msg
 
-    def _create_build_config_and_build(self, build_request, namespace):
+    def _create_build_config_and_build(self, build_request):
         # TODO: test this method more thoroughly
         build_json = build_request.render()
         api_version = build_json['apiVersion']
@@ -191,7 +192,7 @@ class OSBS(object):
         build_config_name = build_json['metadata']['name']
 
         # check if a build already exists for this config; if so then raise
-        running_builds = self._get_running_builds_for_build_config(build_config_name, namespace)
+        running_builds = self._get_running_builds_for_build_config(build_config_name)
         rb_len = len(running_builds)
         if rb_len > 0:
             if rb_len == 1:
@@ -213,22 +214,22 @@ class OSBS(object):
         if existing_bc is not None:
             utils.buildconfig_update(existing_bc, build_json)
             logger.debug('build config for %s already exists, updating...', build_config_name)
-            self.os.update_build_config(build_config_name, json.dumps(existing_bc), namespace)
+            self.os.update_build_config(build_config_name, json.dumps(existing_bc))
         else:
             # if it doesn't exist, then create it
             logger.debug('build config for %s doesn\'t exist, creating...', build_config_name)
-            bc = self.os.create_build_config(json.dumps(build_json), namespace=namespace).json()
+            bc = self.os.create_build_config(json.dumps(build_json)).json()
             # if there's an "ImageChangeTrigger" on the BuildConfig and "From" is of type
             #  "ImageStreamTag", the build will be scheduled automatically
             #  see https://github.com/projectatomic/osbs-client/issues/205
             if build_request.is_auto_instantiated():
                 prev_version = bc['status']['lastVersion']
                 build_id = self.os.wait_for_new_build_config_instance(build_config_name,
-                                                                      prev_version, namespace)
-                build = BuildResponse(self.os.get_build(build_id, namespace).json())
+                                                                      prev_version)
+                build = BuildResponse(self.os.get_build(build_id).json())
 
         if build is None:
-            response = self.os.start_build(build_config_name, namespace=namespace)
+            response = self.os.start_build(build_config_name)
             build = BuildResponse(response.json())
         return build
 
@@ -238,7 +239,7 @@ class OSBS(object):
                           user, component,
                           target,      # may be None
                           architecture=None, yum_repourls=None,
-                          namespace=DEFAULT_NAMESPACE, **kwargs):
+                          **kwargs):
         """
         Create a production build
 
@@ -250,7 +251,6 @@ class OSBS(object):
         :param target: str, koji target (may be None)
         :param architecture: str, build architecture
         :param yum_repourls: list, URLs for yum repos
-        :param namespace: str, OpenShift namespace
         :return: BuildResponse instance
         """
         df_parser = utils.get_df_parser(git_uri, git_ref, git_branch=git_branch)
@@ -291,30 +291,25 @@ class OSBS(object):
             builder_build_json_dir=self.build_conf.get_builder_build_json_store()
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
-        response = self._create_build_config_and_build(build_request, namespace)
+        response = self._create_build_config_and_build(build_request)
         logger.debug(response.json)
         return response
 
     @osbsapi
     def create_prod_with_secret_build(self, git_uri, git_ref, git_branch, user, component,
-                                      target, architecture=None, yum_repourls=None,
-                                      namespace=DEFAULT_NAMESPACE, **kwargs):
+                                      target, architecture=None, yum_repourls=None, **kwargs):
         return self.create_prod_build(git_uri, git_ref, git_branch, user, component, target,
-                                      architecture, yum_repourls=yum_repourls,
-                                      namespace=namespace, **kwargs)
+                                      architecture, yum_repourls=yum_repourls, **kwargs)
 
     @osbsapi
     def create_prod_without_koji_build(self, git_uri, git_ref, git_branch, user, component,
-                                       architecture=None, yum_repourls=None,
-                                       namespace=DEFAULT_NAMESPACE, **kwargs):
+                                       architecture=None, yum_repourls=None, **kwargs):
         return self.create_prod_build(git_uri, git_ref, git_branch, user, component, None,
-                                      architecture, yum_repourls=yum_repourls,
-                                      namespace=namespace, **kwargs)
+                                      architecture, yum_repourls=yum_repourls, **kwargs)
 
     @osbsapi
     def create_simple_build(self, git_uri, git_ref, user, component, tag,
-                            yum_repourls=None, namespace=DEFAULT_NAMESPACE,
-                            **kwargs):
+                            yum_repourls=None, **kwargs):
         build_request = self.get_build_request(SIMPLE_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
@@ -330,16 +325,15 @@ class OSBS(object):
             use_auth=self.build_conf.get_builder_use_auth(),
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
-        response = self._create_build_config_and_build(build_request, namespace)
+        response = self._create_build_config_and_build(build_request)
         logger.debug(response.json)
         return response
 
     @osbsapi
-    def create_build(self, namespace=DEFAULT_NAMESPACE, **kwargs):
+    def create_build(self, **kwargs):
         """
         take input args, create build request from provided build type and submit the build
 
-        :param namespace: str, place/context where the build should be executed
         :param kwargs: keyword args for build
         :return: instance of BuildRequest
         """
@@ -349,17 +343,16 @@ class OSBS(object):
                           PROD_WITH_SECRET_BUILD_TYPE):
             kwargs.setdefault('git_branch', None)
             kwargs.setdefault('target', None)
-            return self.create_prod_build(namespace=namespace, **kwargs)
+            return self.create_prod_build(**kwargs)
         elif build_type == SIMPLE_BUILD_TYPE:
-            return self.create_simple_build(namespace=namespace, **kwargs)
+            return self.create_simple_build(**kwargs)
         elif build_type == PROD_WITH_SECRET_BUILD_TYPE:
-            return self.create_prod_with_secret_build(namespace=namespace, **kwargs)
+            return self.create_prod_with_secret_build(**kwargs)
         else:
             raise OsbsException("Unknown build type: '%s'" % build_type)
 
     @osbsapi
-    def get_build_logs(self, build_id, follow=False, build_json=None, wait_if_missing=False,
-                       namespace=DEFAULT_NAMESPACE):
+    def get_build_logs(self, build_id, follow=False, build_json=None, wait_if_missing=False):
         """
         provide logs from build
 
@@ -367,15 +360,13 @@ class OSBS(object):
         :param follow: bool, fetch logs as they come?
         :param build_json: dict, to save one get-build query
         :param wait_if_missing: bool, if build doesn't exist, wait
-        :param namespace: str
         :return: None, str or iterator
         """
         return self.os.logs(build_id, follow=follow, build_json=build_json,
-                            wait_if_missing=wait_if_missing, namespace=namespace)
+                            wait_if_missing=wait_if_missing)
 
     @osbsapi
-    def get_docker_build_logs(self, build_id, decode_logs=True, build_json=None,
-                              namespace=DEFAULT_NAMESPACE):
+    def get_docker_build_logs(self, build_id, decode_logs=True, build_json=None):
         """
         get logs provided by "docker build"
 
@@ -384,11 +375,10 @@ class OSBS(object):
             { "stream": "line" }
             if this arg is set to True, it decodes logs to human readable form
         :param build_json: dict, to save one get-build query
-        :param namespace: str
         :return: str
         """
         if not build_json:
-            build = self.os.get_build(build_id, namespace=namespace)
+            build = self.os.get_build(build_id)
             build_response = BuildResponse(build.json())
         else:
             build_response = BuildResponse(build_json)
@@ -399,64 +389,54 @@ class OSBS(object):
         logger.warning("build haven't finished yet")
 
     @osbsapi
-    def wait_for_build_to_finish(self, build_id, namespace=DEFAULT_NAMESPACE):
-        response = self.os.wait_for_build_to_finish(build_id, namespace=namespace)
+    def wait_for_build_to_finish(self, build_id):
+        response = self.os.wait_for_build_to_finish(build_id)
         build_response = BuildResponse(response)
         return build_response
 
     @osbsapi
-    def wait_for_build_to_get_scheduled(self, build_id, namespace=DEFAULT_NAMESPACE):
-        response = self.os.wait_for_build_to_get_scheduled(build_id, namespace=namespace)
+    def wait_for_build_to_get_scheduled(self, build_id):
+        response = self.os.wait_for_build_to_get_scheduled(build_id)
         build_response = BuildResponse(response)
         return build_response
 
     @osbsapi
-    def update_labels_on_build(self, build_id, labels,
-                               namespace=DEFAULT_NAMESPACE):
-        response = self.os.update_labels_on_build(build_id, labels,
-                                                  namespace=namespace)
+    def update_labels_on_build(self, build_id, labels):
+        response = self.os.update_labels_on_build(build_id, labels)
         return response
 
     @osbsapi
-    def set_labels_on_build(self, build_id, labels, namespace=DEFAULT_NAMESPACE):
-        response = self.os.set_labels_on_build(build_id, labels, namespace=namespace)
+    def set_labels_on_build(self, build_id, labels):
+        response = self.os.set_labels_on_build(build_id, labels)
         return response
 
     @osbsapi
-    def update_labels_on_build_config(self, build_config_id, labels,
-                                      namespace=DEFAULT_NAMESPACE):
-        response = self.os.update_labels_on_build_config(build_config_id,
-                                                         labels,
-                                                         namespace=namespace)
+    def update_labels_on_build_config(self, build_config_id, labels):
+        response = self.os.update_labels_on_build_config(build_config_id, labels)
         return response
 
     @osbsapi
-    def set_labels_on_build_config(self, build_config_id, labels,
-                                   namespace=DEFAULT_NAMESPACE):
-        response = self.os.set_labels_on_build_config(build_config_id,
-                                                      labels,
-                                                      namespace=namespace)
+    def set_labels_on_build_config(self, build_config_id, labels):
+        response = self.os.set_labels_on_build_config(build_config_id, labels)
         return response
 
     @osbsapi
-    def update_annotations_on_build(self, build_id, annotations,
-                                    namespace=DEFAULT_NAMESPACE):
-        return self.os.update_annotations_on_build(build_id, annotations,
-                                                   namespace=namespace)
+    def update_annotations_on_build(self, build_id, annotations):
+        return self.os.update_annotations_on_build(build_id, annotations)
 
     @osbsapi
-    def set_annotations_on_build(self, build_id, annotations, namespace=DEFAULT_NAMESPACE):
-        return self.os.set_annotations_on_build(build_id, annotations, namespace=namespace)
+    def set_annotations_on_build(self, build_id, annotations):
+        return self.os.set_annotations_on_build(build_id, annotations)
 
     @osbsapi
-    def import_image(self, name, namespace=DEFAULT_NAMESPACE):
+    def import_image(self, name):
         """
         Import image tags from a Docker registry into an ImageStream
 
         :return: bool, whether new tags were imported
         """
 
-        return self.os.import_image(name, namespace=namespace)
+        return self.os.import_image(name)
 
     @osbsapi
     def get_token(self):
@@ -467,13 +447,12 @@ class OSBS(object):
         return self.os.get_user(username).json()
 
     @osbsapi
-    def get_image_stream(self, stream_id, namespace=DEFAULT_NAMESPACE):
-        return self.os.get_image_stream(stream_id, namespace)
+    def get_image_stream(self, stream_id):
+        return self.os.get_image_stream(stream_id)
 
     @osbsapi
     def create_image_stream(self, name, docker_image_repository,
-                            insecure_registry=False,
-                            namespace=DEFAULT_NAMESPACE):
+                            insecure_registry=False):
         """
         Create an ImageStream object
 
@@ -483,7 +462,6 @@ class OSBS(object):
         :param docker_image_repository: str, pull spec for docker image
                repository
         :param insecure_registry: bool, whether plain HTTP should be used
-        :param namespace: str, Kubernetes namespace
         :return: response
         """
         img_stream_file = os.path.join(self.os_conf.get_build_json_store(), 'image_stream.json')
@@ -495,11 +473,10 @@ class OSBS(object):
             insecure_annotation = 'openshift.io/image.insecureRepository'
             stream['metadata']['annotations'][insecure_annotation] = 'true'
 
-        return self.os.create_image_stream(json.dumps(stream),
-                                           namespace=namespace)
+        return self.os.create_image_stream(json.dumps(stream))
 
     @osbsapi
-    def pause_builds(self, namespace=DEFAULT_NAMESPACE):
+    def pause_builds(self):
         # First, set quota so 0 pods are allowed to be running
         quota_file = os.path.join(self.os_conf.get_build_json_store(),
                                   'pause_quota.json')
@@ -507,28 +484,28 @@ class OSBS(object):
             quota_json = json.load(fp)
 
         name = quota_json['metadata']['name']
-        self.os.create_resource_quota(name, quota_json, namespace=namespace)
+        self.os.create_resource_quota(name, quota_json)
 
         # Now wait for running builds to finish
         while True:
-            builds = self.list_builds(namespace=namespace)
+            builds = self.list_builds()
             running_builds = [build for build in builds if build.is_running()]
             if not running_builds:
                 break
 
             name = running_builds[0].get_build_name()
             logger.info("waiting for build to finish: %s", name)
-            self.wait_for_build_to_finish(name, namespace=namespace)
+            self.wait_for_build_to_finish(name)
 
     @osbsapi
-    def resume_builds(self, namespace=DEFAULT_NAMESPACE):
+    def resume_builds(self):
         quota_file = os.path.join(self.os_conf.get_build_json_store(),
                                   'pause_quota.json')
         with open(quota_file) as fp:
             quota_json = json.load(fp)
 
         name = quota_json['metadata']['name']
-        self.os.delete_resource_quota(name, namespace=namespace)
+        self.os.delete_resource_quota(name)
 
     # implements subset of OpenShift's export logic in pkg/cmd/cli/cmd/exporter.go
     @staticmethod
@@ -543,19 +520,18 @@ class OSBS(object):
                 utils.graceful_chain_del(t, 'imageChange', 'lastTrigerredImageID')
 
     @osbsapi
-    def dump_resource(self, resource_type, namespace=DEFAULT_NAMESPACE):
-        return self.os.dump_resource(resource_type, namespace=namespace).json()
+    def dump_resource(self, resource_type):
+        return self.os.dump_resource(resource_type).json()
 
     @osbsapi
-    def restore_resource(self, resource_type, resources, continue_on_error=False,
-                         namespace=DEFAULT_NAMESPACE):
+    def restore_resource(self, resource_type, resources, continue_on_error=False):
         nfailed = 0
         for r in resources["items"]:
             name = utils.graceful_chain_get(r, 'metadata', 'name') or '(no name)'
             logger.debug("restoring %s/%s", resource_type, name)
             try:
                 self._prepare_resource(resource_type, r)
-                self.os.restore_resource(resource_type, r, namespace=namespace)
+                self.os.restore_resource(resource_type, r)
             except Exception:
                 if continue_on_error:
                     logger.exception("failed to restore %s/%s", resource_type, name)
