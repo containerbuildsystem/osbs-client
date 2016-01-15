@@ -12,7 +12,8 @@ from pkg_resources import parse_version
 import pytest
 import six
 
-from osbs.constants import PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE, SIMPLE_BUILD_TYPE
+from osbs.constants import (PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE,
+                            SIMPLE_BUILD_TYPE, DEFAULT_NAMESPACE)
 from osbs.build.build_request import BuildRequest, SimpleBuild, ProductionBuild
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
@@ -58,6 +59,35 @@ class TestOSBS(object):
                                           TEST_GIT_BRANCH, TEST_USER,
                                           TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
         assert isinstance(response, BuildResponse)
+
+    def test_create_prod_build_missing_args(self, osbs):
+        class MockParser(object):
+            labels = {'Name': 'fedora23/something'}
+            baseimage = 'fedora23/python'
+        (flexmock(utils)
+            .should_receive('get_df_parser')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(MockParser()))
+        (flexmock(osbs.build_conf)
+            .should_receive('get_build_type')
+            .and_return(PROD_BUILD_TYPE))
+        (flexmock(osbs)
+            .should_receive('create_prod_build')
+            .with_args(git_uri=TEST_GIT_URI,
+                       git_ref=TEST_GIT_REF,
+                       git_branch=None,
+                       user=TEST_USER,
+                       component=TEST_COMPONENT,
+                       target=None,
+                       architecture=TEST_ARCH,
+                       namespace=DEFAULT_NAMESPACE)
+            .once()
+            .and_return(None))
+        response = osbs.create_build(git_uri=TEST_GIT_URI,
+                                     git_ref=TEST_GIT_REF,
+                                     user=TEST_USER,
+                                     component=TEST_COMPONENT,
+                                     architecture=TEST_ARCH)
 
     def test_create_prod_build_set_required_version(self, osbs106):
         class MockParser(object):

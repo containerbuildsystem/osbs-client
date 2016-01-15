@@ -347,6 +347,8 @@ class OSBS(object):
         if build_type in (PROD_BUILD_TYPE,
                           PROD_WITHOUT_KOJI_BUILD_TYPE,
                           PROD_WITH_SECRET_BUILD_TYPE):
+            kwargs.setdefault('git_branch', None)
+            kwargs.setdefault('target', None)
             return self.create_prod_build(namespace=namespace, **kwargs)
         elif build_type == SIMPLE_BUILD_TYPE:
             return self.create_simple_build(namespace=namespace, **kwargs)
