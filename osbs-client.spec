@@ -26,12 +26,12 @@
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 # set to 0 to create a normal release
 %global postrelease 0
-%global release 3
+%global release 1
 
 %global osbs_obsolete_vr 0.14-2
 
 Name:           osbs-client
-Version:        0.15
+Version:        0.16
 %if "x%{postrelease}" != "x0"
 Release:        %{release}.%{postrelease}.git.%{shortcommit}%{?dist}
 %else
@@ -192,6 +192,9 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %endif # with_python3
 
 %changelog
+* Thu Jan 21 2016 Martin Milata <mmilata@redhat.com> - 0.16-1
+- new upstream release: 0.16
+
 * Fri Nov 20 2015 Jiri Popelka <jpopelka@redhat.com> - 0.15-3
 - use py_build & py_install macros
 - use python_provide macro
