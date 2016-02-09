@@ -394,25 +394,28 @@ class Openshift(object):
         path = "watch/namespaces/%s/%s/%s/" % (self.namespace, resource_type, resource_name)
         url = self._build_url(path, _prepend_namespace=False, **request_args)
 
-        with self._get(url, stream=True, headers={'Connection': 'close'}) as response:
-            check_response(response)
-            for line in response.iter_lines():
-                logger.debug(line)
-                try:
-                    j = json.loads(line)
-                except ValueError:
-                    logger.error("Cannot decode watch event: %s", line)
-                    continue
+        while True:
+            with self._get(url, stream=True, headers={'Connection': 'close'}) as response:
+                check_response(response)
+                for line in response.iter_lines():
+                    logger.debug(line)
+                    try:
+                        j = json.loads(line)
+                    except ValueError:
+                        logger.error("Cannot decode watch event: %s", line)
+                        continue
 
-                if 'object' not in j:
-                    logger.error("Watch event has no 'object': %s", j)
-                    continue
+                    if 'object' not in j:
+                        logger.error("Watch event has no 'object': %s", j)
+                        continue
 
-                if 'type' not in j:
-                    logger.error("Watch event has no 'type': %s", j)
-                    continue
+                    if 'type' not in j:
+                        logger.error("Watch event has no 'type': %s", j)
+                        continue
 
-                yield (j['type'].lower(), j['object'])
+                    yield (j['type'].lower(), j['object'])
+
+            logger.debug("connection closed, reconnecting")
 
     def wait(self, build_id, states):
         """
@@ -453,7 +456,6 @@ class Openshift(object):
         #   2. our object was not found and we keep waiting (in the loop)
         # Therefore, let's raise here
         logger.error("build '%s' was not found during wait", build_id)
-        check_response(response)
         raise OsbsWatchBuildNotFound("build '%s' was not found and response stream ended" % build_id)
 
     def wait_for_build_to_finish(self, build_id):
