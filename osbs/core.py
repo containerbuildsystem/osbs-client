@@ -9,6 +9,7 @@ from __future__ import print_function, unicode_literals, absolute_import
 import json
 import os
 import numbers
+import time
 
 import logging
 from osbs.kerberos_ccache import kerberos_ccache_init
@@ -415,7 +416,8 @@ class Openshift(object):
 
                     yield (j['type'].lower(), j['object'])
 
-            logger.debug("connection closed, reconnecting")
+            logger.debug("connection closed, reconnecting in 30s")
+            time.sleep(30)
 
     def wait(self, build_id, states):
         """
