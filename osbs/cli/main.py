@@ -285,11 +285,11 @@ def cmd_get_build_image_id(args, osbs):
 
 
 def cmd_pause_builds(args, osbs):
-    osbs.pause_builds()
+    osbs.pause_builds(quota_name=args.resourcequota)
 
 
 def cmd_resume_builds(args, osbs):
-    osbs.resume_builds()
+    osbs.resume_builds(quota_name=args.resourcequota)
 
 
 def cmd_backup(args, osbs):
@@ -302,7 +302,7 @@ def cmd_backup(args, osbs):
     else:
         outfile = dirname + ".tar.bz2"
 
-    with paused_builds(osbs):
+    with paused_builds(osbs, quota_name='pause-backup'):
         with TarWriter(outfile, dirname) as t:
             for resource_type in BACKUP_RESOURCES:
                 logger.info("dumping %s", resource_type)
@@ -320,7 +320,7 @@ def cmd_restore(args, osbs):
         infile = args.BACKUP_ARCHIVE
     asciireader = codecs.getreader('ascii')
 
-    with paused_builds(osbs):
+    with paused_builds(osbs, quota_name='pause-backup'):
         for f in TarReader(infile):
             resource_type = os.path.basename(f.filename).split('.')[0]
             if resource_type not in BACKUP_RESOURCES:
@@ -458,11 +458,13 @@ def cli():
     pause_builds = subparsers.add_parser(str_on_2_unicode_on_3('pause-builds'),
                                          help='stop scheduling new builds (admin)',
                                          description='stop scheduling new builds and wait until running builds finish')
+    pause_builds.add_argument("-r", "--resourcequota", action="store", help="resourcequota name used to pause builds")
     pause_builds.set_defaults(func=cmd_pause_builds)
 
     resume_builds = subparsers.add_parser(str_on_2_unicode_on_3('resume-builds'),
                                           help='resume scheduling new builds (admin)',
                                           description='allow builds to be scheduled again after pause-builds')
+    resume_builds.add_argument("-r", "--resourcequota", action="store", help="resourcequota name to remove")
     resume_builds.set_defaults(func=cmd_resume_builds)
 
     backup_builder = subparsers.add_parser(str_on_2_unicode_on_3('backup-builder'),

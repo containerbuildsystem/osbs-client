@@ -475,16 +475,22 @@ class OSBS(object):
 
         return self.os.create_image_stream(json.dumps(stream))
 
-    @osbsapi
-    def pause_builds(self):
-        # First, set quota so 0 pods are allowed to be running
+    def _load_quota_json(self, quota_name=None):
         quota_file = os.path.join(self.os_conf.get_build_json_store(),
                                   'pause_quota.json')
         with open(quota_file) as fp:
             quota_json = json.load(fp)
 
-        name = quota_json['metadata']['name']
-        self.os.create_resource_quota(name, quota_json)
+        if quota_name:
+            quota_json['metadata']['name'] = quota_name
+
+        return quota_json['metadata']['name'], quota_json
+
+    @osbsapi
+    def pause_builds(self, quota_name=None):
+        # First, set quota so 0 pods are allowed to be running
+        quota_name, quota_json = self._load_quota_json(quota_name)
+        self.os.create_resource_quota(quota_name, quota_json)
 
         # Now wait for running builds to finish
         while True:
@@ -498,14 +504,9 @@ class OSBS(object):
             self.wait_for_build_to_finish(name)
 
     @osbsapi
-    def resume_builds(self):
-        quota_file = os.path.join(self.os_conf.get_build_json_store(),
-                                  'pause_quota.json')
-        with open(quota_file) as fp:
-            quota_json = json.load(fp)
-
-        name = quota_json['metadata']['name']
-        self.os.delete_resource_quota(name)
+    def resume_builds(self, quota_name=None):
+        quota_name, _ = self._load_quota_json(quota_name)
+        self.os.delete_resource_quota(quota_name)
 
     # implements subset of OpenShift's export logic in pkg/cmd/cli/cmd/exporter.go
     @staticmethod
