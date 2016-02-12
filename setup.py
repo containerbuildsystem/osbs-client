@@ -9,17 +9,12 @@ of the BSD license. See the LICENSE file for details.
 
 import re
 import sys
+import glob
 
 from setuptools import setup, find_packages
 
 data_files = {
-    "share/osbs": [
-        "inputs/image_stream.json",
-        "inputs/prod.json",
-        "inputs/prod_inner.json",
-        "inputs/simple.json",
-        "inputs/simple_inner.json",
-    ],
+    "share/osbs": glob.glob("inputs/*.json"),
 }
 
 def _get_requirements(path):
