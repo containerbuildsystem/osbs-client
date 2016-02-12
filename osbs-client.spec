@@ -31,7 +31,7 @@
 %global osbs_obsolete_vr 0.14-2
 
 Name:           osbs-client
-Version:        0.16
+Version:        0.17
 %if "x%{postrelease}" != "x0"
 Release:        %{release}.%{postrelease}.git.%{shortcommit}%{?dist}
 %else
@@ -192,6 +192,9 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %endif # with_python3
 
 %changelog
+* Fri Feb 12 2016 Martin Milata <mmilata@redhat.com> - 0.17-1
+- new upstream release: 0.17
+
 * Thu Jan 21 2016 Martin Milata <mmilata@redhat.com> - 0.16-1
 - new upstream release: 0.16
 
