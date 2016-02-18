@@ -45,6 +45,7 @@ def print_json_nicely(decoded_json):
     print(json.dumps(decoded_json, indent=2))
 
 
+
 def cmd_get_all_resource_quota(args, osbs):
     quota_name = args.QUOTA_NAME
     logger.debug("quota name = %s", quota_name)
@@ -54,6 +55,23 @@ def cmd_get_all_resource_quota(args, osbs):
             print(graceful_chain_get(item, "metadata", "name"))
     else:
         print_json_nicely(osbs.get_resource_quota(quota_name))
+
+
+
+def cmd_watch_builds(args, osbs):
+    field_selector = ",".join(["status!={status}".format(status=status.capitalize())
+                               for status in BUILD_FINISHED_STATES])
+    format_str = "{changetype:12} {name}"
+    print(format_str.format(changetype='CHANGE TYPE', name='NAME'))
+    print(format_str.format(changetype='-----------', name='----'))
+    for changetype, obj in osbs.watch_builds(field_selector=field_selector):
+        try:
+            name = obj['metadata']['name']
+        except KeyError:
+            logger.error("'object' doesn't have any name")
+            continue
+        else:
+            print(format_str.format(changetype=changetype, name=name))
 
 
 def cmd_list_builds(args, osbs):
@@ -435,6 +453,9 @@ def cli():
     watch_build_parser = subparsers.add_parser(str_on_2_unicode_on_3('watch-build'), help='wait till build finishes')
     watch_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
     watch_build_parser.set_defaults(func=cmd_watch_build)
+
+    watch_builds_parser = subparsers.add_parser(str_on_2_unicode_on_3('watch-builds'), help='watch running builds')
+    watch_builds_parser.set_defaults(func=cmd_watch_builds)
 
     get_build_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-build'), help='get info about build')
     get_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
