@@ -22,7 +22,8 @@ from osbs.api import OSBS
 from osbs.cli.render import TablePrinter
 from osbs.conf import Configuration
 from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
-                            CLI_LIST_BUILDS_DEFAULT_COLS, PY3, BACKUP_RESOURCES, DEFAULT_NAMESPACE)
+                            CLI_LIST_BUILDS_DEFAULT_COLS, PY3, BACKUP_RESOURCES, DEFAULT_NAMESPACE,
+                            BUILD_FINISHED_STATES)
 from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsAuthException, OsbsResponseException
 from osbs.cli.capture import setup_json_capture
 from osbs.utils import strip_registry_from_image, paused_builds, TarReader, TarWriter
@@ -35,7 +36,13 @@ def print_json_nicely(decoded_json):
 
 
 def cmd_list_builds(args, osbs):
-    builds = osbs.list_builds()
+    kwargs = {}
+    if args.running:
+        field_selector = ",".join(["status!={status}".format(status=status.capitalize())
+                                   for status in BUILD_FINISHED_STATES])
+        kwargs['field_selector'] = field_selector
+
+    builds = osbs.list_builds(**kwargs)
     if args.output == 'json':
         json_output = []
         for build in builds:
