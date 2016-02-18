@@ -398,8 +398,10 @@ class Openshift(object):
 
         return response
 
-    def watch_resource(self, resource_type, resource_name, **request_args):
-        path = "watch/namespaces/%s/%s/%s/" % (self.namespace, resource_type, resource_name)
+    def watch_resource(self, resource_type, resource_name=None, **request_args):
+        path = "watch/namespaces/%s/%s/" % (self.namespace, resource_type)
+        if resource_name is not None:
+            path += "%s/" % resource_name
         url = self._build_url(path, _prepend_namespace=False, **request_args)
 
         while True:
