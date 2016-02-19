@@ -26,7 +26,8 @@ from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SE
                             BUILD_FINISHED_STATES)
 from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsAuthException, OsbsResponseException
 from osbs.cli.capture import setup_json_capture
-from osbs.utils import strip_registry_from_image, paused_builds, TarReader, TarWriter
+from osbs.utils import (strip_registry_from_image, paused_builds, TarReader,
+                        TarWriter, get_time_from_rfc3339)
 
 logger = logging.getLogger('osbs')
 
@@ -38,12 +39,14 @@ def print_json_nicely(decoded_json):
 def cmd_watch_builds(args, osbs):
     field_selector = ",".join(["status!={status}".format(status=status.capitalize())
                                for status in BUILD_FINISHED_STATES])
-    format_str = "{changetype:12} {status:12} {name}"
-    print(format_str.format(changetype='CHANGE TYPE',
+    format_str = "{changetype:9}  {status:10}  {created:24}  {name}"
+    print(format_str.format(changetype='CHANGE',
                             status='STATUS',
+                            created='CREATED',
                             name='NAME'))
-    print(format_str.format(changetype='-----------',
-                            status='--------',
+    print(format_str.format(changetype='-' * 9,
+                            status='-' * 10,
+                            created='-' * 24,
                             name='----'))
     for changetype, obj in osbs.watch_builds(field_selector=field_selector):
         try:
@@ -57,8 +60,16 @@ def cmd_watch_builds(args, osbs):
             except KeyError:
                 status = '(not reported)'
 
+            try:
+                timestamp = obj['metadata']['creationTimestamp']
+            except KeyError:
+                created = '(not reported)'
+            else:
+                created = time.ctime(get_time_from_rfc3339(timestamp))
+
             print(format_str.format(changetype=changetype,
                                     name=name,
+                                    created=created,
                                     status=status))
 
 
