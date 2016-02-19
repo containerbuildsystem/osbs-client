@@ -344,14 +344,21 @@ class Openshift(object):
             return response.iter_lines()
         return response.content
 
-    def list_builds(self, build_config_id=None):
+    def list_builds(self, build_config_id=None, field_selector=None):
         """
+        List builds matching criteria
 
-        :return:
+        :param build_config_id: str, name of BuildConfig to list builds for
+        :param field_selector: str, field selector for query
+        :return: HttpResponse
         """
         query = {}
+        selector = '{field}={value}'
         if build_config_id is not None:
-            query['labelSelector'] = '%s=%s' % ('buildconfig', build_config_id)
+            query['labelSelector'] = selector.format(field='buildconfig',
+                                                     value=build_config_id)
+        if field_selector is not None:
+            query['fieldSelector'] = field_selector
         url = self._build_url("builds/", **query)
         return self._get(url)
 

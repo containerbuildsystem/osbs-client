@@ -90,8 +90,15 @@ class OSBS(object):
         return self._bm
 
     @osbsapi
-    def list_builds(self):
-        response = self.os.list_builds()
+    def list_builds(self, field_selector=None):
+        """
+        List builds with matching fields
+
+        :param field_selector: str, field selector for Builds
+        :return: BuildResponse list
+        """
+
+        response = self.os.list_builds(field_selector=field_selector)
         serialized_response = response.json()
         build_list = []
         for build in serialized_response["items"]:
