@@ -38,9 +38,13 @@ def print_json_nicely(decoded_json):
 def cmd_watch_builds(args, osbs):
     field_selector = ",".join(["status!={status}".format(status=status.capitalize())
                                for status in BUILD_FINISHED_STATES])
-    format_str = "{changetype:12} {name}"
-    print(format_str.format(changetype='CHANGE TYPE', name='NAME'))
-    print(format_str.format(changetype='-----------', name='----'))
+    format_str = "{changetype:12} {status:12} {name}"
+    print(format_str.format(changetype='CHANGE TYPE',
+                            status='STATUS',
+                            name='NAME'))
+    print(format_str.format(changetype='-----------',
+                            status='--------',
+                            name='----'))
     for changetype, obj in osbs.watch_builds(field_selector=field_selector):
         try:
             name = obj['metadata']['name']
@@ -48,7 +52,14 @@ def cmd_watch_builds(args, osbs):
             logger.error("'object' doesn't have any name")
             continue
         else:
-            print(format_str.format(changetype=changetype, name=name))
+            try:
+                status = obj['status']['phase']
+            except KeyError:
+                status = '(not reported)'
+
+            print(format_str.format(changetype=changetype,
+                                    name=name,
+                                    status=status))
 
 
 def cmd_list_builds(args, osbs):
