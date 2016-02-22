@@ -70,6 +70,18 @@ class BuildResponse(object):
     def get_time_created_in_seconds(self):
         return get_time_from_rfc3339(self.get_time_created())
 
+    def get_time_started(self):
+        return graceful_chain_get(self.json, "status", "startTimestamp")
+
+    def get_time_started_in_seconds(self):
+        return get_time_from_rfc3339(self.get_time_started())
+
+    def get_time_completed(self):
+        return graceful_chain_get(self.json, "status", "completionTimestamp")
+
+    def get_time_completed_in_seconds(self):
+        return get_time_from_rfc3339(self.get_time_completed())
+
     def get_annotations(self):
         return graceful_chain_get(self.json, "metadata", "annotations")
 
