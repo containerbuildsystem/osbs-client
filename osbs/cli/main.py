@@ -146,7 +146,9 @@ Unique
 BUILD ID: {build_id}
 STATUS: {status}
 IMAGE: {image}
-DATE: {date}
+CREATED: {created}
+STARTED: {started}
+COMPLETED: {completed}
 
 DOCKERFILE
 
@@ -183,7 +185,9 @@ V2 DIGESTS
             "build_id": build.get_build_name(),
             "status": build.status,
             "image": build.get_image_tag(),
-            "date": build.get_time_created(),
+            "created": build.get_time_created(),
+            "started": build.get_time_started() or '(unset)',
+            "completed": build.get_time_completed() or '(unset)',
             "dockerfile": build.get_dockerfile(),
             "logs": build.get_logs(),
             "packages": build.get_rpm_packages(),
