@@ -19,6 +19,7 @@ import sys
 import argparse
 from osbs import set_logging
 from osbs.api import OSBS
+from osbs.build.build_response import BuildResponse
 from osbs.cli.render import TablePrinter
 from osbs.conf import Configuration
 from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
@@ -42,7 +43,12 @@ def cmd_list_builds(args, osbs):
                                    for status in BUILD_FINISHED_STATES])
         kwargs['field_selector'] = field_selector
 
-    builds = osbs.list_builds(**kwargs)
+    if args.from_json:
+        with open(args.from_json) as fp:
+            builds = [BuildResponse(build) for build in json.load(fp)]
+    else:
+        builds = osbs.list_builds(**kwargs)
+
     if args.output == 'json':
         json_output = []
         for build in builds:
@@ -379,6 +385,8 @@ def cli():
     # this may be a bit confusing, but for users, "running" means not done but
     # for us, "running" means scheduled on kubelet
     list_builds_parser.add_argument("--running", help="list only running builds", action="store_true")
+    list_builds_parser.add_argument("--from-json",
+                                    help="fetch builds list from JSON file instead of from server")
 
     list_builds_parser.set_defaults(func=cmd_list_builds)
 
