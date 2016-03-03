@@ -44,7 +44,7 @@ build_type = simple
 
 This is how simple build could look:
 ```
-$ osbs build -g http://path.to.gitrepo.with.dockerfile/ -c image-name -u your-nick
+$ osbs build -g http://path.to.gitrepo.with.dockerfile/ -b git_branch -c image-name -u your-nick
 ```
 
 ## Deploying OpenShift Build System
