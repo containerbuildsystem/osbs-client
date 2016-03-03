@@ -57,6 +57,9 @@ class RegistryURI(object):
     def uri(self):
         return self.scheme + self.docker_uri
 
+    def __repr__(self):
+        return self.uri
+
 
 class TarWriter(object):
     def __init__(self, outfile, directory=None):
@@ -301,4 +304,3 @@ def run_command(*popenargs, **kwargs):
             message="Command %s returned %s\n\n%s" % (cmd, retcode, output)
         )
     return output
-
