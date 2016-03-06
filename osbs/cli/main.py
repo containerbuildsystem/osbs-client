@@ -13,6 +13,7 @@ import logging
 
 from os import uname
 import codecs
+import datetime
 import time
 import os.path
 import sys
@@ -34,6 +35,16 @@ logger = logging.getLogger('osbs')
 
 def print_json_nicely(decoded_json):
     print(json.dumps(decoded_json, indent=2))
+
+
+def duration(build):
+    try:
+        completed = int(build.get_time_completed_in_seconds())
+        started = int(build.get_time_started_in_seconds())
+    except (TypeError, ValueError):
+        return '-'
+    else:
+        return str(datetime.timedelta(seconds=completed - started))
 
 
 def cmd_list_builds(args, osbs):
@@ -69,6 +80,9 @@ def cmd_list_builds(args, osbs):
             "name": "BUILD ID",
             "status": "STATUS",
             "time_created": "TIME CREATED",
+            "time_started": "TIME STARTED",
+            "time_completed": "TIME COMPLETED",
+            "duration": "DURATION",
         }]
         for build in sorted(builds,
                             key=lambda x: x.get_time_created_in_seconds()):
@@ -92,6 +106,9 @@ def cmd_list_builds(args, osbs):
                 "name": build.get_build_name(),
                 "status": build.status,
                 "time_created": build.get_time_created(),
+                "time_started": build.get_time_started(),
+                "time_completed": build.get_time_completed(),
+                "duration": duration(build),
             }
             data.append(b)
         tp = TablePrinter(data, cols_to_display)
@@ -135,7 +152,9 @@ Unique
 BUILD ID: {build_id}
 STATUS: {status}
 IMAGE: {image}
-DATE: {date}
+CREATED: {created}
+STARTED: {started}
+COMPLETED: {completed}
 
 DOCKERFILE
 
@@ -172,7 +191,9 @@ V2 DIGESTS
             "build_id": build.get_build_name(),
             "status": build.status,
             "image": build.get_image_tag(),
-            "date": build.get_time_created(),
+            "created": build.get_time_created(),
+            "started": build.get_time_started() or '(unset)',
+            "completed": build.get_time_completed() or '(unset)',
             "dockerfile": build.get_dockerfile(),
             "logs": build.get_logs(),
             "packages": build.get_rpm_packages(),
