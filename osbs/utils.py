@@ -198,14 +198,14 @@ def checkout_git_repo(git_uri, git_ref, git_branch=None):
 
 
 @contextlib.contextmanager
-def paused_builds(osbs):
-    logger.info("pausing builds")
-    osbs.pause_builds()
+def paused_builds(osbs, quota_name=None):
     try:
+        logger.info("pausing builds")
+        osbs.pause_builds(quota_name=quota_name)
         yield osbs
     finally:
         logger.info("resuming builds")
-        osbs.resume_builds()
+        osbs.resume_builds(quota_name=quota_name)
 
 
 def looks_like_git_hash(git_ref):
