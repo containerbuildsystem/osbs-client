@@ -14,7 +14,7 @@ import logging
 import datetime
 import os
 import re
-from osbs.constants import DEFAULT_GIT_REF
+from osbs.constants import DEFAULT_GIT_REF, DEFAULT_BUILD_IMAGE
 from osbs.exceptions import OsbsValidationException
 from osbs.utils import (get_imagestreamtag_from_image,
                         git_repo_humanish_part_from_uri,
@@ -147,6 +147,7 @@ class CommonSpec(BuildTypeSpec):
     name = BuildIDParam()
     yum_repourls = BuildParam("yum_repourls")
     use_auth = BuildParam("use_auth", allow_none=True)
+    build_image = BuildParam('build_image')
 
     def __init__(self):
         self.required_params = [
@@ -156,13 +157,15 @@ class CommonSpec(BuildTypeSpec):
             self.component,
             self.registry_uris,
             self.openshift_uri,
+            self.build_image,
         ]
 
     def set_params(self, git_uri=None, git_ref=None,
                    registry_uri=None,  # compatibility name for registry_uris
                    registry_uris=None, user=None,
                    component=None, openshift_uri=None, source_registry_uri=None,
-                   yum_repourls=None, use_auth=None, builder_openshift_url=None):
+                   yum_repourls=None, use_auth=None, builder_openshift_url=None,
+                   build_image=None):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
         self.user.value = user
@@ -181,6 +184,7 @@ class CommonSpec(BuildTypeSpec):
             raise OsbsValidationException("yum_repourls must be a list")
         self.yum_repourls.value = yum_repourls or []
         self.use_auth.value = use_auth
+        self.build_image.value = build_image or DEFAULT_BUILD_IMAGE
 
 
 class ProdSpec(CommonSpec):
