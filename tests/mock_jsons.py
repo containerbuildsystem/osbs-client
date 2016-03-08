@@ -9,16 +9,25 @@ os_version = os.getenv("OS_VERSION", "1.1.2")
 
 httpd_osapi_url = None
 httpd_auth_url = None
+os_osapi_url = None
+os_auth_url = None
 
 os_proxy_url = os.getenv("OS_PROXY_URL", None)
 if os_proxy_url:
-    httpd_osapi_url = "{}/osapi/v3beta".format(os_proxy_url)
+    if int(os_version.split(".")[0]) > 0:
+        # Openshift 1.x uses oapi and v1 endpoint
+        httpd_osapi_url = "{}/oapi/v1".format(os_proxy_url)
+    else:
+        httpd_osapi_url = "{}/osapi/v3beta".format(os_proxy_url)
     httpd_auth_url = "{}/oauth/authorize?client_id={}&response_type=token".format(
         os_proxy_url, "openshift-challenging-client")
 
 os_url = os.getenv("OS_URL", None)
 if os_url:
-    os_osapi_url = "{}/osapi/v3beta".format(os_url)
+    if int(os_version.split(".")[0]) > 0:
+        os_osapi_url = "{}/osapi/v3beta".format(os_url)
+    else:
+        os_osapi_url = "{}/oapi/v1".format(os_url)
     os_auth_url = "{}/oauth/authorize?client_id={}&response_type=token".format(
         os_url, "openshift-challenging-client")
 
