@@ -549,3 +549,11 @@ class OSBS(object):
         if continue_on_error:
             ntotal = len(resources["items"])
             logger.info("restored %s/%s %s", ntotal - nfailed, ntotal, resource_type)
+
+    @osbsapi
+    def list_resource_quotas(self):
+        return self.os.list_resource_quotas().json()
+
+    @osbsapi
+    def get_resource_quota(self, quota_name):
+        return self.os.get_resource_quota(quota_name).json()
