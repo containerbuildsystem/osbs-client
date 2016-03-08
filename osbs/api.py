@@ -246,6 +246,7 @@ class OSBS(object):
                           user, component,
                           target,      # may be None
                           architecture=None, yum_repourls=None,
+                          build_image=None,
                           **kwargs):
         """
         Create a production build
@@ -268,6 +269,7 @@ class OSBS(object):
             git_branch=git_branch,
             user=user,
             component=component,
+            build_image=build_image,
             base_image=df_parser.baseimage,
             name_label=df_parser.labels['Name'],
             registry_uris=self.build_conf.get_registry_uris(),
@@ -296,7 +298,6 @@ class OSBS(object):
             git_push_url=self.build_conf.get_git_push_url(),
             git_push_username=self.build_conf.get_git_push_username(),
             builder_build_json_dir=self.build_conf.get_builder_build_json_store(),
-            build_image=self.build_conf.get_build_image(),
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         response = self._create_build_config_and_build(build_request)
@@ -317,7 +318,7 @@ class OSBS(object):
 
     @osbsapi
     def create_simple_build(self, git_uri, git_ref, user, component, tag,
-                            yum_repourls=None, **kwargs):
+                            yum_repourls=None, build_image=None, **kwargs):
         build_request = self.get_build_request(SIMPLE_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
@@ -325,13 +326,13 @@ class OSBS(object):
             user=user,
             component=component,
             tag=tag,
+            build_image=build_image,
             registry_uris=self.build_conf.get_registry_uris(),
             source_registry_uri=self.build_conf.get_source_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
             builder_openshift_url=self.os_conf.get_builder_openshift_url(),
             yum_repourls=yum_repourls,
             use_auth=self.build_conf.get_builder_use_auth(),
-            build_image=self.build_conf.get_build_image(),
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         response = self._create_build_config_and_build(build_request)
