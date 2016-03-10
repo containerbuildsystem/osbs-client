@@ -8,19 +8,26 @@ of the BSD license. See the LICENSE file for details.
 from types import GeneratorType
 
 from flexmock import flexmock
+import json
 from pkg_resources import parse_version
+import os
 import pytest
+import shutil
 import six
+from tempfile import NamedTemporaryFile
 
+from osbs.api import OSBS
+from osbs.conf import Configuration
 from osbs.constants import PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE, SIMPLE_BUILD_TYPE
 from osbs.build.build_request import BuildRequest, SimpleBuild, ProductionBuild
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
+from osbs.exceptions import OsbsValidationException
 from osbs.http import HttpResponse
 from osbs import utils
 
 from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
-                             TEST_GIT_URI, TEST_TARGET, TEST_USER)
+                             TEST_GIT_URI, TEST_TARGET, TEST_USER, INPUTS_PATH)
 from tests.fake_api import openshift, osbs, osbs106
 
 
@@ -214,3 +221,64 @@ class TestOSBS(object):
             }
         }
         osbs.restore_resource("builds", {"items": [build], "kind": "BuildList", "apiVersion": "v1"})
+
+    @pytest.mark.parametrize(('compress', 'args', 'raises', 'expected'), [
+        # compress plugin not run
+        (False, None, None, None),
+
+        # run with no args
+        (True, {}, None, '.gz'),
+        (True, {'args': {}}, None, '.gz'),
+
+        # run with args
+        (True, {'args': {'method': 'gzip'}}, None, '.gz'),
+        (True, {'args': {'method': 'lzma'}}, None, '.xz'),
+
+        # run with method not known to us
+        (True, {'args': {'method': 'unknown'}}, OsbsValidationException, None),
+    ])
+    def test_get_compression_extension(self, tmpdir, compress, args,
+                                       raises, expected):
+        # Make temporary copies of the JSON files
+        for basename in ['simple.json', 'simple_inner.json']:
+            shutil.copy(os.path.join(INPUTS_PATH, basename),
+                        os.path.join(str(tmpdir), basename))
+
+        # Create an inner JSON description with the specified compress
+        # plugin method
+        with open(os.path.join(str(tmpdir),'simple_inner.json'),
+                  'r+') as inner:
+            inner_json = json.load(inner)
+
+            postbuild_plugins = inner_json['postbuild_plugins']
+            inner_json['postbuild_plugins'] = [plugin
+                                               for plugin in postbuild_plugins
+                                               if plugin['name'] != 'compress']
+
+            if compress:
+                plugin = { 'name': 'compress' }
+                plugin.update(args)
+                inner_json['postbuild_plugins'].insert(0, plugin)
+
+            inner.seek(0)
+            json.dump(inner_json, inner)
+            inner.truncate()
+
+        with NamedTemporaryFile(mode='wt') as fp:
+            fp.write("""
+[general]
+build_json_dir = {build_json_dir}
+[default]
+openshift_url = /
+registry_uri = registry.example.com
+build_type = simple
+""".format(build_json_dir=str(tmpdir)))
+            fp.flush()
+            config = Configuration(fp.name)
+            osbs = OSBS(config, config)
+
+        if raises:
+            with pytest.raises(raises):
+                osbs.get_compression_extension()
+        else:
+            assert osbs.get_compression_extension() == expected
