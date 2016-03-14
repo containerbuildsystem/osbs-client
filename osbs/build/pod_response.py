@@ -50,3 +50,12 @@ class PodResponse(object):
         return dict([(status['image'], remove_prefix(status['imageID'],
                                                      'docker://'))
                      for status in statuses])
+
+    def get_host(self):
+        """
+        Return the host IP address the pod is running on.
+
+        :return: str, IP address
+        """
+
+        return self.json['status']['hostIP']
