@@ -618,6 +618,29 @@ class ProductionBuild(CommonBuild):
             self.dj.dock_json_set_arg('postbuild_plugins',
                                       'cp_built_image_to_nfs',
                                       'dest_dir', self.spec.nfs_dest_dir.value)
+
+            if ':' not in nfs_server_path:
+                # If we want to let atomic-reactor work out the node's
+                # address on its own, it will need to talk to the
+                # server
+                self.dj.dock_json_set_arg('postbuild_plugins',
+                                          'cp_built_image_to_nfs',
+                                          'url',
+                                          self.spec.builder_openshift_url.value)
+                self.dj.dock_json_set_arg('postbuild_plugins',
+                                          'cp_built_image_to_nfs',
+                                          'use_auth',
+                                          self.spec.use_auth.value)
+
+                # TODO: verify_ssl ought to be configurable on this
+                # and other OSv3-using plugins. Rather than set
+                # verify_ssl in the JSON template, we'll set it
+                # here. That way, older plugins that don't accept
+                # verify_ssl will still work (if given the NFS host).
+                self.dj.dock_json_set_arg('postbuild_plugins',
+                                          'cp_built_image_to_nfs',
+                                          'verify_ssl',
+                                          False)
         else:
             # Otherwise, don't run the NFS plugin
             logger.info("removing cp_built_image_to_nfs from request, "
