@@ -69,6 +69,6 @@ In order to successfully build an image you need to have 3 things:
     architecture = x86_64
     build_type = prod
     verify_ssl = false
-    metadata_plugin_use_auth = false
+    builder_use_auth = false
     use_auth=false
     ```
