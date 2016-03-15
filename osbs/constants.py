@@ -13,6 +13,7 @@ PY3 = sys.version_info[0] >= 3
 
 BUILD_JSON_STORE = "/usr/share/osbs/"
 DEFAULT_GIT_REF = "master"
+DEFAULT_BUILD_IMAGE = "buildroot:latest"
 DEFAULT_CONFIGURATION_FILE = "/etc/osbs.conf"
 DEFAULT_CONFIGURATION_SECTION = "default"
 GENERAL_CONFIGURATION_SECTION = "general"

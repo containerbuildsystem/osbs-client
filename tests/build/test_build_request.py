@@ -13,7 +13,7 @@ import shutil
 
 from osbs.build.build_request import BuildManager, BuildRequest, ProductionBuild
 from osbs.constants import (PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE,
-                            PROD_WITH_SECRET_BUILD_TYPE)
+                            PROD_WITH_SECRET_BUILD_TYPE, DEFAULT_BUILD_IMAGE)
 from osbs.exceptions import OsbsValidationException
 
 from flexmock import flexmock
@@ -115,7 +115,11 @@ class TestBuildRequest(object):
         ["registry.example.com:5000"],
         ["registry.example.com:5000", "localhost:6000"],
     ])
-    def test_render_simple_request(self, tag, registry_uris):
+    @pytest.mark.parametrize('build_image', [
+        None,
+        'fancy_buildroot:latestest'
+    ])
+    def test_render_simple_request(self, tag, registry_uris, build_image):
         bm = BuildManager(INPUTS_PATH)
         build_request = bm.get_build_request_by_type("simple")
         name_label = "fedora/resultingimage"
@@ -128,6 +132,7 @@ class TestBuildRequest(object):
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
             'tag': tag,
+            'build_image': build_image,
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -164,11 +169,18 @@ class TestBuildRequest(object):
             assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                     "registries", r) == {"insecure": True}
 
+        rendered_build_image =  build_json["spec"]["strategy"]["customStrategy"]["from"]["name"]
+        assert rendered_build_image == (build_image if build_image else DEFAULT_BUILD_IMAGE)
+
     @pytest.mark.parametrize('architecture', [
         None,
         'x86_64',
     ])
-    def test_render_prod_request_with_repo(self, architecture):
+    @pytest.mark.parametrize('build_image', [
+        None,
+        'ultimate-buildroot:v1.0'
+    ])
+    def test_render_prod_request_with_repo(self, architecture, build_image):
         bm = BuildManager(INPUTS_PATH)
         build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
         name_label = "fedora/resultingimage"
@@ -196,6 +208,7 @@ class TestBuildRequest(object):
             'distribution_scope': "authoritative-source-only",
             'yum_repourls': ["http://example.com/my.repo"],
             'registry_api_versions': ['v1'],
+            'build_image': build_image,
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -263,6 +276,9 @@ class TestBuildRequest(object):
             assert labels['Architecture'] is not None
         else:
             assert 'Architecture' not in labels
+
+        rendered_build_image =  build_json["spec"]["strategy"]["customStrategy"]["from"]["name"]
+        assert rendered_build_image == (build_image if build_image else DEFAULT_BUILD_IMAGE)
 
     def test_render_prod_request(self):
         bm = BuildManager(INPUTS_PATH)

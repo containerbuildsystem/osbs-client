@@ -29,7 +29,7 @@
       "customStrategy": {
         "from": {
           "kind": "DockerImage",
-          "name": "buildroot:latest"
+          "name": "{{BUILD_IMAGE}}"
         },
         "exposeDockerSocket": true,
         "env": [{
