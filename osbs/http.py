@@ -258,7 +258,10 @@ class HttpStream(object):
 
         if err_list:
             err_obj = err_list[0]
-            raise OsbsNetworkException(self.url, err_obj[2], err_obj[1])
+
+            # For anything but the connection being closed, raise
+            if err_obj[1] != pycurl.E_PARTIAL_FILE:
+                raise OsbsNetworkException(self.url, err_obj[2], err_obj[1])
 
         self.finished = (num_handles == 0)
 
