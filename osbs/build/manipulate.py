@@ -22,11 +22,11 @@ class DockJsonManipulator(object):
         """ return dock json from existing build json """
         env_json = self.build_json['spec']['strategy']['customStrategy']['env']
         try:
-            p = [env for env in env_json if env["name"] == "DOCK_PLUGINS"]
+            p = [env for env in env_json if env["name"] == "ATOMIC_REACTOR_PLUGINS"]
         except TypeError:
             raise RuntimeError("\"env\" is not iterable")
         if len(p) <= 0:
-            raise RuntimeError("\"env\" misses key DOCK_PLUGINS")
+            raise RuntimeError("\"env\" misses key ATOMIC_REACTOR_PLUGINS")
         dock_json_str = p[0]['value']
         dock_json = json.loads(dock_json_str)
         return dock_json
@@ -89,7 +89,7 @@ class DockJsonManipulator(object):
 
     def write_dock_json(self):
         env_json = self.build_json['spec']['strategy']['customStrategy']['env']
-        p = [env for env in env_json if env["name"] == "DOCK_PLUGINS"]
+        p = [env for env in env_json if env["name"] == "ATOMIC_REACTOR_PLUGINS"]
         if len(p) <= 0:
-            raise RuntimeError("\"env\" misses key DOCK_PLUGINS")
+            raise RuntimeError("\"env\" misses key ATOMIC_REACTOR_PLUGINS")
         p[0]['value'] = json.dumps(self.dock_json)
