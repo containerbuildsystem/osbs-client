@@ -110,9 +110,10 @@ class BuildResponse(object):
                 error = decoded_line.get("error", "").strip()
                 if error:
                     output += [error]
-                error_detail = decoded_line.get("errorDetail", "").strip()
-                if error_detail:
-                    output += [error_detail]
+                error_detail = decoded_line.get("errorDetail", {})
+                error_msg = error_detail.get("message", "").strip()
+                if error_msg:
+                    output += [error_msg]
             output += "\n"
             return "\n".join(output)
         else:
