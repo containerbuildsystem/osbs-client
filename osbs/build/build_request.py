@@ -298,6 +298,9 @@ class ProductionBuild(CommonBuild):
         super(ProductionBuild, self).__init__(build_json_store, **kwargs)
         self.spec = ProdSpec()
 
+        # For the koji "scratch" build type
+        self.scratch = False
+
     def set_params(self, **kwargs):
         """
         set parameters according to specification
@@ -323,6 +326,14 @@ class ProductionBuild(CommonBuild):
         :param use_auth: bool, use auth from atomic-reactor?
         :param git_push_url: str, URL for git push
         """
+
+        # Here we cater to the koji "scratch" build type, this will disable
+        # all plugins that might cause importing of data to koji
+        try:
+            self.scratch = kwargs.pop("scratch")
+        except KeyError:
+            pass
+
         logger.debug("setting params '%s' for %s", kwargs, self.spec)
         self.spec.set_params(**kwargs)
 
@@ -469,6 +480,21 @@ class ProductionBuild(CommonBuild):
                                 ("postbuild_plugins", "import_image"),
                                 ("exit_plugins", "koji_promote"),
                                 ("exit_plugins", "sendmail")]:
+                logger.info("removing %s from request because there are no triggers",
+                            which)
+                self.dj.remove_plugin(when, which)
+
+    def adjust_for_scratch(self):
+        """
+        Remove koji Content Generator related plugins if no triggers set in
+        order to hadle the "scratch build" scenario
+        """
+        if self.scratch:
+            # Note: only one for now, but left in a list like other adjust_for_
+            # functions in the event that this needs to be expanded
+            for when, which in [
+                ("exit_plugins", "koji_promote"),
+            ]:
                 logger.info("removing %s from request because there are no triggers",
                             which)
                 self.dj.remove_plugin(when, which)
@@ -748,6 +774,7 @@ class ProductionBuild(CommonBuild):
             del self.template['spec']['triggers']
 
         self.adjust_for_triggers()
+        self.adjust_for_scratch()
 
         # Enable/disable plugins as needed for target registry API versions
         self.adjust_for_registry_api_versions()

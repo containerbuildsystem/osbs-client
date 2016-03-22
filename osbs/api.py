@@ -299,6 +299,7 @@ class OSBS(object):
             git_push_url=self.build_conf.get_git_push_url(),
             git_push_username=self.build_conf.get_git_push_username(),
             builder_build_json_dir=self.build_conf.get_builder_build_json_store(),
+            scratch=kwargs.get("scratch", False)
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         response = self._create_build_config_and_build(build_request)
@@ -356,6 +357,11 @@ class OSBS(object):
             kwargs.setdefault('target', None)
             return self.create_prod_build(**kwargs)
         elif build_type == SIMPLE_BUILD_TYPE:
+            # Only Prod Build type cares about potential koji scratch builds
+            try:
+                kwargs.pop("scratch")
+            except KeyError:
+                pass
             return self.create_simple_build(**kwargs)
         elif build_type == PROD_WITH_SECRET_BUILD_TYPE:
             return self.create_prod_with_secret_build(**kwargs)
