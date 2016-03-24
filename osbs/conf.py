@@ -206,6 +206,9 @@ class Configuration(object):
     def get_koji_target(self):
         return self._get_value("target", self.conf_section, "target")
 
+    def get_koji_certs_secret(self):
+        return self._get_value("koji_certs_secret", self.conf_section, "koji_certs_secret")
+
     def get_sources_command(self):
         return self._get_value("sources_command", self.conf_section, "sources_command")
 
