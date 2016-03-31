@@ -17,6 +17,8 @@ DEFAULT_KOJI_BIN = "brew-test"
 DEFAULT_KOJI_TARGET = "extras-rhel-7.2-candidate"
 DEFAULT_GIT_REMOTE = "origin"
 
+class SubprocessError(Exception): pass
+
 def run(*args):
     logging.info("running: %s", " ".join(args))
 
@@ -27,7 +29,7 @@ def run(*args):
     if err:
         logging.info("stderr:\n%s", err.rstrip())
     if p.returncode != 0:
-        raise RuntimeError("Subprocess failed w/ return code {0}".format(p.returncode))
+        raise SubprocessError("Subprocess failed w/ return code {0}".format(p.returncode))
 
     return out
 
@@ -118,15 +120,26 @@ def cmd_start_builds(args):
             raise RuntimeError("Remote URL for repository %s not found" % args.git_remote)
 
     stagger_remaining = args.stagger_number
+    failed_builds = {}
     for b in branches:
         commit = run("git", "rev-parse", b).strip()
         branch_url = "{0}#{1}".format(remote_url, commit)
-        run(args.koji_bin, "container-build", args.koji_target, "--nowait", "--git-branch", b, branch_url)
+
+        try:
+            run(args.koji_bin, "container-build", args.koji_target, "--nowait", "--git-branch", b, branch_url)
+        except SubprocessError as ex:
+            logging.exception("Failed to start build for branch %s", b)
+            failed_builds[b] = ex
 
         if stagger_remaining > 0:
             logging.info("Waiting %d seconds before starting another build", args.stagger_wait)
             time.sleep(args.stagger_wait)
             stagger_remaining -= 1
+
+    if failed_builds:
+        logging.error("Failed to start builds: %d", len(failed_builds))
+        for b, ex in failed_builds.items():
+            logging.error("Branch %s:", b, exc_info=ex)
 
 def main():
     parser = argparse.ArgumentParser(description="OSBS throughput test harness",
