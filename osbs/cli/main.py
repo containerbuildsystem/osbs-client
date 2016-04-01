@@ -443,7 +443,7 @@ def cli():
                               help="name of git branch (for incrementing Release)")
     build_parser.add_argument("-t", "--target", action='store',
                               help="koji target name")
-    build_parser.add_argument("-a", "--arch", action='store', default=uname()[4],
+    build_parser.add_argument("-a", "--arch", action='store',
                               help="build architecture")
     build_parser.add_argument("-u", "--user", action='store', required=True,
                               help="prefix for docker image repository")
@@ -534,7 +534,7 @@ def cli():
     parser.add_argument("--output", choices=["json", "text"], default="text",
                         help="pick output type (default=text)")
     parser.add_argument("--namespace", help="name of namespace to query against",
-                        metavar="NAMESPACE", action="store", default=DEFAULT_NAMESPACE)
+                        metavar="NAMESPACE", action="store")
     parser.add_argument("--capture-dir", metavar="DIR", action="store",
                         help="capture JSON responses and save them in DIR")
     args = parser.parse_args()
