@@ -45,7 +45,7 @@ class RegistryURI(object):
     # - Group 2: hostname and port
     # Group 3: path, including:
     # - Group 4: optional API version, 'v' followed by a number
-    versionre = re.compile(r'((https?://)?([^/]*))(/(v\d+))?$')
+    versionre = re.compile(r'((https?://)?([^/]*))(/(v\d+)?)?$')
 
     def __init__(self, uri):
         groups = self.versionre.match(uri).groups()
