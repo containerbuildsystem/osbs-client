@@ -28,9 +28,10 @@ class TestBuildIDParam(object):
 
 
 class TestRegistryURIsParam(object):
-    def test_registry_uris_param_api_implicit(self):
+    @pytest.mark.parametrize('suffix', ['', '/'])
+    def test_registry_uris_param_api_implicit(self, suffix):
         p = RegistryURIsParam()
-        p.value = ['registry.example.com:5000']
+        p.value = ['registry.example.com:5000{suffix}'.format(suffix=suffix)]
 
         assert p.value[0].uri == 'registry.example.com:5000'
         assert p.value[0].docker_uri == 'registry.example.com:5000'
