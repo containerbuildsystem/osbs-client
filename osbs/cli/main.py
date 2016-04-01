@@ -537,6 +537,8 @@ def cli():
                         metavar="NAMESPACE", action="store")
     parser.add_argument("--capture-dir", metavar="DIR", action="store",
                         help="capture JSON responses and save them in DIR")
+    parser.add_argument("--oauth2-token", metavar="TOKEN", action="store",
+                        help="OAuth 2.0 token")
     args = parser.parse_args()
     return parser, args
 

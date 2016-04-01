@@ -79,6 +79,7 @@ class OSBS(object):
                             kerberos_ccache=self.os_conf.get_kerberos_ccache(),
                             use_auth=self.os_conf.get_use_auth(),
                             verify_ssl=self.os_conf.get_verify_ssl(),
+                            token=self.os_conf.get_oauth2_token(),
                             namespace=self.os_conf.get_namespace())
         self._bm = None
 

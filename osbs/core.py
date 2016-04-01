@@ -57,6 +57,7 @@ class Openshift(object):
                  verbose=False, username=None, password=None, use_kerberos=False,
                  kerberos_keytab=None, kerberos_principal=None, kerberos_ccache=None,
                  client_cert=None, client_key=None, verify_ssl=True, use_auth=None,
+                 token=None,
                  namespace=DEFAULT_NAMESPACE):
         self.os_api_url = openshift_api_url
         self.k8s_api_url = k8s_api_url
@@ -76,7 +77,7 @@ class Openshift(object):
         self.kerberos_keytab = kerberos_keytab
         self.kerberos_principal = kerberos_principal
         self.kerberos_ccache = kerberos_ccache
-        self.token = None
+        self.token = token
         self.ca = None
         auth_credentials_provided = bool(use_kerberos or
                                          (username and password))
