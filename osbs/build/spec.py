@@ -282,7 +282,10 @@ class ProdSpec(CommonSpec):
         # or, if no source registry is set, the first listed registry
         imagestream_reg = self.source_registry_uri.value
         if not imagestream_reg:
-            imagestream_reg = self.registry_uris.value[0]
+            try:
+                imagestream_reg = self.registry_uris.value[0]
+            except IndexError:
+                raise OsbsValidationException("No registries specified")
 
         self.imagestream_url.value = os.path.join(imagestream_reg.docker_uri,
                                                   name_label)
