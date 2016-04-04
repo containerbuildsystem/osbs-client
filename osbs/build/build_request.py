@@ -766,7 +766,7 @@ class ProductionBuild(CommonBuild):
                           self.spec.pdc_secret.value,
 
                           ('exit_plugins', 'koji_promote', 'koji_ssl_certs'):
-                          self.spec.koji_certs_secret})
+                          self.spec.koji_certs_secret.value})
 
         if self.spec.pulp_secret.value:
             # Don't push to docker registry, we're using pulp here

@@ -260,7 +260,7 @@ class ProdSpec(CommonSpec):
         self.koji_target.value = koji_target
         self.kojiroot.value = kojiroot
         self.kojihub.value = kojihub
-        self.koji_certs_secret = koji_certs_secret
+        self.koji_certs_secret.value = koji_certs_secret
         self.pulp_secret.value = pulp_secret or source_secret
         self.pulp_registry.value = pulp_registry
         self.pdc_secret.value = pdc_secret
