@@ -433,23 +433,12 @@ class ProductionBuild(CommonBuild):
         if 'v1' not in versions:
             # Remove v1-only plugins
             for phase, name in [('postbuild_plugins', 'compress'),
-                                ('postbuild_plugins', 'cp_built_image_to_nfs'),
                                 ('postbuild_plugins', 'pulp_push')]:
                 logger.info("removing v1-only plugin: %s", name)
                 self.dj.remove_plugin(phase, name)
 
             # remove extra tag_and_push config
             self.remove_tag_and_push_registries(tag_and_push_registries, 'v1')
-
-            # Enable metadata-only imports to Koji
-            try:
-                koji_promote = self.dj.dock_json_get_plugin_conf('exit_plugins',
-                                                                 'koji_promote')
-            except (KeyError, IndexError):
-                pass
-            else:
-                args = koji_promote.setdefault('args', {})
-                args['metadata_only'] = True
 
         if 'v2' not in versions:
             # Remove v2-only plugins
@@ -478,7 +467,6 @@ class ProductionBuild(CommonBuild):
                                 ("prebuild_plugins", "stop_autorebuild_if_disabled"),
                                 ("prebuild_plugins", "bump_release"),
                                 ("postbuild_plugins", "import_image"),
-                                ("exit_plugins", "koji_promote"),
                                 ("exit_plugins", "sendmail")]:
                 logger.info("removing %s from request because there are no triggers",
                             which)
@@ -629,27 +617,6 @@ class ProductionBuild(CommonBuild):
             logger.info("removing sendmail from request, "
                         "requires pdc_url and smtp_uri")
             self.dj.remove_plugin('exit_plugins', 'sendmail')
-
-    def render_cp_built_image_to_nfs(self):
-        """
-        If NFS destination set, use it
-        """
-        if not self.dj.dock_json_has_plugin_conf('postbuild_plugins',
-                                                 'cp_built_image_to_nfs'):
-            return
-
-        nfs_server_path = self.spec.nfs_server_path.value
-        if nfs_server_path:
-            self.dj.dock_json_set_arg('postbuild_plugins', 'cp_built_image_to_nfs',
-                                      'nfs_server_path', nfs_server_path)
-            self.dj.dock_json_set_arg('postbuild_plugins',
-                                      'cp_built_image_to_nfs',
-                                      'dest_dir', self.spec.nfs_dest_dir.value)
-        else:
-            # Otherwise, don't run the NFS plugin
-            logger.info("removing cp_built_image_to_nfs from request, "
-                        "requires nfs_server_path")
-            self.dj.remove_plugin("postbuild_plugins", "cp_built_image_to_nfs")
 
     def render_pulp_push(self):
         """
@@ -805,7 +772,6 @@ class ProductionBuild(CommonBuild):
         self.render_add_labels_in_dockerfile()
         self.render_koji()
         self.render_bump_release()
-        self.render_cp_built_image_to_nfs()
         self.render_import_image(use_auth=use_auth)
         self.render_pulp_push()
         self.render_pulp_sync()
