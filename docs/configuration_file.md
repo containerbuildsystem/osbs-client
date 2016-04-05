@@ -51,6 +51,8 @@ Some options are also mandatory.
 
 * `koji_target` (*optional*, `string`) — name of koji target from which packages should be fetched
 
+* `koji_certs_secret` (*optional*, `string`) — name of [kubernetes secret](https://github.com/kubernetes/kubernetes/blob/master/docs/design/secrets.md) to use for koji authentication
+
 * `sources_command` (*optional*, `string`) — command to use to get dist-git artifacts from lookaside cache (e.g. `fedpkg sources`)
 
 * `username`, `password` (*optional*, `string`) — when OpenShift is hidden behind authentication proxy, you can specify username and password for basic authentication
