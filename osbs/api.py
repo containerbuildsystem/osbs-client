@@ -281,6 +281,7 @@ class OSBS(object):
             kojihub=self.build_conf.get_kojihub(),
             sources_command=self.build_conf.get_sources_command(),
             koji_target=target,
+            koji_certs_secret=self.build_conf.get_koji_certs_secret(),
             architecture=architecture,
             vendor=self.build_conf.get_vendor(),
             build_host=self.build_conf.get_build_host(),

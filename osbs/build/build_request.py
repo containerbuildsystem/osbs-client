@@ -309,6 +309,7 @@ class ProductionBuild(CommonBuild):
         :param koji_target: str, koji tag with packages used to build the image
         :param kojiroot: str, URL from which koji packages are fetched
         :param kojihub: str, URL of the koji hub
+        :param koji_certs_secret: str, resource name of secret that holds the koji certificates
         :param pulp_registry: str, name of pulp registry in dockpulp.conf
         :param nfs_server_path: str, NFS server and path
         :param nfs_dest_dir: str, directory to create on NFS server
@@ -762,7 +763,10 @@ class ProductionBuild(CommonBuild):
                           self.spec.pulp_secret.value,
 
                           ('exit_plugins', 'sendmail', 'pdc_secret_path'):
-                          self.spec.pdc_secret.value})
+                          self.spec.pdc_secret.value,
+
+                          ('exit_plugins', 'koji_promote', 'koji_ssl_certs'):
+                          self.spec.koji_certs_secret.value})
 
         if self.spec.pulp_secret.value:
             # Don't push to docker registry, we're using pulp here

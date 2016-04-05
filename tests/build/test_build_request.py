@@ -1134,3 +1134,62 @@ class TestBuildRequest(object):
         plugins = json.loads(plugins_json)
         assert plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push',
                                 'args', 'pulp_secret_path') == mount_path
+
+    def test_render_prod_request_with_koji_secret(self, tmpdir):
+        self.create_image_change_trigger_json(str(tmpdir))
+        bm = BuildManager(str(tmpdir))
+        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        # We're using both pulp and sendmail, both of which require a
+        # Kubernetes secret. This isn't supported until OpenShift
+        # Origin 1.0.6.
+        build_request.set_openshift_required_version(parse_version('1.0.6'))
+        name_label = "fedora/resultingimage"
+        push_url = "ssh://{username}git.example.com/git/{component}.git"
+        koji_certs_secret_name = 'foobar'
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'base_image': 'fedora:latest',
+            'name_label': name_label,
+            'registry_uri': "example.com",
+            'openshift_uri': "http://openshift/",
+            'builder_openshift_url': "http://openshift/",
+            'koji_target': "koji-target",
+            'kojiroot': "http://root/",
+            'kojihub': "http://hub/",
+            'sources_command': "make",
+            'architecture': "x86_64",
+            'vendor': "Foo Vendor",
+            'build_host': "our.build.host.example.com",
+            'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
+            'registry_api_versions': ['v1'],
+            'git_push_url': push_url.format(username='', component=TEST_COMPONENT),
+            'git_push_username': 'example',
+            'koji_certs_secret': koji_certs_secret_name,
+        }
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+
+        strategy = build_json['spec']['strategy']['customStrategy']['env']
+        plugins_json = None
+        for d in strategy:
+            if d['name'] == 'DOCK_PLUGINS':
+                plugins_json = d['value']
+                break
+
+        plugins = json.loads(plugins_json)
+        assert get_plugin(plugins, "exit_plugins", "koji_promote")
+        assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
+                                "args", "kojihub") == kwargs["kojihub"]
+        assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
+                                "args", "url") == kwargs["openshift_uri"]
+
+        koji_certs_secret = [secret for secret in
+                             build_json['spec']['strategy']['customStrategy']['secrets']
+                             if secret['secretSource']['name'] == koji_certs_secret_name]
+        mount_path = koji_certs_secret[0]['mountPath']
+        assert get_plugin(plugins, 'exit_plugins', 'koji_promote')['args']['koji_ssl_certs'] == mount_path
