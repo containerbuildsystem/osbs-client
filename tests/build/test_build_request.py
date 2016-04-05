@@ -808,6 +808,58 @@ class TestBuildRequest(object):
         with pytest.raises(OsbsValidationException):
             build_request.render()
 
+    @pytest.mark.parametrize(('nfs_server_path', 'url_expected'), [
+        ('server:path', False),
+        ('path', True),
+    ])
+    def test_render_prod_nfs_server_path(self, nfs_server_path, url_expected):
+        """
+        When the server path of nfs_server_path is missing, the rendered
+        JSON should include information to allow atomic-reactor to
+        speak with the server
+        """
+        bm = BuildManager(INPUTS_PATH)
+        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'base_image': 'fedora:latest',
+            'name_label': 'fedora/resultingimage',
+            'registry_uri': "registry.example.com",
+            'openshift_uri': "http://openshift/",
+            'builder_openshift_url': "http://openshift/",
+            'sources_command': "make",
+            'architecture': "x86_64",
+            'vendor': "Foo Vendor",
+            'build_host': "our.build.host.example.com",
+            'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
+            'registry_api_versions': ['v1'],
+            'nfs_server_path': nfs_server_path,
+        }
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+        strategy = build_json['spec']['strategy']['customStrategy']['env']
+        plugins_json = None
+        for d in strategy:
+            if d['name'] == 'DOCK_PLUGINS':
+                plugins_json = d['value']
+                break
+
+        plugins = json.loads(plugins_json)
+        if url_expected:
+            assert plugin_value_get(plugins, 'postbuild_plugins',
+                                    'cp_built_image_to_nfs', 'args',
+                                    'url') == 'http://openshift/'
+        else:
+            with pytest.raises(KeyError):
+                plugin_value_get(plugins, 'postbuild_plugins',
+                                 'cp_built_image_to_nfs', 'args',
+                                 'url')
+
     @staticmethod
     def create_image_change_trigger_json(outdir):
         """

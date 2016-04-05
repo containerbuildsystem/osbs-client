@@ -159,3 +159,12 @@ class BuildResponse(object):
         digests_json = graceful_chain_get(self.get_annotations_or_labels(), "digests")
         if digests_json:
             return json.loads(digests_json)
+
+    def get_host(self):
+        """
+        Return the host IP address the Build's Node ran on.
+
+        :return: str, IP address
+        """
+
+        return graceful_chain_get(self.get_annotations_or_labels(), "host")
