@@ -226,6 +226,51 @@ class Openshift(object):
         check_response(response)
         return response
 
+    def get_serviceaccount_tokens(self, username="~"):
+        result = {}
+
+        url = self._build_k8s_url("serviceaccounts/%s/" % username, _prepend_namespace=True)
+        response = self._get(url)
+        check_response(response)
+        json = response.json()
+        if not json:
+            return {}
+
+        if 'secrets' not in json.keys():
+            logger.debug("No secrets found for service account", username)
+            return {}
+
+        secrets = json['secrets']
+
+        for secret in secrets:
+            if 'name' not in secret.keys():
+                logger.debug("Malformed secret info: missing 'name' key in ", secret)
+                continue
+            secret_name = secret['name']
+            if 'token' not in secret_name:
+                logger.debug("Secret %s is not a token", secret_name)
+                continue
+
+            url = self._build_k8s_url("secrets/%s/" % secret_name, _prepend_namespace=True)
+            response = self._get(url)
+            check_response(response)
+
+            json = response.json()
+            if not json:
+                continue
+            if 'data' not in json.keys():
+                logger.debug("Malformed secret info: missing 'data' key in ", json)
+                continue
+
+            secret_data = json['data']
+            if 'token' not in secret_data.keys():
+                logger.debug("Malformed secret data: missing 'token' key in ", secret_data)
+                continue
+
+            result[secret_name] = secret_data['token']
+
+        return result
+
     def create_build(self, build_json):
         """
         :return:

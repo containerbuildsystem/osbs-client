@@ -459,6 +459,10 @@ class OSBS(object):
         return self.os.get_user(username).json()
 
     @osbsapi
+    def get_serviceaccount_tokens(self, username="~"):
+        return self.os.get_serviceaccount_tokens(username)
+
+    @osbsapi
     def get_image_stream(self, stream_id):
         return self.os.get_image_stream(stream_id)
 
