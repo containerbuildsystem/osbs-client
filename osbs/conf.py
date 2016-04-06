@@ -358,3 +358,6 @@ class Configuration(object):
 
     def get_oauth2_token(self):
         return self._get_value("token", self.conf_section, "token")
+
+    def get_oauth2_token_file(self):
+        return self._get_value("token_file", self.conf_section, "token_file")

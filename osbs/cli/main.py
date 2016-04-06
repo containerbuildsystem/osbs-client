@@ -568,6 +568,8 @@ def cli():
                         help="capture JSON responses and save them in DIR")
     parser.add_argument("--token", metavar="TOKEN", action="store",
                         help="OAuth 2.0 token")
+    parser.add_argument("--token-file", metavar="TOKENFILE", action="store",
+                        help="Read oauth 2.0 token from file")
     args = parser.parse_args()
     return parser, args
 
