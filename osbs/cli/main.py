@@ -23,11 +23,18 @@ from osbs.build.build_response import BuildResponse
 from osbs.cli.render import TablePrinter
 from osbs.conf import Configuration
 from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
-                            CLI_LIST_BUILDS_DEFAULT_COLS, PY3, BACKUP_RESOURCES, DEFAULT_NAMESPACE,
+                            CLI_LIST_BUILDS_DEFAULT_COLS, PY3, BACKUP_RESOURCES,
                             BUILD_FINISHED_STATES)
 from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsAuthException, OsbsResponseException
 from osbs.cli.capture import setup_json_capture
 from osbs.utils import strip_registry_from_image, paused_builds, TarReader, TarWriter
+
+try:
+    # py2
+    from urlparse import urljoin
+except ImportError:
+    # py3
+    from urllib.parse import urljoin
 
 logger = logging.getLogger('osbs')
 
@@ -349,6 +356,17 @@ def cmd_restore(args, osbs):
     logger.info("backup recovery complete!")
 
 
+def cmd_print_token_url(args, osbs):
+    uri = urljoin(osbs.os_conf.get_openshift_base_uri(), "oauth/token/request")
+    print("Please navigate to {} and complete authentication.".format(uri) +
+          "Set token field in configuration to authenticate requests")
+
+
+def cmd_serviceaccount_token(args, osbs):
+    tokens = osbs.get_serviceaccount_tokens(args.SERVICEACCOUNT)
+    print(tokens)
+
+
 def str_on_2_unicode_on_3(s):
     """
     argparse is way too awesome when doing repr() on choices when printing usage
@@ -499,6 +517,17 @@ def cli():
                                  help="don't stop when restoring a resource fails")
     restore_builder.set_defaults(func=cmd_restore)
 
+    token_url_builder = subparsers.add_parser(str_on_2_unicode_on_3('print-token-url'),
+                                              description='print a url to oauth authentication page')
+    token_url_builder.set_defaults(func=cmd_print_token_url)
+
+    serviceaccount_builder = subparsers.add_parser(
+        str_on_2_unicode_on_3('get-serviceaccount-token'),
+        description='get auth token for serviceaccount')
+    serviceaccount_builder.add_argument("SERVICEACCOUNT",
+                                        help="name of the service account")
+    serviceaccount_builder.set_defaults(func=cmd_serviceaccount_token)
+
     parser.add_argument("--openshift-uri", action='store', metavar="URL",
                         help="openshift URL to remote API")
     parser.add_argument("--registry-uri", action='store', metavar="URL",
@@ -537,8 +566,10 @@ def cli():
                         metavar="NAMESPACE", action="store")
     parser.add_argument("--capture-dir", metavar="DIR", action="store",
                         help="capture JSON responses and save them in DIR")
-    parser.add_argument("--oauth2-token", metavar="TOKEN", action="store",
+    parser.add_argument("--token", metavar="TOKEN", action="store",
                         help="OAuth 2.0 token")
+    parser.add_argument("--token-file", metavar="TOKENFILE", action="store",
+                        help="Read oauth 2.0 token from file")
     args = parser.parse_args()
     return parser, args
 

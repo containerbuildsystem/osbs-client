@@ -10,6 +10,7 @@ import json
 import os
 import numbers
 import time
+import base64
 
 import logging
 from osbs.kerberos_ccache import kerberos_ccache_init
@@ -57,7 +58,7 @@ class Openshift(object):
                  verbose=False, username=None, password=None, use_kerberos=False,
                  kerberos_keytab=None, kerberos_principal=None, kerberos_ccache=None,
                  client_cert=None, client_key=None, verify_ssl=True, use_auth=None,
-                 token=None,
+                 token=None, token_file=None,
                  namespace=DEFAULT_NAMESPACE):
         self.os_api_url = openshift_api_url
         self.k8s_api_url = k8s_api_url
@@ -78,6 +79,12 @@ class Openshift(object):
         self.kerberos_principal = kerberos_principal
         self.kerberos_ccache = kerberos_ccache
         self.token = token
+        if token_file:
+            try:
+                with open(token_file, 'r') as token_fd:
+                    self.token = token_fd.read().strip()
+            except Exception as ex:
+                logger.error("Exception caught while reading %s: %s", token_file, repr(ex))
         self.ca = None
         auth_credentials_provided = bool(use_kerberos or
                                          (username and password))
@@ -225,6 +232,54 @@ class Openshift(object):
         response = self._get(url)
         check_response(response)
         return response
+
+    def get_serviceaccount_tokens(self, username="~"):
+        result = {}
+
+        url = self._build_k8s_url("serviceaccounts/%s/" % username, _prepend_namespace=True)
+        response = self._get(url)
+        check_response(response)
+        json = response.json()
+        if not json:
+            return {}
+
+        if 'secrets' not in json.keys():
+            logger.debug("No secrets found for service account", username)
+            return {}
+
+        secrets = json['secrets']
+
+        for secret in secrets:
+            if 'name' not in secret.keys():
+                logger.debug("Malformed secret info: missing 'name' key in ", secret)
+                continue
+            secret_name = secret['name']
+            if 'token' not in secret_name:
+                logger.debug("Secret %s is not a token", secret_name)
+                continue
+
+            url = self._build_k8s_url("secrets/%s/" % secret_name, _prepend_namespace=True)
+            response = self._get(url)
+            check_response(response)
+
+            json = response.json()
+            if not json:
+                continue
+            if 'data' not in json.keys():
+                logger.debug("Malformed secret info: missing 'data' key in ", json)
+                continue
+
+            secret_data = json['data']
+            if 'token' not in secret_data.keys():
+                logger.debug("Malformed secret data: missing 'token' key in ", secret_data)
+                continue
+
+            token = secret_data['token']
+
+            # Token needs to be base64-decoded
+            result[secret_name] = base64.b64decode(token)
+
+        return result
 
     def create_build(self, build_json):
         """
