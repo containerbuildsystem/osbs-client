@@ -10,6 +10,7 @@ import json
 import os
 import numbers
 import time
+import base64
 
 import logging
 from osbs.kerberos_ccache import kerberos_ccache_init
@@ -273,7 +274,10 @@ class Openshift(object):
                 logger.debug("Malformed secret data: missing 'token' key in ", secret_data)
                 continue
 
-            result[secret_name] = secret_data['token']
+            token = secret_data['token']
+
+            # Token needs to be base64-decoded
+            result[secret_name] = base64.b64decode(token)
 
         return result
 
