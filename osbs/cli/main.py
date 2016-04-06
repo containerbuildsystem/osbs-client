@@ -356,7 +356,7 @@ def cmd_restore(args, osbs):
     logger.info("backup recovery complete!")
 
 
-def cmd_oauth_token(args, osbs):
+def cmd_print_oauth_url(args, osbs):
     uri = urljoin(osbs.os_conf.get_openshift_base_uri(), "/token/request")
     print("Please navigate to {} and complete authentication.".format(uri) +
           "Set oauth2_token field in configuration to authenticate requests")
@@ -519,7 +519,7 @@ def cli():
 
     oauth2_builder = subparsers.add_parser(str_on_2_unicode_on_3('print-oauth-token-url'),
                                            description='print a url to oauth authentication page')
-    oauth2_builder.set_defaults(func=cmd_oauth_token)
+    oauth2_builder.set_defaults(func=cmd_print_oauth_url)
 
     serviceaccount_builder = subparsers.add_parser(
         str_on_2_unicode_on_3('get-serviceaccount-token'),
