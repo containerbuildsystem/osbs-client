@@ -209,6 +209,7 @@ def cmd_build(args, osbs):
         architecture=osbs.build_conf.get_architecture(),
         yum_repourls=osbs.build_conf.get_yum_repourls(),
         build_image=osbs.build_conf.get_build_image(),
+        scratch=args.scratch,
     )
     build_id = build.get_build_name()
     # we need to wait for kubelet to schedule the build, otherwise it's 500
@@ -483,6 +484,8 @@ def cli():
                               help="storage limit")
     build_parser.add_argument("--build-image", action='store', required=False,
                               help="builder image to use")
+    build_parser.add_argument("--scratch", action='store_true', required=False,
+                              default=False, help="perform a scratch build")
     build_parser.set_defaults(func=cmd_build)
 
     get_build_image_id = subparsers.add_parser(str_on_2_unicode_on_3('get-build-image-id'),

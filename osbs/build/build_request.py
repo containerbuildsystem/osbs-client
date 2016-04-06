@@ -298,6 +298,9 @@ class ProductionBuild(CommonBuild):
         super(ProductionBuild, self).__init__(build_json_store, **kwargs)
         self.spec = ProdSpec()
 
+        # For the koji "scratch" build type
+        self.scratch = False
+
     def set_params(self, **kwargs):
         """
         set parameters according to specification
@@ -323,6 +326,14 @@ class ProductionBuild(CommonBuild):
         :param use_auth: bool, use auth from atomic-reactor?
         :param git_push_url: str, URL for git push
         """
+
+        # Here we cater to the koji "scratch" build type, this will disable
+        # all plugins that might cause importing of data to koji
+        try:
+            self.scratch = kwargs.pop("scratch")
+        except KeyError:
+            pass
+
         logger.debug("setting params '%s' for %s", kwargs, self.spec)
         self.spec.set_params(**kwargs)
 
@@ -422,23 +433,12 @@ class ProductionBuild(CommonBuild):
         if 'v1' not in versions:
             # Remove v1-only plugins
             for phase, name in [('postbuild_plugins', 'compress'),
-                                ('postbuild_plugins', 'cp_built_image_to_nfs'),
                                 ('postbuild_plugins', 'pulp_push')]:
                 logger.info("removing v1-only plugin: %s", name)
                 self.dj.remove_plugin(phase, name)
 
             # remove extra tag_and_push config
             self.remove_tag_and_push_registries(tag_and_push_registries, 'v1')
-
-            # Enable metadata-only imports to Koji
-            try:
-                koji_promote = self.dj.dock_json_get_plugin_conf('exit_plugins',
-                                                                 'koji_promote')
-            except (KeyError, IndexError):
-                pass
-            else:
-                args = koji_promote.setdefault('args', {})
-                args['metadata_only'] = True
 
         if 'v2' not in versions:
             # Remove v2-only plugins
@@ -467,8 +467,22 @@ class ProductionBuild(CommonBuild):
                                 ("prebuild_plugins", "stop_autorebuild_if_disabled"),
                                 ("prebuild_plugins", "bump_release"),
                                 ("postbuild_plugins", "import_image"),
-                                ("exit_plugins", "koji_promote"),
                                 ("exit_plugins", "sendmail")]:
+                logger.info("removing %s from request because there are no triggers",
+                            which)
+                self.dj.remove_plugin(when, which)
+
+    def adjust_for_scratch(self):
+        """
+        Remove koji Content Generator related plugins if no triggers set in
+        order to hadle the "scratch build" scenario
+        """
+        if self.scratch:
+            # Note: only one for now, but left in a list like other adjust_for_
+            # functions in the event that this needs to be expanded
+            for when, which in [
+                ("exit_plugins", "koji_promote"),
+            ]:
                 logger.info("removing %s from request because there are no triggers",
                             which)
                 self.dj.remove_plugin(when, which)
@@ -604,27 +618,6 @@ class ProductionBuild(CommonBuild):
                         "requires pdc_url and smtp_uri")
             self.dj.remove_plugin('exit_plugins', 'sendmail')
 
-    def render_cp_built_image_to_nfs(self):
-        """
-        If NFS destination set, use it
-        """
-        if not self.dj.dock_json_has_plugin_conf('postbuild_plugins',
-                                                 'cp_built_image_to_nfs'):
-            return
-
-        nfs_server_path = self.spec.nfs_server_path.value
-        if nfs_server_path:
-            self.dj.dock_json_set_arg('postbuild_plugins', 'cp_built_image_to_nfs',
-                                      'nfs_server_path', nfs_server_path)
-            self.dj.dock_json_set_arg('postbuild_plugins',
-                                      'cp_built_image_to_nfs',
-                                      'dest_dir', self.spec.nfs_dest_dir.value)
-        else:
-            # Otherwise, don't run the NFS plugin
-            logger.info("removing cp_built_image_to_nfs from request, "
-                        "requires nfs_server_path")
-            self.dj.remove_plugin("postbuild_plugins", "cp_built_image_to_nfs")
-
     def render_pulp_push(self):
         """
         If a pulp registry is specified, use the pulp plugin
@@ -748,6 +741,7 @@ class ProductionBuild(CommonBuild):
             del self.template['spec']['triggers']
 
         self.adjust_for_triggers()
+        self.adjust_for_scratch()
 
         # Enable/disable plugins as needed for target registry API versions
         self.adjust_for_registry_api_versions()
@@ -778,7 +772,6 @@ class ProductionBuild(CommonBuild):
         self.render_add_labels_in_dockerfile()
         self.render_koji()
         self.render_bump_release()
-        self.render_cp_built_image_to_nfs()
         self.render_import_image(use_auth=use_auth)
         self.render_pulp_push()
         self.render_pulp_sync()

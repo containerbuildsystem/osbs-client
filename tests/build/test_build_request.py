@@ -257,8 +257,6 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "exit_plugins", "koji_promote")
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
         assert 'sourceSecret' not in build_json["spec"]["source"]
         assert plugin_value_get(plugins, "prebuild_plugins", "add_yum_repo_by_url",
@@ -360,8 +358,6 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "exit_plugins", "koji_promote")
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
         assert 'sourceSecret' not in build_json["spec"]["source"]
 
@@ -448,8 +444,6 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "exit_plugins", "koji_promote")
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
         assert 'sourceSecret' not in build_json["spec"]["source"]
 
@@ -518,11 +512,10 @@ class TestBuildRequest(object):
         assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
-        assert get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "exit_plugins", "koji_promote")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
@@ -666,11 +659,12 @@ class TestBuildRequest(object):
                 assert len(pulp_secrets) == 1
                 assert pulp_secrets[0]['secretSource']['name'] == pulp_secret
 
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
+
         if 'v1' in registry_api_versions:
             assert get_plugin(plugins, "postbuild_plugins",
                               "compress")
-            assert get_plugin(plugins, "postbuild_plugins",
-                              "cp_built_image_to_nfs")
             assert get_plugin(plugins, "postbuild_plugins",
                               "pulp_push")
             assert plugin_value_get(plugins, "postbuild_plugins", "pulp_push",
@@ -679,9 +673,6 @@ class TestBuildRequest(object):
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, "postbuild_plugins",
                            "compress")
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, "postbuild_plugins",
-                           "cp_built_image_to_nfs")
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, "postbuild_plugins",
                            "pulp_push")
@@ -774,8 +765,6 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "exit_plugins", "koji_promote")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
 
@@ -1042,8 +1031,6 @@ class TestBuildRequest(object):
             get_plugin(plugins, "prebuild_plugins", "bump_release")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "exit_plugins", "koji_promote")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
 
