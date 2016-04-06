@@ -357,4 +357,4 @@ class Configuration(object):
         return self._get_value("build_image", self.conf_section, "build_image")
 
     def get_oauth2_token(self):
-        return self._get_value("oauth2_token", self.conf_section, "oauth2_token")
+        return self._get_value("token", self.conf_section, "token")

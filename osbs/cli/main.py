@@ -356,10 +356,10 @@ def cmd_restore(args, osbs):
     logger.info("backup recovery complete!")
 
 
-def cmd_print_oauth_url(args, osbs):
+def cmd_print_token_url(args, osbs):
     uri = urljoin(osbs.os_conf.get_openshift_base_uri(), "oauth/token/request")
     print("Please navigate to {} and complete authentication.".format(uri) +
-          "Set oauth2_token field in configuration to authenticate requests")
+          "Set token field in configuration to authenticate requests")
 
 
 def cmd_serviceaccount_token(args, osbs):
@@ -517,9 +517,9 @@ def cli():
                                  help="don't stop when restoring a resource fails")
     restore_builder.set_defaults(func=cmd_restore)
 
-    oauth2_builder = subparsers.add_parser(str_on_2_unicode_on_3('print-oauth-token-url'),
-                                           description='print a url to oauth authentication page')
-    oauth2_builder.set_defaults(func=cmd_print_oauth_url)
+    token_url_builder = subparsers.add_parser(str_on_2_unicode_on_3('print-token-url'),
+                                              description='print a url to oauth authentication page')
+    token_url_builder.set_defaults(func=cmd_print_token_url)
 
     serviceaccount_builder = subparsers.add_parser(
         str_on_2_unicode_on_3('get-serviceaccount-token'),
@@ -566,7 +566,7 @@ def cli():
                         metavar="NAMESPACE", action="store")
     parser.add_argument("--capture-dir", metavar="DIR", action="store",
                         help="capture JSON responses and save them in DIR")
-    parser.add_argument("--oauth2-token", metavar="TOKEN", action="store",
+    parser.add_argument("--token", metavar="TOKEN", action="store",
                         help="OAuth 2.0 token")
     args = parser.parse_args()
     return parser, args
