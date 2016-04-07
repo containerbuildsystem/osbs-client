@@ -84,7 +84,9 @@ class Openshift(object):
                 with open(token_file, 'r') as token_fd:
                     self.token = token_fd.read().strip()
             except Exception as ex:
-                logger.error("Exception caught while reading %s: %s", token_file, repr(ex))
+                logger.error("Exception caught while reading %s: %s",
+                             token_file, repr(ex))
+
         self.ca = None
         auth_credentials_provided = bool(use_kerberos or
                                          (username and password))
@@ -239,19 +241,20 @@ class Openshift(object):
         url = self._build_k8s_url("serviceaccounts/%s/" % username, _prepend_namespace=True)
         response = self._get(url)
         check_response(response)
-        json = response.json()
-        if not json:
+        sa_json = response.json()
+        if not sa_json:
             return {}
 
-        if 'secrets' not in json.keys():
-            logger.debug("No secrets found for service account", username)
+        if 'secrets' not in sa_json.keys():
+            logger.debug("No secrets found for service account %s", username)
             return {}
 
-        secrets = json['secrets']
+        secrets = sa_json['secrets']
 
         for secret in secrets:
             if 'name' not in secret.keys():
-                logger.debug("Malformed secret info: missing 'name' key in ", secret)
+                logger.debug("Malformed secret info: missing 'name' key in %r",
+                             secret)
                 continue
             secret_name = secret['name']
             if 'token' not in secret_name:
@@ -262,16 +265,18 @@ class Openshift(object):
             response = self._get(url)
             check_response(response)
 
-            json = response.json()
-            if not json:
+            secret_json = response.json()
+            if not secret_json:
                 continue
-            if 'data' not in json.keys():
-                logger.debug("Malformed secret info: missing 'data' key in ", json)
+            if 'data' not in secret_json.keys():
+                logger.debug("Malformed secret info: missing 'data' key in %r",
+                             json)
                 continue
 
-            secret_data = json['data']
+            secret_data = secret_json['data']
             if 'token' not in secret_data.keys():
-                logger.debug("Malformed secret data: missing 'token' key in ", secret_data)
+                logger.debug("Malformed secret data: missing 'token' key in %r",
+                             secret_data)
                 continue
 
             token = secret_data['token']
