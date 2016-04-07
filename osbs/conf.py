@@ -357,7 +357,43 @@ class Configuration(object):
         return self._get_value("build_image", self.conf_section, "build_image")
 
     def get_oauth2_token(self):
-        return self._get_value("token", self.conf_section, "token")
+        # token overrides token_file
+        # either in kwargs overrides cli args
+        # either in cli args overrides conf
+        key_names = ['token', 'token_file']
+        value = None
+        found_key = None
+        for key in key_names:
+            value = self.kwargs.get(key, None)
+            if value is not None:
+                found_key = key
+                break
 
-    def get_oauth2_token_file(self):
-        return self._get_value("token_file", self.conf_section, "token_file")
+        if value is None:
+            for key in key_names:
+                value = getattr(self.args, key, None)
+                if value is not None:
+                    found_key = key
+                    break
+
+        if value is None:
+            for key in key_names:
+                try:
+                    value = self.scp.get(self.conf_section, key)
+                except configparser.Error:
+                    pass
+                else:
+                    found_key = key
+                    break
+
+        # For token_file, read the file
+        if found_key == 'token_file':
+            token_file = value
+            try:
+                with open(token_file, 'r') as token_fd:
+                    value = token_fd.read().strip()
+            except IOError as ex:
+                logger.error("exception caught while reading %s: %r",
+                             token_file, ex)
+
+        return value
