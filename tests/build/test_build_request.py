@@ -184,6 +184,10 @@ class TestBuildRequest(object):
         bm = BuildManager(INPUTS_PATH)
         build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
         name_label = "fedora/resultingimage"
+        vendor = "Foo Vendor"
+        build_host = "our.build.host.example.com"
+        authoritative_registry = "registry.example.com"
+        distribution_scope = "authoritative-source-only"
         assert isinstance(build_request, ProductionBuild)
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -202,10 +206,10 @@ class TestBuildRequest(object):
             'kojihub': "http://hub/",
             'sources_command': "make",
             'architecture': architecture,
-            'vendor': "Foo Vendor",
-            'build_host': "our.build.host.example.com",
-            'authoritative_registry': "registry.example.com",
-            'distribution_scope': "authoritative-source-only",
+            'vendor': vendor,
+            'build_host': build_host,
+            'authoritative_registry': authoritative_registry,
+            'distribution_scope': distribution_scope,
             'yum_repourls': ["http://example.com/my.repo"],
             'registry_api_versions': ['v1'],
             'build_image': build_image,
@@ -266,10 +270,10 @@ class TestBuildRequest(object):
                                   "args", "labels")
 
         assert labels is not None
-        assert labels['Authoritative_Registry'] is not None
-        assert labels['Build_Host'] is not None
-        assert labels['Vendor'] is not None
-        assert labels['distribution-scope'] is not None
+        assert labels['Authoritative_Registry'] == authoritative_registry
+        assert labels['Build_Host'] == build_host
+        assert labels['Vendor'] == vendor
+        assert labels['distribution-scope'] == distribution_scope
         if architecture:
             assert labels['Architecture'] is not None
         else:

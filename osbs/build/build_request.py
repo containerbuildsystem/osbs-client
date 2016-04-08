@@ -319,7 +319,7 @@ class ProductionBuild(CommonBuild):
         :param sources_command: str, command used to fetch dist-git sources
         :param architecture: str, architecture we are building for
         :param vendor: str, vendor name
-        :param build_host: str, host the build will run on
+        :param build_host: str, host the build will run on or None for auto
         :param authoritative_registry: str, the docker registry authoritative for this image
         :param distribution_scope: str, distribution scope for this image
                                    (private, authoritative-source-only, restricted, public)
@@ -490,10 +490,13 @@ class ProductionBuild(CommonBuild):
     def render_add_labels_in_dockerfile(self):
         implicit_labels = {
             'Vendor': self.spec.vendor.value,
-            'Build_Host': self.spec.build_host.value,
             'Authoritative_Registry': self.spec.authoritative_registry.value,
             'distribution-scope': self.spec.distribution_scope.value,
         }
+
+        build_host = self.spec.build_host.value
+        if build_host:
+            implicit_labels['Build_Host'] = build_host
 
         architecture = self.spec.architecture.value
         if architecture:
