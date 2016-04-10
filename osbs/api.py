@@ -247,7 +247,6 @@ class OSBS(object):
                           user, component,
                           target,      # may be None
                           architecture=None, yum_repourls=None,
-                          build_image=None,
                           **kwargs):
         """
         Create a production build
@@ -270,7 +269,7 @@ class OSBS(object):
             git_branch=git_branch,
             user=user,
             component=component,
-            build_image=build_image,
+            build_image=self.build_conf.get_build_image(),
             base_image=df_parser.baseimage,
             name_label=df_parser.labels['Name'],
             registry_uris=self.build_conf.get_registry_uris(),
@@ -321,7 +320,7 @@ class OSBS(object):
 
     @osbsapi
     def create_simple_build(self, git_uri, git_ref, user, component, tag,
-                            yum_repourls=None, build_image=None, **kwargs):
+                            yum_repourls=None, **kwargs):
         build_request = self.get_build_request(SIMPLE_BUILD_TYPE)
         build_request.set_params(
             git_uri=git_uri,
@@ -329,7 +328,7 @@ class OSBS(object):
             user=user,
             component=component,
             tag=tag,
-            build_image=build_image,
+            build_image=self.build_conf.get_build_image(),
             registry_uris=self.build_conf.get_registry_uris(),
             source_registry_uri=self.build_conf.get_source_registry_uri(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
