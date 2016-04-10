@@ -282,3 +282,48 @@ build_type = simple
                 osbs.get_compression_extension()
         else:
             assert osbs.get_compression_extension() == expected
+
+    def test_build_image(self):
+        build_image = 'registry.example.com/buildroot:2.0'
+        with NamedTemporaryFile(mode='wt') as fp:
+            fp.write("""
+[general]
+build_json_dir = {build_json_dir}
+[default]
+openshift_url = /
+sources_command = /bin/true
+vendor = Example, Inc
+registry_uri = registry.example.com
+build_host = localhost
+authoritative_registry = localhost
+distribution_scope = private
+build_type = prod
+build_image = {build_image}
+""".format(build_json_dir='inputs', build_image=build_image))
+            fp.flush()
+            config = Configuration(fp.name)
+            osbs = OSBS(config, config)
+
+        assert config.get_build_image() == build_image
+
+        class MockParser(object):
+            labels = {'Name': 'fedora23/something'}
+            baseimage = 'fedora23/python'
+        (flexmock(utils)
+            .should_receive('get_df_parser')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(MockParser()))
+
+        # Return the request as the response so we can check it
+        def request_as_response(request):
+            request.json = request.render()
+            return request
+
+        flexmock(OSBS, _create_build_config_and_build=request_as_response)
+
+        req = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                     TEST_GIT_BRANCH, TEST_USER,
+                                     TEST_COMPONENT, TEST_TARGET,
+                                     TEST_ARCH)
+        img = req.json['spec']['strategy']['customStrategy']['from']['name']
+        assert img == build_image
