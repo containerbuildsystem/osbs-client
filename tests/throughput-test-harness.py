@@ -121,12 +121,16 @@ def cmd_start_builds(args):
 
     stagger_remaining = args.stagger_number
     failed_builds = {}
+    repo_url = []
+    if args.repo_url:
+        repo_url = ['--repo-url', args.repo_url]
+
     for b in branches:
         commit = run("git", "rev-parse", b).strip()
         branch_url = "{0}#{1}".format(remote_url, commit)
 
         try:
-            run(args.koji_bin, "container-build", args.koji_target, "--nowait", "--git-branch", b, branch_url)
+            run(args.koji_bin, "container-build", args.koji_target, "--nowait", "--git-branch", b, branch_url, *repo_url)
         except SubprocessError as ex:
             logging.exception("Failed to start build for branch %s", b)
             failed_builds[b] = ex
@@ -174,6 +178,7 @@ def main():
     start_builds.add_argument("--koji-bin", default=DEFAULT_KOJI_BIN, help="koji executable")
     start_builds.add_argument("--koji-target", default=DEFAULT_KOJI_TARGET, help="koji target to build in")
     start_builds.add_argument("--git-url", help="url of git repo to pass to koji (autodetected if not specified)")
+    start_builds.add_argument("--repo-url", help="url of rpm repo to install for builds")
     start_builds.set_defaults(func=cmd_start_builds)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
