@@ -186,7 +186,8 @@ def checkout_git_repo(git_uri, git_ref, git_branch=None):
 
         # Find the specific ref we want
         try:
-            run_command(['git', 'reset', '--hard', git_ref], cwd=repo_path)
+            run_command(['git', 'reset', '--hard'], cwd=repo_path)
+            run_command(['git', 'checkout', git_ref], cwd=repo_path)
         except OsbsException as ex:
             raise OsbsException("Unable to reset branch to '%s'" % git_ref,
                                 cause=ex, traceback=sys.exc_info()[2])
