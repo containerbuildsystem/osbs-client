@@ -432,8 +432,7 @@ class ProductionBuild(CommonBuild):
 
         if 'v1' not in versions:
             # Remove v1-only plugins
-            for phase, name in [('postbuild_plugins', 'compress'),
-                                ('postbuild_plugins', 'pulp_push')]:
+            for phase, name in [('postbuild_plugins', 'pulp_push')]:
                 logger.info("removing v1-only plugin: %s", name)
                 self.dj.remove_plugin(phase, name)
 

@@ -666,17 +666,14 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
 
+        assert get_plugin(plugins, "postbuild_plugins", "compress")
+
         if 'v1' in registry_api_versions:
-            assert get_plugin(plugins, "postbuild_plugins",
-                              "compress")
             assert get_plugin(plugins, "postbuild_plugins",
                               "pulp_push")
             assert plugin_value_get(plugins, "postbuild_plugins", "pulp_push",
                                     "args", "pulp_registry_name") == pulp_env
         else:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, "postbuild_plugins",
-                           "compress")
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, "postbuild_plugins",
                            "pulp_push")
