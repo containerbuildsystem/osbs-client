@@ -27,7 +27,8 @@ from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SE
                             BUILD_FINISHED_STATES)
 from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsAuthException, OsbsResponseException
 from osbs.cli.capture import setup_json_capture
-from osbs.utils import strip_registry_from_image, paused_builds, TarReader, TarWriter
+from osbs.utils import (strip_registry_from_image, paused_builds, TarReader,
+                        TarWriter, get_time_from_rfc3339)
 
 try:
     # py2
@@ -41,6 +42,43 @@ logger = logging.getLogger('osbs')
 
 def print_json_nicely(decoded_json):
     print(json.dumps(decoded_json, indent=2))
+
+
+def cmd_watch_builds(args, osbs):
+    field_selector = ",".join(["status!={status}".format(status=status.capitalize())
+                               for status in BUILD_FINISHED_STATES])
+    format_str = "{changetype:9}  {status:10}  {created:24}  {name}"
+    print(format_str.format(changetype='CHANGE',
+                            status='STATUS',
+                            created='CREATED',
+                            name='NAME'))
+    print(format_str.format(changetype='-' * 9,
+                            status='-' * 10,
+                            created='-' * 24,
+                            name='----'))
+    for changetype, obj in osbs.watch_builds(field_selector=field_selector):
+        try:
+            name = obj['metadata']['name']
+        except KeyError:
+            logger.error("'object' doesn't have any name")
+            continue
+        else:
+            try:
+                status = obj['status']['phase']
+            except KeyError:
+                status = '(not reported)'
+
+            try:
+                timestamp = obj['metadata']['creationTimestamp']
+            except KeyError:
+                created = '(not reported)'
+            else:
+                created = time.ctime(get_time_from_rfc3339(timestamp))
+
+            print(format_str.format(changetype=changetype,
+                                    name=name,
+                                    created=created,
+                                    status=status))
 
 
 def cmd_list_builds(args, osbs):
@@ -413,6 +451,9 @@ def cli():
     watch_build_parser = subparsers.add_parser(str_on_2_unicode_on_3('watch-build'), help='wait till build finishes')
     watch_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
     watch_build_parser.set_defaults(func=cmd_watch_build)
+
+    watch_builds_parser = subparsers.add_parser(str_on_2_unicode_on_3('watch-builds'), help='watch running builds')
+    watch_builds_parser.set_defaults(func=cmd_watch_builds)
 
     get_build_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-build'), help='get info about build')
     get_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)

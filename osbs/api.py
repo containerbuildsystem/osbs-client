@@ -106,6 +106,14 @@ class OSBS(object):
             build_list.append(BuildResponse(build))
         return build_list
 
+    def watch_builds(self, field_selector=None):
+        kwargs = {}
+        if field_selector is not None:
+            kwargs['fieldSelector'] = field_selector
+
+        for changetype, obj in self.os.watch_resource("builds", **kwargs):
+            yield changetype, obj
+
     @osbsapi
     def get_build(self, build_id):
         response = self.os.get_build(build_id)
