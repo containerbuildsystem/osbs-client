@@ -76,6 +76,14 @@ class Connection(object):
                 },
             },
 
+            (OAPI_PREFIX + "namespaces/default/builds?fieldSelector=status%3DRunning",
+             OAPI_PREFIX + "namespaces/default/builds/?fieldSelector=status%3DRunning"): {
+                "get": {
+                    # Contains a list of builds
+                    "file": "builds_list.json",
+                }
+            },
+
             # Some 'builds' requests are with a trailing slash, some without:
             (OAPI_PREFIX + "namespaces/default/builds/%s" % TEST_BUILD,
              OAPI_PREFIX + "namespaces/default/builds/%s/" % TEST_BUILD): {

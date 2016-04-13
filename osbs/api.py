@@ -19,7 +19,7 @@ from .constants import SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE, PROD_WIT
 from osbs.build.build_request import BuildManager
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
-from osbs.constants import PROD_BUILD_TYPE
+from osbs.constants import BUILD_RUNNING_STATES, PROD_BUILD_TYPE
 from osbs.core import Openshift
 from osbs.exceptions import OsbsException, OsbsValidationException
 # import utils in this way, so that we can mock standalone functions with flexmock
@@ -515,8 +515,13 @@ class OSBS(object):
 
         # Now wait for running builds to finish
         while True:
-            builds = self.list_builds()
+            field_selector = ','.join(['status=%s' % status.capitalize()
+                                       for status in BUILD_RUNNING_STATES])
+            builds = self.list_builds(field_selector)
+
+            # Double check builds are actually in running state.
             running_builds = [build for build in builds if build.is_running()]
+
             if not running_builds:
                 break
 
