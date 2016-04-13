@@ -123,14 +123,36 @@ def cmd_start_builds(args):
     failed_builds = {}
     repo_url = []
     if args.repo_url:
-        repo_url = ['--repo-url', args.repo_url]
+        if args.use_koji:
+            repo_url = ['--repo-url', args.repo_url]
+        else:
+            repo_url = ['--add-yum-repo', args.repo_url]
 
-    for b in branches:
+    for (i, b) in enumerate(branches):
+        if i >= DEFAULT_BRANCH_COUNT:
+            break
         commit = run("git", "rev-parse", b).strip()
         branch_url = "{0}#{1}".format(remote_url, commit)
 
         try:
-            run(args.koji_bin, "container-build", args.koji_target, "--nowait", "--git-branch", b, branch_url, *repo_url)
+            if args.use_koji:
+                run(args.koji_bin,
+                    "container-build",
+                    args.koji_target,
+                    "--nowait",
+                    "--git-branch", b,
+                    branch_url,
+                    *repo_url)
+            else:
+                run("osbs",
+                    "build",
+                    "-g", remote_url,
+                    "-b", b,
+                    "--target", args.koji_target,
+                    "-c", "fake-component",
+                    "-u", "vrutkovs",
+                    "--no-logs",
+                    *repo_url)
         except SubprocessError as ex:
             logging.exception("Failed to start build for branch %s", b)
             failed_builds[b] = ex
@@ -175,6 +197,8 @@ def main():
                               help="wait between starting N first builds")
     start_builds.add_argument("--stagger-wait", metavar="SECONDS", type=int, default=DEFAULT_STAGGER_WAIT,
                               help="amount of time to wait between initial builds")
+    start_builds.add_argument("--use-koji", default=False, action="store_true",
+                              help="use koji to submit builds (default: use osbs")
     start_builds.add_argument("--koji-bin", default=DEFAULT_KOJI_BIN, help="koji executable")
     start_builds.add_argument("--koji-target", default=DEFAULT_KOJI_TARGET, help="koji target to build in")
     start_builds.add_argument("--git-url", help="url of git repo to pass to koji (autodetected if not specified)")
