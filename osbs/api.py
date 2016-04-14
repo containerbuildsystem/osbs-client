@@ -247,6 +247,7 @@ class OSBS(object):
                           user, component,
                           target,      # may be None
                           architecture=None, yum_repourls=None,
+                          build_image=None,
                           **kwargs):
         """
         Create a production build
@@ -269,7 +270,7 @@ class OSBS(object):
             git_branch=git_branch,
             user=user,
             component=component,
-            build_image=self.build_conf.get_build_image(),
+            build_image=build_image or self.build_conf.get_build_image(),
             base_image=df_parser.baseimage,
             name_label=df_parser.labels['Name'],
             registry_uris=self.build_conf.get_registry_uris(),
