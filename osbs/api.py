@@ -289,6 +289,7 @@ class OSBS(object):
             authoritative_registry=self.build_conf.get_authoritative_registry(),
             distribution_scope=self.build_conf.get_distribution_scope(),
             yum_repourls=yum_repourls,
+            proxy=self.build_conf.get_proxy(),
             pulp_secret=self.build_conf.get_pulp_secret(),
             pdc_secret=self.build_conf.get_pdc_secret(),
             pdc_url=self.build_conf.get_pdc_url(),
@@ -335,6 +336,7 @@ class OSBS(object):
             openshift_uri=self.os_conf.get_openshift_base_uri(),
             builder_openshift_url=self.os_conf.get_builder_openshift_url(),
             yum_repourls=yum_repourls,
+            proxy=self.build_conf.get_proxy(),
             use_auth=self.build_conf.get_builder_use_auth(),
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())

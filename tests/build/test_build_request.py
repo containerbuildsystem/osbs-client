@@ -172,6 +172,10 @@ class TestBuildRequest(object):
         rendered_build_image =  build_json["spec"]["strategy"]["customStrategy"]["from"]["name"]
         assert rendered_build_image == (build_image if build_image else DEFAULT_BUILD_IMAGE)
 
+    @pytest.mark.parametrize('proxy', [
+        None,
+        'http://proxy.example.com',
+    ])
     @pytest.mark.parametrize('architecture', [
         None,
         'x86_64',
@@ -184,7 +188,7 @@ class TestBuildRequest(object):
         None,
         'buildroot-stream:v1.0'
     ])
-    def test_render_prod_request_with_repo(self, architecture, build_image, build_imagestream):
+    def test_render_prod_request_with_repo(self, architecture, build_image, build_imagestream, proxy):
         bm = BuildManager(INPUTS_PATH)
         build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
         name_label = "fedora/resultingimage"
@@ -217,7 +221,8 @@ class TestBuildRequest(object):
             'yum_repourls': ["http://example.com/my.repo"],
             'registry_api_versions': ['v1'],
             'build_image': build_image,
-            'build_imagestream': build_imagestream
+            'build_imagestream': build_imagestream,
+            'proxy': proxy,
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -270,6 +275,13 @@ class TestBuildRequest(object):
         assert 'sourceSecret' not in build_json["spec"]["source"]
         assert plugin_value_get(plugins, "prebuild_plugins", "add_yum_repo_by_url",
                                 "args", "repourls") == ["http://example.com/my.repo"]
+        if proxy:
+            assert plugin_value_get(plugins, "prebuild_plugins", "add_yum_repo_by_url",
+                                    "args", "inject_proxy") == proxy
+        else:
+            with pytest.raises(KeyError):
+                plugin_value_get(plugins, "prebuild_plugins", "add_yum_repo_by_url",
+                                 "args", "inject_proxy")
 
         labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile",
                                   "args", "labels")
@@ -291,7 +303,11 @@ class TestBuildRequest(object):
             assert rendered_build_image == build_imagestream
             assert build_json["spec"]["strategy"]["customStrategy"]["from"]["kind"] == "ImageStreamTag"
 
-    def test_render_prod_request(self):
+    @pytest.mark.parametrize('proxy', [
+        None,
+        'http://proxy.example.com',
+    ])
+    def test_render_prod_request(self, proxy):
         bm = BuildManager(INPUTS_PATH)
         build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
         name_label = "fedora/resultingimage"
@@ -319,6 +335,7 @@ class TestBuildRequest(object):
             'registry_api_versions': ['v1'],
             'pdc_url': 'https://pdc.example.com',
             'smtp_uri': 'smtp.example.com',
+            'proxy': proxy
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -360,6 +377,13 @@ class TestBuildRequest(object):
                                 "args", "target") == "koji-target"
         assert plugin_value_get(plugins, "prebuild_plugins", "koji",
                                 "args", "hub") == "http://hub/"
+        if proxy:
+            assert plugin_value_get(plugins, "prebuild_plugins", "koji",
+                                    "args", "proxy") == proxy
+        else:
+            with pytest.raises(KeyError):
+                plugin_value_get(plugins, "prebuild_plugins", "koji", "args", "proxy")
+
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries", "registry.example.com") == {"insecure": True}
         with pytest.raises(NoSuchPluginException):

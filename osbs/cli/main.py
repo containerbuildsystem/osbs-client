@@ -485,6 +485,8 @@ def cli():
                               help="storage limit")
     build_parser.add_argument("--scratch", action='store_true', required=False,
                               default=False, help="perform a scratch build")
+    build_parser.add_argument("--yum-proxy", action='store', required=False,
+                              help="set yum proxy to repos from koji/add-yum-repo params")
     group = build_parser.add_mutually_exclusive_group()
     group.add_argument("--build-image", action='store', required=False,
                        help="builder image to use")

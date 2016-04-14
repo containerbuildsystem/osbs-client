@@ -149,6 +149,7 @@ class CommonSpec(BuildTypeSpec):
     use_auth = BuildParam("use_auth", allow_none=True)
     build_image = BuildParam('build_image')
     build_imagestream = BuildParam('build_imagestream')
+    proxy = BuildParam("proxy", allow_none=True)
 
     def __init__(self):
         self.required_params = [
@@ -165,11 +166,12 @@ class CommonSpec(BuildTypeSpec):
                    registry_uris=None, user=None,
                    component=None, openshift_uri=None, source_registry_uri=None,
                    yum_repourls=None, use_auth=None, builder_openshift_url=None,
-                   build_image=None, build_imagestream=None):
+                   build_image=None, build_imagestream=None, proxy=None):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
         self.user.value = user
         self.component.value = component
+        self.proxy.value = proxy
 
         # registry_uri is the compatibility name for registry_uris
         if registry_uri is not None:

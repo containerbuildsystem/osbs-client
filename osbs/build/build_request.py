@@ -212,6 +212,10 @@ class CommonBuild(BuildRequest):
             self.dj.dock_json_set_arg('prebuild_plugins',
                                       "add_yum_repo_by_url", "repourls",
                                       self.spec.yum_repourls.value)
+            if self.spec.proxy.value:
+                self.dj.dock_json_set_arg('prebuild_plugins',
+                                          "add_yum_repo_by_url", "inject_proxy",
+                                          self.spec.proxy.value)
 
     def render_check_and_set_rebuild(self, use_auth=None):
         if self.dj.dock_json_has_plugin_conf('prebuild_plugins',
@@ -530,6 +534,9 @@ class ProductionBuild(CommonBuild):
                                       "root", self.spec.kojiroot.value)
             self.dj.dock_json_set_arg('prebuild_plugins', "koji",
                                       "hub", self.spec.kojihub.value)
+            if self.spec.proxy.value:
+                self.dj.dock_json_set_arg('prebuild_plugins', "koji",
+                                          "proxy", self.spec.proxy.value)
 
     def render_bump_release(self):
         """
