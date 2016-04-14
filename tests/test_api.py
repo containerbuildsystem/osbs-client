@@ -283,7 +283,16 @@ build_type = simple
         else:
             assert osbs.get_compression_extension() == expected
 
-    def test_build_image(self):
+    @pytest.mark.parametrize(('conf_build_image', 'kwargs', 'expected'), [
+        ('registry.example.com/buildroot:2.0',
+         {},
+         'registry.example.com/buildroot:2.0'),
+
+        ('registry.example.com/buildroot:2.0',
+         {'build_image': 'kwarg-buildroot'},
+         'kwarg-buildroot'),
+    ])
+    def test_build_image(self, conf_build_image, kwargs, expected):
         build_image = 'registry.example.com/buildroot:2.0'
         with NamedTemporaryFile(mode='wt') as fp:
             fp.write("""
@@ -299,12 +308,12 @@ authoritative_registry = localhost
 distribution_scope = private
 build_type = prod
 build_image = {build_image}
-""".format(build_json_dir='inputs', build_image=build_image))
+""".format(build_json_dir='inputs', build_image=conf_build_image))
             fp.flush()
             config = Configuration(fp.name)
             osbs = OSBS(config, config)
 
-        assert config.get_build_image() == build_image
+        assert config.get_build_image() == conf_build_image
 
         class MockParser(object):
             labels = {'Name': 'fedora23/something'}
@@ -324,6 +333,6 @@ build_image = {build_image}
         req = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
                                      TEST_GIT_BRANCH, TEST_USER,
                                      TEST_COMPONENT, TEST_TARGET,
-                                     TEST_ARCH)
+                                     TEST_ARCH, **kwargs)
         img = req.json['spec']['strategy']['customStrategy']['from']['name']
-        assert img == build_image
+        assert img == expected
