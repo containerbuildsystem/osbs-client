@@ -221,7 +221,6 @@ class ProdSpec(CommonSpec):
         self.required_params += [
             self.sources_command,
             self.vendor,
-            self.build_host,
             self.authoritative_registry,
             self.distribution_scope,
             self.registry_api_versions,
