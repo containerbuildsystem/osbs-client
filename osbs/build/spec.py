@@ -148,6 +148,7 @@ class CommonSpec(BuildTypeSpec):
     yum_repourls = BuildParam("yum_repourls")
     use_auth = BuildParam("use_auth", allow_none=True)
     build_image = BuildParam('build_image')
+    build_imagestream = BuildParam('build_imagestream')
 
     def __init__(self):
         self.required_params = [
@@ -157,7 +158,6 @@ class CommonSpec(BuildTypeSpec):
             self.component,
             self.registry_uris,
             self.openshift_uri,
-            self.build_image,
         ]
 
     def set_params(self, git_uri=None, git_ref=None,
@@ -165,7 +165,7 @@ class CommonSpec(BuildTypeSpec):
                    registry_uris=None, user=None,
                    component=None, openshift_uri=None, source_registry_uri=None,
                    yum_repourls=None, use_auth=None, builder_openshift_url=None,
-                   build_image=None):
+                   build_image=None, build_imagestream=None,):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
         self.user.value = user
@@ -185,12 +185,12 @@ class CommonSpec(BuildTypeSpec):
         self.yum_repourls.value = yum_repourls or []
         self.use_auth.value = use_auth
         self.build_image.value = build_image or DEFAULT_BUILD_IMAGE
+        self.build_imagestream.value = build_imagestream
 
 
 class ProdSpec(CommonSpec):
     git_branch = BuildParam('git_branch', allow_none=True)
     trigger_imagestreamtag = BuildParam('trigger_imagestreamtag')
-    build_imagestream = BuildParam('build_imagestream')
     imagestream_name = BuildParam('imagestream_name')
     imagestream_url = BuildParam('imagestream_url')
     imagestream_insecure_registry = BuildParam('imagestream_insecure_registry')
@@ -250,7 +250,6 @@ class ProdSpec(CommonSpec):
                    name_label=None, git_push_url=None, git_push_username=None,
                    builder_build_json_dir=None,
                    registry_api_versions=None,
-                   build_imagestream=None,
                    **kwargs):
         super(ProdSpec, self).set_params(**kwargs)
         self.sources_command.value = sources_command
@@ -304,7 +303,6 @@ class ProdSpec(CommonSpec):
             self.koji_target.value or 'none',
             timestamp
         )
-        self.build_imagestream.value = build_imagestream
 
 
 class SimpleSpec(CommonSpec):
