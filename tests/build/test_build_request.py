@@ -180,7 +180,11 @@ class TestBuildRequest(object):
         None,
         'ultimate-buildroot:v1.0'
     ])
-    def test_render_prod_request_with_repo(self, architecture, build_image):
+    @pytest.mark.parametrize('build_imagestream', [
+        None,
+        'buildroot-stream:v1.0'
+    ])
+    def test_render_prod_request_with_repo(self, architecture, build_image, build_imagestream):
         bm = BuildManager(INPUTS_PATH)
         build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
         name_label = "fedora/resultingimage"
@@ -213,6 +217,7 @@ class TestBuildRequest(object):
             'yum_repourls': ["http://example.com/my.repo"],
             'registry_api_versions': ['v1'],
             'build_image': build_image,
+            'build_imagestream': build_imagestream
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -279,8 +284,12 @@ class TestBuildRequest(object):
         else:
             assert 'Architecture' not in labels
 
-        rendered_build_image =  build_json["spec"]["strategy"]["customStrategy"]["from"]["name"]
-        assert rendered_build_image == (build_image if build_image else DEFAULT_BUILD_IMAGE)
+        rendered_build_image = build_json["spec"]["strategy"]["customStrategy"]["from"]["name"]
+        if not build_imagestream:
+            assert rendered_build_image == (build_image if build_image else DEFAULT_BUILD_IMAGE)
+        else:
+            assert rendered_build_image == build_imagestream
+            assert build_json["spec"]["strategy"]["customStrategy"]["from"]["kind"] == "ImageStreamTag"
 
     def test_render_prod_request(self):
         bm = BuildManager(INPUTS_PATH)

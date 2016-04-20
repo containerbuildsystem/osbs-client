@@ -270,6 +270,7 @@ class OSBS(object):
             user=user,
             component=component,
             build_image=self.build_conf.get_build_image(),
+            build_imagestream=self.build_conf.get_build_imagestream(),
             base_image=df_parser.baseimage,
             name_label=df_parser.labels['Name'],
             registry_uris=self.build_conf.get_registry_uris(),

@@ -356,6 +356,9 @@ class Configuration(object):
     def get_build_image(self):
         return self._get_value("build_image", self.conf_section, "build_image")
 
+    def get_build_imagestream(self):
+        return self._get_value("build_imagestream", self.conf_section, "build_imagestream")
+
     def get_oauth2_token(self):
         # token overrides token_file
         # either in kwargs overrides cli args
