@@ -283,8 +283,13 @@ class CommonBuild(BuildRequest):
             if 'sourceSecret' in self.template['spec']['source']:
                 del self.template['spec']['source']['sourceSecret']
 
-        self.template['spec']['strategy']['customStrategy']['from']['name'] = \
-            self.spec.build_image.value
+        if self.spec.build_imagestream.value:
+            self.template['spec']['strategy']['customStrategy']['from']['kind'] = 'ImageStreamTag'
+            self.template['spec']['strategy']['customStrategy']['from']['name'] = \
+                self.spec.build_imagestream.value
+        else:
+            self.template['spec']['strategy']['customStrategy']['from']['name'] = \
+                self.spec.build_image.value
 
     def validate_input(self):
         self.spec.validate()
@@ -769,11 +774,6 @@ class ProductionBuild(CommonBuild):
             # but still construct the unique tag
             self.template['spec']['output']['to']['name'] = \
                 self.spec.image_tag.value
-
-        if self.spec.build_imagestream.value:
-            self.template['spec']['strategy']['customStrategy']['from']['kind'] = 'ImageStreamTag'
-            self.template['spec']['strategy']['customStrategy']['from']['name'] = \
-                self.spec.build_imagestream.value
 
         use_auth = self.spec.use_auth.value
         self.render_add_labels_in_dockerfile()
