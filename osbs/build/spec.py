@@ -190,6 +190,7 @@ class CommonSpec(BuildTypeSpec):
 class ProdSpec(CommonSpec):
     git_branch = BuildParam('git_branch', allow_none=True)
     trigger_imagestreamtag = BuildParam('trigger_imagestreamtag')
+    build_imagestream = BuildParam('build_imagestream')
     imagestream_name = BuildParam('imagestream_name')
     imagestream_url = BuildParam('imagestream_url')
     imagestream_insecure_registry = BuildParam('imagestream_insecure_registry')
@@ -248,7 +249,9 @@ class ProdSpec(CommonSpec):
                    nfs_dest_dir=None, git_branch=None, base_image=None,
                    name_label=None, git_push_url=None, git_push_username=None,
                    builder_build_json_dir=None,
-                   registry_api_versions=None, **kwargs):
+                   registry_api_versions=None,
+                   build_imagestream=None,
+                   **kwargs):
         super(ProdSpec, self).set_params(**kwargs)
         self.sources_command.value = sources_command
         self.architecture.value = architecture
@@ -301,6 +304,7 @@ class ProdSpec(CommonSpec):
             self.koji_target.value or 'none',
             timestamp
         )
+        self.build_imagestream.value = build_imagestream
 
 
 class SimpleSpec(CommonSpec):

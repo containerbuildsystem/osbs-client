@@ -770,6 +770,11 @@ class ProductionBuild(CommonBuild):
             self.template['spec']['output']['to']['name'] = \
                 self.spec.image_tag.value
 
+        if self.spec.build_imagestream.value:
+            self.template['spec']['strategy']['customStrategy']['from']['kind'] = 'ImageStreamTag'
+            self.template['spec']['strategy']['customStrategy']['from']['name'] = \
+                self.spec.build_imagestream.value
+
         use_auth = self.spec.use_auth.value
         self.render_add_labels_in_dockerfile()
         self.render_koji()
