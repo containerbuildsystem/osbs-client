@@ -599,3 +599,11 @@ class OSBS(object):
                                               % method)
 
         return None
+
+    @osbsapi
+    def list_resource_quotas(self):
+        return self.os.list_resource_quotas().json()
+
+    @osbsapi
+    def get_resource_quota(self, quota_name):
+        return self.os.get_resource_quota(quota_name).json()

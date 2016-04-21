@@ -27,7 +27,8 @@ from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SE
                             BUILD_FINISHED_STATES)
 from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsAuthException, OsbsResponseException
 from osbs.cli.capture import setup_json_capture
-from osbs.utils import strip_registry_from_image, paused_builds, TarReader, TarWriter
+from osbs.utils import strip_registry_from_image, paused_builds, TarReader, TarWriter, \
+    graceful_chain_get
 
 try:
     # py2
@@ -41,6 +42,17 @@ logger = logging.getLogger('osbs')
 
 def print_json_nicely(decoded_json):
     print(json.dumps(decoded_json, indent=2))
+
+
+def cmd_get_all_resource_quota(args, osbs):
+    quota_name = args.QUOTA_NAME
+    logger.debug("quota name = %s", quota_name)
+    if quota_name is None:
+        response = osbs.list_resource_quotas()
+        for item in response["items"]:
+            print(graceful_chain_get(item, "metadata", "name"))
+    else:
+        print_json_nicely(osbs.get_resource_quota(quota_name))
 
 
 def cmd_list_builds(args, osbs):
@@ -445,6 +457,12 @@ def cli():
     build_logs_parser.add_argument("--from-docker-build", help="return logs from `docker build` instead",
                                    action="store_true", default=False)
     build_logs_parser.set_defaults(func=cmd_build_logs)
+
+    get_quota_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-quota'),
+                                             help='get specific quota or list all quotas '
+                                                  'present in OpenShift')
+    get_quota_parser.add_argument("QUOTA_NAME", help="name of quota", nargs="?", default=None)
+    get_quota_parser.set_defaults(func=cmd_get_all_resource_quota)
 
     build_parser = subparsers.add_parser(str_on_2_unicode_on_3('build'), help='build an image in OSBS')
     build_parser.add_argument("--build-type", "-T", action="store", metavar="BUILD_TYPE",

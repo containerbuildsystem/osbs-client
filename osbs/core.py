@@ -426,6 +426,18 @@ class Openshift(object):
         check_response(response)
         return response
 
+    def list_resource_quotas(self):
+        url = self._build_k8s_url("resourcequotas/")
+        response = self._get(url)
+        check_response(response)
+        return response
+
+    def get_resource_quota(self, quota_name):
+        url = self._build_k8s_url("resourcequotas/%s" % quota_name)
+        response = self._get(url)
+        check_response(response)
+        return response
+
     def create_resource_quota(self, name, quota_json):
         """
         Prevent builds being scheduled and wait for running builds to finish.
