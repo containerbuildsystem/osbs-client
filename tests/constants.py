@@ -58,7 +58,7 @@ TEST_BUILD_JSON = {
                 },
                 "exposeDockerSocket": True,
                 "env": [{
-                    "name": "DOCK_PLUGINS",
+                    "name": "ATOMIC_REACTOR_PLUGINS",
                     "value": "TBD"
                 }]
             }

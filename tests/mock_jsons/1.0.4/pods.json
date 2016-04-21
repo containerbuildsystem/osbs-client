@@ -30,7 +30,7 @@
                                 "value": "https://github.com/TomasTomecek/docker-hello-world.git"
                             },
                             {
-                                "name": "DOCK_PLUGINS",
+                                "name": "ATOMIC_REACTOR_PLUGINS",
                                 "value": "{\"prebuild_plugins\": [{\"args\": {}, \"name\": \"pull_base_image\"}, {\"name\": \"change_from_in_dockerfile\"}, {\"name\": \"dockerfile_content\"}], \"exit_plugins\": [{\"args\": {\"url\": \"https://osbs.localdomain:8443/\", \"verify_ssl\": false, \"use_auth\": false}, \"name\": \"store_metadata_in_osv3\"}, {\"name\": \"remove_built_image\"}], \"postbuild_plugins\": [{\"args\": {\"image_id\": \"BUILT_IMAGE_ID\"}, \"name\": \"all_rpm_packages\"}]}"
                             },
                             {

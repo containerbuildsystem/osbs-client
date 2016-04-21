@@ -94,7 +94,7 @@ class TestBuildRequest(object):
         env_vars = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None
         for d in env_vars:
-            if d['name'] == 'DOCK_PLUGINS':
+            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
                 plugins_json = d['value']
                 break
 
@@ -150,7 +150,7 @@ class TestBuildRequest(object):
         env_vars = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None
         for d in env_vars:
-            if d['name'] == 'DOCK_PLUGINS':
+            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
                 plugins_json = d['value']
                 break
 
@@ -233,7 +233,7 @@ class TestBuildRequest(object):
         env_vars = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None
         for d in env_vars:
-            if d['name'] == 'DOCK_PLUGINS':
+            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
                 plugins_json = d['value']
                 break
 
@@ -334,7 +334,7 @@ class TestBuildRequest(object):
         env_vars = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None
         for d in env_vars:
-            if d['name'] == 'DOCK_PLUGINS':
+            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
                 plugins_json = d['value']
                 break
 
@@ -423,7 +423,7 @@ class TestBuildRequest(object):
         env_vars = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None
         for d in env_vars:
-            if d['name'] == 'DOCK_PLUGINS':
+            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
                 plugins_json = d['value']
                 break
 
@@ -507,7 +507,7 @@ class TestBuildRequest(object):
         strategy = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None
         for d in strategy:
-            if d['name'] == 'DOCK_PLUGINS':
+            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
                 plugins_json = d['value']
                 break
 
@@ -636,7 +636,7 @@ class TestBuildRequest(object):
         env_vars = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None
         for d in env_vars:
-            if d['name'] == 'DOCK_PLUGINS':
+            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
                 plugins_json = d['value']
                 break
 
@@ -741,7 +741,7 @@ class TestBuildRequest(object):
         strategy = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None
         for d in strategy:
-            if d['name'] == 'DOCK_PLUGINS':
+            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
                 plugins_json = d['value']
                 break
 
@@ -914,7 +914,7 @@ class TestBuildRequest(object):
         strategy = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None
         for d in strategy:
-            if d['name'] == 'DOCK_PLUGINS':
+            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
                 plugins_json = d['value']
                 break
 
@@ -1026,7 +1026,7 @@ class TestBuildRequest(object):
         strategy = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None
         for d in strategy:
-            if d['name'] == 'DOCK_PLUGINS':
+            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
                 plugins_json = d['value']
                 break
 
@@ -1090,7 +1090,7 @@ class TestBuildRequest(object):
             env = build_json['spec']['strategy']['customStrategy']['env']
             plugins_json = None
             for d in env:
-                if d['name'] == 'DOCK_PLUGINS':
+                if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
                     plugins_json = d['value']
                     break
 
@@ -1123,7 +1123,7 @@ class TestBuildRequest(object):
         env = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None
         for d in env:
-            if d['name'] == 'DOCK_PLUGINS':
+            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
                 plugins_json = d['value']
                 break
 

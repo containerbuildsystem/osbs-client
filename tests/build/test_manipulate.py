@@ -34,7 +34,7 @@ class TestDockJsonManipulator(object):
     def test_manipulator_get_dock_json(self):
         build_json = copy.deepcopy(TEST_BUILD_JSON)
         env_json = build_json['spec']['strategy']['customStrategy']['env']
-        p = [env for env in env_json if env["name"] == "DOCK_PLUGINS"]
+        p = [env for env in env_json if env["name"] == "ATOMIC_REACTOR_PLUGINS"]
         inner = {
             "a": "b"
         }

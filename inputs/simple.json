@@ -30,7 +30,7 @@
         },
         "exposeDockerSocket": true,
         "env": [{
-          "name": "DOCK_PLUGINS",
+          "name": "ATOMIC_REACTOR_PLUGINS",
           "value": "TBD"
         }]
       }
