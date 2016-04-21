@@ -1174,7 +1174,7 @@ class TestBuildRequest(object):
         strategy = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None
         for d in strategy:
-            if d['name'] == 'DOCK_PLUGINS':
+            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
                 plugins_json = d['value']
                 break
 
