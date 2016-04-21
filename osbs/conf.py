@@ -245,6 +245,13 @@ class Configuration(object):
         else:
             return []
 
+    def get_registry_secrets(self):
+        value = self._get_value("registry_secret", self.conf_section, "registry_secret")
+        if value:
+            return value.split(',')
+        else:
+            return []
+
     def get_registry_api_versions(self):
         value = self._get_value("registry_api_versions",
                                 self.conf_section,
