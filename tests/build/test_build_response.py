@@ -27,3 +27,15 @@ class TestBuildResponse(object):
         })
 
         assert msg in build_response.get_logs()
+
+    def test_get_koji_build_id(self):
+        koji_build_id = '123'
+        build_response = BuildResponse({
+            'metadata': {
+                'labels': {
+                    'koji-build-id': koji_build_id,
+                 },
+            },
+        })
+        assert build_response.get_koji_build_id() == koji_build_id
+
