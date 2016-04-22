@@ -359,6 +359,9 @@ class Configuration(object):
     def get_build_imagestream(self):
         return self._get_value("build_imagestream", self.conf_section, "build_imagestream")
 
+    def get_proxy(self):
+        return self._get_value("yum_proxy", self.conf_section, "yum_proxy")
+
     def get_oauth2_token(self):
         # token overrides token_file
         # either in kwargs overrides cli args
