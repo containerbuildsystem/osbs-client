@@ -159,3 +159,7 @@ class BuildResponse(object):
         digests_json = graceful_chain_get(self.get_annotations_or_labels(), "digests")
         if digests_json:
             return json.loads(digests_json)
+
+    def get_koji_build_id(self):
+        return graceful_chain_get(self.get_labels(), "koji-build-id")
+

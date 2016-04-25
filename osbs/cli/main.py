@@ -12,6 +12,7 @@ import json
 import logging
 
 from os import uname
+from textwrap import dedent
 import codecs
 import time
 import os.path
@@ -85,6 +86,7 @@ def cmd_list_builds(args, osbs):
             "image": "IMAGE NAME",
             "unique_image": "UNIQUE IMAGE NAME",
             "image_id": "IMAGE ID",
+            "koji_build_id": "KOJI BUILD ID",
             "name": "BUILD ID",
             "status": "STATUS",
             "time_created": "TIME CREATED",
@@ -108,6 +110,7 @@ def cmd_list_builds(args, osbs):
                 "image": image,
                 "unique_image": unique_image,
                 "image_id": build.get_image_id() or '',
+                "koji_build_id": build.get_koji_build_id() or '',
                 "name": build.get_build_name(),
                 "status": build.status,
                 "time_created": build.get_time_created(),
@@ -126,14 +129,14 @@ def cmd_get_build(args, osbs):
         repositories_dict = build.get_repositories()
         repositories_str = None
         if repositories_dict is not None:
-            repositories_template = """\
-Primary
+            repositories_template = dedent("""\
+                Primary
 
-{primary}
+                {primary}
 
-Unique
+                Unique
 
-{unique}"""
+                {unique}""")
             repositories_context = {
                 "primary": "\n".join(repositories_dict["primary"]),
                 "unique": "\n".join(repositories_dict["unique"]),
@@ -150,43 +153,48 @@ Unique
         else:
             digests_str = "(unset)"
 
-        template = """\
-BUILD ID: {build_id}
-STATUS: {status}
-IMAGE: {image}
-DATE: {date}
+        template = dedent("""\
+            BUILD ID: {build_id}
+            STATUS: {status}
+            IMAGE: {image}
+            DATE: {date}
 
-DOCKERFILE
+            DOCKERFILE
 
-{dockerfile}
+            {dockerfile}
 
-BUILD LOGS
+            BUILD LOGS
 
-{logs}
+            {logs}
 
-PACKAGES
+            PACKAGES
 
-{packages}
+            {packages}
 
-COMMIT ID
+            COMMIT ID
 
-{commit_id}
+            {commit_id}
 
-BASE IMAGE ID (FROM {base_image})
+            BASE IMAGE ID (FROM {base_image})
 
-{base_image_id}
+            {base_image_id}
 
-IMAGE ID
+            IMAGE ID
 
-{image_id}
+            {image_id}
 
-REPOSITORIES
+            KOJI BUILD ID
 
-{repositories}
+            {koji_build_id}
 
-V2 DIGESTS
+            REPOSITORIES
 
-{digests}"""
+            {repositories}
+
+            V2 DIGESTS
+
+            {digests}""")
+
         context = {
             "build_id": build.get_build_name(),
             "status": build.status,
@@ -200,6 +208,7 @@ V2 DIGESTS
             "base_image": build.get_base_image_name() or '(unset)',
             "base_image_id": build.get_base_image_id() or '(unset)',
             "image_id": build.get_image_id() or '(unset)',
+            "koji_build_id": build.get_koji_build_id() or '(unset)',
             "digests": digests_str,
         }
         print(template.format(**context))
