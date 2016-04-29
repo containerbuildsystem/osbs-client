@@ -247,6 +247,7 @@ class OSBS(object):
                           user, component,
                           target,      # may be None
                           architecture=None, yum_repourls=None,
+                          koji_task_id=None,
                           **kwargs):
         """
         Create a production build
@@ -259,6 +260,7 @@ class OSBS(object):
         :param target: str, koji target (may be None)
         :param architecture: str, build architecture
         :param yum_repourls: list, URLs for yum repos
+        :param koji_task_id: int, koji task ID requesting build
         :return: BuildResponse instance
         """
         df_parser = utils.get_df_parser(git_uri, git_ref, git_branch=git_branch)
@@ -283,6 +285,7 @@ class OSBS(object):
             sources_command=self.build_conf.get_sources_command(),
             koji_target=target,
             koji_certs_secret=self.build_conf.get_koji_certs_secret(),
+            koji_task_id=koji_task_id,
             architecture=architecture,
             vendor=self.build_conf.get_vendor(),
             build_host=self.build_conf.get_build_host(),

@@ -322,6 +322,7 @@ class ProductionBuild(CommonBuild):
         :param kojiroot: str, URL from which koji packages are fetched
         :param kojihub: str, URL of the koji hub
         :param koji_certs_secret: str, resource name of secret that holds the koji certificates
+        :param koji_task_id: int, Koji Task that created this build config
         :param pulp_registry: str, name of pulp registry in dockpulp.conf
         :param nfs_server_path: str, NFS server and path
         :param nfs_dest_dir: str, directory to create on NFS server
@@ -781,6 +782,11 @@ class ProductionBuild(CommonBuild):
             # but still construct the unique tag
             self.template['spec']['output']['to']['name'] = \
                 self.spec.image_tag.value
+
+        kojitask = self.spec.koji_task_id.value
+        if kojitask is not None:
+            self.template['metadata'].setdefault('labels', {})
+            self.template['metadata']['labels']['kojitask'] = kojitask
 
         use_auth = self.spec.use_auth.value
         self.render_add_labels_in_dockerfile()

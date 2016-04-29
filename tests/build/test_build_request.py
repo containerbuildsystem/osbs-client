@@ -196,6 +196,7 @@ class TestBuildRequest(object):
         build_host = "our.build.host.example.com"
         authoritative_registry = "registry.example.com"
         distribution_scope = "authoritative-source-only"
+        koji_task_id = 4756
         assert isinstance(build_request, ProductionBuild)
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -212,6 +213,7 @@ class TestBuildRequest(object):
             'koji_target': "koji-target",
             'kojiroot': "http://root/",
             'kojihub': "http://hub/",
+            'koji_task_id': koji_task_id,
             'sources_command': "make",
             'architecture': architecture,
             'vendor': vendor,
@@ -228,6 +230,7 @@ class TestBuildRequest(object):
         build_json = build_request.render()
 
         assert build_json["metadata"]["name"] == TEST_BUILD_CONFIG
+        assert build_json["metadata"]["labels"]["kojitask"] == koji_task_id
         assert "triggers" not in build_json["spec"]
         assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
         assert build_json["spec"]["source"]["git"]["ref"] == TEST_GIT_REF
@@ -1167,6 +1170,7 @@ class TestBuildRequest(object):
         name_label = "fedora/resultingimage"
         push_url = "ssh://{username}git.example.com/git/{component}.git"
         koji_certs_secret_name = 'foobar'
+        koji_task_id = 1234
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -1182,6 +1186,7 @@ class TestBuildRequest(object):
             'kojiroot': "http://root/",
             'kojihub': "http://hub/",
             'sources_command': "make",
+            'koji_task_id': koji_task_id,
             'architecture': "x86_64",
             'vendor': "Foo Vendor",
             'build_host': "our.build.host.example.com",
@@ -1194,6 +1199,8 @@ class TestBuildRequest(object):
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
+
+        assert build_json["metadata"]["labels"]["kojitask"] == koji_task_id
 
         strategy = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None

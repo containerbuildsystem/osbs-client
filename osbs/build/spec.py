@@ -207,6 +207,7 @@ class ProdSpec(CommonSpec):
     kojiroot = BuildParam("kojiroot", allow_none=True)
     kojihub = BuildParam("kojihub", allow_none=True)
     koji_certs_secret = BuildParam("koji_certs_secret", allow_none=True)
+    koji_task_id = BuildParam("koji_task_id", allow_none=True)
     image_tag = BuildParam("image_tag")
     pulp_secret = BuildParam("pulp_secret", allow_none=True)
     pulp_registry = BuildParam("pulp_registry", allow_none=True)
@@ -244,6 +245,7 @@ class ProdSpec(CommonSpec):
     def set_params(self, sources_command=None, architecture=None, vendor=None,
                    build_host=None, authoritative_registry=None, distribution_scope=None,
                    koji_target=None, kojiroot=None, kojihub=None, koji_certs_secret=None,
+                   koji_task_id=None,
                    source_secret=None,  # compatibility name for pulp_secret
                    pulp_secret=None, pulp_registry=None, pdc_secret=None, pdc_url=None,
                    smtp_uri=None, nfs_server_path=None,
@@ -263,6 +265,7 @@ class ProdSpec(CommonSpec):
         self.kojiroot.value = kojiroot
         self.kojihub.value = kojihub
         self.koji_certs_secret.value = koji_certs_secret
+        self.koji_task_id.value = koji_task_id
         self.pulp_secret.value = pulp_secret or source_secret
         self.pulp_registry.value = pulp_registry
         self.pdc_secret.value = pdc_secret
