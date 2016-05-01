@@ -330,6 +330,7 @@ class TestBuildRequest(object):
         bm = BuildManager(INPUTS_PATH)
         build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
         name_label = "fedora/resultingimage"
+        koji_target = "koji-target"
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -342,7 +343,7 @@ class TestBuildRequest(object):
             'source_registry_uri': "registry.example.com",
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
-            'koji_target': "koji-target",
+            'koji_target': koji_target,
             'kojiroot': "http://root/",
             'kojihub': "http://hub/",
             'sources_command': "make",
@@ -395,7 +396,7 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "prebuild_plugins", "koji",
                                 "args", "root") == "http://root/"
         assert plugin_value_get(plugins, "prebuild_plugins", "koji",
-                                "args", "target") == "koji-target"
+                                "args", "target") == koji_target
         assert plugin_value_get(plugins, "prebuild_plugins", "koji",
                                 "args", "hub") == "http://hub/"
         if proxy:
@@ -417,6 +418,9 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
+        assert get_plugin(plugins, "exit_plugins", "koji_promote")
+        assert plugin_value_get(plugins, "exit_plugins", "koji_promote", "args",
+                                "target") ==  koji_target
         assert 'sourceSecret' not in build_json["spec"]["source"]
 
         labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile",
@@ -501,6 +505,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "exit_plugins", "koji_promote")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
         assert 'sourceSecret' not in build_json["spec"]["source"]
