@@ -17,7 +17,8 @@ from osbs.http import HttpResponse
 from osbs.conf import Configuration
 from osbs.api import OSBS
 from tests.constants import (TEST_BUILD, TEST_COMPONENT, TEST_GIT_REF,
-                             TEST_GIT_BRANCH, TEST_BUILD_CONFIG)
+                             TEST_GIT_BRANCH, TEST_BUILD_CONFIG,
+                             TEST_GIT_URI_HUMAN_NAME)
 from tempfile import NamedTemporaryFile
 
 try:
@@ -95,7 +96,7 @@ class Connection(object):
                  "put": {
                      "file": "build_test-build-123.json",
                  }
-             },
+            },
 
             (OAPI_PREFIX + "namespaces/default/builds/%s/log/" % TEST_BUILD,
              OAPI_PREFIX + "namespaces/default/builds/%s/log/?follow=0" % TEST_BUILD,
@@ -104,7 +105,7 @@ class Connection(object):
                      # Lines of text
                      "file": "build_test-build-123_logs.txt",
                  },
-             },
+            },
 
             ("/oauth/authorize",
              "/oauth/authorize?client_id=openshift-challenging-client&response_type=token",
@@ -113,7 +114,7 @@ class Connection(object):
                      "file": "authorize.txt",
                      "custom_callback": self.process_authorize,
                  }
-             },
+            },
 
             OAPI_PREFIX + "users/~/": {
                 "get": {
@@ -146,14 +147,18 @@ class Connection(object):
 
             # use both version with ending slash and without it
             (OAPI_PREFIX + "namespaces/default/buildconfigs/%s" % TEST_BUILD_CONFIG,
-             OAPI_PREFIX + "namespaces/default/buildconfigs/%s/" % TEST_BUILD_CONFIG): {
+             OAPI_PREFIX + "namespaces/default/buildconfigs/%s/" % TEST_BUILD_CONFIG,
+             ((OAPI_PREFIX + "namespaces/default/buildconfigs/?labelSelector=" +
+               "git-repo-name%%3D%s" "%%2C" "git-branch%%3D%s"
+               ) % (TEST_GIT_URI_HUMAN_NAME, TEST_GIT_BRANCH)),
+             ): {
                  "get": {
                      "custom_callback":
                          self.with_status_code(httplib.NOT_FOUND),
                      # Empty file (no response content as the status is 404
                      "file": None,
                  }
-             },
+            },
 
             OAPI_PREFIX + "namespaces/default/builds/?labelSelector=buildconfig%%3D%s" %
             TEST_BUILD_CONFIG: {
@@ -195,7 +200,6 @@ class Connection(object):
                 },
             },
         }
-
 
     @staticmethod
     def process_authorize(key, content):
@@ -293,7 +297,7 @@ koji_root = http://koji.example.com/kojiroot
 koji_hub = http://koji.example.com/kojihub
 build_type = simple
 use_auth = false
-""".format (build_json_dir="inputs"))
+""".format(build_json_dir="inputs"))
         fp.flush()
         dummy_config = Configuration(fp.name)
         osbs = OSBS(dummy_config, dummy_config)
@@ -321,7 +325,7 @@ koji_root = http://koji.example.com/kojiroot
 koji_hub = http://koji.example.com/kojihub
 build_type = simple
 use_auth = false
-""".format (build_json_dir="inputs"))
+""".format(build_json_dir="inputs"))
         fp.flush()
         dummy_config = Configuration(fp.name)
         osbs = OSBS(dummy_config, dummy_config)
@@ -358,4 +362,3 @@ class ResponseMapping(object):
             return custom_callback(key, content)
         else:
             return {"content": content}
-

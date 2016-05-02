@@ -17,7 +17,7 @@ import re
 from osbs.constants import DEFAULT_GIT_REF, DEFAULT_BUILD_IMAGE
 from osbs.exceptions import OsbsValidationException
 from osbs.utils import (get_imagestreamtag_from_image,
-                        git_repo_humanish_part_from_uri,
+                        make_name_from_git,
                         RegistryURI)
 
 logger = logging.getLogger(__name__)
@@ -273,10 +273,7 @@ class ProdSpec(CommonSpec):
         self.git_push_url.value = git_push_url
         self.git_push_username.value = git_push_username
         self.git_branch.value = git_branch
-        repo = git_repo_humanish_part_from_uri(self.git_uri.value)
-        namefmt = "{repo}-{branch}"
-        self.name.value = namefmt.format(repo=repo,
-                                         branch=git_branch or 'unknown')
+        self.name.value = make_name_from_git(self.git_uri.value, self.git_branch.value)
         self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
         self.builder_build_json_dir.value = builder_build_json_dir
         self.imagestream_name.value = name_label.replace('/', '-')
