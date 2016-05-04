@@ -25,7 +25,8 @@ from osbs.constants import PROD_BUILD_TYPE, SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI
 from osbs.constants import PROD_WITH_SECRET_BUILD_TYPE
 from osbs.constants import SECRETS_PATH
 from osbs.exceptions import OsbsException, OsbsValidationException
-from osbs.utils import looks_like_git_hash
+from osbs.utils import (looks_like_git_hash, make_name_from_git,
+                        git_repo_humanish_part_from_uri)
 
 
 build_classes = {}
@@ -147,6 +148,10 @@ class BuildRequest(object):
                     trigger['imageChange']['from']['kind'] == 'ImageStreamTag':
                 return True
         return False
+
+    def set_label(self, name, value):
+        self.template['metadata'].setdefault('labels', {})
+        self.template['metadata']['labels'][name] = value
 
 
 class CommonBuild(BuildRequest):
@@ -731,6 +736,14 @@ class ProductionBuild(CommonBuild):
         if validate:
             self.spec.validate()
         super(ProductionBuild, self).render()
+
+        repo_name = git_repo_humanish_part_from_uri(self.spec.git_uri.value)
+        # NOTE: Since only the repo name is used, a forked repos will have
+        # the same git-repo-name tag. This is a known limitation. If this
+        # use case must be handled properly, the git URI must be taken into
+        # account.
+        self.set_label('git-repo-name', repo_name)
+        self.set_label('git-branch', self.spec.git_branch.value)
 
         self.dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts",
                                   "command", self.spec.sources_command.value)

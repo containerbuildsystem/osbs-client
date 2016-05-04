@@ -59,6 +59,9 @@ class OSBS(object):
     reasons, untrue for list_builds and get_user, which return list of BuildResponse objects
     and dict respectively.
     """
+
+    _GIT_LABEL_KEYS = ('git-repo-name', 'git-branch')
+
     @osbsapi
     def __init__(self, openshift_configuration, build_configuration):
         """ """
@@ -180,7 +183,6 @@ class OSBS(object):
                 running.append(br)
         return running
 
-    @staticmethod
     def _panic_msg_for_more_running_builds(self, build_config_name, builds):
         # this should never happen, but if it does, we want to know all the builds
         #  that were running at the time
@@ -189,19 +191,59 @@ class OSBS(object):
             (build_config_name, builds)
         return msg
 
-    def _create_build_config_and_build(self, build_request):
-        # TODO: test this method more thoroughly
-        build_json = build_request.render()
-        api_version = build_json['apiVersion']
-        if api_version != self.os_conf.get_openshift_api_version():
-            raise OsbsValidationException("BuildConfig template has incorrect apiVersion (%s)" %
-                                          api_version)
+    def _verify_labels_match(self, new_build_config, existing_build_config):
+        new_labels = new_build_config['metadata']['labels']
+        existing_labels = existing_build_config['metadata']['labels']
 
-        build_config_name = build_json['metadata']['name']
+        for key in self._GIT_LABEL_KEYS:
+            new_label_value = new_labels.get(key)
+            existing_label_value = existing_labels.get(key)
 
-        # check if a build already exists for this config; if so then raise
+            if (existing_label_value is not None and
+                    existing_label_value != new_label_value):
+
+                msg = (
+                    'Git labels collide with existing build config labels. '
+                    'Existing labels: %r, '
+                    'New labels: %r ') % (existing_labels, new_labels)
+                raise OsbsValidationException(msg)
+
+    def _get_existing_build_config(self, build_config):
+        """
+        Uses the given build config to find an existing matching build config.
+        Build configs are a match if:
+        - metadata.name are equal
+        OR
+        - metadata.labels.git-repo-name AND metadata.labels.git-branch are equal
+        """
+
+        git_labels = [(key, build_config['metadata']['labels'][key])
+                      for key in self._GIT_LABEL_KEYS]
+        name = build_config['metadata']['name']
+
+        queries = (
+            (self.os.get_build_config_by_labels, git_labels),
+            (self.os.get_build_config, name),
+        )
+
+        existing_bc = None
+        for func, arg in queries:
+            try:
+                existing_bc = func(arg)
+                # build config found
+                break
+            except OsbsException as exc:
+                # doesn't exist
+                logger.info('Build config NOT found via %s: %s',
+                            func.__name__, str(exc))
+                continue
+
+        return existing_bc
+
+    def _verify_no_running_builds(self, build_config_name):
         running_builds = self._get_running_builds_for_build_config(build_config_name)
         rb_len = len(running_builds)
+
         if rb_len > 0:
             if rb_len == 1:
                 rb = running_builds[0]
@@ -211,18 +253,33 @@ class OSBS(object):
                 msg = self._panic_msg_for_more_running_builds(build_config_name, running_builds)
             raise OsbsException(msg)
 
-        try:
-            # see if there's already a build config
-            existing_bc = self.os.get_build_config(build_config_name)
-        except OsbsException:
-            # doesn't exist
-            existing_bc = None
-
+    def _create_build_config_and_build(self, build_request):
         build = None
+
+        build_json = build_request.render()
+        api_version = build_json['apiVersion']
+        if api_version != self.os_conf.get_openshift_api_version():
+            raise OsbsValidationException('BuildConfig template has incorrect apiVersion (%s)' %
+                                          api_version)
+
+        build_config_name = build_json['metadata']['name']
+        existing_bc = self._get_existing_build_config(build_json)
+
         if existing_bc is not None:
+            self._verify_labels_match(build_json, existing_bc)
+            # Existing build config may have a different name if matched by
+            # git-repo-name and git-branch labels. Continue using existing
+            # build config name.
+            build_config_name = existing_bc['metadata']['name']
+            self._verify_no_running_builds(build_config_name)
+
             utils.buildconfig_update(existing_bc, build_json)
+            # Reset name change that may have occurred during
+            # update above, since renaming is not supported.
+            existing_bc['metadata']['name'] = build_config_name
             logger.debug('build config for %s already exists, updating...', build_config_name)
             self.os.update_build_config(build_config_name, json.dumps(existing_bc))
+
         else:
             # if it doesn't exist, then create it
             logger.debug('build config for %s doesn\'t exist, creating...', build_config_name)

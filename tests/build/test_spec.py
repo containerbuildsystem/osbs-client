@@ -7,7 +7,7 @@ of the BSD license. See the LICENSE file for details.
 """
 import pytest
 
-from osbs.build.spec import BuildIDParam, RegistryURIsParam, CommonSpec
+from osbs.build.spec import BuildIDParam, RegistryURIsParam, CommonSpec, ProdSpec
 from osbs.exceptions import OsbsValidationException
 from tests.constants import TEST_USER
 
@@ -55,3 +55,23 @@ class TestCommonSpec(object):
         assert registry.uri == 'http://registry.example.com:5000'
         assert registry.docker_uri == 'registry.example.com:5000'
         assert registry.version == 'v2'
+
+
+class TestProdSpec(object):
+
+    def test_spec_name(self):
+        kwargs = {
+            # Params needed to avoid exceptions.
+            'user': 'user',
+            'base_image': 'base_image',
+            'name_label': 'name_label',
+            'source_registry_uri': 'source_registry_uri',
+            # Params relevant to this test.
+            'git_uri': 'https://github.com/user/reponame.git',
+            'git_branch': 'master',
+        }
+
+        spec = ProdSpec()
+        spec.set_params(**kwargs)
+
+        assert spec.name.value == 'reponame-master'
