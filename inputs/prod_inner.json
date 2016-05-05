@@ -132,13 +132,6 @@
   ],
   "exit_plugins": [
     {
-      "args": {
-        "url": "{{OPENSHIFT_URI}}",
-        "verify_ssl": false
-      },
-      "name": "store_metadata_in_osv3"
-    },
-    {
       "name": "koji_promote",
       "args": {
         "kojihub": "{{KOJI_HUB}}",
@@ -146,6 +139,13 @@
         "verify_ssl": false,
         "blocksize": 10485760
       }
+    },
+    {
+      "args": {
+        "url": "{{OPENSHIFT_URI}}",
+        "verify_ssl": false
+      },
+      "name": "store_metadata_in_osv3"
     },
     {
       "name": "remove_built_image"
