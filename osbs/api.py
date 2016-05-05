@@ -542,13 +542,6 @@ class OSBS(object):
     def _prepare_resource(resource_type, resource):
         utils.graceful_chain_del(resource, 'metadata', 'resourceVersion')
 
-        if resource_type == 'buildconfigs':
-            utils.graceful_chain_del(resource, 'status', 'lastVersion')
-
-            triggers = utils.graceful_chain_get(resource, 'spec', 'triggers') or ()
-            for t in triggers:
-                utils.graceful_chain_del(t, 'imageChange', 'lastTrigerredImageID')
-
     @osbsapi
     def dump_resource(self, resource_type):
         return self.os.dump_resource(resource_type).json()
