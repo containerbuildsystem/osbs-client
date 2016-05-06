@@ -15,6 +15,7 @@ INPUTS_PATH = os.path.join(HERE, '..', 'inputs')
 TEST_BUILD = "test-build-123"
 TEST_BUILD_CONFIG = "path-master"
 TEST_GIT_URI = "git://hostname/path"
+TEST_GIT_URI_HUMAN_NAME = "path"
 TEST_GIT_REF = "0123456789012345678901234567890123456789"
 TEST_GIT_BRANCH = "master"
 TEST_USER = "user"

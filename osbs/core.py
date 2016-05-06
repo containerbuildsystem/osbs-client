@@ -309,6 +309,28 @@ class Openshift(object):
         build_config = response.json()
         return build_config
 
+    def get_build_config_by_labels(self, label_selectors):
+        """
+        Returns a build config matching the given label
+        selectors. This method will raise OsbsException
+        if not exactly one build config is found.
+        """
+        labels = ['%s=%s' % (field, value) for field, value in label_selectors]
+        labels = ','.join(labels)
+        url = self._build_url("buildconfigs/", labelSelector=labels)
+        items = self._get(url).json()['items']
+
+        if not items:
+            raise OsbsException(
+                "Build config not found for labels: %r" %
+                (label_selectors, ))
+        if len(items) > 1:
+            raise OsbsException(
+                "More than one build config found for labels: %r" %
+                (label_selectors, ))
+
+        return items[0]
+
     def create_build_config(self, build_config_json):
         """
         :return:

@@ -14,6 +14,7 @@ import os
 import pytest
 import shutil
 import six
+import copy
 from tempfile import NamedTemporaryFile
 
 from osbs.api import OSBS
@@ -22,7 +23,7 @@ from osbs.constants import PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE, SIMPLE
 from osbs.build.build_request import BuildRequest, SimpleBuild, ProductionBuild
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
-from osbs.exceptions import OsbsValidationException
+from osbs.exceptions import OsbsValidationException, OsbsException
 from osbs.http import HttpResponse
 from osbs import utils
 
@@ -246,7 +247,7 @@ class TestOSBS(object):
 
         # Create an inner JSON description with the specified compress
         # plugin method
-        with open(os.path.join(str(tmpdir),'simple_inner.json'),
+        with open(os.path.join(str(tmpdir), 'simple_inner.json'),
                   'r+') as inner:
             inner_json = json.load(inner)
 
@@ -256,7 +257,7 @@ class TestOSBS(object):
                                                if plugin['name'] != 'compress']
 
             if compress:
-                plugin = { 'name': 'compress' }
+                plugin = {'name': 'compress'}
                 plugin.update(args)
                 inner_json['postbuild_plugins'].insert(0, plugin)
 
@@ -327,3 +328,351 @@ build_image = {build_image}
                                      TEST_ARCH)
         img = req.json['spec']['strategy']['customStrategy']['from']['name']
         assert img == build_image
+
+    def test_get_existing_build_config_by_labels(self):
+        build_config = {
+            'metadata': {
+                'name': 'name',
+                'labels': {
+                    'git-repo-name': 'reponame',
+                    'git-branch': 'branch',
+                }
+            },
+        }
+
+        existing_build_config = copy.deepcopy(build_config)
+        existing_build_config['_from'] = 'from-labels'
+
+        config = Configuration()
+        osbs = OSBS(config, config)
+
+        (flexmock(osbs.os)
+            .should_receive('get_build_config_by_labels')
+            .with_args([('git-repo-name', 'reponame'), ('git-branch', 'branch')])
+            .once()
+            .and_return(existing_build_config))
+        (flexmock(osbs.os)
+            .should_receive('get_build_config')
+            .never())
+
+        actual_build_config = osbs._get_existing_build_config(build_config)
+        assert actual_build_config == existing_build_config
+        assert actual_build_config['_from'] == 'from-labels'
+
+    def test_get_existing_build_config_by_name(self):
+        build_config = {
+            'metadata': {
+                'name': 'name',
+                'labels': {
+                    'git-repo-name': 'reponame',
+                    'git-branch': 'branch',
+                }
+            },
+        }
+
+        existing_build_config = copy.deepcopy(build_config)
+        existing_build_config['_from'] = 'from-name'
+
+        config = Configuration()
+        osbs = OSBS(config, config)
+
+        (flexmock(osbs.os)
+            .should_receive('get_build_config_by_labels')
+            .with_args([('git-repo-name', 'reponame'), ('git-branch', 'branch')])
+            .once()
+            .and_raise(OsbsException))
+        (flexmock(osbs.os)
+            .should_receive('get_build_config')
+            .with_args('name')
+            .once()
+            .and_return(existing_build_config))
+
+        actual_build_config = osbs._get_existing_build_config(build_config)
+        assert actual_build_config == existing_build_config
+        assert actual_build_config['_from'] == 'from-name'
+
+    def test_get_existing_build_config_missing(self):
+        build_config = {
+            'metadata': {
+                'name': 'name',
+                'labels': {
+                    'git-repo-name': 'reponame',
+                    'git-branch': 'branch',
+                }
+            },
+        }
+        config = Configuration()
+        osbs = OSBS(config, config)
+
+        (flexmock(osbs.os)
+            .should_receive('get_build_config_by_labels')
+            .with_args([('git-repo-name', 'reponame'), ('git-branch', 'branch')])
+            .once()
+            .and_raise(OsbsException))
+        (flexmock(osbs.os)
+            .should_receive('get_build_config')
+            .with_args('name')
+            .once()
+            .and_raise(OsbsException))
+
+        assert osbs._get_existing_build_config(build_config) is None
+
+    def test_verify_no_running_builds_zero(self):
+        config = Configuration()
+        osbs = OSBS(config, config)
+
+        (flexmock(osbs)
+            .should_receive('_get_running_builds_for_build_config')
+            .with_args('build_config_name')
+            .once()
+            .and_return([]))
+
+        osbs._verify_no_running_builds('build_config_name')
+
+    def test_verify_no_running_builds_one(self):
+        config = Configuration()
+        osbs = OSBS(config, config)
+
+        (flexmock(osbs)
+            .should_receive('_get_running_builds_for_build_config')
+            .with_args('build_config_name')
+            .once()
+            .and_return([
+                flexmock(status='Running', get_build_name=lambda: 'build-1'),
+            ]))
+
+        with pytest.raises(OsbsException) as exc:
+            osbs._verify_no_running_builds('build_config_name')
+        assert str(exc.value).startswith('Build build-1 for build_config_name')
+
+    def test_verify_no_running_builds_many(self):
+        config = Configuration()
+        osbs = OSBS(config, config)
+
+        (flexmock(osbs)
+            .should_receive('_get_running_builds_for_build_config')
+            .with_args('build_config_name')
+            .once()
+            .and_return([
+                flexmock(status='Running', get_build_name=lambda: 'build-1'),
+                flexmock(status='Running', get_build_name=lambda: 'build-2'),
+            ]))
+
+        with pytest.raises(OsbsException) as exc:
+            osbs._verify_no_running_builds('build_config_name')
+        assert str(exc.value).startswith('Multiple builds for')
+
+    def test_create_build_config_bad_version(self):
+        config = Configuration()
+        osbs = OSBS(config, config)
+        build_json = {'apiVersion': 'spam'}
+        build_request = flexmock(
+            render=lambda: build_json,
+            is_auto_instantiated=lambda: False)
+
+        with pytest.raises(OsbsValidationException):
+            osbs._create_build_config_and_build(build_request)
+
+    def test_create_build_config_label_mismatch(self):
+        config = Configuration()
+        osbs = OSBS(config, config)
+
+        build_json = {
+            'apiVersion': osbs.os_conf.get_openshift_api_version(),
+            'metadata': {
+                'name': 'build',
+                'labels': {
+                    'git-repo-name': 'reponame',
+                    'git-branch': 'branch',
+                },
+            },
+        }
+
+        existing_build_json = copy.deepcopy(build_json)
+        existing_build_json['metadata']['name'] = 'build'
+        existing_build_json['metadata']['labels']['git-repo-name'] = 'reponame2'
+        existing_build_json['metadata']['labels']['git-branch'] = 'branch2'
+
+        build_request = flexmock(
+            render=lambda: build_json,
+            is_auto_instantiated=lambda: False)
+
+        (flexmock(osbs)
+            .should_receive('_get_existing_build_config')
+            .once()
+            .and_return(existing_build_json))
+
+        with pytest.raises(OsbsValidationException) as exc:
+            osbs._create_build_config_and_build(build_request)
+
+        assert 'Git labels collide' in str(exc.value)
+
+    def test_create_build_config_already_running(self):
+        config = Configuration()
+        osbs = OSBS(config, config)
+
+        build_json = {
+            'apiVersion': osbs.os_conf.get_openshift_api_version(),
+            'metadata': {
+                'name': 'build',
+                'labels': {
+                    'git-repo-name': 'reponame',
+                    'git-branch': 'branch',
+                },
+            },
+        }
+
+        existing_build_json = copy.deepcopy(build_json)
+        existing_build_json['metadata']['name'] = 'existing-build'
+
+        build_request = flexmock(
+            render=lambda: build_json,
+            is_auto_instantiated=lambda: False)
+
+        (flexmock(osbs)
+            .should_receive('_get_existing_build_config')
+            .once()
+            .and_return(existing_build_json))
+
+        (flexmock(osbs)
+            .should_receive('_get_running_builds_for_build_config')
+            .once()
+            .and_return([
+                flexmock(status='Running', get_build_name=lambda: 'build-1'),
+            ]))
+
+        with pytest.raises(OsbsException):
+            osbs._create_build_config_and_build(build_request)
+
+    def test_create_build_config_update(self):
+        config = Configuration()
+        osbs = OSBS(config, config)
+
+        build_json = {
+            'apiVersion': osbs.os_conf.get_openshift_api_version(),
+            'metadata': {
+                'name': 'build',
+                'labels': {
+                    'git-repo-name': 'reponame',
+                    'git-branch': 'branch',
+                },
+            },
+        }
+
+        existing_build_json = copy.deepcopy(build_json)
+        existing_build_json['metadata']['name'] = 'existing-build'
+        existing_build_json['metadata']['labels']['new-label'] = 'new-value'
+
+        build_request = flexmock(
+            render=lambda: build_json,
+            is_auto_instantiated=lambda: False)
+
+        (flexmock(osbs)
+            .should_receive('_get_existing_build_config')
+            .once()
+            .and_return(existing_build_json))
+
+        (flexmock(osbs)
+            .should_receive('_get_running_builds_for_build_config')
+            .once()
+            .and_return([]))
+
+        (flexmock(osbs.os)
+            .should_receive('update_build_config')
+            .with_args('existing-build', json.dumps(existing_build_json))
+            .once())
+
+        (flexmock(osbs.os)
+            .should_receive('start_build')
+            .with_args('existing-build')
+            .once()
+            .and_return(flexmock(json=lambda: {'spam': 'maps'})))
+
+        build_response = osbs._create_build_config_and_build(build_request)
+        assert build_response.json == {'spam': 'maps'}
+
+    def test_create_build_config_create(self):
+        config = Configuration()
+        osbs = OSBS(config, config)
+
+        build_json = {
+            'apiVersion': osbs.os_conf.get_openshift_api_version(),
+            'metadata': {
+                'name': 'build',
+                'labels': {
+                    'git-repo-name': 'reponame',
+                    'git-branch': 'branch',
+                },
+            },
+        }
+
+        build_request = flexmock(
+            render=lambda: build_json,
+            is_auto_instantiated=lambda: False)
+
+        (flexmock(osbs)
+            .should_receive('_get_existing_build_config')
+            .once()
+            .and_return(None))
+
+        (flexmock(osbs.os)
+            .should_receive('create_build_config')
+            .with_args(json.dumps(build_json))
+            .once()
+            .and_return(flexmock(json=lambda: {'spam': 'maps'})))
+
+        (flexmock(osbs.os)
+            .should_receive('start_build')
+            .with_args('build')
+            .once()
+            .and_return(flexmock(json=lambda: {'spam': 'maps'})))
+
+        build_response = osbs._create_build_config_and_build(build_request)
+        assert build_response.json == {'spam': 'maps'}
+
+    def test_create_build_config_auto_start(self):
+        config = Configuration()
+        osbs = OSBS(config, config)
+
+        build_json = {
+            'apiVersion': osbs.os_conf.get_openshift_api_version(),
+            'metadata': {
+                'name': 'build',
+                'labels': {
+                    'git-repo-name': 'reponame',
+                    'git-branch': 'branch',
+                },
+            },
+        }
+
+        build_request = flexmock(
+            render=lambda: build_json,
+            is_auto_instantiated=lambda: True)
+
+        (flexmock(osbs)
+            .should_receive('_get_existing_build_config')
+            .once()
+            .and_return(None))
+
+        (flexmock(osbs.os)
+            .should_receive('create_build_config')
+            .with_args(json.dumps(build_json))
+            .once()
+            .and_return(flexmock(json=lambda: {
+                'status': {'lastVersion': 'lastVersion'}}
+            )))
+
+        (flexmock(osbs.os)
+            .should_receive('wait_for_new_build_config_instance')
+            .with_args('build', 'lastVersion')
+            .once()
+            .and_return('build-id'))
+
+        (flexmock(osbs.os)
+            .should_receive('get_build')
+            .with_args('build-id')
+            .once()
+            .and_return(flexmock(json=lambda: {'spam': 'maps'})))
+
+        build_response = osbs._create_build_config_and_build(build_request)
+        assert build_response.json == {'spam': 'maps'}

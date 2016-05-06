@@ -17,7 +17,7 @@ from osbs.utils import (buildconfig_update,
                         get_imagestreamtag_from_image,
                         git_repo_humanish_part_from_uri,
                         get_time_from_rfc3339, strip_registry_from_image,
-                        TarWriter, TarReader)
+                        TarWriter, TarReader, make_name_from_git)
 from osbs.exceptions import OsbsException
 import osbs.kerberos_ccache
 
@@ -76,6 +76,22 @@ def test_get_time_from_rfc3339_valid(rfc3339, seconds, tz):
     os.environ['TZ'] = tz
     tzset()
     assert get_time_from_rfc3339(rfc3339) == seconds
+
+
+@pytest.mark.parametrize(('repo', 'branch', 'limit', 'separator', 'expected'), [
+    ('spam', 'bacon', 10, '-', 'spam-bacon'),
+    ('spam', 'bacon', 5, '-', 'sp-ba'),
+    ('spam', 'bacon', 10, '*', 'spam*bacon'),
+    ('spammmmmm', 'bacon', 10, '-', 'spamm-baco'),
+    ('spam', 'baconnnnnnn', 10, '-', 'spam-bacon'),
+    ('s', 'bacon', 10, '-', 's-bacon'),
+    ('spam', 'b', 10, '-', 'spam-b'),
+    ('spam', 'bacon', 10, '^^^', 'spam^^^bac'),
+    ('spam', '', 10, '-', 'spam-unkno'),
+    ('https://github.com/blah/spam.git', 'bacon', 10, '-', 'spam-bacon'),
+])
+def test_make_name_from_git(repo, branch, limit, separator, expected):
+    assert make_name_from_git(repo, branch, limit, separator) == expected
 
 
 @pytest.mark.skipif(sys.version_info[0] < 3,
@@ -181,6 +197,7 @@ def test_kinit_newcache(custom_ccache):
     osbs.kerberos_ccache.kerberos_ccache_init(PRINCIPAL, KEYTAB_PATH,
                                               CCACHE_PATH if custom_ccache else None)
 
+
 @pytest.mark.parametrize("custom_ccache", [True, False])
 def test_kinit_fails(custom_ccache):
     flexmock(osbs.kerberos_ccache).should_receive('run') \
@@ -200,6 +217,7 @@ def test_kinit_fails(custom_ccache):
     with pytest.raises(OsbsException):
         osbs.kerberos_ccache.kerberos_ccache_init(PRINCIPAL, KEYTAB_PATH,
                                                   CCACHE_PATH if custom_ccache else None)
+
 
 @pytest.mark.parametrize("prefix", ["", "some/thing"])
 def test_tarfile(tmpdir, prefix):

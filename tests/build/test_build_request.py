@@ -19,8 +19,9 @@ from osbs.exceptions import OsbsValidationException
 from flexmock import flexmock
 import pytest
 
-from tests.constants import (INPUTS_PATH, TEST_BUILD_CONFIG, TEST_BUILD_JSON, TEST_COMPONENT,
-                             TEST_GIT_BRANCH, TEST_GIT_REF, TEST_GIT_URI)
+from tests.constants import (INPUTS_PATH, TEST_BUILD_CONFIG, TEST_BUILD_JSON,
+                             TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
+                             TEST_GIT_URI, TEST_GIT_URI_HUMAN_NAME)
 
 
 class NoSuchPluginException(Exception):
@@ -56,6 +57,21 @@ class TestBuildRequest(object):
         br = BuildRequest('something')
         flexmock(br).should_receive('template').and_return(build_json)
         assert br.is_auto_instantiated() is False
+
+    def test_set_label(self):
+        build_json = copy.deepcopy(TEST_BUILD_JSON)
+        br = BuildRequest('something')
+        flexmock(br).should_receive('template').and_return(build_json)
+        assert br.template['metadata'].get('labels') is None
+
+        br.set_label('label-1', 'value-1')
+        br.set_label('label-2', 'value-2')
+        br.set_label('label-3', 'value-3')
+        assert br.template['metadata']['labels'] == {
+            'label-1': 'value-1',
+            'label-2': 'value-2',
+            'label-3': 'value-3',
+        }
 
     def test_render_simple_request_incorrect_postbuild(self, tmpdir):
         # Make temporary copies of the JSON files
@@ -169,7 +185,7 @@ class TestBuildRequest(object):
             assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                     "registries", r) == {"insecure": True}
 
-        rendered_build_image =  build_json["spec"]["strategy"]["customStrategy"]["from"]["name"]
+        rendered_build_image = build_json["spec"]["strategy"]["customStrategy"]["from"]["name"]
         assert rendered_build_image == (build_image if build_image else DEFAULT_BUILD_IMAGE)
 
     @pytest.mark.parametrize('proxy', [
@@ -350,6 +366,8 @@ class TestBuildRequest(object):
         assert build_json["spec"]["output"]["to"]["name"].startswith(
             "registry.example.com/john-foo/component:"
         )
+        assert build_json["metadata"]["labels"]["git-repo-name"] == TEST_GIT_URI_HUMAN_NAME
+        assert build_json["metadata"]["labels"]["git-branch"] == TEST_GIT_BRANCH
 
         env_vars = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None
@@ -1107,8 +1125,8 @@ class TestBuildRequest(object):
 
             # Using the sourceSecret scheme
             assert 'sourceSecret' in build_json['spec']['source']
-            assert build_json['spec']['source']\
-                ['sourceSecret']['name'] == secret_name
+            assert (build_json['spec']['source']['sourceSecret']['name'] ==
+                    secret_name)
 
             # Not using the secrets array scheme
             assert 'secrets' not in build_json['spec']['strategy']['customStrategy']

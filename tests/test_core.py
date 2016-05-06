@@ -5,14 +5,16 @@ All rights reserved.
 This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
+from flexmock import flexmock
 import six
+import json
 
 from osbs.http import HttpResponse
 from osbs.constants import BUILD_FINISHED_STATES
-from osbs.exceptions import OsbsResponseException
+from osbs.exceptions import OsbsResponseException, OsbsException
 from osbs.core import check_response
 
-from tests.constants import TEST_BUILD, TEST_LABEL, TEST_LABEL_VALUE
+from tests.constants import TEST_BUILD, TEST_LABEL, TEST_LABEL_VALUE, TEST_BUILD_CONFIG
 from tests.fake_api import openshift
 import pytest
 
@@ -104,3 +106,81 @@ class TestOpenshift(object):
         assert response is not None
         assert response.json()["metadata"]["name"] == TEST_BUILD
         assert response.json()["status"]["phase"].lower() in BUILD_FINISHED_STATES
+
+    def test_get_build_config(self, openshift):
+        mock_response = {"spam": "maps"}
+        build_config_name = 'some-build-config-name'
+        expected_url = openshift._build_url("buildconfigs/%s/" % build_config_name)
+        (flexmock(openshift)
+            .should_receive("_get")
+            .with_args(expected_url)
+            .once()
+            .and_return(HttpResponse(200, {}, json.dumps(mock_response))))
+        response = openshift.get_build_config(build_config_name)
+        assert response['spam'] == 'maps'
+
+    def test_get_missing_build_config(self, openshift):
+        build_config_name = 'some-build-config-name'
+        expected_url = openshift._build_url("buildconfigs/%s/" % build_config_name)
+        (flexmock(openshift)
+            .should_receive("_get")
+            .with_args(expected_url)
+            .once()
+            .and_return(HttpResponse(404, {}, '')))
+        with pytest.raises(OsbsResponseException):
+            openshift.get_build_config(build_config_name)
+
+    def test_get_build_config_by_labels(self, openshift):
+        mock_response = {"items": [{"spam": "maps"}]}
+        build_config_name = 'some-build-config-name'
+        label_selectors = (
+            ('label-1', 'value-1'),
+            ('label-2', 'value-2'),
+        )
+        expected_url = openshift._build_url(
+            "buildconfigs/?labelSelector=label-1%3Dvalue-1%2Clabel-2%3Dvalue-2")
+        (flexmock(openshift)
+            .should_receive("_get")
+            .with_args(expected_url)
+            .once()
+            .and_return(HttpResponse(200, {}, json.dumps(mock_response))))
+        response = openshift.get_build_config_by_labels(label_selectors)
+        assert response['spam'] == 'maps'
+
+    def test_get_missing_build_config_by_labels(self, openshift):
+        mock_response = {"items": []}
+        build_config_name = 'some-build-config-name'
+        label_selectors = (
+            ('label-1', 'value-1'),
+            ('label-2', 'value-2'),
+        )
+        expected_url = openshift._build_url(
+            "buildconfigs/?labelSelector=label-1%3Dvalue-1%2Clabel-2%3Dvalue-2")
+        (flexmock(openshift)
+            .should_receive("_get")
+            .with_args(expected_url)
+            .once()
+            .and_return(HttpResponse(200, {}, json.dumps(mock_response))))
+
+        with pytest.raises(OsbsException) as exc:
+            openshift.get_build_config_by_labels(label_selectors)
+        assert str(exc.value).startswith('Build config not found')
+
+    def test_get_multiple_build_config_by_labels(self, openshift):
+        mock_response = {"items": [{"spam": "maps"}, {"eggs": "sgge"}]}
+        build_config_name = 'some-build-config-name'
+        label_selectors = (
+            ('label-1', 'value-1'),
+            ('label-2', 'value-2'),
+        )
+        expected_url = openshift._build_url(
+            "buildconfigs/?labelSelector=label-1%3Dvalue-1%2Clabel-2%3Dvalue-2")
+        (flexmock(openshift)
+            .should_receive("_get")
+            .with_args(expected_url)
+            .once()
+            .and_return(HttpResponse(200, {}, json.dumps(mock_response))))
+
+        with pytest.raises(OsbsException) as exc:
+            openshift.get_build_config_by_labels(label_selectors)
+        assert str(exc.value).startswith('More than one build config found')

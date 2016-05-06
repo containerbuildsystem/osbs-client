@@ -39,6 +39,7 @@ from osbs.exceptions import OsbsException
 
 logger = logging.getLogger(__name__)
 
+
 class RegistryURI(object):
     # Group 0: URI without path -- allowing empty value -- including:
     # - Group 1: optional 'http://' / 'https://'
@@ -285,6 +286,53 @@ def get_time_from_rfc3339(rfc3339):
         # valid ISO8601 timestamps not in this exact format.
         time_tuple = strptime(rfc3339, '%Y-%m-%dT%H:%M:%SZ')
         return timegm(time_tuple)
+
+
+def make_name_from_git(repo, branch, limit=53, separator='-'):
+    """
+    return name string representing the given git repo and branch
+    to be used as a build name.
+
+    NOTE: Build name will be used to generate pods which have a
+    limit of 64 characters and is composed as:
+
+        <buildname>-<buildnumber>-<podsuffix>
+        rhel7-1-build
+
+    Assuming '-XXXX' (5 chars) and '-build' (6 chars) as default
+    suffixes, name should be limited to 53 chars (64 - 11).
+
+    :param repo: str, the git repository to be used
+    :param branch: str, the git branch to be used
+    :param limit: int, max name length
+    :param separator: str, used to separate the repo and branch in name
+
+    :return: str, name representing git repo and branch.
+    """
+
+    repo = git_repo_humanish_part_from_uri(repo)
+    branch = branch or 'unknown'
+
+    repo_chars = []
+    branch_chars = []
+    groups = ((repo, repo_chars), (branch, branch_chars))
+
+    size = len(separator)
+    for i in range(max(len(repo), len(branch))):
+        for group, group_chars in groups:
+            if i < len(group):
+                group_chars.append(group[i])
+                size += 1
+                if size >= limit:
+                    break
+        else:
+            continue
+        break
+
+    repo = ''.join(repo_chars)
+    branch = ''.join(branch_chars)
+
+    return repo + separator + branch
 
 
 def run_command(*popenargs, **kwargs):
