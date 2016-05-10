@@ -24,7 +24,7 @@ from osbs.cli.render import TablePrinter
 from osbs.conf import Configuration
 from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
                             CLI_LIST_BUILDS_DEFAULT_COLS, PY3, BACKUP_RESOURCES,
-                            BUILD_FINISHED_STATES)
+                            BUILD_FINISHED_STATES, CLI_WATCH_BUILDS_DEFAULT_COLS)
 from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsAuthException, OsbsResponseException
 from osbs.cli.capture import setup_json_capture
 from osbs.utils import (strip_registry_from_image, paused_builds, TarReader,
@@ -59,15 +59,16 @@ def cmd_get_all_resource_quota(args, osbs):
 def cmd_watch_builds(args, osbs):
     field_selector = ",".join(["status!={status}".format(status=status.capitalize())
                                for status in BUILD_FINISHED_STATES])
-    format_str = "{changetype:9}  {status:10}  {created:24}  {name}"
-    print(format_str.format(changetype='CHANGE',
-                            status='STATUS',
-                            created='CREATED',
-                            name='NAME'))
-    print(format_str.format(changetype='-' * 9,
-                            status='-' * 10,
-                            created='-' * 24,
-                            name='----'))
+    cols_to_display = CLI_WATCH_BUILDS_DEFAULT_COLS
+    if args.columns:
+        cols_to_display = args.columns.split(",")
+
+    data = [{
+        "changetype": "CHANGE",
+        "status": "STATUS",
+        "created": "CREATED",
+        "name": "NAME",
+    }]
     for changetype, obj in osbs.watch_builds(field_selector=field_selector):
         try:
             name = obj['metadata']['name']
@@ -87,10 +88,15 @@ def cmd_watch_builds(args, osbs):
             else:
                 created = time.ctime(get_time_from_rfc3339(timestamp))
 
-            print(format_str.format(changetype=changetype,
-                                    name=name,
-                                    created=created,
-                                    status=status))
+            b = {
+                "changetype": changetype,
+                "name": name or '',
+                "status": status,
+                "created": created,
+            }
+            data.append(b)
+        tp = TablePrinter(data, cols_to_display)
+        tp.render()
 
 
 def cmd_list_builds(args, osbs):
@@ -474,6 +480,9 @@ def cli():
     watch_build_parser.set_defaults(func=cmd_watch_build)
 
     watch_builds_parser = subparsers.add_parser(str_on_2_unicode_on_3('watch-builds'), help='watch running builds')
+    watch_builds_parser.add_argument("--columns",
+                                     help="comma-separated list of columns to display, possible values: "
+                                     "changetype, status, created, name")
     watch_builds_parser.set_defaults(func=cmd_watch_builds)
 
     get_build_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-build'), help='get info about build')
