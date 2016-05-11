@@ -322,6 +322,14 @@ class OSBS(object):
         """
         df_parser = utils.get_df_parser(git_uri, git_ref, git_branch=git_branch)
         build_request = self.get_build_request(PROD_BUILD_TYPE)
+        name_label_name = 'Name'
+        try:
+            name_label = df_parser.labels[name_label_name]
+        except KeyError:
+            raise OsbsValidationException("required label '{name}' missing "
+                                          "from Dockerfile"
+                                          .format(name=name_label_name))
+
         build_request.set_params(
             git_uri=git_uri,
             git_ref=git_ref,
@@ -331,7 +339,7 @@ class OSBS(object):
             build_image=self.build_conf.get_build_image(),
             build_imagestream=self.build_conf.get_build_imagestream(),
             base_image=df_parser.baseimage,
-            name_label=df_parser.labels['Name'],
+            name_label=name_label,
             registry_uris=self.build_conf.get_registry_uris(),
             source_registry_uri=self.build_conf.get_source_registry_uri(),
             registry_api_versions=self.build_conf.get_registry_api_versions(),

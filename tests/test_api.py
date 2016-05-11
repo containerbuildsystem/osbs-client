@@ -67,6 +67,19 @@ class TestOSBS(object):
                                           TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
         assert isinstance(response, BuildResponse)
 
+    def test_create_prod_build_missing_name_label(self, osbs):
+        class MockParser(object):
+            labels = {}
+            baseimage = 'fedora23/python'
+        (flexmock(utils)
+            .should_receive('get_df_parser')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(MockParser()))
+        with pytest.raises(OsbsValidationException):
+            osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                   TEST_GIT_BRANCH, TEST_USER,
+                                   TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
+
     def test_create_prod_build_missing_args(self, osbs):
         class MockParser(object):
             labels = {'Name': 'fedora23/something'}
