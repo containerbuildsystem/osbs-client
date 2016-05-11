@@ -58,3 +58,4 @@ SECRETS_PATH = "/var/run/secrets/atomic-reactor"
 BACKUP_RESOURCES = ('buildconfigs', 'imagestreams', 'builds',)
 
 CLI_LIST_BUILDS_DEFAULT_COLS = ["name", "status", "image"]
+CLI_WATCH_BUILDS_DEFAULT_COLS = ["changetype", "status", "created", "name"]
