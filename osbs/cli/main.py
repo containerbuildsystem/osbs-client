@@ -95,8 +95,12 @@ def cmd_watch_builds(args, osbs):
                 "created": created,
             }
             data.append(b)
-        tp = TablePrinter(data, cols_to_display)
-        tp.render()
+        if args.output == 'json':
+            print(json.dumps(b))
+            sys.stdout.flush()
+        elif args.output == 'text':
+            tp = TablePrinter(data, cols_to_display)
+            tp.render()
 
 
 def cmd_list_builds(args, osbs):
