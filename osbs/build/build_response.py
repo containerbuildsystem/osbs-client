@@ -162,4 +162,3 @@ class BuildResponse(object):
 
     def get_koji_build_id(self):
         return graceful_chain_get(self.get_labels(), "koji-build-id")
-
