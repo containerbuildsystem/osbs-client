@@ -25,8 +25,7 @@ from osbs.constants import PROD_BUILD_TYPE, SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI
 from osbs.constants import PROD_WITH_SECRET_BUILD_TYPE
 from osbs.constants import SECRETS_PATH
 from osbs.exceptions import OsbsException, OsbsValidationException
-from osbs.utils import (looks_like_git_hash, make_name_from_git,
-                        git_repo_humanish_part_from_uri)
+from osbs.utils import looks_like_git_hash, git_repo_humanish_part_from_uri
 
 
 build_classes = {}
