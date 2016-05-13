@@ -380,7 +380,8 @@ class Openshift(object):
                 logger.error("BuildConfig deleted while waiting for new build instance")
                 break
 
-        raise OsbsResponseException("New BuildConfig instance not found")
+        raise OsbsResponseException("New BuildConfig instance not found",
+                                    httplib.NOT_FOUND)
 
     def logs(self, build_id, follow=False, build_json=None, wait_if_missing=False):
         """
