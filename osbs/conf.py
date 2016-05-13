@@ -247,9 +247,9 @@ class Configuration(object):
 
     def get_registry_api_versions(self):
         value = self._get_value("registry_api_versions",
-                                   self.conf_section,
-                                   "registry_api_versions",
-                                   default='v1,v2')
+                                self.conf_section,
+                                "registry_api_versions",
+                                default='v1,v2')
         return value.split(',')
 
     def get_source_registry_uri(self):

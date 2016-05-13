@@ -420,7 +420,7 @@ def cmd_restore(args, osbs):
 
             logger.info("restoring %s", resource_type)
             osbs.restore_resource(resource_type, json.load(asciireader(f.fileobj)),
-                                                 continue_on_error=args.continue_on_error)
+                                  continue_on_error=args.continue_on_error)
             f.fileobj.close()
 
     logger.info("backup recovery complete!")
