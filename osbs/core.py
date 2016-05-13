@@ -175,7 +175,7 @@ class Openshift(object):
         return self._con.put(url, headers=headers, verify_ssl=self.verify_ssl, **kwargs)
 
     def _delete(self, url, with_auth=True, **kwargs):
-        headers, hwargs = self._request_args(with_auth, **kwargs)
+        headers, kwargs = self._request_args(with_auth, **kwargs)
         return self._con.delete(url, headers=headers, verify_ssl=self.verify_ssl,
                                 **kwargs)
 
