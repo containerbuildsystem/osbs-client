@@ -796,10 +796,10 @@ class ProductionBuild(CommonBuild):
             self.template['spec']['output']['to']['name'] = \
                 self.spec.image_tag.value
 
-        kojitask = self.spec.koji_task_id.value
-        if kojitask is not None:
+        koji_task_id = self.spec.koji_task_id.value
+        if koji_task_id is not None:
             self.template['metadata'].setdefault('labels', {})
-            self.template['metadata']['labels']['kojitask'] = kojitask
+            self.template['metadata']['labels']['koji-task-id'] = koji_task_id
 
         use_auth = self.spec.use_auth.value
         self.render_add_labels_in_dockerfile()

@@ -246,7 +246,7 @@ class TestBuildRequest(object):
         build_json = build_request.render()
 
         assert build_json["metadata"]["name"] == TEST_BUILD_CONFIG
-        assert build_json["metadata"]["labels"]["kojitask"] == koji_task_id
+        assert build_json["metadata"]["labels"]["koji-task-id"] == koji_task_id
         assert "triggers" not in build_json["spec"]
         assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
         assert build_json["spec"]["source"]["git"]["ref"] == TEST_GIT_REF
@@ -1218,7 +1218,7 @@ class TestBuildRequest(object):
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
-        assert build_json["metadata"]["labels"]["kojitask"] == koji_task_id
+        assert build_json["metadata"]["labels"]["koji-task-id"] == koji_task_id
 
         strategy = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None
