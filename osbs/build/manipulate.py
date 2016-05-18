@@ -38,7 +38,7 @@ class DockJsonManipulator(object):
         Raises KeyError if there are no plugins of that type.
         Raises IndexError if the named plugin is not listed.
         """
-        match = [x for x in self.dock_json[plugin_type] if x.get('name', None) == plugin_name]
+        match = [x for x in self.dock_json[plugin_type] if x.get('name') == plugin_name]
         return match[0]
 
     def remove_plugin(self, plugin_type, plugin_name):
@@ -46,7 +46,7 @@ class DockJsonManipulator(object):
         if config contains plugin, remove it
         """
         for p in self.dock_json[plugin_type]:
-            if p.get('name', None) == plugin_name:
+            if p.get('name') == plugin_name:
                 self.dock_json[plugin_type].remove(p)
                 break
 

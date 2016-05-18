@@ -160,7 +160,7 @@ def buildconfig_update(orig, new, remove_nonexistent_keys=False):
         for k, v in new.items():
             if k == 'strategy':
                 remove_nonexistent_keys = True
-            if isinstance(orig.get(k, None), dict) and isinstance(v, dict):
+            if isinstance(orig.get(k), dict) and isinstance(v, dict):
                 buildconfig_update(orig[k], v, remove_nonexistent_keys)
             else:
                 orig[k] = v
