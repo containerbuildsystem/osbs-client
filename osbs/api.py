@@ -615,7 +615,7 @@ class OSBS(object):
 
     # implements subset of OpenShift's export logic in pkg/cmd/cli/cmd/exporter.go
     @staticmethod
-    def _prepare_resource(resource_type, resource):
+    def _prepare_resource(resource):
         utils.graceful_chain_del(resource, 'metadata', 'resourceVersion')
 
     @osbsapi
@@ -629,7 +629,7 @@ class OSBS(object):
             name = utils.graceful_chain_get(r, 'metadata', 'name') or '(no name)'
             logger.debug("restoring %s/%s", resource_type, name)
             try:
-                self._prepare_resource(resource_type, r)
+                self._prepare_resource(r)
                 self.os.restore_resource(resource_type, r)
             except Exception:
                 if continue_on_error:
