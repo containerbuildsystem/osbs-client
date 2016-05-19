@@ -203,6 +203,7 @@ class ProdSpec(CommonSpec):
     authoritative_registry = BuildParam("authoritative_registry ")
     distribution_scope = BuildParam("distribution_scope")
     registry_api_versions = BuildParam("registry_api_versions")
+    labels = BuildParam("labels", default={})
     koji_target = BuildParam("koji_target", allow_none=True)
     kojiroot = BuildParam("kojiroot", allow_none=True)
     kojihub = BuildParam("kojihub", allow_none=True)
@@ -252,7 +253,7 @@ class ProdSpec(CommonSpec):
                    nfs_dest_dir=None, git_branch=None, base_image=None,
                    name_label=None, git_push_url=None, git_push_username=None,
                    builder_build_json_dir=None,
-                   registry_api_versions=None, **kwargs):
+                   registry_api_versions=None, labels=None, **kwargs):
         super(ProdSpec, self).set_params(**kwargs)
         self.sources_command.value = sources_command
         self.architecture.value = architecture
@@ -279,6 +280,7 @@ class ProdSpec(CommonSpec):
         self.name.value = make_name_from_git(self.git_uri.value, self.git_branch.value)
         self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
         self.builder_build_json_dir.value = builder_build_json_dir
+        self.labels.value = labels
         self.imagestream_name.value = name_label.replace('/', '-')
         # The ImageStream should take tags from the source registry
         # or, if no source registry is set, the first listed registry

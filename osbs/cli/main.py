@@ -276,6 +276,7 @@ def cmd_build(args, osbs):
         build_image=osbs.build_conf.get_build_image(),
         build_imagestream=osbs.build_conf.get_build_imagestream(),
         scratch=args.scratch,
+        labels=osbs.build_conf.get_labels(),
     )
     build_id = build.get_build_name()
     # we need to wait for kubelet to schedule the build, otherwise it's 500
@@ -564,6 +565,9 @@ def cli():
                               default=False, help="perform a scratch build")
     build_parser.add_argument("--yum-proxy", action='store', required=False,
                               help="set yum proxy to repos from koji/add-yum-repo params")
+    build_parser.add_argument('--label', action='append', nargs=2, required=False,
+                              dest='labels', metavar=('NAME', 'VALUE'),
+                              help='set label in dockerfile')
     group = build_parser.add_mutually_exclusive_group()
     group.add_argument("--build-image", action='store', required=False,
                        help="builder image to use")

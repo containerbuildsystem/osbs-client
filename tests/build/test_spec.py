@@ -59,19 +59,35 @@ class TestCommonSpec(object):
 
 class TestProdSpec(object):
 
-    def test_spec_name(self):
-        kwargs = {
+    def get_minimal_kwargs(self):
+        return {
             # Params needed to avoid exceptions.
             'user': 'user',
             'base_image': 'base_image',
             'name_label': 'name_label',
             'source_registry_uri': 'source_registry_uri',
-            # Params relevant to this test.
+            'git_uri': 'https://github.com/user/reponame.git',
+        }
+
+    def test_spec_name(self):
+        kwargs = self.get_minimal_kwargs()
+        kwargs.update({
             'git_uri': 'https://github.com/user/reponame.git',
             'git_branch': 'master',
-        }
+        })
 
         spec = ProdSpec()
         spec.set_params(**kwargs)
 
         assert spec.name.value == 'reponame-master'
+
+    def test_labels(self):
+        kwargs = self.get_minimal_kwargs()
+        kwargs.update({
+            'labels': {'spam': 'maps'},
+        })
+
+        spec = ProdSpec()
+        spec.set_params(**kwargs)
+
+        assert spec.labels.value == {'spam': 'maps'}

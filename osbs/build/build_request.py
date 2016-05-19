@@ -547,6 +547,9 @@ class ProductionBuild(CommonBuild):
                                           self.spec.proxy.value)
 
     def render_add_labels_in_dockerfile(self):
+        phase = 'prebuild_plugins'
+        plugin = 'add_labels_in_dockerfile'
+
         implicit_labels = {
             'Vendor': self.spec.vendor.value,
             'Authoritative_Registry': self.spec.authoritative_registry.value,
@@ -561,9 +564,13 @@ class ProductionBuild(CommonBuild):
         if architecture:
             implicit_labels['Architecture'] = architecture
 
-        self.dj.dock_json_merge_arg('prebuild_plugins',
-                                    "add_labels_in_dockerfile",
-                                    "labels", implicit_labels)
+        self.dj.dock_json_merge_arg(phase, plugin, 'labels', implicit_labels)
+
+        explicit_labels = self.spec.labels.value
+        if explicit_labels:
+            logger.debug('Adding requested labels: %r', explicit_labels)
+            self.dj.dock_json_merge_arg(phase, plugin, "labels",
+                                        explicit_labels)
 
     def render_koji(self):
         """
