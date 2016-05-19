@@ -28,6 +28,48 @@ class NoSuchPluginException(Exception):
     pass
 
 
+def get_sample_prod_params():
+    return {
+        'git_uri': TEST_GIT_URI,
+        'git_ref': TEST_GIT_REF,
+        'git_branch': TEST_GIT_BRANCH,
+        'user': 'john-foo',
+        'component': TEST_COMPONENT,
+        'base_image': 'fedora:latest',
+        'name_label': 'fedora/resultingimage',
+        'registry_uri': 'registry.example.com',
+        'source_registry_uri': 'registry.example.com',
+        'openshift_uri': 'http://openshift/',
+        'builder_openshift_url': 'http://openshift/',
+        'koji_target': 'koji-target',
+        'kojiroot': 'http://root/',
+        'kojihub': 'http://hub/',
+        'sources_command': 'make',
+        'architecture': 'x86_64',
+        'vendor': 'Foo Vendor',
+        'build_host': 'our.build.host.example.com',
+        'authoritative_registry': 'registry.example.com',
+        'distribution_scope': 'authoritative-source-only',
+        'registry_api_versions': ['v1'],
+        'pdc_url': 'https://pdc.example.com',
+        'smtp_uri': 'smtp.example.com',
+        'proxy': 'http://proxy.example.com'
+    }
+
+
+def get_plugins_from_build_json(build_json):
+    env_vars = build_json['spec']['strategy']['customStrategy']['env']
+    plugins = None
+
+    for d in env_vars:
+        if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
+            plugins = json.loads(d['value'])
+            break
+
+    assert plugins is not None
+    return plugins
+
+
 def get_plugin(plugins, plugin_type, plugin_name):
     plugins = plugins[plugin_type]
     for plugin in plugins:
@@ -107,15 +149,7 @@ class TestBuildRequest(object):
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
-        env_vars = build_json['spec']['strategy']['customStrategy']['env']
-        plugins_json = None
-        for d in env_vars:
-            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
-                plugins_json = d['value']
-                break
-
-        assert plugins_json is not None
-        plugins = json.loads(plugins_json)
+        plugins = get_plugins_from_build_json(build_json)
 
         # Check the store_metadata_in_osv3's uri parameter was set
         # correctly, even though it was listed as a postbuild plugin.
@@ -163,15 +197,7 @@ class TestBuildRequest(object):
             expected_output = registry_uris[0] + "/" + expected_output
         assert build_json["spec"]["output"]["to"]["name"].startswith(expected_output)
 
-        env_vars = build_json['spec']['strategy']['customStrategy']['env']
-        plugins_json = None
-        for d in env_vars:
-            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
-                plugins_json = d['value']
-                break
-
-        assert plugins_json is not None
-        plugins = json.loads(plugins_json)
+        plugins = get_plugins_from_build_json(build_json)
         pull_base_image = get_plugin(plugins, "prebuild_plugins",
                                      "pull_base_image")
         assert pull_base_image is not None
@@ -254,15 +280,7 @@ class TestBuildRequest(object):
             "registry.example.com/john-foo/component:"
         )
 
-        env_vars = build_json['spec']['strategy']['customStrategy']['env']
-        plugins_json = None
-        for d in env_vars:
-            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
-                plugins_json = d['value']
-                break
-
-        assert plugins_json is not None
-        plugins = json.loads(plugins_json)
+        plugins = get_plugins_from_build_json(build_json)
 
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
@@ -370,15 +388,7 @@ class TestBuildRequest(object):
         assert build_json["metadata"]["labels"]["git-repo-name"] == TEST_GIT_URI_HUMAN_NAME
         assert build_json["metadata"]["labels"]["git-branch"] == TEST_GIT_BRANCH
 
-        env_vars = build_json['spec']['strategy']['customStrategy']['env']
-        plugins_json = None
-        for d in env_vars:
-            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
-                plugins_json = d['value']
-                break
-
-        assert plugins_json is not None
-        plugins = json.loads(plugins_json)
+        plugins = get_plugins_from_build_json(build_json)
 
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
@@ -469,15 +479,7 @@ class TestBuildRequest(object):
             "registry.example.com/john-foo/component:none-"
         )
 
-        env_vars = build_json['spec']['strategy']['customStrategy']['env']
-        plugins_json = None
-        for d in env_vars:
-            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
-                plugins_json = d['value']
-                break
-
-        assert plugins_json is not None
-        plugins = json.loads(plugins_json)
+        plugins = get_plugins_from_build_json(build_json)
 
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
@@ -555,15 +557,7 @@ class TestBuildRequest(object):
 
         assert build_json["spec"]["source"]["sourceSecret"]["name"] == "mysecret"
 
-        strategy = build_json['spec']['strategy']['customStrategy']['env']
-        plugins_json = None
-        for d in strategy:
-            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
-                plugins_json = d['value']
-                break
-
-        assert plugins_json is not None
-        plugins = json.loads(plugins_json)
+        plugins = get_plugins_from_build_json(build_json)
 
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
@@ -684,15 +678,7 @@ class TestBuildRequest(object):
             "john-foo/component:"
         )
 
-        env_vars = build_json['spec']['strategy']['customStrategy']['env']
-        plugins_json = None
-        for d in env_vars:
-            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
-                plugins_json = d['value']
-                break
-
-        assert plugins_json is not None
-        plugins = json.loads(plugins_json)
+        plugins = get_plugins_from_build_json(build_json)
 
         # tag_and_push configuration. Must not have the scheme part.
         expected_registries = {
@@ -790,14 +776,7 @@ class TestBuildRequest(object):
         build_request.set_params(**kwargs)
         build_json = build_request.render()
         strategy = build_json['spec']['strategy']['customStrategy']['env']
-        plugins_json = None
-        for d in strategy:
-            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
-                plugins_json = d['value']
-                break
-
-        assert plugins_json is not None
-        plugins = json.loads(plugins_json)
+        plugins = get_plugins_from_build_json(build_json)
 
         repourls = None
         for d in plugins['prebuild_plugins']:
@@ -962,14 +941,8 @@ class TestBuildRequest(object):
         assert "triggers" in build_json["spec"]
         assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == 'fedora:latest'
 
-        strategy = build_json['spec']['strategy']['customStrategy']['env']
-        plugins_json = None
-        for d in strategy:
-            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
-                plugins_json = d['value']
-                break
+        plugins = get_plugins_from_build_json(build_json)
 
-        plugins = json.loads(plugins_json)
         assert get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
         assert get_plugin(plugins, "prebuild_plugins",
                           "stop_autorebuild_if_disabled")
@@ -1074,15 +1047,8 @@ class TestBuildRequest(object):
         # Verify the triggers are now disabled
         assert "triggers" not in build_json["spec"]
 
-        strategy = build_json['spec']['strategy']['customStrategy']['env']
-        plugins_json = None
-        for d in strategy:
-            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
-                plugins_json = d['value']
-                break
-
         # Verify the rebuild plugins are all disabled
-        plugins = json.loads(plugins_json)
+        plugins = get_plugins_from_build_json(build_json)
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
         with pytest.raises(NoSuchPluginException):
@@ -1138,15 +1104,7 @@ class TestBuildRequest(object):
             assert 'secrets' not in build_json['spec']['strategy']['customStrategy']
 
             # We shouldn't have pulp_secret_path set
-            env = build_json['spec']['strategy']['customStrategy']['env']
-            plugins_json = None
-            for d in env:
-                if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
-                    plugins_json = d['value']
-                    break
-
-            assert plugins_json is not None
-            plugins = json.loads(plugins_json)
+            plugins = get_plugins_from_build_json(build_json)
             assert 'pulp_secret_path' not in plugin_value_get(plugins,
                                                               'postbuild_plugins',
                                                               'pulp_push',
@@ -1171,15 +1129,7 @@ class TestBuildRequest(object):
         # Check that the secret's mountPath matches the plugin's
         # configured path for the secret
         mount_path = pulp_secret[0]['mountPath']
-        env = build_json['spec']['strategy']['customStrategy']['env']
-        plugins_json = None
-        for d in env:
-            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
-                plugins_json = d['value']
-                break
-
-        assert plugins_json is not None
-        plugins = json.loads(plugins_json)
+        plugins = get_plugins_from_build_json(build_json)
         assert plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push',
                                 'args', 'pulp_secret_path') == mount_path
 
@@ -1226,14 +1176,7 @@ class TestBuildRequest(object):
 
         assert build_json["metadata"]["labels"]["koji-task-id"] == koji_task_id
 
-        strategy = build_json['spec']['strategy']['customStrategy']['env']
-        plugins_json = None
-        for d in strategy:
-            if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
-                plugins_json = d['value']
-                break
-
-        plugins = json.loads(plugins_json)
+        plugins = get_plugins_from_build_json(build_json)
         assert get_plugin(plugins, "exit_plugins", "koji_promote")
         assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
                                 "args", "kojihub") == kwargs["kojihub"]
@@ -1245,3 +1188,75 @@ class TestBuildRequest(object):
                              if secret['secretSource']['name'] == koji_certs_secret_name]
         mount_path = koji_certs_secret[0]['mountPath']
         assert get_plugin(plugins, 'exit_plugins', 'koji_promote')['args']['koji_ssl_certs'] == mount_path
+
+    @pytest.mark.parametrize(('base_image', 'is_custom'), [
+        ('fedora', False),
+        ('fedora:latest', False),
+        ('koji/image-build', True),
+        ('koji/image-build:spam.conf', True),
+    ])
+    def test_prod_is_custom_base_image(self, tmpdir, base_image, is_custom):
+        bm = BuildManager(INPUTS_PATH)
+        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        # Safe to call prior to build image being set
+        assert build_request.is_custom_base_image() is False
+
+        kwargs = get_sample_prod_params()
+        kwargs['base_image'] = base_image
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+
+        assert build_request.is_custom_base_image() == is_custom
+
+    def test_prod_missing_kojihub__custom_base_image(self, tmpdir):
+        bm = BuildManager(INPUTS_PATH)
+        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+
+        kwargs = get_sample_prod_params()
+        kwargs['base_image'] = 'koji/image-build'
+        del kwargs['kojihub']
+        build_request.set_params(**kwargs)
+
+        with pytest.raises(OsbsValidationException) as exc:
+            build_request.render()
+
+        assert str(exc.value).startswith(
+            'Custom base image builds require kojihub')
+
+    def test_prod_custom_base_image(self, tmpdir):
+        bm = BuildManager(INPUTS_PATH)
+        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+
+        kwargs = get_sample_prod_params()
+        kwargs['base_image'] = 'koji/image-build'
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+
+        assert build_request.is_custom_base_image() is True
+        plugins = get_plugins_from_build_json(build_json)
+
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, 'prebuild_plugins', 'pull_base_image')
+
+        add_filesystem_args = plugin_value_get(
+            plugins, 'prebuild_plugins', 'add_filesystem', 'args')
+        assert add_filesystem_args['koji_hub'] == kwargs['kojihub']
+        assert add_filesystem_args['koji_proxyuser'] == kwargs['proxy']
+
+    def test_prod_non_custom_base_image(self, tmpdir):
+        bm = BuildManager(INPUTS_PATH)
+        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+
+        kwargs = get_sample_prod_params()
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+
+        assert build_request.is_custom_base_image() is False
+        plugins = get_plugins_from_build_json(build_json)
+
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, 'prebuild_plugins', 'add_filesystem')
+
+        pull_base_image_plugin = get_plugin(
+            plugins, 'prebuild_plugins', 'pull_base_image')
+        assert pull_base_image_plugin is not None
