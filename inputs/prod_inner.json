@@ -80,13 +80,6 @@
   ],
   "postbuild_plugins": [
     {
-      "name": "compress",
-      "args": {
-        "load_exported_image": true,
-        "method": "gzip"
-      }
-    },
-    {
       "name": "tag_by_labels"
     },
     {
@@ -111,6 +104,13 @@
         "pulp_registry_name": "{{PULP_REGISTRY_NAME}}",
         "docker_registry": "{{DOCKER_REGISTRY}}",
         "dockpulp_loglevel": "INFO"
+      }
+    },
+    {
+      "name": "compress",
+      "args": {
+        "load_exported_image": true,
+        "method": "gzip"
       }
     },
     {
