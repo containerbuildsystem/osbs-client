@@ -600,6 +600,10 @@ class ProductionBuild(CommonBuild):
                                       self.spec.builder_openshift_url.value)
             self.dj.dock_json_set_arg('exit_plugins', 'koji_promote',
                                       'kojihub', self.spec.kojihub.value)
+            koji_target = self.spec.koji_target.value
+            if koji_target is not None:
+                self.dj.dock_json_set_arg('exit_plugins', 'koji_promote',
+                                          'target', koji_target)
 
             if use_auth is not None:
                 self.dj.dock_json_set_arg('exit_plugins', 'koji_promote',
