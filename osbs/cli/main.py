@@ -43,7 +43,6 @@ def print_json_nicely(decoded_json):
     print(json.dumps(decoded_json, indent=2))
 
 
-
 def cmd_get_all_resource_quota(args, osbs):
     quota_name = args.QUOTA_NAME
     logger.debug("quota name = %s", quota_name)
@@ -53,7 +52,6 @@ def cmd_get_all_resource_quota(args, osbs):
             print(graceful_chain_get(item, "metadata", "name"))
     else:
         print_json_nicely(osbs.get_resource_quota(quota_name))
-
 
 
 def cmd_watch_builds(args, osbs):
@@ -420,7 +418,7 @@ def cmd_restore(args, osbs):
 
             logger.info("restoring %s", resource_type)
             osbs.restore_resource(resource_type, json.load(asciireader(f.fileobj)),
-                                                 continue_on_error=args.continue_on_error)
+                                  continue_on_error=args.continue_on_error)
             f.fileobj.close()
 
     logger.info("backup recovery complete!")

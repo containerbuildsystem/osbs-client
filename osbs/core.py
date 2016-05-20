@@ -175,7 +175,7 @@ class Openshift(object):
         return self._con.put(url, headers=headers, verify_ssl=self.verify_ssl, **kwargs)
 
     def _delete(self, url, with_auth=True, **kwargs):
-        headers, hwargs = self._request_args(with_auth, **kwargs)
+        headers, kwargs = self._request_args(with_auth, **kwargs)
         return self._con.delete(url, headers=headers, verify_ssl=self.verify_ssl,
                                 **kwargs)
 
@@ -380,7 +380,8 @@ class Openshift(object):
                 logger.error("BuildConfig deleted while waiting for new build instance")
                 break
 
-        raise OsbsResponseException("New BuildConfig instance not found")
+        raise OsbsResponseException("New BuildConfig instance not found",
+                                    httplib.NOT_FOUND)
 
     def logs(self, build_id, follow=False, build_json=None, wait_if_missing=False):
         """

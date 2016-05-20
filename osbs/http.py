@@ -252,7 +252,7 @@ class HttpStream(object):
                 # see curl_multi_perform manpage
                 break
 
-        num_q, ok_list, err_list = self.curl_multi.info_read()
+        num_q, _, err_list = self.curl_multi.info_read()
         if num_q != 0:
             logger.warning("CurlMulti.info_read() has %s remaining messages", num_q)
 
