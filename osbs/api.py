@@ -93,15 +93,17 @@ class OSBS(object):
         return self._bm
 
     @osbsapi
-    def list_builds(self, field_selector=None):
+    def list_builds(self, field_selector=None, koji_task_id=None):
         """
         List builds with matching fields
 
         :param field_selector: str, field selector for Builds
+        :param koji_task_id: str, only list builds for Koji Task ID
         :return: BuildResponse list
         """
 
-        response = self.os.list_builds(field_selector=field_selector)
+        response = self.os.list_builds(field_selector=field_selector,
+                                       koji_task_id=koji_task_id)
         serialized_response = response.json()
         build_list = []
         for build in serialized_response["items"]:

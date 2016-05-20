@@ -28,13 +28,19 @@ from osbs.http import HttpResponse
 from osbs import utils
 
 from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
-                             TEST_GIT_URI, TEST_TARGET, TEST_USER, INPUTS_PATH)
+                             TEST_GIT_URI, TEST_TARGET, TEST_USER, INPUTS_PATH,
+                             TEST_KOJI_TASK_ID)
 from tests.fake_api import openshift, osbs, osbs106
 
 
 class TestOSBS(object):
-    def test_list_builds_api(self, osbs):
-        response_list = osbs.list_builds()
+    @pytest.mark.parametrize('koji_task_id', [None, TEST_KOJI_TASK_ID])
+    def test_list_builds_api(self, osbs, koji_task_id):
+        kwargs = {}
+        if koji_task_id:
+            kwargs['koji_task_id'] = koji_task_id
+
+        response_list = osbs.list_builds(**kwargs)
         # We should get a response
         assert response_list is not None
         assert len(response_list) > 0

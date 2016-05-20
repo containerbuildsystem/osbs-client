@@ -18,7 +18,7 @@ from osbs.conf import Configuration
 from osbs.api import OSBS
 from tests.constants import (TEST_BUILD, TEST_COMPONENT, TEST_GIT_REF,
                              TEST_GIT_BRANCH, TEST_BUILD_CONFIG,
-                             TEST_GIT_URI_HUMAN_NAME)
+                             TEST_GIT_URI_HUMAN_NAME, TEST_KOJI_TASK_ID)
 from tempfile import NamedTemporaryFile
 
 try:
@@ -79,6 +79,13 @@ class Connection(object):
 
             (OAPI_PREFIX + "namespaces/default/builds?fieldSelector=status%3DRunning",
              OAPI_PREFIX + "namespaces/default/builds/?fieldSelector=status%3DRunning"): {
+                "get": {
+                    # Contains a list of builds
+                    "file": "builds_list.json",
+                }
+            },
+
+            OAPI_PREFIX + "namespaces/default/builds/?labelSelector=koji-task-id%3D{task}".format(task=TEST_KOJI_TASK_ID): {
                 "get": {
                     # Contains a list of builds
                     "file": "builds_list.json",

@@ -25,6 +25,7 @@ TEST_ARCH = "x86_64"
 TEST_BUILD_POD = "build-test-build-123"
 TEST_LABEL = "test-label"
 TEST_LABEL_VALUE = "sample-value"
+TEST_KOJI_TASK_ID = 12345
 
 TEST_BUILD_JSON = {
     "metadata": {
