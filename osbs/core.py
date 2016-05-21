@@ -11,6 +11,7 @@ import os
 import numbers
 import time
 import base64
+import pycurl
 
 import logging
 from osbs.kerberos_ccache import kerberos_ccache_init
@@ -20,7 +21,8 @@ from osbs.constants import WATCH_MODIFIED, WATCH_DELETED, WATCH_ERROR
 from osbs.constants import (SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
                             SERVICEACCOUNT_CACRT)
 from osbs.exceptions import (OsbsResponseException, OsbsException,
-                             OsbsWatchBuildNotFound, OsbsAuthException)
+                             OsbsWatchBuildNotFound, OsbsAuthException,
+                             OsbsNetworkException)
 from osbs.utils import graceful_chain_get
 
 try:
@@ -395,22 +397,28 @@ class Openshift(object):
         # If connection is closed within this many seconds, give up:
         min_idle_timeout = 60
 
+        # Stream logs, but be careful of the connection closing
+        # due to idle timeout. In that case, try again until the
+        # call returns more quickly than a reasonable timeout
+        # would be set to.
+        last_activity = time.time()
         while True:
             buildlogs_url = self._build_url("builds/%s/log/" % build_id,
                                             **kwargs)
-            response = self._get(buildlogs_url, stream=1,
-                                 headers={'Connection': 'close'})
-            check_response(response)
-
-            # Stream logs, but be careful of the connection closing
-            # due to idle timeout. In that case, try again until the
-            # call returns more quickly than a reasonable timeout
-            # would be set to.
-            last_activity = time.time()
-
-            for line in response.iter_lines():
-                last_activity = time.time()
-                yield line
+            try:
+                response = self._get(buildlogs_url, stream=1,
+                                     headers={'Connection': 'close'})
+            except OsbsNetworkException as ex:
+                # pycurl reports 'empty reply from server' as
+                # FOLLOWLOCATION. Handle this as though there were no
+                # lines returned.
+                if ex.status_code != pycurl.FOLLOWLOCATION:
+                    raise
+            else:
+                check_response(response)
+                for line in response.iter_lines():
+                    last_activity = time.time()
+                    yield line
 
             idle = time.time() - last_activity
             logger.debug("connection closed after %ds", idle)
