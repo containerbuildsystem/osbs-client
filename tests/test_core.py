@@ -6,12 +6,15 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 from flexmock import flexmock
+import pycurl
 import six
+import time
 import json
 
 from osbs.http import HttpResponse
 from osbs.constants import BUILD_FINISHED_STATES
-from osbs.exceptions import OsbsResponseException, OsbsException
+from osbs.exceptions import (OsbsResponseException, OsbsNetworkException,
+                             OsbsException)
 from osbs.core import check_response
 
 from tests.constants import TEST_BUILD, TEST_LABEL, TEST_LABEL_VALUE, TEST_BUILD_CONFIG
@@ -74,6 +77,38 @@ class TestOpenshift(object):
     def test_set_labels_on_build(self, openshift):
         l = openshift.set_labels_on_build(TEST_BUILD, {TEST_LABEL: TEST_LABEL_VALUE})
         assert l.json() is not None
+
+
+    def test_stream_logs(self, openshift):
+        ex = OsbsNetworkException('/', '', pycurl.FOLLOWLOCATION)
+        response = flexmock(status_code=httplib.OK)
+        (response
+            .should_receive('iter_lines')
+            .and_return(["{'stream': 'foo\n'}"])
+            .and_raise(StopIteration))
+
+        (flexmock(openshift)
+            .should_receive('_get')
+             # First: timeout in response after 100s
+            .and_raise(ex)
+             # Next: return a real response
+            .and_return(response))
+
+        (flexmock(time)
+            .should_receive('time')
+            .and_return(0)
+            .and_return(100))
+
+        logs = openshift.stream_logs(TEST_BUILD)
+        assert len([log for log in logs]) == 1
+
+    def test_stream_logs_error(self, openshift):
+        ex = OsbsNetworkException('/', '', pycurl.E_COULDNT_RESOLVE_HOST)
+        (flexmock(openshift)
+            .should_receive('_get')
+            .and_raise(ex))
+        with pytest.raises(OsbsNetworkException):
+            list(openshift.stream_logs(TEST_BUILD))
 
     def test_list_builds(self, openshift):
         l = openshift.list_builds()
