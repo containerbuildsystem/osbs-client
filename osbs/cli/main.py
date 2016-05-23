@@ -143,9 +143,8 @@ def cmd_list_builds(args, osbs):
                 image = strip_registry_from_image(build.get_repositories()["primary"][0])
             except (TypeError, KeyError, IndexError):
                 image = ""  # "" or unique_image? failed builds don't have that ^
-            if args.FILTER:
-                if args.FILTER not in image:
-                    continue
+            if args.FILTER and args.FILTER not in image:
+                continue
             if args.running and not build.is_in_progress():
                 continue
             b = {

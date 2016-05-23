@@ -262,7 +262,7 @@ class CommonBuild(BuildRequest):
         self.template['spec']['source']['git']['uri'] = self.spec.git_uri.value
         self.template['spec']['source']['git']['ref'] = self.spec.git_ref.value
 
-        if len(self.spec.registry_uris.value) > 0:
+        if self.spec.registry_uris.value:
             primary_registry_uri = self.spec.registry_uris.value[0].docker_uri
             tag_with_registry = '{0}/{1}'.format(primary_registry_uri,
                                                  self.spec.image_tag.value)
@@ -475,7 +475,7 @@ class ProductionBuild(CommonBuild):
         the check_and_set_rebuild, bump_release, or import_image plugins.
         """
         triggers = self.template['spec'].get('triggers', [])
-        if len(triggers) == 0:
+        if not triggers:
             for when, which in [("prebuild_plugins", "check_and_set_rebuild"),
                                 ("prebuild_plugins", "stop_autorebuild_if_disabled"),
                                 ("prebuild_plugins", "bump_release"),

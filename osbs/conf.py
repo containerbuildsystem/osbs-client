@@ -64,7 +64,7 @@ class Configuration(object):
         # FIXME: this is too bloated: split it into separate classes
         # and implement it as mixins
         def get_value_from_kwargs():
-            return self.kwargs.get(args_key, None)
+            return self.kwargs.get(args_key)
 
         def get_value_from_cli_args():
             return getattr(self.args, args_key, None)
@@ -370,7 +370,7 @@ class Configuration(object):
         value = None
         found_key = None
         for key in key_names:
-            value = self.kwargs.get(key, None)
+            value = self.kwargs.get(key)
             if value is not None:
                 found_key = key
                 break
