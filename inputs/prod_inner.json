@@ -71,11 +71,7 @@
   ],
   "prepublish_plugins": [
     {
-      "name": "squash",
-      "args": {
-        "remove_former_image": false,
-        "dont_load": true
-      }
+      "name": "squash"
     }
   ],
   "postbuild_plugins": [
@@ -163,4 +159,3 @@
     }
   ]
 }
-
