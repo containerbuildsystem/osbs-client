@@ -10,6 +10,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 import json
 import logging
 import os
+import re
 from pkg_resources import parse_version
 
 try:
@@ -314,6 +315,8 @@ class ProductionBuild(CommonBuild):
         # For the koji "scratch" build type
         self.scratch = False
 
+        self.base_image = None
+
     def set_params(self, **kwargs):
         """
         set parameters according to specification
@@ -347,6 +350,8 @@ class ProductionBuild(CommonBuild):
             self.scratch = kwargs.pop("scratch")
         except KeyError:
             pass
+
+        self.base_image = kwargs.get('base_image')
 
         logger.debug("setting params '%s' for %s", kwargs, self.spec)
         self.spec.set_params(**kwargs)
@@ -430,6 +435,13 @@ class ProductionBuild(CommonBuild):
             logger.info("removing %s registry: %s", version, registry)
             del tag_and_push_registries[registry]
 
+    def is_custom_base_image(self):
+        """
+        Returns whether or not this is a build from a custom base image
+        """
+        return bool(re.match('^koji/image-build(:.*)?$',
+                             self.base_image or ''))
+
     def adjust_for_registry_api_versions(self):
         """
         Enable/disable plugins depending on supported registry API versions
@@ -499,6 +511,40 @@ class ProductionBuild(CommonBuild):
                 logger.info("removing %s from request because there are no triggers",
                             which)
                 self.dj.remove_plugin(when, which)
+
+    def adjust_for_custom_base_image(self):
+        """
+        Disable plugins to handle builds depending on whether
+        or not this is a build from a custom base image.
+        """
+        plugins = []
+        if self.is_custom_base_image():
+            # Plugins irrelevant to building base images.
+            plugins.append(("prebuild_plugins", "pull_base_image"))
+            msg = "removing %s from custom image build request"
+
+        else:
+            # Plugins not needed for building non base images.
+            plugins.append(("prebuild_plugins", "add_filesystem"))
+            msg = "removing %s from non custom image build request"
+
+        for when, which in plugins:
+            logger.info(msg, which)
+            self.dj.remove_plugin(when, which)
+
+    def render_add_filesystem(self):
+        phase = 'prebuild_plugins'
+        plugin = 'add_filesystem'
+
+        if self.dj.dock_json_has_plugin_conf(phase, plugin):
+            if not self.spec.kojihub.value:
+                raise OsbsValidationException(
+                    'Custom base image builds require kojihub to be defined')
+            self.dj.dock_json_set_arg(phase, plugin, 'koji_hub',
+                                      self.spec.kojihub.value)
+            if self.spec.proxy.value:
+                self.dj.dock_json_set_arg(phase, plugin, 'koji_proxyuser',
+                                          self.spec.proxy.value)
 
     def render_add_labels_in_dockerfile(self):
         implicit_labels = {
@@ -768,11 +814,16 @@ class ProductionBuild(CommonBuild):
                 remove_triggers = True
                 # Continue the loop so we log everything that's missing
 
+        if self.is_custom_base_image():
+            logger.info('removing triggers for custom base image build')
+            remove_triggers = True
+
         if remove_triggers and 'triggers' in self.template['spec']:
             del self.template['spec']['triggers']
 
         self.adjust_for_triggers()
         self.adjust_for_scratch()
+        self.adjust_for_custom_base_image()
 
         # Enable/disable plugins as needed for target registry API versions
         self.adjust_for_registry_api_versions()
@@ -791,6 +842,9 @@ class ProductionBuild(CommonBuild):
                           self.spec.pdc_secret.value,
 
                           ('exit_plugins', 'koji_promote', 'koji_ssl_certs'):
+                          self.spec.koji_certs_secret.value,
+
+                          ('prebuild_plugins', 'add_filesystem', 'koji_ssl_certs_dir'):
                           self.spec.koji_certs_secret.value})
 
         if self.spec.pulp_secret.value:
@@ -805,6 +859,7 @@ class ProductionBuild(CommonBuild):
             self.template['metadata']['labels']['koji-task-id'] = koji_task_id
 
         use_auth = self.spec.use_auth.value
+        self.render_add_filesystem()
         self.render_add_labels_in_dockerfile()
         self.render_koji()
         self.render_bump_release()

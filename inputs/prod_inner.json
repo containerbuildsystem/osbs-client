@@ -16,6 +16,12 @@
       "name": "stop_autorebuild_if_disabled"
     },
     {
+      "name": "add_filesystem",
+      "args": {
+        "koji_hub": "{{KOJI_HUB}}"
+      }
+    },
+    {
       "name": "pull_base_image",
       "args": {
         "parent_registry": "{{REGISTRY_URI}}",
