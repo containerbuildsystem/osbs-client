@@ -73,7 +73,8 @@
     {
       "name": "squash",
       "args": {
-        "remove_former_image": false
+        "remove_former_image": false,
+        "dont_load": true
       }
     }
   ],
@@ -162,3 +163,4 @@
     }
   ]
 }
+
