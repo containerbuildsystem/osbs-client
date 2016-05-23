@@ -11,6 +11,7 @@ import os
 import numbers
 import time
 import base64
+import pycurl
 
 import logging
 from osbs.kerberos_ccache import kerberos_ccache_init
@@ -20,7 +21,8 @@ from osbs.constants import WATCH_MODIFIED, WATCH_DELETED, WATCH_ERROR
 from osbs.constants import (SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
                             SERVICEACCOUNT_CACRT)
 from osbs.exceptions import (OsbsResponseException, OsbsException,
-                             OsbsWatchBuildNotFound, OsbsAuthException)
+                             OsbsWatchBuildNotFound, OsbsAuthException,
+                             OsbsNetworkException)
 from osbs.utils import graceful_chain_get
 
 try:
@@ -383,6 +385,51 @@ class Openshift(object):
         raise OsbsResponseException("New BuildConfig instance not found",
                                     httplib.NOT_FOUND)
 
+    def stream_logs(self, build_id):
+        """
+        stream logs from build
+
+        :param build_id: str
+        :return: iterator
+        """
+        kwargs = {'follow': 1}
+
+        # If connection is closed within this many seconds, give up:
+        min_idle_timeout = 60
+
+        # Stream logs, but be careful of the connection closing
+        # due to idle timeout. In that case, try again until the
+        # call returns more quickly than a reasonable timeout
+        # would be set to.
+        last_activity = time.time()
+        while True:
+            buildlogs_url = self._build_url("builds/%s/log/" % build_id,
+                                            **kwargs)
+            try:
+                response = self._get(buildlogs_url, stream=1,
+                                     headers={'Connection': 'close'})
+            except OsbsNetworkException as ex:
+                # pycurl reports 'empty reply from server' as
+                # FOLLOWLOCATION. Handle this as though there were no
+                # lines returned.
+                if ex.status_code != pycurl.FOLLOWLOCATION:
+                    raise
+            else:
+                check_response(response)
+                for line in response.iter_lines():
+                    last_activity = time.time()
+                    yield line
+
+            idle = time.time() - last_activity
+            logger.debug("connection closed after %ds", idle)
+            if idle < min_idle_timeout:
+                # Finish output
+                return
+
+            since = int(idle - 1)
+            logger.debug("fetching logs starting from %ds ago", since)
+            kwargs['sinceSeconds'] = since
+
     def logs(self, build_id, follow=False, build_json=None, wait_if_missing=False):
         """
         provide logs from build
@@ -412,13 +459,12 @@ class Openshift(object):
         if br.is_pending():
             return
 
-        buildlogs_url = self._build_url("builds/%s/log/" % build_id,
-                                        follow=(1 if follow else 0))
-        response = self._get(buildlogs_url, stream=follow, headers={'Connection': 'close'})
-        check_response(response)
-
         if follow:
-            return response.iter_lines()
+            return self.stream_logs(build_id)
+
+        buildlogs_url = self._build_url("builds/%s/log/" % build_id)
+        response = self._get(buildlogs_url, headers={'Connection': 'close'})
+        check_response(response)
         return response.content
 
     def list_builds(self, build_config_id=None, koji_task_id=None,
