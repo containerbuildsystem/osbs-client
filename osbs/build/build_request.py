@@ -55,7 +55,7 @@ class BuildRequest(object):
         self._inner_template = None  # dock json
         self._dj = None
         self._resource_limits = None
-        self._openshift_required_version = parse_version('0.5.4')
+        self._openshift_required_version = parse_version('1.0.6')
 
     def set_params(self, **kwargs):
         """

@@ -553,17 +553,28 @@ class TestBuildRequest(object):
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
-        assert build_json["spec"]["source"]["sourceSecret"]["name"] == "mysecret"
+        assert 'sourceSecret' not in build_json["spec"]["source"]
+        secrets = build_json['spec']['strategy']['customStrategy']['secrets']
+        pulp_secret = [secret for secret in secrets
+                       if secret['secretSource']['name'] == 'mysecret']
+        assert len(pulp_secret) > 0
+        assert 'mountPath' in pulp_secret[0]
 
-        strategy = build_json['spec']['strategy']['customStrategy']['env']
+        # Check that the secret's mountPath matches the plugin's
+        # configured path for the secret
+        mount_path = pulp_secret[0]['mountPath']
+        env = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None
-        for d in strategy:
+        for d in env:
             if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
                 plugins_json = d['value']
                 break
 
         assert plugins_json is not None
         plugins = json.loads(plugins_json)
+        assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
+        assert plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push',
+                                'args', 'pulp_secret_path') == mount_path
 
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
@@ -573,7 +584,6 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "bump_release")
         assert get_plugin(plugins, "prebuild_plugins", "koji")
-        assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         with pytest.raises(NoSuchPluginException):
@@ -1120,8 +1130,8 @@ class TestBuildRequest(object):
             'pulp_secret': secret_name,
         }
 
-        # Default required version (0.5.4), implicitly and explicitly
-        for required in (None, parse_version('0.5.4')):
+        # Default required version (1.0.6), implicitly and explicitly
+        for required in (None, parse_version('1.0.6')):
             build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
             if required is not None:
                 build_request.set_openshift_required_version(required)
@@ -1129,15 +1139,20 @@ class TestBuildRequest(object):
             build_request.set_params(**kwargs)
             build_json = build_request.render()
 
-            # Using the sourceSecret scheme
-            assert 'sourceSecret' in build_json['spec']['source']
-            assert (build_json['spec']['source']['sourceSecret']['name'] ==
-                    secret_name)
+            # Not using the sourceSecret scheme
+            assert 'sourceSecret' not in build_json['spec']['source']
 
-            # Not using the secrets array scheme
-            assert 'secrets' not in build_json['spec']['strategy']['customStrategy']
+            # Using the secrets array scheme instead
+            assert 'secrets' in build_json['spec']['strategy']['customStrategy']
+            secrets = build_json['spec']['strategy']['customStrategy']['secrets']
+            pulp_secret = [secret for secret in secrets
+                           if secret['secretSource']['name'] == secret_name]
+            assert len(pulp_secret) > 0
+            assert 'mountPath' in pulp_secret[0]
 
-            # We shouldn't have pulp_secret_path set
+            # Check that the secret's mountPath matches the plugin's
+            # configured path for the secret
+            mount_path = pulp_secret[0]['mountPath']
             env = build_json['spec']['strategy']['customStrategy']['env']
             plugins_json = None
             for d in env:
@@ -1147,30 +1162,25 @@ class TestBuildRequest(object):
 
             assert plugins_json is not None
             plugins = json.loads(plugins_json)
-            assert 'pulp_secret_path' not in plugin_value_get(plugins,
-                                                              'postbuild_plugins',
-                                                              'pulp_push',
-                                                              'args')
+            assert plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push',
+                                    'args', 'pulp_secret_path') == mount_path
 
-        # Set required version to 1.0.6
+
+        # Set required version to 0.5.4
 
         build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
-        build_request.set_openshift_required_version(parse_version('1.0.6'))
+        build_request.set_openshift_required_version(parse_version('0.5.4'))
         build_json = build_request.render()
-        # Not using the sourceSecret scheme
-        assert 'sourceSecret' not in build_json['spec']['source']
 
-        # Using the secrets array scheme instead
-        assert 'secrets' in build_json['spec']['strategy']['customStrategy']
-        secrets = build_json['spec']['strategy']['customStrategy']['secrets']
-        pulp_secret = [secret for secret in secrets
-                       if secret['secretSource']['name'] == secret_name]
-        assert len(pulp_secret) > 0
-        assert 'mountPath' in pulp_secret[0]
+        # Using the sourceSecret scheme
+        assert 'sourceSecret' in build_json['spec']['source']
+        assert (build_json['spec']['source']['sourceSecret']['name'] ==
+                secret_name)
 
-        # Check that the secret's mountPath matches the plugin's
-        # configured path for the secret
-        mount_path = pulp_secret[0]['mountPath']
+        # Not using the secrets array scheme
+        assert 'secrets' not in build_json['spec']['strategy']['customStrategy']
+
+        # We shouldn't have pulp_secret_path set
         env = build_json['spec']['strategy']['customStrategy']['env']
         plugins_json = None
         for d in env:
@@ -1180,8 +1190,10 @@ class TestBuildRequest(object):
 
         assert plugins_json is not None
         plugins = json.loads(plugins_json)
-        assert plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push',
-                                'args', 'pulp_secret_path') == mount_path
+        assert 'pulp_secret_path' not in plugin_value_get(plugins,
+                                                          'postbuild_plugins',
+                                                          'pulp_push',
+                                                          'args')
 
     def test_render_prod_request_with_koji_secret(self, tmpdir):
         self.create_image_change_trigger_json(str(tmpdir))
