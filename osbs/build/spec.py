@@ -4,9 +4,6 @@ All rights reserved.
 
 This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
-
-
-Specifications of build types.
 """
 from __future__ import print_function, absolute_import, unicode_literals
 
@@ -117,27 +114,10 @@ class SourceRegistryURIParam(BuildParam):
         BuildParam.value.fset(self, RegistryURI(val) if val else None)
 
 
-class BuildTypeSpec(object):
-    """ Abstract baseclass for specification of a buildtype """
-    required_params = None
-
-    def validate(self):
-        logger.info("Validating params of %s", self.__class__.__name__)
-        for param in self.required_params:
-            if param.value is None:
-                if param.allow_none:
-                    logger.debug("param '%s' is None; None is allowed", param.name)
-                else:
-                    logger.error("param '%s' is None; None is NOT allowed", param.name)
-                    raise OsbsValidationException("param '%s' is not valid: None is not allowed" % param.name)
-
-    def __repr__(self):
-        return "Spec(%s)" % self.__dict__
-
-
-class CommonSpec(BuildTypeSpec):
+class BuildSpec(object):
     git_uri = BuildParam('git_uri')
     git_ref = BuildParam('git_ref', default=DEFAULT_GIT_REF)
+    git_branch = BuildParam('git_branch', allow_none=True)
     user = UserParam()
     component = BuildParam('component')
     registry_uris = RegistryURIsParam()
@@ -150,48 +130,6 @@ class CommonSpec(BuildTypeSpec):
     build_image = BuildParam('build_image')
     build_imagestream = BuildParam('build_imagestream')
     proxy = BuildParam("proxy", allow_none=True)
-
-    def __init__(self):
-        self.required_params = [
-            self.git_uri,
-            self.git_ref,
-            self.user,
-            self.component,
-            self.registry_uris,
-            self.openshift_uri,
-        ]
-
-    def set_params(self, git_uri=None, git_ref=None,
-                   registry_uri=None,  # compatibility name for registry_uris
-                   registry_uris=None, user=None,
-                   component=None, openshift_uri=None, source_registry_uri=None,
-                   yum_repourls=None, use_auth=None, builder_openshift_url=None,
-                   build_image=None, build_imagestream=None, proxy=None):
-        self.git_uri.value = git_uri
-        self.git_ref.value = git_ref
-        self.user.value = user
-        self.component.value = component
-        self.proxy.value = proxy
-
-        # registry_uri is the compatibility name for registry_uris
-        if registry_uri is not None:
-            assert registry_uris is None
-            registry_uris = [registry_uri]
-
-        self.registry_uris.value = registry_uris or []
-        self.source_registry_uri.value = source_registry_uri
-        self.openshift_uri.value = openshift_uri
-        self.builder_openshift_url.value = builder_openshift_url
-        if not (yum_repourls is None or isinstance(yum_repourls, list)):
-            raise OsbsValidationException("yum_repourls must be a list")
-        self.yum_repourls.value = yum_repourls or []
-        self.use_auth.value = use_auth
-        self.build_image.value = build_image or DEFAULT_BUILD_IMAGE
-        self.build_imagestream.value = build_imagestream
-
-
-class ProdSpec(CommonSpec):
-    git_branch = BuildParam('git_branch', allow_none=True)
     trigger_imagestreamtag = BuildParam('trigger_imagestreamtag')
     imagestream_name = BuildParam('imagestream_name')
     imagestream_url = BuildParam('imagestream_url')
@@ -222,8 +160,13 @@ class ProdSpec(CommonSpec):
     builder_build_json_dir = BuildParam("builder_build_json_dir", allow_none=True)
 
     def __init__(self):
-        super(ProdSpec, self).__init__()
-        self.required_params += [
+        self.required_params = [
+            self.git_uri,
+            self.git_ref,
+            self.user,
+            self.component,
+            self.registry_uris,
+            self.openshift_uri,
             self.sources_command,
             self.vendor,
             self.authoritative_registry,
@@ -243,7 +186,13 @@ class ProdSpec(CommonSpec):
             self.git_push_username,
         ]
 
-    def set_params(self, sources_command=None, architecture=None, vendor=None,
+    def set_params(self, git_uri=None, git_ref=None,
+                   registry_uri=None,  # compatibility name for registry_uris
+                   registry_uris=None, user=None,
+                   component=None, openshift_uri=None, source_registry_uri=None,
+                   yum_repourls=None, use_auth=None, builder_openshift_url=None,
+                   build_image=None, build_imagestream=None, proxy=None,
+                   sources_command=None, architecture=None, vendor=None,
                    build_host=None, authoritative_registry=None, distribution_scope=None,
                    koji_target=None, kojiroot=None, kojihub=None, koji_certs_secret=None,
                    koji_task_id=None,
@@ -252,9 +201,30 @@ class ProdSpec(CommonSpec):
                    smtp_uri=None, nfs_server_path=None,
                    nfs_dest_dir=None, git_branch=None, base_image=None,
                    name_label=None, git_push_url=None, git_push_username=None,
-                   builder_build_json_dir=None,
-                   registry_api_versions=None, labels=None, **kwargs):
-        super(ProdSpec, self).set_params(**kwargs)
+                   builder_build_json_dir=None, registry_api_versions=None, labels=None,
+                   **kwargs):
+        self.git_uri.value = git_uri
+        self.git_ref.value = git_ref
+        self.user.value = user
+        self.component.value = component
+        self.proxy.value = proxy
+
+        # registry_uri is the compatibility name for registry_uris
+        if registry_uri is not None:
+            assert registry_uris is None
+            registry_uris = [registry_uri]
+
+        self.registry_uris.value = registry_uris or []
+        self.source_registry_uri.value = source_registry_uri
+        self.openshift_uri.value = openshift_uri
+        self.builder_openshift_url.value = builder_openshift_url
+        if not (yum_repourls is None or isinstance(yum_repourls, list)):
+            raise OsbsValidationException("yum_repourls must be a list")
+        self.yum_repourls.value = yum_repourls or []
+        self.use_auth.value = use_auth
+        self.build_image.value = build_image or DEFAULT_BUILD_IMAGE
+        self.build_imagestream.value = build_imagestream
+
         self.sources_command.value = sources_command
         self.architecture.value = architecture
         self.vendor.value = vendor
@@ -306,17 +276,15 @@ class ProdSpec(CommonSpec):
             timestamp
         )
 
+    def validate(self):
+        logger.info("Validating params of %s", self.__class__.__name__)
+        for param in self.required_params:
+            if param.value is None:
+                if param.allow_none:
+                    logger.debug("param '%s' is None; None is allowed", param.name)
+                else:
+                    logger.error("param '%s' is None; None is NOT allowed", param.name)
+                    raise OsbsValidationException("param '%s' is not valid: None is not allowed" % param.name)
 
-class SimpleSpec(CommonSpec):
-    image_tag = BuildParam("image_tag")
-
-    def set_params(self, tag=None, **kwargs):
-        super(SimpleSpec, self).set_params(**kwargs)
-        timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-        self.name.value = "build-%s" % timestamp
-
-        self.image_tag.value = "%s/%s:%s" % (
-            self.user.value,
-            self.component.value,
-            tag or timestamp
-        )
+    def __repr__(self):
+        return "Spec(%s)" % self.__dict__

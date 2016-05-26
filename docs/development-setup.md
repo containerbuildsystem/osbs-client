@@ -67,7 +67,6 @@ In order to successfully build an image you need to have 3 things:
     authoritative_registry = <registry.example.com>
     build_host = <builder.example.com>
     architecture = x86_64
-    build_type = prod
     verify_ssl = false
     builder_use_auth = false
     use_auth=false

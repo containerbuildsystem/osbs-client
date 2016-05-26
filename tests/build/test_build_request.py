@@ -11,9 +11,9 @@ import os
 from pkg_resources import parse_version
 import shutil
 
-from osbs.build.build_request import BuildManager, BuildRequest, ProductionBuild
-from osbs.constants import (PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE,
-                            PROD_WITH_SECRET_BUILD_TYPE, DEFAULT_BUILD_IMAGE)
+from osbs.build.build_request import BuildRequest
+from osbs.constants import (DEFAULT_BUILD_IMAGE, DEFAULT_OUTER_TEMPLATE,
+                            DEFAULT_INNER_TEMPLATE)
 from osbs.exceptions import OsbsValidationException
 
 from flexmock import flexmock
@@ -130,8 +130,7 @@ class TestBuildRequest(object):
         'fancy_buildroot:latestest'
     ])
     def test_render_simple_request(self, tag, registry_uris, build_image):
-        bm = BuildManager(INPUTS_PATH)
-        build_request = bm.get_build_request_by_type("simple")
+        build_request = BuildRequest(INPUTS_PATH)
         name_label = "fedora/resultingimage"
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -191,15 +190,14 @@ class TestBuildRequest(object):
         'buildroot-stream:v1.0'
     ])
     def test_render_prod_request_with_repo(self, architecture, build_image, build_imagestream, proxy):
-        bm = BuildManager(INPUTS_PATH)
-        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        build_request = BuildRequest(INPUTS_PATH)
         name_label = "fedora/resultingimage"
         vendor = "Foo Vendor"
         build_host = "our.build.host.example.com"
         authoritative_registry = "registry.example.com"
         distribution_scope = "authoritative-source-only"
         koji_task_id = 4756
-        assert isinstance(build_request, ProductionBuild)
+        assert isinstance(build_request, BuildRequest)
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -305,8 +303,7 @@ class TestBuildRequest(object):
         'http://proxy.example.com',
     ])
     def test_render_prod_request(self, proxy):
-        bm = BuildManager(INPUTS_PATH)
-        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        build_request = BuildRequest(INPUTS_PATH)
         name_label = "fedora/resultingimage"
         koji_target = "koji-target"
         kwargs = {
@@ -404,10 +401,9 @@ class TestBuildRequest(object):
         assert labels['distribution-scope'] is not None
 
     def test_render_prod_without_koji_request(self):
-        bm = BuildManager(INPUTS_PATH)
-        build_request = bm.get_build_request_by_type(PROD_WITHOUT_KOJI_BUILD_TYPE)
+        build_request = BuildRequest(INPUTS_PATH)
         name_label = "fedora/resultingimage"
-        assert isinstance(build_request, ProductionBuild)
+        assert isinstance(build_request, BuildRequest)
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -484,9 +480,8 @@ class TestBuildRequest(object):
         assert labels['distribution-scope'] is not None
 
     def test_render_prod_with_secret_request(self):
-        bm = BuildManager(INPUTS_PATH)
-        build_request = bm.get_build_request_by_type(PROD_WITH_SECRET_BUILD_TYPE)
-        assert isinstance(build_request, ProductionBuild)
+        build_request = BuildRequest(INPUTS_PATH)
+        assert isinstance(build_request, BuildRequest)
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -555,8 +550,7 @@ class TestBuildRequest(object):
         sendmail plugin without requiring OpenShift 1.0.6, as
         configuring the plugin requires the new-style secrets.
         """
-        bm = BuildManager(INPUTS_PATH)
-        build_request = bm.get_build_request_by_type(PROD_WITH_SECRET_BUILD_TYPE)
+        build_request = BuildRequest(INPUTS_PATH)
         name_label = "fedora/resultingimage"
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -595,8 +589,7 @@ class TestBuildRequest(object):
     ])
     @pytest.mark.parametrize('openshift_version', ['1.0.0', '1.0.6'])
     def test_render_prod_request_v1_v2(self, registry_api_versions, openshift_version):
-        bm = BuildManager(INPUTS_PATH)
-        build_request = bm.get_build_request_by_type(PROD_WITH_SECRET_BUILD_TYPE)
+        build_request = BuildRequest(INPUTS_PATH)
         build_request.set_openshift_required_version(parse_version(openshift_version))
         name_label = "fedora/resultingimage"
         pulp_env = 'v1pulp'
@@ -711,7 +704,6 @@ class TestBuildRequest(object):
                 get_plugin(plugins, "postbuild_plugins", "pulp_sync")
 
     def test_render_with_yum_repourls(self):
-        bm = BuildManager(INPUTS_PATH)
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -734,7 +726,7 @@ class TestBuildRequest(object):
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
         }
-        build_request = bm.get_build_request_by_type("prod")
+        build_request = BuildRequest(INPUTS_PATH)
 
         # Test validation for yum_repourls parameter
         kwargs['yum_repourls'] = 'should be a list'
@@ -782,8 +774,7 @@ class TestBuildRequest(object):
         """
         Rendering should fail if pulp is specified but auth config isn't
         """
-        bm = BuildManager(INPUTS_PATH)
-        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        build_request = BuildRequest(INPUTS_PATH)
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -816,12 +807,12 @@ class TestBuildRequest(object):
         """
 
         # Make temporary copies of the JSON files
-        for basename in ['prod.json', 'prod_inner.json']:
+        for basename in [DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE]:
             shutil.copy(os.path.join(INPUTS_PATH, basename),
                         os.path.join(outdir, basename))
 
         # Create a build JSON description with an image change trigger
-        with open(os.path.join(outdir, 'prod.json'), 'r+') as prod_json:
+        with open(os.path.join(outdir, DEFAULT_OUTER_TEMPLATE), 'r+') as prod_json:
             build_json = json.load(prod_json)
 
             # Add the image change trigger
@@ -863,8 +854,7 @@ class TestBuildRequest(object):
     def test_render_prod_request_with_trigger(self, tmpdir, branchref,
                                               registry_uri, insecure_registry):
         self.create_image_change_trigger_json(str(tmpdir))
-        bm = BuildManager(str(tmpdir))
-        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        build_request = BuildRequest(str(tmpdir))
         # We're using both pulp and sendmail, both of which require a
         # Kubernetes secret. This isn't supported until OpenShift
         # Origin 1.0.6.
@@ -980,8 +970,7 @@ class TestBuildRequest(object):
     ])
     def test_render_prod_request_trigger_missing_param(self, tmpdir, missing):
         self.create_image_change_trigger_json(str(tmpdir))
-        bm = BuildManager(str(tmpdir))
-        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        build_request = BuildRequest(str(tmpdir))
         push_url = "ssh://{username}git.example.com/git/{component}.git"
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -1032,7 +1021,6 @@ class TestBuildRequest(object):
             get_plugin(plugins, "exit_plugins", "sendmail")
 
     def test_render_prod_request_new_secrets(self, tmpdir):
-        bm = BuildManager(INPUTS_PATH)
         secret_name = 'mysecret'
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -1058,7 +1046,7 @@ class TestBuildRequest(object):
 
         # Default required version (1.0.6), implicitly and explicitly
         for required in (None, parse_version('1.0.6')):
-            build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+            build_request = BuildRequest(INPUTS_PATH)
             if required is not None:
                 build_request.set_openshift_required_version(required)
 
@@ -1086,7 +1074,7 @@ class TestBuildRequest(object):
 
         # Set required version to 0.5.4
 
-        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        build_request = BuildRequest(INPUTS_PATH)
         build_request.set_openshift_required_version(parse_version('0.5.4'))
         build_json = build_request.render()
 
@@ -1107,8 +1095,7 @@ class TestBuildRequest(object):
 
     def test_render_prod_request_with_koji_secret(self, tmpdir):
         self.create_image_change_trigger_json(str(tmpdir))
-        bm = BuildManager(str(tmpdir))
-        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        build_request = BuildRequest(str(tmpdir))
         # We're using both pulp and sendmail, both of which require a
         # Kubernetes secret. This isn't supported until OpenShift
         # Origin 1.0.6.
@@ -1172,8 +1159,7 @@ class TestBuildRequest(object):
         for name in labels.keys():
             expected_names.add(name)
 
-        bm = BuildManager(INPUTS_PATH)
-        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        build_request = BuildRequest(INPUTS_PATH)
 
         kwargs = get_sample_prod_params()
         kwargs['labels'] = labels
@@ -1196,8 +1182,7 @@ class TestBuildRequest(object):
         ('koji/image-build:spam.conf', True),
     ])
     def test_prod_is_custom_base_image(self, tmpdir, base_image, is_custom):
-        bm = BuildManager(INPUTS_PATH)
-        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        build_request = BuildRequest(INPUTS_PATH)
         # Safe to call prior to build image being set
         assert build_request.is_custom_base_image() is False
 
@@ -1209,8 +1194,7 @@ class TestBuildRequest(object):
         assert build_request.is_custom_base_image() == is_custom
 
     def test_prod_missing_kojihub__custom_base_image(self, tmpdir):
-        bm = BuildManager(INPUTS_PATH)
-        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        build_request = BuildRequest(INPUTS_PATH)
 
         kwargs = get_sample_prod_params()
         kwargs['base_image'] = 'koji/image-build'
@@ -1224,8 +1208,7 @@ class TestBuildRequest(object):
             'Custom base image builds require kojihub')
 
     def test_prod_custom_base_image(self, tmpdir):
-        bm = BuildManager(INPUTS_PATH)
-        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        build_request = BuildRequest(INPUTS_PATH)
 
         kwargs = get_sample_prod_params()
         kwargs['base_image'] = 'koji/image-build'
@@ -1244,8 +1227,7 @@ class TestBuildRequest(object):
         assert add_filesystem_args['koji_proxyuser'] == kwargs['proxy']
 
     def test_prod_non_custom_base_image(self, tmpdir):
-        bm = BuildManager(INPUTS_PATH)
-        build_request = bm.get_build_request_by_type(PROD_BUILD_TYPE)
+        build_request = BuildRequest(INPUTS_PATH)
 
         kwargs = get_sample_prod_params()
         build_request.set_params(**kwargs)

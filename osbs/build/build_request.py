@@ -21,21 +21,13 @@ except ImportError:
     import urllib.parse as urlparse
 
 from osbs.build.manipulate import DockJsonManipulator
-from osbs.build.spec import CommonSpec, ProdSpec, SimpleSpec
-from osbs.constants import PROD_BUILD_TYPE, SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE
-from osbs.constants import PROD_WITH_SECRET_BUILD_TYPE
-from osbs.constants import SECRETS_PATH
+from osbs.build.spec import BuildSpec
+from osbs.constants import SECRETS_PATH, DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE
 from osbs.exceptions import OsbsException, OsbsValidationException
 from osbs.utils import looks_like_git_hash, git_repo_humanish_part_from_uri
 
 
-build_classes = {}
 logger = logging.getLogger(__name__)
-
-
-def register_build_class(cls):
-    build_classes[cls.key] = cls
-    return cls
 
 
 class BuildRequest(object):
@@ -43,13 +35,11 @@ class BuildRequest(object):
     Wraps logic for creating build inputs
     """
 
-    key = None
-
     def __init__(self, build_json_store):
         """
         :param build_json_store: str, path to directory with JSON build files
         """
-        self.spec = None
+        self.spec = BuildSpec()
         self.build_json_store = build_json_store
         self.build_json = None       # rendered template
         self._template = None        # template loaded from filesystem
@@ -57,15 +47,48 @@ class BuildRequest(object):
         self._dj = None
         self._resource_limits = None
         self._openshift_required_version = parse_version('1.0.6')
+        # For the koji "scratch" build type
+        self.scratch = False
+        self.base_image = None
 
     def set_params(self, **kwargs):
         """
         set parameters according to specification
 
-        :param kwargs:
-        :return:
+        these parameters are accepted:
+
+        :param pulp_secret: str, resource name of pulp secret
+        :param pdc_secret: str, resource name of pdc secret
+        :param koji_target: str, koji tag with packages used to build the image
+        :param kojiroot: str, URL from which koji packages are fetched
+        :param kojihub: str, URL of the koji hub
+        :param koji_certs_secret: str, resource name of secret that holds the koji certificates
+        :param koji_task_id: int, Koji Task that created this build config
+        :param pulp_registry: str, name of pulp registry in dockpulp.conf
+        :param nfs_server_path: str, NFS server and path
+        :param nfs_dest_dir: str, directory to create on NFS server
+        :param sources_command: str, command used to fetch dist-git sources
+        :param architecture: str, architecture we are building for
+        :param vendor: str, vendor name
+        :param build_host: str, host the build will run on or None for auto
+        :param authoritative_registry: str, the docker registry authoritative for this image
+        :param distribution_scope: str, distribution scope for this image
+                                   (private, authoritative-source-only, restricted, public)
+        :param use_auth: bool, use auth from atomic-reactor?
+        :param git_push_url: str, URL for git push
         """
-        raise NotImplementedError()
+
+        # Here we cater to the koji "scratch" build type, this will disable
+        # all plugins that might cause importing of data to koji
+        try:
+            self.scratch = kwargs.pop("scratch")
+        except KeyError:
+            pass
+
+        self.base_image = kwargs.get('base_image')
+
+        logger.debug("setting params '%s' for %s", kwargs, self.spec)
+        self.spec.set_params(**kwargs)
 
     def set_resource_limits(self, cpu=None, memory=None, storage=None):
         if self._resource_limits is None:
@@ -84,30 +107,6 @@ class BuildRequest(object):
         if openshift_required_version is not None:
             self._openshift_required_version = openshift_required_version
 
-    @staticmethod
-    def new_by_type(build_name, *args, **kwargs):
-        """Find BuildRequest with the given name."""
-
-        # Compatibility
-        if build_name in (PROD_WITHOUT_KOJI_BUILD_TYPE,
-                          PROD_WITH_SECRET_BUILD_TYPE):
-            build_name = PROD_BUILD_TYPE
-
-        try:
-            build_class = build_classes[build_name]
-            logger.debug("Instantiating: %s(%s, %s)", build_class.__name__, args, kwargs)
-            return build_class(*args, **kwargs)
-        except KeyError:
-            raise RuntimeError("Unknown build type '{0}'".format(build_name))
-
-    def render(self, validate=True):
-        """
-        render input parameters into template
-
-        :return: dict, build json
-        """
-        raise NotImplementedError()
-
     @property
     def build_id(self):
         return self.build_json['metadata']['name']
@@ -115,7 +114,7 @@ class BuildRequest(object):
     @property
     def template(self):
         if self._template is None:
-            path = os.path.join(self.build_json_store, "%s.json" % self.key)
+            path = os.path.join(self.build_json_store, DEFAULT_OUTER_TEMPLATE)
             logger.debug("loading template from path %s", path)
             try:
                 with open(path, "r") as fp:
@@ -128,7 +127,7 @@ class BuildRequest(object):
     @property
     def inner_template(self):
         if self._inner_template is None:
-            path = os.path.join(self.build_json_store, "%s_inner.json" % self.key)
+            path = os.path.join(self.build_json_store, DEFAULT_INNER_TEMPLATE)
             logger.debug("loading inner template from path %s", path)
             with open(path, "r") as fp:
                 self._inner_template = json.load(fp)
@@ -152,35 +151,6 @@ class BuildRequest(object):
     def set_label(self, name, value):
         self.template['metadata'].setdefault('labels', {})
         self.template['metadata']['labels'][name] = value
-
-
-class CommonBuild(BuildRequest):
-    def __init__(self, build_json_store):
-        """
-        :param build_json_store: str, path to directory with JSON build files
-        """
-        super(CommonBuild, self).__init__(build_json_store)
-        self.spec = CommonSpec()
-
-    def set_params(self, **kwargs):
-        """
-        set parameters according to specification
-
-        these parameters are accepted:
-
-        :param git_uri: str, URL of source git repository
-        :param git_ref: str, what git tree to build (default: master)
-        :param registry_uris: list, URI of docker registry where built image is pushed (str)
-        :param source_registry_uri: str, URI of docker registry from which image is pulled
-        :param user: str, user part of resulting image name
-        :param component: str, component part of the image name
-        :param openshift_uri: str, URL of openshift instance for the build
-        :param builder_openshift_url: str, url of OpenShift where builder will connect
-        :param yum_repourls: list of str, URLs to yum repo files to include
-        :param use_auth: bool, use auth from atomic-reactor?
-        """
-        logger.debug("setting params '%s' for %s", kwargs, self.spec)
-        self.spec.set_params(**kwargs)
 
     def render_resource_limits(self):
         if self._resource_limits is not None:
@@ -242,106 +212,6 @@ class CommonBuild(BuildRequest):
             self.dj.dock_json_set_arg('exit_plugins',
                                       "store_metadata_in_osv3",
                                       "use_auth", use_auth)
-
-    def render(self):
-        # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
-        self.template['metadata']['name'] = self.spec.name.value
-        self.render_resource_limits()
-        self.template['spec']['source']['git']['uri'] = self.spec.git_uri.value
-        self.template['spec']['source']['git']['ref'] = self.spec.git_ref.value
-
-        if self.spec.registry_uris.value:
-            primary_registry_uri = self.spec.registry_uris.value[0].docker_uri
-            tag_with_registry = '{0}/{1}'.format(primary_registry_uri,
-                                                 self.spec.image_tag.value)
-            self.template['spec']['output']['to']['name'] = tag_with_registry
-        else:
-            self.template['spec']['output']['to']['name'] = self.spec.image_tag.value
-
-        self.render_tag_and_push_registries()
-
-        if 'triggers' in self.template['spec']:
-            imagechange = self.template['spec']['triggers'][0]['imageChange']
-            imagechange['from']['name'] = self.spec.trigger_imagestreamtag.value
-
-        self.render_add_yum_repo_by_url()
-
-        use_auth = self.spec.use_auth.value
-        self.render_check_and_set_rebuild(use_auth=use_auth)
-        self.render_store_metadata_in_osv3(use_auth=use_auth)
-
-        # For Origin 1.0.6 we'll use the 'secrets' array; for earlier
-        # versions we'll just use 'sourceSecret'
-        if self._openshift_required_version < parse_version('1.0.6'):
-            if 'secrets' in self.template['spec']['strategy']['customStrategy']:
-                del self.template['spec']['strategy']['customStrategy']['secrets']
-        else:
-            if 'sourceSecret' in self.template['spec']['source']:
-                del self.template['spec']['source']['sourceSecret']
-
-        if self.spec.build_imagestream.value:
-            self.template['spec']['strategy']['customStrategy']['from']['kind'] = 'ImageStreamTag'
-            self.template['spec']['strategy']['customStrategy']['from']['name'] = \
-                self.spec.build_imagestream.value
-        else:
-            self.template['spec']['strategy']['customStrategy']['from']['name'] = \
-                self.spec.build_image.value
-
-    def validate_input(self):
-        self.spec.validate()
-
-
-@register_build_class
-class ProductionBuild(CommonBuild):
-    key = PROD_BUILD_TYPE
-
-    def __init__(self, build_json_store, **kwargs):
-        super(ProductionBuild, self).__init__(build_json_store, **kwargs)
-        self.spec = ProdSpec()
-
-        # For the koji "scratch" build type
-        self.scratch = False
-
-        self.base_image = None
-
-    def set_params(self, **kwargs):
-        """
-        set parameters according to specification
-
-        these parameters are accepted:
-
-        :param pulp_secret: str, resource name of pulp secret
-        :param pdc_secret: str, resource name of pdc secret
-        :param koji_target: str, koji tag with packages used to build the image
-        :param kojiroot: str, URL from which koji packages are fetched
-        :param kojihub: str, URL of the koji hub
-        :param koji_certs_secret: str, resource name of secret that holds the koji certificates
-        :param koji_task_id: int, Koji Task that created this build config
-        :param pulp_registry: str, name of pulp registry in dockpulp.conf
-        :param nfs_server_path: str, NFS server and path
-        :param nfs_dest_dir: str, directory to create on NFS server
-        :param sources_command: str, command used to fetch dist-git sources
-        :param architecture: str, architecture we are building for
-        :param vendor: str, vendor name
-        :param build_host: str, host the build will run on or None for auto
-        :param authoritative_registry: str, the docker registry authoritative for this image
-        :param distribution_scope: str, distribution scope for this image
-                                   (private, authoritative-source-only, restricted, public)
-        :param use_auth: bool, use auth from atomic-reactor?
-        :param git_push_url: str, URL for git push
-        """
-
-        # Here we cater to the koji "scratch" build type, this will disable
-        # all plugins that might cause importing of data to koji
-        try:
-            self.scratch = kwargs.pop("scratch")
-        except KeyError:
-            pass
-
-        self.base_image = kwargs.get('base_image')
-
-        logger.debug("setting params '%s' for %s", kwargs, self.spec)
-        self.spec.set_params(**kwargs)
 
     def set_secret_for_plugin(self, plugin, secret):
         has_plugin_conf = self.dj.dock_json_has_plugin_conf(plugin[0],
@@ -779,7 +649,49 @@ class ProductionBuild(CommonBuild):
     def render(self, validate=True):
         if validate:
             self.spec.validate()
-        super(ProductionBuild, self).render()
+
+        # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
+        self.template['metadata']['name'] = self.spec.name.value
+        self.render_resource_limits()
+        self.template['spec']['source']['git']['uri'] = self.spec.git_uri.value
+        self.template['spec']['source']['git']['ref'] = self.spec.git_ref.value
+
+        if self.spec.registry_uris.value:
+            primary_registry_uri = self.spec.registry_uris.value[0].docker_uri
+            tag_with_registry = '{0}/{1}'.format(primary_registry_uri,
+                                                 self.spec.image_tag.value)
+            self.template['spec']['output']['to']['name'] = tag_with_registry
+        else:
+            self.template['spec']['output']['to']['name'] = self.spec.image_tag.value
+
+        self.render_tag_and_push_registries()
+
+        if 'triggers' in self.template['spec']:
+            imagechange = self.template['spec']['triggers'][0]['imageChange']
+            imagechange['from']['name'] = self.spec.trigger_imagestreamtag.value
+
+        self.render_add_yum_repo_by_url()
+
+        use_auth = self.spec.use_auth.value
+        self.render_check_and_set_rebuild(use_auth=use_auth)
+        self.render_store_metadata_in_osv3(use_auth=use_auth)
+
+        # For Origin 1.0.6 we'll use the 'secrets' array; for earlier
+        # versions we'll just use 'sourceSecret'
+        if self._openshift_required_version < parse_version('1.0.6'):
+            if 'secrets' in self.template['spec']['strategy']['customStrategy']:
+                del self.template['spec']['strategy']['customStrategy']['secrets']
+        else:
+            if 'sourceSecret' in self.template['spec']['source']:
+                del self.template['spec']['source']['sourceSecret']
+
+        if self.spec.build_imagestream.value:
+            self.template['spec']['strategy']['customStrategy']['from']['kind'] = 'ImageStreamTag'
+            self.template['spec']['strategy']['customStrategy']['from']['name'] = \
+                self.spec.build_imagestream.value
+        else:
+            self.template['spec']['strategy']['customStrategy']['from']['name'] = \
+                self.spec.build_image.value
 
         repo_name = git_repo_humanish_part_from_uri(self.spec.git_uri.value)
         # NOTE: Since only the repo name is used, a forked repos will have
@@ -867,72 +779,3 @@ class ProductionBuild(CommonBuild):
         self.build_json = self.template
         logger.debug(self.build_json)
         return self.build_json
-
-
-@register_build_class
-class SimpleBuild(CommonBuild):
-    """
-    Simple build type for scratch builds - gets sources from git, builds image
-    according to Dockerfile, pushes it to a registry.
-    """
-
-    key = SIMPLE_BUILD_TYPE
-
-    def __init__(self, build_json_store, **kwargs):
-        super(SimpleBuild, self).__init__(build_json_store, **kwargs)
-        self.spec = SimpleSpec()
-
-    def set_params(self, **kwargs):
-        """
-        set parameters according to specification
-        """
-        logger.debug("setting params '%s' for %s", kwargs, self.spec)
-        self.spec.set_params(**kwargs)
-
-    def render(self, validate=True):
-        if validate:
-            self.spec.validate()
-        super(SimpleBuild, self).render()
-        try:
-            self.dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3", "url",
-                                      self.spec.builder_openshift_url.value)
-        except RuntimeError:
-            # For compatibility with older osbs.conf files
-            self.dj.dock_json_set_arg('postbuild_plugins', "store_metadata_in_osv3", "url",
-                                      self.spec.builder_openshift_url.value)
-
-        # Remove 'version' from tag_and_push plugin config as it's no
-        # longer needed
-        if self.dj.dock_json_has_plugin_conf('postbuild_plugins',
-                                             'tag_and_push'):
-            push_conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins',
-                                                          'tag_and_push')
-            try:
-                registries = push_conf['args']['registries']
-            except KeyError:
-                pass
-            else:
-                for regdict in registries.values():
-                    if 'version' in regdict:
-                        del regdict['version']
-
-        self.dj.write_dock_json()
-        self.build_json = self.template
-        logger.debug(self.build_json)
-        return self.build_json
-
-
-class BuildManager(object):
-
-    def __init__(self, build_json_store):
-        self.build_json_store = build_json_store
-
-    def get_build_request_by_type(self, build_type):
-        """
-        return instance of BuildRequest according to specified build type
-
-        :param build_type: str, name of build type
-        :return: instance of BuildRequest
-        """
-        b = BuildRequest.new_by_type(build_type, build_json_store=self.build_json_store)
-        return b

@@ -7,7 +7,7 @@ of the BSD license. See the LICENSE file for details.
 """
 import pytest
 
-from osbs.build.spec import BuildIDParam, RegistryURIsParam, CommonSpec, ProdSpec
+from osbs.build.spec import BuildIDParam, RegistryURIsParam, BuildSpec
 from osbs.exceptions import OsbsValidationException
 from tests.constants import TEST_USER
 
@@ -46,18 +46,7 @@ class TestRegistryURIsParam(object):
         assert p.value[0].version == 'v2'
 
 
-class TestCommonSpec(object):
-    def test_registry_uris_param_v2(self):
-        spec = CommonSpec()
-        spec.set_params(registry_uris=['http://registry.example.com:5000/v2'],
-                        user=TEST_USER)
-        registry = spec.registry_uris.value[0]
-        assert registry.uri == 'http://registry.example.com:5000'
-        assert registry.docker_uri == 'registry.example.com:5000'
-        assert registry.version == 'v2'
-
-
-class TestProdSpec(object):
+class TestBuildSpec(object):
 
     def get_minimal_kwargs(self):
         return {
@@ -67,6 +56,7 @@ class TestProdSpec(object):
             'name_label': 'name_label',
             'source_registry_uri': 'source_registry_uri',
             'git_uri': 'https://github.com/user/reponame.git',
+            'registry_uris': ['http://registry.example.com:5000/v2'],
         }
 
     def test_spec_name(self):
@@ -76,10 +66,14 @@ class TestProdSpec(object):
             'git_branch': 'master',
         })
 
-        spec = ProdSpec()
+        spec = BuildSpec()
         spec.set_params(**kwargs)
 
         assert spec.name.value == 'reponame-master'
+        registry = spec.registry_uris.value[0]
+        assert registry.uri == 'http://registry.example.com:5000'
+        assert registry.docker_uri == 'registry.example.com:5000'
+        assert registry.version == 'v2'
 
     def test_labels(self):
         kwargs = self.get_minimal_kwargs()
@@ -87,7 +81,7 @@ class TestProdSpec(object):
             'labels': {'spam': 'maps'},
         })
 
-        spec = ProdSpec()
+        spec = BuildSpec()
         spec.set_params(**kwargs)
 
         assert spec.labels.value == {'spam': 'maps'}

@@ -14,11 +14,10 @@ import sys
 import warnings
 from functools import wraps
 
-from .constants import SIMPLE_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE, PROD_WITH_SECRET_BUILD_TYPE
-from osbs.build.build_request import BuildManager
+from osbs.build.build_request import BuildRequest
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
-from osbs.constants import BUILD_RUNNING_STATES, PROD_BUILD_TYPE
+from osbs.constants import BUILD_RUNNING_STATES
 from osbs.core import Openshift
 from osbs.exceptions import OsbsException, OsbsValidationException
 # import utils in this way, so that we can mock standalone functions with flexmock
@@ -85,13 +84,6 @@ class OSBS(object):
                             namespace=self.os_conf.get_namespace())
         self._bm = None
 
-    # some calls might not need build manager so let's make it lazy
-    @property
-    def bm(self):
-        if self._bm is None:
-            self._bm = BuildManager(build_json_store=self.os_conf.get_build_json_store())
-        return self._bm
-
     @osbsapi
     def list_builds(self, field_selector=None, koji_task_id=None):
         """
@@ -148,13 +140,15 @@ class OSBS(object):
     @osbsapi
     def get_build_request(self, build_type=None):
         """
-        return instance of BuildRequest according to specified build type
+        return instance of BuildRequest
 
-        :param build_type: str, name of build type
+        :param build_type: str, unused
         :return: instance of BuildRequest
         """
-        build_type = build_type or self.build_conf.get_build_type()
-        build_request = self.bm.get_build_request_by_type(build_type=build_type)
+        if build_type is not None:
+            warnings.warn("build types are deprecated, do not use the build_type argument")
+
+        build_request = BuildRequest(build_json_store=self.os_conf.get_build_json_store())
 
         # Apply configured resource limits.
         cpu_limit = self.build_conf.get_cpu_limit()
@@ -336,7 +330,7 @@ class OSBS(object):
         :return: BuildResponse instance
         """
         df_parser = utils.get_df_parser(git_uri, git_ref, git_branch=git_branch)
-        build_request = self.get_build_request(PROD_BUILD_TYPE)
+        build_request = self.get_build_request()
         name_label_name = 'Name'
         try:
             name_label = df_parser.labels[name_label_name]
@@ -405,55 +399,21 @@ class OSBS(object):
                                       architecture, yum_repourls=yum_repourls, **kwargs)
 
     @osbsapi
-    def create_simple_build(self, git_uri, git_ref, user, component, tag,
-                            yum_repourls=None, **kwargs):
-        build_request = self.get_build_request(SIMPLE_BUILD_TYPE)
-        build_request.set_params(
-            git_uri=git_uri,
-            git_ref=git_ref,
-            user=user,
-            component=component,
-            tag=tag,
-            build_image=self.build_conf.get_build_image(),
-            registry_uris=self.build_conf.get_registry_uris(),
-            source_registry_uri=self.build_conf.get_source_registry_uri(),
-            openshift_uri=self.os_conf.get_openshift_base_uri(),
-            builder_openshift_url=self.os_conf.get_builder_openshift_url(),
-            yum_repourls=yum_repourls,
-            proxy=self.build_conf.get_proxy(),
-            use_auth=self.build_conf.get_builder_use_auth(),
-        )
-        build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
-        response = self._create_build_config_and_build(build_request)
-        logger.debug(response.json)
-        return response
+    def create_simple_build(self, **kwargs):
+        warnings.warn("simple builds are deprecated, please use the create_build method")
+        return self.create_prod_build(**kwargs)
 
     @osbsapi
     def create_build(self, **kwargs):
         """
-        take input args, create build request from provided build type and submit the build
+        take input args, create build request and submit the build
 
         :param kwargs: keyword args for build
         :return: instance of BuildRequest
         """
-        build_type = self.build_conf.get_build_type()
-        if build_type in (PROD_BUILD_TYPE,
-                          PROD_WITHOUT_KOJI_BUILD_TYPE,
-                          PROD_WITH_SECRET_BUILD_TYPE):
-            kwargs.setdefault('git_branch', None)
-            kwargs.setdefault('target', None)
-            return self.create_prod_build(**kwargs)
-        elif build_type == SIMPLE_BUILD_TYPE:
-            # Only Prod Build type cares about potential koji scratch builds
-            try:
-                kwargs.pop("scratch")
-            except KeyError:
-                pass
-            return self.create_simple_build(**kwargs)
-        elif build_type == PROD_WITH_SECRET_BUILD_TYPE:
-            return self.create_prod_with_secret_build(**kwargs)
-        else:
-            raise OsbsException("Unknown build type: '%s'" % build_type)
+        kwargs.setdefault('git_branch', None)
+        kwargs.setdefault('target', None)
+        return self.create_prod_build(**kwargs)
 
     @osbsapi
     def get_build_logs(self, build_id, follow=False, build_json=None, wait_if_missing=False):
@@ -662,8 +622,7 @@ class OSBS(object):
         :returns: str including leading dot, or else None if no compression
         """
 
-        build_type = self.build_conf.get_build_type()
-        build_request = self.bm.get_build_request_by_type(build_type=build_type)
+        build_request = BuildRequest(build_json_store=self.os_conf.get_build_json_store())
         inner = build_request.inner_template
         postbuild_plugins = inner.get('postbuild_plugins', [])
         for plugin in postbuild_plugins:

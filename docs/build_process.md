@@ -23,9 +23,9 @@ This document mentions several components that communicate with each other:
    * the `stop_autorebuild_if_disabled` configuration names the config file where autorebuilds are enabled/disabled, see [OSBS repo configuration file](#osbs-repo-configuration-file)
  5. osbs-client starts the Openshift build from `BuildConfig` for *IM*.
  6. Openshift spawns a new build container that contains atomic-reactor inside.
- 7. atomic-reactor's `CheckAndSetRebuildPlugin` is run. This determines whether the build is an automatically triggered autorebuild by examining `is_autrebuild` label. If this is autorebuild, then TODO. If this is not autorebuild, then the `is_autorebuild` label of the `BuildConfig` is set to `"true"`. This is done in order to ensure that all subsequent builds (except user-executed builds) are marked as autorebuild.
+ 7. atomic-reactor's `CheckAndSetRebuildPlugin` is run. This determines whether the build is an automatically triggered autorebuild by examining `is_autorebuild` label. If this is autorebuild, then TODO. If this is not autorebuild, then the `is_autorebuild` label of the `BuildConfig` is set to `"true"`. This is done in order to ensure that all subsequent builds (except user-executed builds) are marked as autorebuild.
  8. atomic-reactor builds the image.
- 9. Assuming the build is successful, atomic-reactor pushes the built image into registry and runs post-build plugins. These can vary depending on type of build, but usually it means pushing image to Pulp or copying it to NFS or so.
+ 9. Assuming the build is successful, atomic-reactor pushes the built image into registry and runs post-build plugins. These can vary depending on configuration, but usually it means pushing image to Pulp or copying it to NFS or so.
  10. atomic-reactor's `ImportImagePlugin` is run, which checks whether ImageStream for *IM* exists. If not, it creates it. Then, either way, it imports newly built *IM* into the `ImageStream`. If there are already some other images that use *IM* as their base image, they get rebuilt.
 
 

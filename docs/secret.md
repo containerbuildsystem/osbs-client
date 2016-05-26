@@ -1,6 +1,6 @@
 # Using Kubernetes Secrets
 
-The `prod` build type allows you to provide some secret content to the build using [Kubernetes Secret Volumes](http://kubernetes.io/v1.1/docs/user-guide/secrets.html).
+You can provide some secret content to the build using [Kubernetes Secret Volumes](http://kubernetes.io/v1.1/docs/user-guide/secrets.html).
 
 This is useful when the build workflow requires keys, certificates, etc, which should not be part of the buildroot image.
 
@@ -52,7 +52,6 @@ When you need to change the data, you can use `update` instead of `create`.
 In your OSBS build instance configuration, use the following values:
 
 ```
-build_type = prod
 pulp_secret = mysecret
 pdc_secret = myothersecret
 ```
