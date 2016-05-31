@@ -863,7 +863,7 @@ class ProductionBuild(CommonBuild):
         koji_task_id = self.spec.koji_task_id.value
         if koji_task_id is not None:
             self.template['metadata'].setdefault('labels', {})
-            self.template['metadata']['labels']['koji-task-id'] = koji_task_id
+            self.template['metadata']['labels']['koji-task-id'] = str(koji_task_id)
 
         use_auth = self.spec.use_auth.value
         self.render_add_filesystem()
