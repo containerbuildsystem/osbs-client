@@ -212,9 +212,12 @@ class OSBS(object):
                 existing_label_value != new_label_value):
 
                 msg = (
-                    'Git labels collide with existing build config labels. '
+                    'Git labels collide with existing build config "%s". '
                     'Existing labels: %r, '
-                    'New labels: %r ') % (existing_labels, new_labels)
+                    'New labels: %r ') % (
+                       existing_build_config['metadata']['name'],
+                       existing_labels,
+                       new_labels)
                 raise OsbsValidationException(msg)
 
     def _get_existing_build_config(self, build_config):
@@ -272,6 +275,7 @@ class OSBS(object):
                                           api_version)
 
         build_config_name = build_json['metadata']['name']
+        logger.debug('build config to be named "%s"', build_config_name)
         existing_bc = self._get_existing_build_config(build_json)
 
         if existing_bc is not None:
@@ -280,6 +284,8 @@ class OSBS(object):
             # git-repo-name and git-branch labels. Continue using existing
             # build config name.
             build_config_name = existing_bc['metadata']['name']
+            logger.debug('existing build config name to be used "%s"',
+                         build_config_name)
             self._verify_no_running_builds(build_config_name)
 
             utils.buildconfig_update(existing_bc, build_json)
