@@ -485,7 +485,7 @@ class Openshift(object):
             label['buildconfig'] = build_config_id
 
         if koji_task_id is not None:
-            label['koji-task-id'] = koji_task_id
+            label['koji-task-id'] = str(koji_task_id)
 
         if label:
             query['labelSelector'] = ','.join([selector.format(key=key,
