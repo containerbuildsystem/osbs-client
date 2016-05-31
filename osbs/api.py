@@ -208,8 +208,8 @@ class OSBS(object):
             new_label_value = new_labels.get(key)
             existing_label_value = existing_labels.get(key)
 
-            if (existing_label_value is not None and
-                    existing_label_value != new_label_value):
+            if (existing_label_value and
+                existing_label_value != new_label_value):
 
                 msg = (
                     'Git labels collide with existing build config labels. '
