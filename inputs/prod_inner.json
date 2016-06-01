@@ -111,7 +111,6 @@
     {
       "name": "compress",
       "args": {
-        "load_exported_image": true,
         "method": "gzip"
       }
     },
