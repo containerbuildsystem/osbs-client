@@ -300,6 +300,14 @@ class CommonBuild(BuildRequest):
             self.template['spec']['strategy']['customStrategy']['from']['name'] = \
                 self.spec.build_image.value
 
+        repo_name = git_repo_humanish_part_from_uri(self.spec.git_uri.value)
+        # NOTE: Since only the repo name is used, a forked repos will have
+        # the same git-repo-name tag. This is a known limitation. If this
+        # use case must be handled properly, the git URI must be taken into
+        # account.
+        self.set_label('git-repo-name', repo_name)
+        self.set_label('git-branch', self.spec.git_ref.value)
+
     def validate_input(self):
         self.spec.validate()
 
@@ -794,12 +802,6 @@ class ProductionBuild(CommonBuild):
             self.spec.validate()
         super(ProductionBuild, self).render()
 
-        repo_name = git_repo_humanish_part_from_uri(self.spec.git_uri.value)
-        # NOTE: Since only the repo name is used, a forked repos will have
-        # the same git-repo-name tag. This is a known limitation. If this
-        # use case must be handled properly, the git URI must be taken into
-        # account.
-        self.set_label('git-repo-name', repo_name)
         self.set_label('git-branch', self.spec.git_branch.value)
 
         self.dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts",
