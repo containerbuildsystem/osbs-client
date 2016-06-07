@@ -115,47 +115,7 @@ class TestBuildRequest(object):
             'label-3': 'value-3',
         }
 
-    def test_render_simple_request_incorrect_postbuild(self, tmpdir):
-        # Make temporary copies of the JSON files
-        for basename in ['simple.json', 'simple_inner.json']:
-            shutil.copy(os.path.join(INPUTS_PATH, basename),
-                        os.path.join(str(tmpdir), basename))
-
-        # Create an inner JSON description which incorrectly runs the exit
-        # plugins as postbuild plugins.
-        with open(os.path.join(str(tmpdir), 'simple_inner.json'), 'r+') as inner:
-            inner_json = json.load(inner)
-
-            # Re-write all the exit plugins as postbuild plugins
-            exit_plugins = inner_json['exit_plugins']
-            inner_json['postbuild_plugins'].extend(exit_plugins)
-            del inner_json['exit_plugins']
-
-            inner.seek(0)
-            json.dump(inner_json, inner)
-            inner.truncate()
-
-        bm = BuildManager(str(tmpdir))
-        build_request = bm.get_build_request_by_type("simple")
-        kwargs = {
-            'git_uri': TEST_GIT_URI,
-            'git_ref': TEST_GIT_REF,
-            'user': "john-foo",
-            'component': "component",
-            'registry_uri': "registry.example.com",
-            'openshift_uri': "http://openshift/",
-            'builder_openshift_url': "http://openshift/",
-        }
-        build_request.set_params(**kwargs)
-        build_json = build_request.render()
-
-        plugins = get_plugins_from_build_json(build_json)
-
-        # Check the store_metadata_in_osv3's uri parameter was set
-        # correctly, even though it was listed as a postbuild plugin.
-        assert plugin_value_get(plugins, "postbuild_plugins", "store_metadata_in_osv3", "args", "url") == \
-            "http://openshift/"
-
+    @pytest.mark.xfail
     @pytest.mark.parametrize('tag', [
         None,
         "some_tag",

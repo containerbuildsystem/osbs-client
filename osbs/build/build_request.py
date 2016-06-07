@@ -234,27 +234,14 @@ class CommonBuild(BuildRequest):
                                           'use_auth', use_auth)
 
     def render_store_metadata_in_osv3(self, use_auth=None):
-        try:
-            self.dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3",
-                                      "url",
-                                      self.spec.builder_openshift_url.value)
+        self.dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3",
+                                  "url",
+                                  self.spec.builder_openshift_url.value)
 
-            if use_auth is not None:
-                self.dj.dock_json_set_arg('exit_plugins',
-                                          "store_metadata_in_osv3",
-                                          "use_auth", use_auth)
-        except RuntimeError:
-            # For compatibility with older osbs.conf files
-            self.dj.dock_json_set_arg('postbuild_plugins',
+        if use_auth is not None:
+            self.dj.dock_json_set_arg('exit_plugins',
                                       "store_metadata_in_osv3",
-                                      "url",
-                                      self.spec.builder_openshift_url.value)
-
-            if use_auth is not None:
-                # For compatibility with older osbs.conf files
-                self.dj.dock_json_set_arg('postbuild_plugins',
-                                          "store_metadata_in_osv3",
-                                          "use_auth", use_auth)
+                                      "use_auth", use_auth)
 
     def render(self):
         # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
