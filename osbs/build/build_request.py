@@ -406,20 +406,18 @@ class BuildRequest(object):
     def render_add_labels_in_dockerfile(self):
         phase = 'prebuild_plugins'
         plugin = 'add_labels_in_dockerfile'
-
-        implicit_labels = {
-            'Vendor': self.spec.vendor.value,
-            'Authoritative_Registry': self.spec.authoritative_registry.value,
-            'distribution-scope': self.spec.distribution_scope.value,
+        implicit_labels = {}
+        label_spec = {
+            'Vendor': self.spec.vendor,
+            'Authoritative_Registry': self.spec.authoritative_registry,
+            'distribution-scope': self.spec.distribution_scope,
+            'Build_Host': self.spec.build_host,
+            'Architecture': self.spec.architecture,
         }
 
-        build_host = self.spec.build_host.value
-        if build_host:
-            implicit_labels['Build_Host'] = build_host
-
-        architecture = self.spec.architecture.value
-        if architecture:
-            implicit_labels['Architecture'] = architecture
+        for label, spec in label_spec.items():
+            if spec.value is not None:
+                implicit_labels[label] = spec.value
 
         self.dj.dock_json_merge_arg(phase, plugin, 'labels', implicit_labels)
 
@@ -622,6 +620,12 @@ class BuildRequest(object):
         """
         Configure the import_image plugin
         """
+        if self.spec.imagestream_name is None or self.spec.imagestream_url is None:
+            logger.info("removing import_image from request, "
+                        "registry or repo url is not defined")
+            self.dj.remove_plugin('postbuild_plugins', 'import_image')
+            return
+
         if self.dj.dock_json_has_plugin_conf('postbuild_plugins',
                                              'import_image'):
             self.dj.dock_json_set_arg('postbuild_plugins', 'import_image',
@@ -701,8 +705,12 @@ class BuildRequest(object):
         self.set_label('git-repo-name', repo_name)
         self.set_label('git-branch', self.spec.git_branch.value)
 
-        self.dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts",
-                                  "command", self.spec.sources_command.value)
+        if self.spec.sources_command.value is not None:
+            self.dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts",
+                                      "command", self.spec.sources_command.value)
+        else:
+            logger.info("removing distgit_fetch_artefacts, no sources_command was provided")
+            self.dj.remove_plugin('prebuild_plugins', 'distgit_fetch_artefacts')
 
         # pull_base_image wants a docker URI so strip off the scheme part
         source_registry = self.spec.source_registry_uri.value

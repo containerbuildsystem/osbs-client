@@ -134,12 +134,12 @@ class BuildSpec(object):
     imagestream_name = BuildParam('imagestream_name')
     imagestream_url = BuildParam('imagestream_url')
     imagestream_insecure_registry = BuildParam('imagestream_insecure_registry')
-    sources_command = BuildParam("sources_command")
+    sources_command = BuildParam("sources_command", allow_none=True)
     architecture = BuildParam("architecture")
-    vendor = BuildParam("vendor")
+    vendor = BuildParam("vendor", allow_none=True)
     build_host = BuildParam("build_host")
-    authoritative_registry = BuildParam("authoritative_registry ")
-    distribution_scope = BuildParam("distribution_scope")
+    authoritative_registry = BuildParam("authoritative_registry", allow_none=True)
+    distribution_scope = BuildParam("distribution_scope", allow_none=True)
     registry_api_versions = BuildParam("registry_api_versions")
     labels = BuildParam("labels", default={})
     koji_target = BuildParam("koji_target", allow_none=True)
@@ -248,9 +248,13 @@ class BuildSpec(object):
         self.git_push_username.value = git_push_username
         self.git_branch.value = git_branch
         self.name.value = make_name_from_git(self.git_uri.value, self.git_branch.value)
+        if not base_image:
+            raise OsbsValidationException("base_image must be provided")
         self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
         self.builder_build_json_dir.value = builder_build_json_dir
         self.labels.value = labels
+        if not name_label:
+            raise OsbsValidationException("name_label must be provided")
         self.imagestream_name.value = name_label.replace('/', '-')
         # The ImageStream should take tags from the source registry
         # or, if no source registry is set, the first listed registry
@@ -259,15 +263,18 @@ class BuildSpec(object):
             try:
                 imagestream_reg = self.registry_uris.value[0]
             except IndexError:
-                raise OsbsValidationException("No registries specified")
+                logger.info("no registries specified, cannot determine imagestream url")
+                imagestream_reg = None
 
-        self.imagestream_url.value = os.path.join(imagestream_reg.docker_uri,
-                                                  name_label)
-        logger.debug("setting 'imagestream_url' to '%s'",
-                     self.imagestream_url.value)
-        insecure = imagestream_reg.uri.startswith('http://')
-        self.imagestream_insecure_registry.value = insecure
-        logger.debug("setting 'imagestream_insecure_registry' to %r", insecure)
+        if imagestream_reg:
+            self.imagestream_url.value = os.path.join(imagestream_reg.docker_uri,
+                                                      name_label)
+            logger.debug("setting 'imagestream_url' to '%s'",
+                         self.imagestream_url.value)
+            insecure = imagestream_reg.uri.startswith('http://')
+            self.imagestream_insecure_registry.value = insecure
+            logger.debug("setting 'imagestream_insecure_registry' to %r", insecure)
+
         timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         self.image_tag.value = "%s/%s:%s-%s" % (
             self.user.value,

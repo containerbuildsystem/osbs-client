@@ -115,11 +115,6 @@ class TestBuildRequest(object):
             'label-3': 'value-3',
         }
 
-    @pytest.mark.xfail
-    @pytest.mark.parametrize('tag', [
-        None,
-        "some_tag",
-    ])
     @pytest.mark.parametrize('registry_uris', [
         [],
         ["registry.example.com:5000"],
@@ -129,9 +124,8 @@ class TestBuildRequest(object):
         None,
         'fancy_buildroot:latestest'
     ])
-    def test_render_simple_request(self, tag, registry_uris, build_image):
+    def test_render_simple_request(self, registry_uris, build_image):
         build_request = BuildRequest(INPUTS_PATH)
-        name_label = "fedora/resultingimage"
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -140,8 +134,10 @@ class TestBuildRequest(object):
             'registry_uris': registry_uris,
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
-            'tag': tag,
             'build_image': build_image,
+            'base_image': 'fedora:latest',
+            'name_label': 'fedora/resultingimage',
+            'registry_api_versions': ['v1'],
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -151,7 +147,7 @@ class TestBuildRequest(object):
         assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
         assert build_json["spec"]["source"]["git"]["ref"] == TEST_GIT_REF
 
-        expected_output = "john-foo/component:%s" % (tag if tag else "20")
+        expected_output = "john-foo/component:none-20"
         if registry_uris:
             expected_output = registry_uris[0] + "/" + expected_output
         assert build_json["spec"]["output"]["to"]["name"].startswith(expected_output)
@@ -161,7 +157,8 @@ class TestBuildRequest(object):
                                      "pull_base_image")
         assert pull_base_image is not None
         assert ('args' not in pull_base_image or
-                'parent_registry' not in pull_base_image['args'])
+                'parent_registry' not in pull_base_image['args'] or
+                pull_base_image['args']['parent_registry'] == None)
 
         assert plugin_value_get(plugins, "exit_plugins", "store_metadata_in_osv3", "args", "url") == \
             "http://openshift/"
