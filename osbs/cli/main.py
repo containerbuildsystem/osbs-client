@@ -263,6 +263,11 @@ def cmd_cancel_build(args, osbs):
 
 
 def cmd_build(args, osbs):
+    if args.labels:
+        labels = dict(args.labels)
+    else:
+        labels = None
+
     build = osbs.create_build(
         git_uri=osbs.build_conf.get_git_uri(),
         git_ref=osbs.build_conf.get_git_ref(),
@@ -276,7 +281,7 @@ def cmd_build(args, osbs):
         build_image=osbs.build_conf.get_build_image(),
         build_imagestream=osbs.build_conf.get_build_imagestream(),
         scratch=args.scratch,
-        labels=osbs.build_conf.get_labels(),
+        labels=labels,
     )
     build_id = build.get_build_name()
     # we need to wait for kubelet to schedule the build, otherwise it's 500

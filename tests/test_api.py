@@ -33,6 +33,15 @@ from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRA
 from tests.fake_api import openshift, osbs, osbs106
 
 
+def request_as_response(request):
+    """
+    Return the request as the response so we can check it
+    """
+
+    request.json = request.render()
+    return request
+
+
 class TestOSBS(object):
     @pytest.mark.parametrize('koji_task_id', [None, TEST_KOJI_TASK_ID])
     def test_list_builds_api(self, osbs, koji_task_id):
@@ -334,11 +343,6 @@ build_image = {build_image}
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
             .and_return(MockParser()))
 
-        # Return the request as the response so we can check it
-        def request_as_response(request):
-            request.json = request.render()
-            return request
-
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
 
         req = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
@@ -347,6 +351,33 @@ build_image = {build_image}
                                      TEST_ARCH)
         img = req.json['spec']['strategy']['customStrategy']['from']['name']
         assert img == build_image
+
+    def test_explicit_labels(self, osbs):
+        class MockParser(object):
+            labels = {'Name': 'fedora23/something'}
+            baseimage = 'fedora23/python'
+        (flexmock(utils)
+            .should_receive('get_df_parser')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(MockParser()))
+
+        flexmock(OSBS, _create_build_config_and_build=request_as_response)
+
+        key = 'Release'
+        value = '4'
+        req = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                     TEST_GIT_BRANCH, TEST_USER,
+                                     TEST_COMPONENT, TEST_TARGET,
+                                     TEST_ARCH,
+                                     labels={key: value})
+        env_vars = req.json['spec']['strategy']['customStrategy']['env']
+        plugins_var = [env_var for env_var in env_vars
+                       if env_var['name'] == 'ATOMIC_REACTOR_PLUGINS']
+        plugins = json.loads(plugins_var[0]['value'])
+        add = [plugin for plugin in plugins['prebuild_plugins']
+               if plugin['name'] == 'add_labels_in_dockerfile']
+        add_labels = add[0]['args']['labels']
+        assert add_labels[key] == value
 
     def test_get_existing_build_config_by_labels(self):
         build_config = {
