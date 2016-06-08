@@ -9,7 +9,6 @@ from __future__ import print_function, absolute_import, unicode_literals
 
 import logging
 import os
-import json
 import warnings
 from pkg_resources import parse_version
 
@@ -362,15 +361,6 @@ class Configuration(object):
 
     def get_proxy(self):
         return self._get_value("yum_proxy", self.conf_section, "yum_proxy")
-
-    def get_labels(self):
-        labels_list = self._get_value("labels", self.conf_section, "labels")
-        if labels_list is None:
-            return {}
-        # When read from config file, it needs to be deserialized
-        if type(labels_list) is not list:
-            labels_list = json.loads(labels_list)
-        return dict(labels_list)
 
     def get_oauth2_token(self):
         # token overrides token_file

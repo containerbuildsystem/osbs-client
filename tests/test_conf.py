@@ -150,38 +150,3 @@ class TestConfiguration(object):
                                      **kwargs)
 
                 assert conf.get_oauth2_token() == expected
-
-    @pytest.mark.parametrize(('config', 'kwargs', 'cli_args', 'expected'), [
-        # No labels
-        ({'default': {}},
-         {},
-         {},
-         {}),
-        # From config
-        ({'default': {'labels': '[["spam", "maps"]]'}},
-         {},
-         {},
-         {'spam': 'maps'}),
-        # From keyword arguments
-        ({'default': {}},
-         # Hmm this is confusing. Try to make it labels?
-         {'labels': [['spam', 'maps']]},
-         {},
-         {'spam': 'maps'}),
-        # From CLI arguments
-        ({'default': {}},
-         {},
-         {'labels': [['spam', 'maps']]},
-         {'spam': 'maps'}),
-    ])
-    def test_explicit_labels(self, config, kwargs, cli_args, expected):
-        if 'token_file' in kwargs:
-            tmpf = self.tmpfile_with_content(kwargs['token_file'])
-            kwargs['token_file'] = tmpf.name
-
-        with self.build_cli_args(cli_args) as args:
-            with self.config_file(config) as config_file:
-                conf = Configuration(conf_file=config_file, cli_args=args,
-                                     **kwargs)
-
-                assert conf.get_labels() == expected

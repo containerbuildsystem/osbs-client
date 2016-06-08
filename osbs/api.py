@@ -320,6 +320,8 @@ class OSBS(object):
                           target,      # may be None
                           architecture=None, yum_repourls=None,
                           koji_task_id=None,
+                          scratch=False,
+                          labels=None,
                           **kwargs):
         """
         Create a production build
@@ -333,6 +335,8 @@ class OSBS(object):
         :param architecture: str, build architecture
         :param yum_repourls: list, URLs for yum repos
         :param koji_task_id: int, koji task ID requesting build
+        :param scratch: bool, this is a scratch build
+        :param labels: dict, overrides for Dockerfile labels
         :return: BuildResponse instance
         """
         df_parser = utils.get_df_parser(git_uri, git_ref, git_branch=git_branch)
@@ -384,8 +388,8 @@ class OSBS(object):
             git_push_url=self.build_conf.get_git_push_url(),
             git_push_username=self.build_conf.get_git_push_username(),
             builder_build_json_dir=self.build_conf.get_builder_build_json_store(),
-            labels=self.build_conf.get_labels(),
-            scratch=kwargs.get("scratch", False)
+            labels=labels,
+            scratch=scratch,
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         response = self._create_build_config_and_build(build_request)
