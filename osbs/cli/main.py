@@ -278,8 +278,6 @@ def cmd_build(args, osbs):
         target=osbs.build_conf.get_koji_target(),
         architecture=osbs.build_conf.get_architecture(),
         yum_repourls=osbs.build_conf.get_yum_repourls(),
-        build_image=osbs.build_conf.get_build_image(),
-        build_imagestream=osbs.build_conf.get_build_imagestream(),
         scratch=args.scratch,
         labels=labels,
     )
