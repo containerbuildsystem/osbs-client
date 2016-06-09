@@ -171,8 +171,8 @@ def cmd_get_build(args, osbs):
         print_json_nicely(build_json)
     elif args.output == 'text':
         repositories_dict = build.get_repositories()
-        repositories_str = None
-        if repositories_dict is not None:
+        repositories_str = '(unset)'
+        if repositories_dict is not None and repositories_dict["primary"]:
             repositories_template = dedent("""\
                 Primary
 
@@ -197,6 +197,23 @@ def cmd_get_build(args, osbs):
         else:
             digests_str = "(unset)"
 
+        logs_str = ''
+        build_logs = build.get_logs()
+        if build_logs:
+            logs_str = dedent("""\
+                BUILD LOGS
+
+                {logs}""").format(logs=build_logs)
+
+        packages_str = ''
+        packages_list = build.get_rpm_packages()
+        if packages_list:
+            packages_str = dedent("""\
+                PACKAGES
+
+                {packages}
+                """).format(packages=packages_list)
+
         template = dedent("""\
             BUILD ID: {build_id}
             STATUS: {status}
@@ -206,15 +223,7 @@ def cmd_get_build(args, osbs):
             DOCKERFILE
 
             {dockerfile}
-
-            BUILD LOGS
-
-            {logs}
-
-            PACKAGES
-
-            {packages}
-
+            {logs}{packages}
             COMMIT ID
 
             {commit_id}
@@ -245,8 +254,8 @@ def cmd_get_build(args, osbs):
             "image": build.get_image_tag(),
             "date": build.get_time_created(),
             "dockerfile": build.get_dockerfile(),
-            "logs": build.get_logs(),
-            "packages": build.get_rpm_packages(),
+            "logs": logs_str,
+            "packages": packages_str,
             "repositories": repositories_str,
             "commit_id": build.get_commit_id(),
             "base_image": build.get_base_image_name() or '(unset)',

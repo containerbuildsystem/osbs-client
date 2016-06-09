@@ -97,7 +97,7 @@ class BuildResponse(object):
         """
         logs = graceful_chain_get(self.get_annotations_or_labels(), "logs")
         if not logs:
-            logger.error("no logs")
+            logger.debug("no logs found in annotations")
             return ""
         if decode_logs:
             output = []
