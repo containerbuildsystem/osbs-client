@@ -339,15 +339,11 @@ class BuildRequest(object):
     def adjust_for_triggers(self):
         """
         Remove trigger-related plugins if no triggers set
-
-        If there are no triggers set, there is no point in running
-        the check_and_set_rebuild, bump_release, or import_image plugins.
         """
         triggers = self.template['spec'].get('triggers', [])
         if not triggers:
             for when, which in [("prebuild_plugins", "check_and_set_rebuild"),
                                 ("prebuild_plugins", "stop_autorebuild_if_disabled"),
-                                ("prebuild_plugins", "bump_release"),
                                 ("postbuild_plugins", "import_image"),
                                 ("exit_plugins", "sendmail")]:
                 logger.info("removing %s from request because there are no triggers",
@@ -455,48 +451,21 @@ class BuildRequest(object):
         """
         If the bump_release plugin is present, configure it
         """
-        if self.dj.dock_json_has_plugin_conf('prebuild_plugins',
-                                             'bump_release'):
-            push_url = self.spec.git_push_url.value
+        phase = 'prebuild_plugins'
+        plugin = 'bump_release'
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return
 
-            if push_url is not None:
-                # Do we need to add in a username?
-                if self.spec.git_push_username.value is not None:
-                    components = urlparse.urlsplit(push_url)
+        target = self.spec.koji_target.value
+        hub = self.spec.kojihub.value
+        if not (target and hub):
+            logger.info('removing %s from request as koji info not specified',
+                        plugin)
+            self.dj.remove_plugin(phase, plugin)
+            return
 
-                    # Remove any existing username
-                    netloc = components.netloc.split('@', 1)[-1]
-
-                    # Add in the configured username
-                    comps = list(components)
-                    comps[1] = "%s@%s" % (self.spec.git_push_username.value,
-                                          netloc)
-
-                    # Reassemble the URL
-                    push_url = urlparse.urlunsplit(comps)
-
-                self.dj.dock_json_set_arg('prebuild_plugins', 'bump_release',
-                                          'push_url', push_url)
-
-            # Set the source git ref to the branch we're building
-            # from, but configure the plugin with the commit hash we
-            # started with.
-            logger.info("bump_release configured so "
-                        "setting source git ref to %s",
-                        self.spec.git_branch.value)
-
-            if looks_like_git_hash(self.spec.git_branch.value):
-                raise OsbsValidationException("git_branch parameter requires "
-                                              "branch name not hash")
-
-            if not looks_like_git_hash(self.spec.git_ref.value):
-                raise OsbsValidationException("git_ref parameter requires "
-                                              "hash not branch name")
-
-            self.template['spec']['source']['git']['ref'] = \
-                self.spec.git_branch.value
-            self.dj.dock_json_set_arg('prebuild_plugins', 'bump_release',
-                                      'git_ref', self.spec.git_ref.value)
+        self.dj.dock_json_set_arg(phase, plugin, 'target', target)
+        self.dj.dock_json_set_arg(phase, plugin, 'hub', hub)
 
     def render_koji_promote(self, use_auth=None):
         if not self.dj.dock_json_has_plugin_conf('exit_plugins',
