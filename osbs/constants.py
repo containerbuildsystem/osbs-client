@@ -16,6 +16,8 @@ DEFAULT_GIT_REF = "master"
 DEFAULT_BUILD_IMAGE = "buildroot:latest"
 DEFAULT_CONFIGURATION_FILE = "/etc/osbs.conf"
 DEFAULT_CONFIGURATION_SECTION = "default"
+DEFAULT_OUTER_TEMPLATE = "prod.json"
+DEFAULT_INNER_TEMPLATE = "prod_inner.json"
 GENERAL_CONFIGURATION_SECTION = "general"
 POD_FINISHED_STATES = ["failed", "succeeded"]
 POD_FAILED_STATES = ["failed"]
@@ -40,11 +42,6 @@ WATCH_ERROR = 'error'
 # https://github.com/openshift/origin/blob/master/pkg/build/api/types.go
 # type BuildStatus string
 DEFAULT_NAMESPACE = "default"
-
-PROD_BUILD_TYPE = "prod"
-PROD_WITHOUT_KOJI_BUILD_TYPE = "prod-without-koji"
-PROD_WITH_SECRET_BUILD_TYPE = "prod-with-secret"
-SIMPLE_BUILD_TYPE = "simple"
 
 # How to authenticate from within a pod
 SERVICEACCOUNT_SECRET = "/var/run/secrets/kubernetes.io/serviceaccount"

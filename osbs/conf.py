@@ -265,9 +265,6 @@ class Configuration(object):
         return self._get_value("verify_ssl", self.conf_section, "verify_ssl",
                                default=True, is_bool_val=True)
 
-    def get_build_type(self):
-        return self._get_value("build_type", self.conf_section, "build_type")
-
     def get_vendor(self):
         return self._get_value("vendor", self.conf_section, "vendor")
 

@@ -77,8 +77,6 @@ Some options are also mandatory.
 
 * `verify_ssl` (*optional*, `boolean`) — verify SSL certificates during secure connection?
 
-* `build_type` (**mandatory**, `string`) — name of build type to use for building the image
-
 * `vendor` (*optional*, `string`) — content of `vendor` label to be set
 
 * `build_host` (*optional*, `string`) — content of `com.redhat.build-host` label to be set

@@ -19,12 +19,12 @@ from tempfile import NamedTemporaryFile
 
 from osbs.api import OSBS
 from osbs.conf import Configuration
-from osbs.constants import PROD_BUILD_TYPE, PROD_WITHOUT_KOJI_BUILD_TYPE, SIMPLE_BUILD_TYPE
-from osbs.build.build_request import BuildRequest, SimpleBuild, ProductionBuild
+from osbs.build.build_request import BuildRequest
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
 from osbs.exceptions import OsbsValidationException, OsbsException
 from osbs.http import HttpResponse
+from osbs.constants import DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE
 from osbs import utils
 
 from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
@@ -103,9 +103,6 @@ class TestOSBS(object):
             .should_receive('get_df_parser')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
             .and_return(MockParser()))
-        (flexmock(osbs.build_conf)
-            .should_receive('get_build_type')
-            .and_return(PROD_BUILD_TYPE))
         (flexmock(osbs)
             .should_receive('create_prod_build')
             .with_args(git_uri=TEST_GIT_URI,
@@ -181,12 +178,12 @@ class TestOSBS(object):
     def test_get_build_request_api(self, osbs):
         build = osbs.get_build_request()
         assert isinstance(build, BuildRequest)
-        simple = osbs.get_build_request(SIMPLE_BUILD_TYPE)
-        assert isinstance(simple, SimpleBuild)
-        prod = osbs.get_build_request(PROD_BUILD_TYPE)
-        assert isinstance(prod, ProductionBuild)
-        prodwithoutkoji = osbs.get_build_request(PROD_WITHOUT_KOJI_BUILD_TYPE)
-        assert isinstance(prodwithoutkoji, ProductionBuild)
+        simple = osbs.get_build_request("simple")
+        assert isinstance(simple, BuildRequest)
+        prod = osbs.get_build_request("prod")
+        assert isinstance(prod, BuildRequest)
+        prodwithoutkoji = osbs.get_build_request("prod-without-koji")
+        assert isinstance(prodwithoutkoji, BuildRequest)
 
     def test_set_labels_on_build_api(self, osbs):
         labels = {'label1': 'value1', 'label2': 'value2'}
@@ -269,13 +266,13 @@ class TestOSBS(object):
     def test_get_compression_extension(self, tmpdir, compress, args,
                                        raises, expected):
         # Make temporary copies of the JSON files
-        for basename in ['simple.json', 'simple_inner.json']:
+        for basename in [DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE]:
             shutil.copy(os.path.join(INPUTS_PATH, basename),
                         os.path.join(str(tmpdir), basename))
 
         # Create an inner JSON description with the specified compress
         # plugin method
-        with open(os.path.join(str(tmpdir), 'simple_inner.json'),
+        with open(os.path.join(str(tmpdir), DEFAULT_INNER_TEMPLATE),
                   'r+') as inner:
             inner_json = json.load(inner)
 
@@ -300,7 +297,6 @@ build_json_dir = {build_json_dir}
 [default]
 openshift_url = /
 registry_uri = registry.example.com
-build_type = simple
 """.format(build_json_dir=str(tmpdir)))
             fp.flush()
             config = Configuration(fp.name)
@@ -326,7 +322,6 @@ registry_uri = registry.example.com
 build_host = localhost
 authoritative_registry = localhost
 distribution_scope = private
-build_type = prod
 build_image = {build_image}
 """.format(build_json_dir='inputs', build_image=build_image))
             fp.flush()

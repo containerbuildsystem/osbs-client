@@ -33,7 +33,7 @@ def test_missing_section():
         os_conf = Configuration(conf_file=f.name,
                                 conf_section="missing")
 
-def test_no_build_type():
+def test_no_build_image():
     with NamedTemporaryFile(mode='w+') as f:
         f.write("""
 [default]
@@ -43,7 +43,7 @@ build_host=localhost
         f.seek(0)
         os_conf = Configuration(conf_file=f.name,
                                 conf_section="default")
-        assert os_conf.get_build_type() is None
+        assert os_conf.get_build_image() is None
 
 def test_no_inputs():
     with NamedTemporaryFile(mode='w+') as f:
@@ -52,7 +52,6 @@ def test_no_inputs():
 build_json_dir=/nonexistent/path/
 
 [default]
-build_type=simple
 openshift_uri=https://172.0.0.1:8443/
 registry_uri=127.0.0.1:5000
 """)

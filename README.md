@@ -37,7 +37,6 @@ source_registry_uri = your.registry.example.com
 # and where should be pushed?
 registry_uri = your.registry.example.com
 verify_ssl = false
-build_type = simple
 ```
 
 ## Issuing a build

@@ -537,8 +537,6 @@ def cli():
     get_quota_parser.set_defaults(func=cmd_get_all_resource_quota)
 
     build_parser = subparsers.add_parser(str_on_2_unicode_on_3('build'), help='build an image in OSBS')
-    build_parser.add_argument("--build-type", "-T", action="store", metavar="BUILD_TYPE",
-                              help="build type (prod, simple)")
     build_parser.add_argument("--build-json-dir", action="store", metavar="PATH",
                               help="directory with build jsons")
     build_parser.add_argument("-g", "--git-url", action='store', metavar="URL",

@@ -15,7 +15,6 @@ Here is how `/etc/osbs.conf` might look:
 [default]
 build_host = osbs.example.com
 openshift_url = https://osbs.example.com:8443/
-build_type = prod
 authoritative_registry = distribution.example.com
 registry_api_versions = v2
 vendor = Example, Inc
@@ -66,7 +65,6 @@ Here is how `/etc/osbs.conf` might look:
 [default]
 build_host = osbs.example.com
 openshift_url = https://osbs.example.com:8443/
-build_type = prod
 authoritative_registry = crane.example.com
 registry_api_versions = v1,v2
 vendor = Example, Inc
