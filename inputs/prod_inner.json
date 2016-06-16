@@ -85,6 +85,9 @@
       "name": "tag_by_labels"
     },
     {
+      "name": "tag_from_config"
+    },
+    {
       "name": "tag_and_push",
       "args": {
         "registries": {
