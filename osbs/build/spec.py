@@ -121,6 +121,7 @@ class BuildSpec(object):
     user = UserParam()
     component = BuildParam('component')
     registry_uris = RegistryURIsParam()
+    registry_secrets = BuildParam('registry_secrets', allow_none=True)
     source_registry_uri = SourceRegistryURIParam()
     openshift_uri = BuildParam('openshift_uri')
     builder_openshift_url = BuildParam('builder_openshift_url')
@@ -188,7 +189,8 @@ class BuildSpec(object):
 
     def set_params(self, git_uri=None, git_ref=None,
                    registry_uri=None,  # compatibility name for registry_uris
-                   registry_uris=None, user=None,
+                   registry_uris=None, registry_secrets=None,
+                   user=None,
                    component=None, openshift_uri=None, source_registry_uri=None,
                    yum_repourls=None, use_auth=None, builder_openshift_url=None,
                    build_image=None, build_imagestream=None, proxy=None,
@@ -215,6 +217,7 @@ class BuildSpec(object):
             registry_uris = [registry_uri]
 
         self.registry_uris.value = registry_uris or []
+        self.registry_secrets.value = registry_secrets or []
         self.source_registry_uri.value = source_registry_uri
         self.openshift_uri.value = openshift_uri
         self.builder_openshift_url.value = builder_openshift_url

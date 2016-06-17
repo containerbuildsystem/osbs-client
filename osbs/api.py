@@ -354,6 +354,7 @@ class OSBS(object):
             base_image=df_parser.baseimage,
             name_label=name_label,
             registry_uris=self.build_conf.get_registry_uris(),
+            registry_secrets=self.build_conf.get_registry_secrets(),
             source_registry_uri=self.build_conf.get_source_registry_uri(),
             registry_api_versions=self.build_conf.get_registry_api_versions(),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
