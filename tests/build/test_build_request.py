@@ -242,8 +242,12 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins",
                        "stop_autorebuild_if_disabled")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "prebuild_plugins", "bump_release")
+
+        assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
+                                "args", "target") == "koji-target"
+        assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
+                                "args", "hub") == "http://hub/"
+
         assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts",
                                 "args", "command") == "make"
         assert plugin_value_get(plugins, "prebuild_plugins", "pull_base_image",
@@ -349,8 +353,12 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins",
                        "stop_autorebuild_if_disabled")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "prebuild_plugins", "bump_release")
+
+        assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
+                                "args", "target") == koji_target
+        assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
+                                "args", "hub") == "http://hub/"
+
         assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts",
                                 "args", "command") == "make"
         assert plugin_value_get(plugins, "prebuild_plugins", "pull_base_image", "args",
@@ -384,7 +392,7 @@ class TestBuildRequest(object):
             get_plugin(plugins, "exit_plugins", "sendmail")
         assert get_plugin(plugins, "exit_plugins", "koji_promote")
         assert plugin_value_get(plugins, "exit_plugins", "koji_promote", "args",
-                                "target") ==  koji_target
+                                "target") == koji_target
         assert 'sourceSecret' not in build_json["spec"]["source"]
 
         labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile",
@@ -527,8 +535,12 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins",
                        "stop_autorebuild_if_disabled")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "prebuild_plugins", "bump_release")
+
+        assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
+                                "args", "target") == "koji-target"
+        assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
+                                "args", "hub") == "http://hub/"
+
         assert get_plugin(plugins, "prebuild_plugins", "koji")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
@@ -752,8 +764,12 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins",
                        "stop_autorebuild_if_disabled")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "prebuild_plugins", "bump_release")
+
+        assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
+                                "args", "target") == "koji-target"
+        assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
+                                "args", "hub") == "http://hub/"
+
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "koji")
         with pytest.raises(NoSuchPluginException):
@@ -766,6 +782,50 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
+
+    @pytest.mark.parametrize(('hub', 'target', 'disabled'), [
+        ('http://hub/', 'koji-target', False),
+        (None, 'koji-target', True),
+        ('http://hub/', None, True),
+    ])
+    def test_render_bump_release(self, hub, target, disabled):
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'base_image': 'fedora:latest',
+            'name_label': 'fedora/resultingimage',
+            'registry_uri': "registry.example.com",
+            'openshift_uri': "http://openshift/",
+            'sources_command': "make",
+            'vendor': "Foo Vendor",
+            'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
+            'registry_api_versions': ['v1'],
+        }
+
+        if hub:
+            kwargs['kojihub'] = hub
+
+        if target:
+            kwargs['koji_target'] = target
+
+        build_request = BuildRequest(INPUTS_PATH)
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+        strategy = build_json['spec']['strategy']['customStrategy']['env']
+        plugins = get_plugins_from_build_json(build_json)
+
+        if disabled:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "prebuild_plugins", "bump_release")
+
+        else:
+            assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
+                                    "args", "target") == target
+            assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
+                                    "args", "hub") == hub
 
     def test_render_prod_with_pulp_no_auth(self):
         """
@@ -833,23 +893,8 @@ class TestBuildRequest(object):
         ("https://registry.example.com", False),
         ("http://registry.example.com", True),
     ])
-    @pytest.mark.parametrize('branchref', [
-        # Wrong way round
-        {
-            'git_ref': TEST_GIT_BRANCH,
-            'git_branch': TEST_GIT_REF,
-            'should_raise': True,
-        },
-
-        # Right way round
-        {
-            'git_ref': TEST_GIT_REF,
-            'git_branch': TEST_GIT_BRANCH,
-            'should_raise': False,
-        },
-    ])
-    def test_render_prod_request_with_trigger(self, tmpdir, branchref,
-                                              registry_uri, insecure_registry):
+    def test_render_prod_request_with_trigger(self, tmpdir, registry_uri,
+                                              insecure_registry):
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequest(str(tmpdir))
         # We're using both pulp and sendmail, both of which require a
@@ -861,8 +906,8 @@ class TestBuildRequest(object):
         pdc_secret_name = 'foo'
         kwargs = {
             'git_uri': TEST_GIT_URI,
-            'git_ref': branchref['git_ref'],
-            'git_branch': branchref['git_branch'],
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
             'user': "john-foo",
             'component': TEST_COMPONENT,
             'base_image': 'fedora:latest',
@@ -887,13 +932,7 @@ class TestBuildRequest(object):
             'smtp_uri': 'smtp.example.com',
         }
         build_request.set_params(**kwargs)
-        if branchref['should_raise']:
-            with pytest.raises(OsbsValidationException):
-                build_request.render()
-
-            return
-        else:
-            build_json = build_request.render()
+        build_json = build_request.render()
 
         assert "triggers" in build_json["spec"]
         assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == 'fedora:latest'
@@ -906,12 +945,6 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "prebuild_plugins",
                                 "check_and_set_rebuild", "args",
                                 "url") == kwargs["openshift_uri"]
-        assert get_plugin(plugins, "prebuild_plugins", "bump_release")
-        assert plugin_value_get(plugins, "prebuild_plugins", "bump_release", "args",
-                                "git_ref") == TEST_GIT_REF
-        assert plugin_value_get(plugins, "prebuild_plugins", "bump_release", "args",
-                                "push_url") == push_url.format(username='example@',
-                                                               component=TEST_COMPONENT)
         assert get_plugin(plugins, "postbuild_plugins", "import_image")
         assert plugin_value_get(plugins,
                                 "postbuild_plugins", "import_image", "args",
@@ -1011,8 +1044,6 @@ class TestBuildRequest(object):
             get_plugin(plugins, "prebuild_plugins",
                        "stop_autorebuild_if_disabled")
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "prebuild_plugins", "bump_release")
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
@@ -1068,9 +1099,7 @@ class TestBuildRequest(object):
             assert plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push',
                                     'args', 'pulp_secret_path') == mount_path
 
-
         # Set required version to 0.5.4
-
         build_request = BuildRequest(INPUTS_PATH)
         build_request.set_openshift_required_version(parse_version('0.5.4'))
         build_json = build_request.render()

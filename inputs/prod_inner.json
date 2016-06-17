@@ -30,9 +30,8 @@
     },
     {
       "args": {
-        "author_name": "Build System",
-        "author_email": "build@example.com",
-        "git_ref": "{{GIT_REF}}"
+        "target": "{{KOJI_TARGET}}",
+        "hub": "{{KOJI_HUB}}"
       },
       "name": "bump_release"
     },
