@@ -656,13 +656,14 @@ class TestBuildRequest(object):
         ['v1', 'v2'],
         ['v2'],
     ])
-    @pytest.mark.parametrize('openshift_version', ['1.0.0', '1.0.6'])
-    def test_render_prod_request_v1_v2(self, registry_api_versions, openshift_version):
+    def test_render_prod_request_v1_v2(self, registry_api_versions):
         build_request = BuildRequest(INPUTS_PATH)
-        build_request.set_openshift_required_version(parse_version(openshift_version))
+        # OpenShift Origin >= 1.0.6 is required for v2
+        build_request.set_openshift_required_version(parse_version('1.0.6'))
         name_label = "fedora/resultingimage"
         pulp_env = 'v1pulp'
         pulp_secret = pulp_env + 'secret'
+        registry_secret = 'registry_secret'
         kwargs = {
             'pulp_registry': pulp_env,
             'pulp_secret': pulp_secret,
@@ -681,6 +682,10 @@ class TestBuildRequest(object):
                 "http://registry1.example.com:5000/v1",
 
                 "http://registry2.example.com:5000/v2"
+            ],
+            'registry_secrets': [
+                "",
+                registry_secret,
             ],
             'nfs_server_path': "server:path",
             'source_registry_uri': "registry.example.com",
@@ -714,7 +719,10 @@ class TestBuildRequest(object):
 
         # tag_and_push configuration. Must not have the scheme part.
         expected_registries = {
-            'registry2.example.com:5000': {'insecure': True},
+            'registry2.example.com:5000': {
+                'insecure': True,
+                'secret': '/var/run/secrets/atomic-reactor/registry_secret'
+            },
         }
 
         if 'v1' in registry_api_versions:
@@ -725,21 +733,25 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push",
                                 "args", "registries") == expected_registries
 
-        if openshift_version == '1.0.0':
-            assert 'secrets' not in build_json['spec']['strategy']['customStrategy']
-            assert build_json['spec']['source']['sourceSecret']['name'] == pulp_secret
-        else:
-            assert 'sourceSecret' not in build_json['spec']['source']
-            secrets = build_json['spec']['strategy']['customStrategy']['secrets']
-            for version, plugin in [('v1', 'pulp_push'), ('v2', 'pulp_sync')]:
-                if version not in registry_api_versions:
-                    continue
+        assert 'sourceSecret' not in build_json['spec']['source']
+        secrets = build_json['spec']['strategy']['customStrategy']['secrets']
+        for version, plugin in [('v1', 'pulp_push'), ('v2', 'pulp_sync')]:
+            if version not in registry_api_versions:
+                continue
 
-                path = plugin_value_get(plugins, "postbuild_plugins", plugin,
+            path = plugin_value_get(plugins, "postbuild_plugins", plugin,
                                         "args", "pulp_secret_path")
-                pulp_secrets = [secret for secret in secrets if secret['mountPath'] == path]
-                assert len(pulp_secrets) == 1
-                assert pulp_secrets[0]['secretSource']['name'] == pulp_secret
+            pulp_secrets = [secret for secret in secrets if secret['mountPath'] == path]
+            assert len(pulp_secrets) == 1
+            assert pulp_secrets[0]['secretSource']['name'] == pulp_secret
+
+            if plugin == 'pulp_sync':
+                path = plugin_value_get(plugins, "postbuild_plugins", plugin,
+                                        "args", "registry_secret_path")
+                reg_secrets = [secret for secret in secrets
+                               if secret['mountPath'] == path]
+                assert len(reg_secrets) == 1
+                assert reg_secrets[0]['secretSource']['name'] == registry_secret
 
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
@@ -762,6 +774,9 @@ class TestBuildRequest(object):
                                    "args", "pulp_registry_name")
             assert env == pulp_env
 
+            pulp_secret = plugin_value_get(plugins, "postbuild_plugins",
+                                           "pulp_sync", "args",
+                                           "pulp_secret_path")
             docker_registry = plugin_value_get(plugins, "postbuild_plugins",
                                                "pulp_sync", "args",
                                                "docker_registry")

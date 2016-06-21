@@ -568,31 +568,38 @@ class BuildRequest(object):
             return
 
         pulp_registry = self.spec.pulp_registry.value
-        docker_v2_registries = [registry
-                                for registry in self.spec.registry_uris.value
-                                if registry.version == 'v2']
 
-        if pulp_registry and docker_v2_registries:
+        # Find which registry to use
+        docker_registry = None
+        registry_secret = None
+        registries = zip_longest(self.spec.registry_uris.value,
+                                 self.spec.registry_secrets.value)
+        for registry, secret in registries:
+            if registry.version == 'v2':
+                # First specified v2 registry is the one we'll tell pulp
+                # to sync from. Keep the http prefix -- pulp wants it.
+                docker_registry = registry.uri
+                registry_secret = secret
+                logger.info("using docker v2 registry %s for pulp_sync",
+                            docker_registry)
+                break
+
+        if pulp_registry and docker_registry:
             self.dj.dock_json_set_arg('postbuild_plugins', 'pulp_sync',
                                       'pulp_registry_name', pulp_registry)
-
-            # First specified v2 registry is the one we'll tell pulp
-            # to sync from. Keep the http prefix -- pulp wants it.
-            docker_registry = docker_v2_registries[0].uri
-            logger.info("using docker v2 registry %s for pulp_sync",
-                        docker_registry)
 
             self.dj.dock_json_set_arg('postbuild_plugins', 'pulp_sync',
                                       'docker_registry', docker_registry)
 
-            # Verify we have either a secret or username/password
+            self.set_secret_for_plugin(('postbuild_plugins',
+                                        'pulp_sync',
+                                        'registry_secret_path'),
+                                       registry_secret)
+
+            # Verify we have a pulp secret
             if self.spec.pulp_secret.value is None:
-                conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins',
-                                                         'pulp_sync')
-                args = conf.get('args', {})
-                if 'username' not in args:
-                    raise OsbsValidationException("Pulp registry specified "
-                                                  "but no auth config")
+                raise OsbsValidationException("Pulp registry specified "
+                                              "but no auth config")
         else:
             # If no pulp registry is specified, don't run the pulp plugin
             logger.info("removing pulp_sync from request, "
@@ -734,6 +741,9 @@ class BuildRequest(object):
                            'pulp_sync',
                            'pulp_secret_path'):
                           self.spec.pulp_secret.value,
+
+                          # pulp_sync registry_secret_path set
+                          # in render_pulp_sync
 
                           ('exit_plugins', 'sendmail', 'pdc_secret_path'):
                           self.spec.pdc_secret.value,
