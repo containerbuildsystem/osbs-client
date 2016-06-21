@@ -16,9 +16,11 @@ from pkg_resources import parse_version
 try:
     # py2
     import urlparse
+    from itertools import izip_longest as zip_longest
 except ImportError:
     # py3
     import urllib.parse as urlparse
+    from itertools import zip_longest
 
 from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.spec import BuildSpec
@@ -170,12 +172,16 @@ class BuildRequest(object):
             placeholder = '{{REGISTRY_URI}}'
 
             if placeholder in registries:
-                for registry in self.spec.registry_uris.value:
+                for registry, secret in zip_longest(self.spec.registry_uris.value,
+                                                    self.spec.registry_secrets.value):
                     if not registry.uri:
                         continue
 
                     regdict = registries[placeholder].copy()
                     regdict['version'] = registry.version
+                    if secret:
+                        regdict['secret'] = os.path.join(SECRETS_PATH, secret)
+
                     registries[registry.docker_uri] = regdict
 
                 del registries[placeholder]
@@ -234,7 +240,11 @@ class BuildRequest(object):
                         'mountPath': secret_path,
                     })
 
-                self.dj.dock_json_set_arg(*(plugin + (secret_path,)))
+                # there's no need to set args if no plugin secret specified
+                # this is used in tag_and_push plugin, as it sets secret path
+                # for each registry separately
+                if plugin[2] is not None:
+                    self.dj.dock_json_set_arg(*(plugin + (secret_path,)))
             else:
                 logger.debug("not setting secret for unused plugin %s",
                              plugin[1])
@@ -267,7 +277,11 @@ class BuildRequest(object):
             if not isinstance(plugin, tuple) or len(plugin) != 3:
                 raise ValueError('got "%s" as secrets key, need 3-tuple' % plugin)
             if secret is not None:
-                self.set_secret_for_plugin(plugin, secret)
+                if isinstance(secret, list):
+                    for secret_item in secret:
+                        self.set_secret_for_plugin(plugin, secret_item)
+                else:
+                    self.set_secret_for_plugin(plugin, secret)
                 secret_set = True
 
         if not secret_set:
@@ -728,7 +742,14 @@ class BuildRequest(object):
                           self.spec.koji_certs_secret.value,
 
                           ('prebuild_plugins', 'add_filesystem', 'koji_ssl_certs_dir'):
-                          self.spec.koji_certs_secret.value})
+                          self.spec.koji_certs_secret.value,
+
+                          ('postbuild_plugins', 'tag_and_push',
+                           # Only set the secrets for the build, don't
+                           # add the path to the plugin's
+                           # configuration. This is done elsewhere.
+                           None):
+                          self.spec.registry_secrets.value})
 
         if self.spec.pulp_secret.value:
             # Don't push to docker registry, we're using pulp here
