@@ -86,6 +86,16 @@ def plugin_value_get(plugins, plugin_type, plugin_name, *args):
     return result
 
 
+def get_secret_mountpath_by_name(build_json, name):
+    secrets = build_json['spec']['strategy']['customStrategy']['secrets']
+    named_secrets = [secret for secret in secrets
+                     if secret['secretSource']['name'] == name]
+    assert len(named_secrets) == 1
+    secret = named_secrets[0]
+    assert 'mountPath' in secret
+    return secret['mountPath']
+
+
 class TestBuildRequest(object):
     def test_build_request_is_auto_instantiated(self):
         build_json = copy.deepcopy(TEST_BUILD_JSON)
@@ -515,16 +525,10 @@ class TestBuildRequest(object):
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
-        assert 'sourceSecret' not in build_json["spec"]["source"]
-        secrets = build_json['spec']['strategy']['customStrategy']['secrets']
-        pulp_secret = [secret for secret in secrets
-                       if secret['secretSource']['name'] == 'mysecret']
-        assert len(pulp_secret) > 0
-        assert 'mountPath' in pulp_secret[0]
-
         # Check that the secret's mountPath matches the plugin's
         # configured path for the secret
-        mount_path = pulp_secret[0]['mountPath']
+        assert 'sourceSecret' not in build_json["spec"]["source"]
+        mount_path = get_secret_mountpath_by_name(build_json, 'mysecret')
         plugins = get_plugins_from_build_json(build_json)
         assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
         assert plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push',
@@ -552,6 +556,60 @@ class TestBuildRequest(object):
             get_plugin(plugins, "exit_plugins", "sendmail")
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries") == {}
+
+    @pytest.mark.parametrize('registry_secrets', [None, ['registry-secret']])
+    def test_render_pulp_sync(self, registry_secrets):
+        build_request = BuildRequest(INPUTS_PATH)
+        # OpenShift Origin >= 1.0.6 is required for v2
+        build_request.set_openshift_required_version(parse_version('1.0.6'))
+        pulp_env = 'env'
+        pulp_secret = 'pulp-secret'
+        registry_uri = 'https://registry.example.com'
+        registry_ver = '/v2'
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'base_image': 'fedora:latest',
+            'name_label': 'fedora/resultingimage',
+            'registry_uri': registry_uri + registry_ver,
+            'openshift_uri': "http://openshift/",
+            'sources_command': "make",
+            'architecture': "x86_64",
+            'vendor': "Foo Vendor",
+            'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
+            'registry_api_versions': ['v2'],
+            'registry_secrets': registry_secrets,
+            'pulp_registry': pulp_env,
+            'pulp_secret': pulp_secret,
+        }
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        assert get_plugin(plugins, 'postbuild_plugins', 'pulp_sync')
+        assert plugin_value_get(plugins, 'postbuild_plugins',
+                                'pulp_sync', 'args',
+                                'pulp_registry_name') == pulp_env
+        assert plugin_value_get(plugins, 'postbuild_plugins',
+                                'pulp_sync', 'args',
+                                'docker_registry') == registry_uri
+
+        assert 'sourceSecret' not in build_json['spec']['source']
+        if registry_secrets:
+            mount_path = get_secret_mountpath_by_name(build_json,
+                                                      registry_secrets[0])
+            assert plugin_value_get(plugins, 'postbuild_plugins',
+                                    'pulp_sync', 'args',
+                                    'registry_secret_path') == mount_path
+
+        mount_path = get_secret_mountpath_by_name(build_json, pulp_secret)
+        assert plugin_value_get(plugins, 'postbuild_plugins',
+                                'pulp_sync', 'args',
+                                'pulp_secret_path') == mount_path
 
     def test_render_prod_with_registry_secrets(self):
         build_request = BuildRequest(INPUTS_PATH)
@@ -585,12 +643,7 @@ class TestBuildRequest(object):
         build_json = build_request.render()
 
         assert 'sourceSecret' not in build_json["spec"]["source"]
-        secrets = build_json['spec']['strategy']['customStrategy']['secrets']
-        registry_secret = [secret for secret in secrets
-                           if secret['secretSource']['name'] == 'registry_secret']
-        assert len(registry_secret) > 0
-        assert 'mountPath' in registry_secret[0]
-        mount_path = registry_secret[0]['mountPath']
+        mount_path = get_secret_mountpath_by_name(build_json, 'registry_secret')
         plugins = get_plugins_from_build_json(build_json)
         assert get_plugin(plugins, "postbuild_plugins", "tag_and_push")
         assert plugin_value_get(
@@ -741,17 +794,15 @@ class TestBuildRequest(object):
 
             path = plugin_value_get(plugins, "postbuild_plugins", plugin,
                                         "args", "pulp_secret_path")
-            pulp_secrets = [secret for secret in secrets if secret['mountPath'] == path]
-            assert len(pulp_secrets) == 1
-            assert pulp_secrets[0]['secretSource']['name'] == pulp_secret
+            mount_path = get_secret_mountpath_by_name(build_json, pulp_secret)
+            assert mount_path == path
 
             if plugin == 'pulp_sync':
                 path = plugin_value_get(plugins, "postbuild_plugins", plugin,
                                         "args", "registry_secret_path")
-                reg_secrets = [secret for secret in secrets
-                               if secret['mountPath'] == path]
-                assert len(reg_secrets) == 1
-                assert reg_secrets[0]['secretSource']['name'] == registry_secret
+                mount_path = get_secret_mountpath_by_name(build_json,
+                                                          registry_secret)
+                assert mount_path == path
 
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
@@ -1054,10 +1105,7 @@ class TestBuildRequest(object):
             plugin_value_get(plugins, 'exit_plugins', 'koji_promote',
                              'args', 'metadata_only')  # v1 enabled by default
 
-        pdc_secret = [secret for secret in
-                      build_json['spec']['strategy']['customStrategy']['secrets']
-                      if secret['secretSource']['name'] == pdc_secret_name]
-        mount_path = pdc_secret[0]['mountPath']
+        mount_path = get_secret_mountpath_by_name(build_json, pdc_secret_name)
         expected = {'args': {'from_address': 'osbs@example.com',
                              'url': 'http://openshift/',
                              'pdc_url': 'https://pdc.example.com',
@@ -1159,17 +1207,9 @@ class TestBuildRequest(object):
             # Not using the sourceSecret scheme
             assert 'sourceSecret' not in build_json['spec']['source']
 
-            # Using the secrets array scheme instead
-            assert 'secrets' in build_json['spec']['strategy']['customStrategy']
-            secrets = build_json['spec']['strategy']['customStrategy']['secrets']
-            pulp_secret = [secret for secret in secrets
-                           if secret['secretSource']['name'] == secret_name]
-            assert len(pulp_secret) > 0
-            assert 'mountPath' in pulp_secret[0]
-
             # Check that the secret's mountPath matches the plugin's
             # configured path for the secret
-            mount_path = pulp_secret[0]['mountPath']
+            mount_path = get_secret_mountpath_by_name(build_json, secret_name)
             plugins = get_plugins_from_build_json(build_json)
             assert plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push',
                                     'args', 'pulp_secret_path') == mount_path
@@ -1243,10 +1283,8 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
                                 "args", "url") == kwargs["openshift_uri"]
 
-        koji_certs_secret = [secret for secret in
-                             build_json['spec']['strategy']['customStrategy']['secrets']
-                             if secret['secretSource']['name'] == koji_certs_secret_name]
-        mount_path = koji_certs_secret[0]['mountPath']
+        mount_path = get_secret_mountpath_by_name(build_json,
+                                                  koji_certs_secret_name)
         assert get_plugin(plugins, 'exit_plugins', 'koji_promote')['args']['koji_ssl_certs'] == mount_path
 
     @pytest.mark.parametrize(('labels'), [

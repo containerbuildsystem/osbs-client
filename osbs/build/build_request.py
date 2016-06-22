@@ -591,10 +591,11 @@ class BuildRequest(object):
             self.dj.dock_json_set_arg('postbuild_plugins', 'pulp_sync',
                                       'docker_registry', docker_registry)
 
-            self.set_secret_for_plugin(('postbuild_plugins',
-                                        'pulp_sync',
-                                        'registry_secret_path'),
-                                       registry_secret)
+            if registry_secret:
+                self.set_secret_for_plugin(('postbuild_plugins',
+                                            'pulp_sync',
+                                            'registry_secret_path'),
+                                           registry_secret)
 
             # Verify we have a pulp secret
             if self.spec.pulp_secret.value is None:
