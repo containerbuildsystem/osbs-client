@@ -470,15 +470,13 @@ class BuildRequest(object):
         if not self.dj.dock_json_has_plugin_conf(phase, plugin):
             return
 
-        target = self.spec.koji_target.value
         hub = self.spec.kojihub.value
-        if not (target and hub):
-            logger.info('removing %s from request as koji info not specified',
+        if not hub:
+            logger.info('removing %s from request as koji hub not specified',
                         plugin)
             self.dj.remove_plugin(phase, plugin)
             return
 
-        self.dj.dock_json_set_arg(phase, plugin, 'target', target)
         self.dj.dock_json_set_arg(phase, plugin, 'hub', hub)
 
     def render_koji_promote(self, use_auth=None):
