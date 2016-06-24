@@ -119,6 +119,22 @@ class BuildResponse(object):
         else:
             return logs
 
+    def get_error_message(self):
+        """
+        Return an error message based on atomic-reactor's metadata
+        """
+        try:
+            str_metadata = graceful_chain_get(self.get_annotations_or_labels(), "plugins-metadata")
+            metadata_dict = json.loads(str_metadata)
+            plugin, error_message = list(metadata_dict['errors'].items())[0]
+            if error_message:
+                # Plugin has non-empty error description
+                return "Error in plugin %s: %s" % (plugin, error_message)
+            else:
+                return "Error in plugin %s" % plugin
+        except Exception:
+            return None
+
     def get_commit_id(self):
         return graceful_chain_get(self.get_annotations_or_labels(), "commit_id")
 

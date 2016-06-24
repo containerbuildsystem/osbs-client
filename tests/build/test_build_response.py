@@ -6,6 +6,7 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 import json
+import pytest
 from osbs.build.build_response import BuildResponse
 
 class TestBuildResponse(object):
@@ -39,3 +40,24 @@ class TestBuildResponse(object):
         })
         assert build_response.get_koji_build_id() == koji_build_id
 
+    @pytest.mark.parametrize(('plugin', 'message', 'expected_error_message'), [
+        ('dockerbuild', None, 'Error in plugin dockerbuild'),
+        ('foo', 'bar', 'Error in plugin foo: bar'),
+        (None, None, None)
+    ])
+    def test_error_message(self, plugin, message, expected_error_message):
+        plugins_metadata = json.dumps({
+            'errors': {
+                plugin: message,
+            },
+        })
+        if not plugin:
+            plugins_metadata = ''
+        build_response = BuildResponse({
+            'metadata': {
+                'annotations': {
+                    'plugins-metadata': plugins_metadata
+                }
+            }
+        })
+        assert build_response.get_error_message() == expected_error_message
