@@ -254,8 +254,6 @@ class TestBuildRequest(object):
                        "stop_autorebuild_if_disabled")
 
         assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
-                                "args", "target") == "koji-target"
-        assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
                                 "args", "hub") == "http://hub/"
 
         assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts",
@@ -364,8 +362,6 @@ class TestBuildRequest(object):
             get_plugin(plugins, "prebuild_plugins",
                        "stop_autorebuild_if_disabled")
 
-        assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
-                                "args", "target") == koji_target
         assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
                                 "args", "hub") == "http://hub/"
 
@@ -540,8 +536,6 @@ class TestBuildRequest(object):
             get_plugin(plugins, "prebuild_plugins",
                        "stop_autorebuild_if_disabled")
 
-        assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
-                                "args", "target") == "koji-target"
         assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
                                 "args", "hub") == "http://hub/"
 
@@ -892,8 +886,6 @@ class TestBuildRequest(object):
                        "stop_autorebuild_if_disabled")
 
         assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
-                                "args", "target") == "koji-target"
-        assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
                                 "args", "hub") == "http://hub/"
 
         with pytest.raises(NoSuchPluginException):
@@ -909,12 +901,11 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
 
-    @pytest.mark.parametrize(('hub', 'target', 'disabled'), [
-        ('http://hub/', 'koji-target', False),
-        (None, 'koji-target', True),
-        ('http://hub/', None, True),
+    @pytest.mark.parametrize(('hub', 'disabled'), [
+        ('http://hub/', False),
+        (None, True),
     ])
-    def test_render_bump_release(self, hub, target, disabled):
+    def test_render_bump_release(self, hub, disabled):
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -934,9 +925,6 @@ class TestBuildRequest(object):
         if hub:
             kwargs['kojihub'] = hub
 
-        if target:
-            kwargs['koji_target'] = target
-
         build_request = BuildRequest(INPUTS_PATH)
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -948,8 +936,6 @@ class TestBuildRequest(object):
                 get_plugin(plugins, "prebuild_plugins", "bump_release")
 
         else:
-            assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
-                                    "args", "target") == target
             assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
                                     "args", "hub") == hub
 

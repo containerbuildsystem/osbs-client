@@ -30,7 +30,6 @@
     },
     {
       "args": {
-        "target": "{{KOJI_TARGET}}",
         "hub": "{{KOJI_HUB}}"
       },
       "name": "bump_release"
