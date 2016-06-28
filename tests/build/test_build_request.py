@@ -1156,6 +1156,8 @@ class TestBuildRequest(object):
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
+        assert build_json["metadata"]["labels"]["git-branch"] is not None
+
         # Verify the triggers are now disabled
         assert "triggers" not in build_json["spec"]
 
