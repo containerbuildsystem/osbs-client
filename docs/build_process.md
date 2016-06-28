@@ -39,6 +39,11 @@ You can choose if you want to push built image into:
     registry_uri = registry.example.com/v1
     ```
 
+   if registry requires authentication, a dockercfg should be stored in the secret:
+   ```ini
+   registry_secret = dockercfg_secret
+   ```
+
  * pulp registry — can be configured with `pulp_registry_name`, atomic-reactor will `upload` image (as archive) and copies it into required repository
 
 
