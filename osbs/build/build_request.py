@@ -151,6 +151,8 @@ class BuildRequest(object):
         return False
 
     def set_label(self, name, value):
+        if not value:
+            value = ''
         self.template['metadata'].setdefault('labels', {})
         self.template['metadata']['labels'][name] = value
 
