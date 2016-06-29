@@ -151,6 +151,8 @@ class BuildRequest(object):
         return False
 
     def set_label(self, name, value):
+        if not value:
+            value = ''
         self.template['metadata'].setdefault('labels', {})
         self.template['metadata']['labels'][name] = value
 
@@ -692,7 +694,10 @@ class BuildRequest(object):
         # use case must be handled properly, the git URI must be taken into
         # account.
         self.set_label('git-repo-name', repo_name)
-        self.set_label('git-branch', self.spec.git_branch.value)
+        if self.spec.git_branch.value:
+            self.set_label('git-branch', self.spec.git_branch.value)
+        else:
+            self.set_label('git-branch', 'unknown')
 
         if self.spec.sources_command.value is not None:
             self.dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts",
