@@ -74,14 +74,3 @@ class TestBuildSpec(object):
         assert registry.uri == 'http://registry.example.com:5000'
         assert registry.docker_uri == 'registry.example.com:5000'
         assert registry.version == 'v2'
-
-    def test_labels(self):
-        kwargs = self.get_minimal_kwargs()
-        kwargs.update({
-            'labels': {'spam': 'maps'},
-        })
-
-        spec = BuildSpec()
-        spec.set_params(**kwargs)
-
-        assert spec.labels.value == {'spam': 'maps'}

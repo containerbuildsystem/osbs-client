@@ -68,6 +68,34 @@ class TestOSBS(object):
         image_id = images['buildroot:latest']
         assert not image_id.startswith("docker:")
 
+    def test_create_build_with_deprecated_params(self, osbs):
+        class MockParser(object):
+            labels = {'Name': 'fedora23/something'}
+            baseimage = 'fedora23/python'
+        (flexmock(utils)
+            .should_receive('get_df_parser')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(MockParser()))
+
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': TEST_USER,
+            'component': TEST_COMPONENT,
+            'target': TEST_TARGET,
+            'architecture': TEST_ARCH,
+            'yum_repourls': None,
+            'koji_task_id': None,
+            'scratch': False,
+            # Stuff that should be ignored and not cause erros
+            'labels': {'Release': 'bacon'},
+            'spam': 'maps',
+        }
+
+        response = osbs.create_build(**kwargs)
+        assert isinstance(response, BuildResponse)
+
     def test_create_prod_build(self, osbs):
         # TODO: test situation when a buildconfig already exists
         class MockParser(object):
@@ -346,33 +374,6 @@ build_image = {build_image}
                                      TEST_ARCH)
         img = req.json['spec']['strategy']['customStrategy']['from']['name']
         assert img == build_image
-
-    def test_explicit_labels(self, osbs):
-        class MockParser(object):
-            labels = {'Name': 'fedora23/something'}
-            baseimage = 'fedora23/python'
-        (flexmock(utils)
-            .should_receive('get_df_parser')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
-
-        flexmock(OSBS, _create_build_config_and_build=request_as_response)
-
-        key = 'Release'
-        value = '4'
-        req = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                     TEST_GIT_BRANCH, TEST_USER,
-                                     TEST_COMPONENT, TEST_TARGET,
-                                     TEST_ARCH,
-                                     labels={key: value})
-        env_vars = req.json['spec']['strategy']['customStrategy']['env']
-        plugins_var = [env_var for env_var in env_vars
-                       if env_var['name'] == 'ATOMIC_REACTOR_PLUGINS']
-        plugins = json.loads(plugins_var[0]['value'])
-        add = [plugin for plugin in plugins['prebuild_plugins']
-               if plugin['name'] == 'add_labels_in_dockerfile']
-        add_labels = add[0]['args']['labels']
-        assert add_labels[key] == value
 
     def test_get_existing_build_config_by_labels(self):
         build_config = {
