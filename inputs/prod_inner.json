@@ -18,7 +18,8 @@
     {
       "name": "add_filesystem",
       "args": {
-        "koji_hub": "{{KOJI_HUB}}"
+        "koji_hub": "{{KOJI_HUB}}",
+        "repos": []
       }
     },
     {
