@@ -414,6 +414,9 @@ class BuildRequest(object):
             if self.spec.proxy.value:
                 self.dj.dock_json_set_arg(phase, plugin, 'koji_proxyuser',
                                           self.spec.proxy.value)
+            if self.spec.yum_repourls.value:
+                self.dj.dock_json_set_arg(phase, plugin, 'repos',
+                                          self.spec.yum_repourls.value)
 
     def render_add_labels_in_dockerfile(self):
         phase = 'prebuild_plugins'

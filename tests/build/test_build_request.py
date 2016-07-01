@@ -1339,6 +1339,7 @@ class TestBuildRequest(object):
 
         kwargs = get_sample_prod_params()
         kwargs['base_image'] = 'koji/image-build'
+        kwargs['yum_repourls'] = ["http://example.com/my.repo"]
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
@@ -1352,6 +1353,7 @@ class TestBuildRequest(object):
             plugins, 'prebuild_plugins', 'add_filesystem', 'args')
         assert add_filesystem_args['koji_hub'] == kwargs['kojihub']
         assert add_filesystem_args['koji_proxyuser'] == kwargs['proxy']
+        assert add_filesystem_args['repos'] == kwargs['yum_repourls']
 
     def test_prod_non_custom_base_image(self, tmpdir):
         build_request = BuildRequest(INPUTS_PATH)
