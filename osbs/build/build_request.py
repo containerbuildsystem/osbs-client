@@ -436,12 +436,6 @@ class BuildRequest(object):
 
         self.dj.dock_json_merge_arg(phase, plugin, 'labels', implicit_labels)
 
-        explicit_labels = self.spec.labels.value
-        if explicit_labels:
-            logger.debug('Adding requested labels: %r', explicit_labels)
-            self.dj.dock_json_merge_arg(phase, plugin, "labels",
-                                        explicit_labels)
-
     def render_koji(self):
         """
         if there is yum repo specified, don't pick stuff from koji

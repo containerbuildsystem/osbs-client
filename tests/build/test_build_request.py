@@ -1275,33 +1275,6 @@ class TestBuildRequest(object):
                                                   koji_certs_secret_name)
         assert get_plugin(plugins, 'exit_plugins', 'koji_promote')['args']['koji_ssl_certs'] == mount_path
 
-    @pytest.mark.parametrize(('labels'), [
-        {'spam': 'maps'},
-        {'spam': 'maps', 'eggs': 'sgge'},
-        {}
-    ])
-    def test_prod_labels(self, labels):
-        expected_names = set(['distribution-scope', 'Vendor', 'Build_Host',
-                              'Architecture', 'Authoritative_Registry'])
-        for name in labels.keys():
-            expected_names.add(name)
-
-        build_request = BuildRequest(INPUTS_PATH)
-
-        kwargs = get_sample_prod_params()
-        kwargs['labels'] = labels
-        build_request.set_params(**kwargs)
-        build_json = build_request.render()
-
-        plugins = get_plugins_from_build_json(build_json)
-
-        add_labels_args = plugin_value_get(
-            plugins, 'prebuild_plugins', 'add_labels_in_dockerfile', 'args')
-
-        assert set(add_labels_args['labels'].keys()) == expected_names
-        for name, value in labels.items():
-            assert add_labels_args['labels'][name] == value
-
     @pytest.mark.parametrize(('base_image', 'is_custom'), [
         ('fedora', False),
         ('fedora:latest', False),

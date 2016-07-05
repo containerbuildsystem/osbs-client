@@ -142,7 +142,6 @@ class BuildSpec(object):
     authoritative_registry = BuildParam("authoritative_registry", allow_none=True)
     distribution_scope = BuildParam("distribution_scope", allow_none=True)
     registry_api_versions = BuildParam("registry_api_versions")
-    labels = BuildParam("labels", default={})
     koji_target = BuildParam("koji_target", allow_none=True)
     kojiroot = BuildParam("kojiroot", allow_none=True)
     kojihub = BuildParam("kojihub", allow_none=True)
@@ -203,7 +202,7 @@ class BuildSpec(object):
                    smtp_uri=None, nfs_server_path=None,
                    nfs_dest_dir=None, git_branch=None, base_image=None,
                    name_label=None, git_push_url=None, git_push_username=None,
-                   builder_build_json_dir=None, registry_api_versions=None, labels=None,
+                   builder_build_json_dir=None, registry_api_versions=None,
                    **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
@@ -255,7 +254,6 @@ class BuildSpec(object):
             raise OsbsValidationException("base_image must be provided")
         self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
         self.builder_build_json_dir.value = builder_build_json_dir
-        self.labels.value = labels
         if not name_label:
             raise OsbsValidationException("name_label must be provided")
         self.imagestream_name.value = name_label.replace('/', '-')
