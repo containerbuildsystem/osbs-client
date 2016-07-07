@@ -287,7 +287,7 @@ class Openshift(object):
         """
         url = self._build_url("builds/")
         logger.debug(build_json)
-        return self._post(url, data=build_json,
+        return self._post(url, data=json.dumps(build_json),
                           headers={"Content-Type": "application/json"})
 
     def cancel_build(self, build_id):

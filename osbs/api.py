@@ -12,6 +12,7 @@ import logging
 import os
 import sys
 import warnings
+import datetime
 from functools import wraps
 
 from osbs.build.build_request import BuildRequest
@@ -259,6 +260,19 @@ class OSBS(object):
                 msg = self._panic_msg_for_more_running_builds(build_config_name, running_builds)
             raise OsbsException(msg)
 
+    def _create_scratch_build(self, build_request):
+        logger.debug(build_request)
+        build_json = build_request.render()
+        build_json['kind'] = 'Build'
+        if 'spec' not in build_json.keys():
+            build_json['spec'] = {}
+        build_json['spec']['serviceAccount'] = 'builder'
+        build_json['metadata']['labels']['scratch'] = 'true'
+        build_config_name = 'scratch-%s' % datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        logger.debug('starting scratch build %s', build_config_name)
+        build_json['metadata']['name'] = build_config_name
+        return BuildResponse(self.os.create_build(build_json).json())
+
     def _create_build_config_and_build(self, build_request):
         build = None
 
@@ -314,7 +328,7 @@ class OSBS(object):
                           target,      # may be None
                           architecture=None, yum_repourls=None,
                           koji_task_id=None,
-                          scratch=False,
+                          scratch=None,
                           **kwargs):
         """
         Create a production build
@@ -381,10 +395,13 @@ class OSBS(object):
             git_push_url=self.build_conf.get_git_push_url(),
             git_push_username=self.build_conf.get_git_push_username(),
             builder_build_json_dir=self.build_conf.get_builder_build_json_store(),
-            scratch=scratch,
+            scratch=self.build_conf.get_scratch(scratch),
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
-        response = self._create_build_config_and_build(build_request)
+        if build_request.scratch:
+            response = self._create_scratch_build(build_request)
+        else:
+            response = self._create_build_config_and_build(build_request)
         logger.debug(response.json)
         return response
 
