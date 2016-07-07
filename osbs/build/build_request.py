@@ -50,7 +50,7 @@ class BuildRequest(object):
         self._resource_limits = None
         self._openshift_required_version = parse_version('1.0.6')
         # For the koji "scratch" build type
-        self.scratch = False
+        self.scratch = None
         self.base_image = None
 
     def set_params(self, **kwargs):

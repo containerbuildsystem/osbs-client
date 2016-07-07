@@ -366,6 +366,10 @@ class Configuration(object):
     def get_proxy(self):
         return self._get_value("yum_proxy", self.conf_section, "yum_proxy")
 
+    def get_scratch(self, default_value):
+        return self._get_value("scratch", self.conf_section, "scratch",
+                               default=default_value, is_bool_val=True)
+
     def get_oauth2_token(self):
         # token overrides token_file
         # either in kwargs overrides cli args

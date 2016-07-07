@@ -15,6 +15,7 @@ import pytest
 import shutil
 import six
 import copy
+import datetime
 from tempfile import NamedTemporaryFile
 
 from osbs.api import OSBS
@@ -514,7 +515,8 @@ build_image = {build_image}
         build_json = {'apiVersion': 'spam'}
         build_request = flexmock(
             render=lambda: build_json,
-            is_auto_instantiated=lambda: False)
+            is_auto_instantiated=lambda: False,
+            scratch=False)
 
         with pytest.raises(OsbsValidationException):
             osbs._create_build_config_and_build(build_request)
@@ -541,7 +543,8 @@ build_image = {build_image}
 
         build_request = flexmock(
             render=lambda: build_json,
-            is_auto_instantiated=lambda: False)
+            is_auto_instantiated=lambda: False,
+            scratch=False)
 
         (flexmock(osbs)
             .should_receive('_get_existing_build_config')
@@ -573,7 +576,8 @@ build_image = {build_image}
 
         build_request = flexmock(
             render=lambda: build_json,
-            is_auto_instantiated=lambda: False)
+            is_auto_instantiated=lambda: False,
+            scratch=False)
 
         (flexmock(osbs)
             .should_receive('_get_existing_build_config')
@@ -611,7 +615,8 @@ build_image = {build_image}
 
         build_request = flexmock(
             render=lambda: build_json,
-            is_auto_instantiated=lambda: False)
+            is_auto_instantiated=lambda: False,
+            scratch=False)
 
         (flexmock(osbs)
             .should_receive('_get_existing_build_config')
@@ -654,7 +659,8 @@ build_image = {build_image}
 
         build_request = flexmock(
             render=lambda: build_json,
-            is_auto_instantiated=lambda: False)
+            is_auto_instantiated=lambda: False,
+            scratch=False)
 
         (flexmock(osbs)
             .should_receive('_get_existing_build_config')
@@ -693,7 +699,8 @@ build_image = {build_image}
 
         build_request = flexmock(
             render=lambda: build_json,
-            is_auto_instantiated=lambda: True)
+            is_auto_instantiated=lambda: True,
+            scratch=False)
 
         (flexmock(osbs)
             .should_receive('_get_existing_build_config')
@@ -722,3 +729,91 @@ build_image = {build_image}
 
         build_response = osbs._create_build_config_and_build(build_request)
         assert build_response.json == {'spam': 'maps'}
+
+    def test_scratch_build_config(self):
+        config = Configuration()
+        osbs = OSBS(config, config)
+
+        build_json = {
+            'apiVersion': osbs.os_conf.get_openshift_api_version(),
+
+            'metadata': {
+                'name': 'build',
+                'labels': {
+                    'git-repo-name': 'reponame',
+                    'git-branch': 'branch',
+                },
+            },
+        }
+
+        build_request = flexmock(
+            render=lambda: build_json,
+            is_auto_instantiated=lambda: False,
+            scratch=True)
+
+        updated_build_json = copy.deepcopy(build_json)
+        updated_build_json['kind'] = 'Build'
+        updated_build_json['metadata']['labels']['scratch'] = 'true'
+        updated_build_json['spec'] = {}
+        updated_build_json['spec']['serviceAccount'] = 'builder'
+        build_name = 'scratch-%s' % datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        updated_build_json['metadata']['name'] = build_name
+
+        (flexmock(osbs.os)
+            .should_receive('create_build')
+            .with_args(updated_build_json)
+            .once()
+            .and_return(flexmock(json=lambda: {'spam': 'maps'})))
+
+        (flexmock(osbs.os)
+            .should_receive('create_build_config')
+            .never())
+
+        (flexmock(osbs.os)
+            .should_receive('update_build_config')
+            .never())
+
+        build_response = osbs._create_scratch_build(build_request)
+        assert build_response.json == {'spam': 'maps'}
+
+    def test_scratch_param_to_create_build(self):
+        config = Configuration()
+        osbs = OSBS(config, config)
+
+        class MockParser(object):
+            labels = {'Name': 'fedora23/something'}
+            baseimage = 'fedora23/python'
+
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': TEST_USER,
+            'component': TEST_COMPONENT,
+            'target': TEST_TARGET,
+            'architecture': TEST_ARCH,
+            'yum_repourls': None,
+            'koji_task_id': None,
+            'scratch': True,
+        }
+
+        (flexmock(utils)
+            .should_receive('get_df_parser')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(MockParser()))
+
+        (flexmock(osbs)
+            .should_receive('_create_scratch_build')
+            .once()
+            .and_return(flexmock(json=lambda: {'spam': 'maps'})))
+
+        (flexmock(osbs.os)
+            .should_receive('create_build_config')
+            .never())
+
+        (flexmock(osbs.os)
+            .should_receive('update_build_config')
+            .never())
+
+        build_response = osbs.create_build(**kwargs)
+        assert build_response.json() == {'spam': 'maps'}
