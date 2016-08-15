@@ -81,6 +81,12 @@
   ],
   "postbuild_plugins": [
     {
+      "args": {
+        "image_id": "BUILT_IMAGE_ID"
+      },
+      "name": "all_rpm_packages"
+    },
+    {
       "name": "tag_by_labels"
     },
     {
@@ -116,12 +122,6 @@
         "load_exported_image": true,
         "method": "gzip"
       }
-    },
-    {
-      "args": {
-        "image_id": "BUILT_IMAGE_ID"
-      },
-      "name": "all_rpm_packages"
     },
     {
       "args": {
