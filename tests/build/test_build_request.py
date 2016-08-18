@@ -276,6 +276,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
         assert 'sourceSecret' not in build_json["spec"]["source"]
         assert plugin_value_get(plugins, "prebuild_plugins", "add_yum_repo_by_url",
                                 "args", "repourls") == ["http://example.com/my.repo"]
@@ -396,6 +398,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
         assert get_plugin(plugins, "exit_plugins", "koji_promote")
         assert plugin_value_get(plugins, "exit_plugins", "koji_promote", "args",
                                 "target") == koji_target
@@ -478,6 +482,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "exit_plugins", "koji_promote")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
         assert 'sourceSecret' not in build_json["spec"]["source"]
 
         labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile",
@@ -548,11 +554,14 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries") == {}
 
     @pytest.mark.parametrize('registry_secrets', [None, ['registry-secret']])
-    def test_render_pulp_sync(self, registry_secrets):
+    @pytest.mark.parametrize('source_registry', [None, 'registry.example.com', 'localhost'])
+    def test_render_pulp_sync(self, registry_secrets, source_registry):
         build_request = BuildRequest(INPUTS_PATH)
         # OpenShift Origin >= 1.0.6 is required for v2
         build_request.set_openshift_required_version(parse_version('1.0.6'))
@@ -580,6 +589,9 @@ class TestBuildRequest(object):
             'pulp_registry': pulp_env,
             'pulp_secret': pulp_secret,
         }
+        if source_registry:
+            kwargs['source_registry_uri'] = source_registry
+
         build_request.set_params(**kwargs)
         build_json = build_request.render()
         plugins = get_plugins_from_build_json(build_json)
@@ -591,6 +603,25 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, 'postbuild_plugins',
                                 'pulp_sync', 'args',
                                 'docker_registry') == registry_uri
+
+        if source_registry and source_registry in kwargs['registry_uri']:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
+        else:
+            assert get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
+            assert 'https://registry.example.com' in plugin_value_get(plugins, 'exit_plugins',
+                                                                      'delete_from_registry',
+                                                                      'args', 'registries')
+
+            if registry_secrets:
+                assert plugin_value_get(plugins, 'exit_plugins',
+                                        'delete_from_registry', 'args',
+                                        'registries', 'https://registry.example.com', 'secret')
+            else:
+                assert plugin_value_get(plugins, 'exit_plugins',
+                                        'delete_from_registry', 'args',
+                                        'registries', 'https://registry.example.com') == {}
+
 
         assert 'sourceSecret' not in build_json['spec']['source']
         if registry_secrets:

@@ -340,8 +340,9 @@ class BuildRequest(object):
 
         if 'v2' not in versions:
             # Remove v2-only plugins
-            logger.info("removing v2-only plugin: pulp_sync")
+            logger.info("removing v2-only plugins: pulp_sync, delete_from_registry")
             self.dj.remove_plugin('postbuild_plugins', 'pulp_sync')
+            self.dj.remove_plugin('exit_plugins', 'delete_from_registry')
 
             # remove extra tag_and_push config
             self.remove_tag_and_push_registries(tag_and_push_registries, 'v2')
@@ -558,7 +559,8 @@ class BuildRequest(object):
 
     def render_pulp_sync(self):
         """
-        If a pulp registry is specified, use the pulp plugin
+        If a pulp registry is specified, use the pulp plugin as well as the
+        delete_from_registry to delete the image after sync
         """
         if not self.dj.dock_json_has_plugin_conf('postbuild_plugins',
                                                  'pulp_sync'):
@@ -598,11 +600,30 @@ class BuildRequest(object):
             if self.spec.pulp_secret.value is None:
                 raise OsbsValidationException("Pulp registry specified "
                                               "but no auth config")
+
+            source_registry = self.spec.source_registry_uri.value
+            perform_delete = (source_registry is None or
+                              source_registry.docker_uri != registry.docker_uri)
+            if perform_delete:
+                delete_registries = {docker_registry: {}}
+                if registry_secret:
+                    delete_registries[docker_registry]['secret'] = \
+                        os.path.join(SECRETS_PATH, registry_secret)
+                    # tag_and_push configured the registry secret, no neet to set it again
+
+                self.dj.dock_json_set_arg('exit_plugins', 'delete_from_registry',
+                                          'registries', delete_registries)
+            else:
+                logger.info("removing delete_from_registry from request, "
+                            "source and target registry are identical")
+                self.dj.remove_plugin("exit_plugins", "delete_from_registry")
         else:
             # If no pulp registry is specified, don't run the pulp plugin
-            logger.info("removing pulp_sync from request, "
+            logger.info("removing pulp_sync+delete_from_registry from request, "
                         "requires pulp_registry and a v2 registry")
             self.dj.remove_plugin("postbuild_plugins", "pulp_sync")
+            self.dj.remove_plugin("exit_plugins", "delete_from_registry")
+
 
     def render_import_image(self, use_auth=None):
         """
