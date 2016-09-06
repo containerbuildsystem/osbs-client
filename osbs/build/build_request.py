@@ -221,6 +221,18 @@ class BuildRequest(object):
                                       "store_metadata_in_osv3",
                                       "use_auth", use_auth)
 
+    def render_unique_tag_only(self):
+
+        if not self.spec.unique_tag_only.value:
+            return
+
+        if self.dj.dock_json_has_plugin_conf('postbuild_plugins',
+                                             'tag_by_labels'):
+            self.dj.dock_json_set_arg('postbuild_plugins', 'tag_by_labels',
+                                      'unique_tag_only', True)
+
+        self.dj.remove_plugin('postbuild_plugins', 'tag_from_config')
+
     def set_secret_for_plugin(self, plugin, secret):
         has_plugin_conf = self.dj.dock_json_has_plugin_conf(plugin[0],
                                                             plugin[1])
@@ -678,6 +690,8 @@ class BuildRequest(object):
             self.template['spec']['output']['to']['name'] = self.spec.image_tag.value
 
         self.render_tag_and_push_registries()
+
+        self.render_unique_tag_only()
 
         if 'triggers' in self.template['spec']:
             imagechange = self.template['spec']['triggers'][0]['imageChange']

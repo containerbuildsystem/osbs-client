@@ -158,6 +158,7 @@ class BuildSpec(object):
     git_push_url = BuildParam("git_push_url", allow_none=True)
     git_push_username = BuildParam("git_push_username", allow_none=True)
     builder_build_json_dir = BuildParam("builder_build_json_dir", allow_none=True)
+    unique_tag_only = BuildParam("unique_tag_only", allow_none=True)
 
     def __init__(self):
         self.required_params = [
@@ -203,6 +204,7 @@ class BuildSpec(object):
                    nfs_dest_dir=None, git_branch=None, base_image=None,
                    name_label=None, git_push_url=None, git_push_username=None,
                    builder_build_json_dir=None, registry_api_versions=None,
+                   unique_tag_only=None,
                    **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
@@ -283,6 +285,8 @@ class BuildSpec(object):
             self.koji_target.value or 'none',
             timestamp
         )
+
+        self.unique_tag_only.value = unique_tag_only
 
     def validate(self):
         logger.info("Validating params of %s", self.__class__.__name__)

@@ -150,3 +150,49 @@ class TestConfiguration(object):
                                      **kwargs)
 
                 assert conf.get_oauth2_token() == expected
+
+    @pytest.mark.parametrize(('config', 'kwargs', 'cli_args', 'expected'), [
+        ({'default': {}},
+         {},
+         {},
+         {'get_unique_tag_only': False}),
+
+        ({'default': {'unique_tag_only': 'true'}},
+         {},
+         {},
+         {'get_unique_tag_only': True}),
+
+        ({'default': {}},
+         {'unique_tag_only': 'true'},
+         {},
+         {'get_unique_tag_only': True}),
+
+        ({'default': {}},
+         {},
+         {'unique_tag_only': 'true'},
+         {'get_unique_tag_only': True}),
+
+        ({'default': {'unique_tag_only': 'false'}},
+         {},
+         {},
+         {'get_unique_tag_only': False}),
+
+        ({'default': {}},
+         {'unique_tag_only': 'false'},
+         {},
+         {'get_unique_tag_only': False}),
+
+        ({'default': {}},
+         {},
+         {'unique_tag_only': 'false'},
+         {'get_unique_tag_only': False}),
+
+    ])
+    def test_param_retrieval(self, config, kwargs, cli_args, expected):
+        with self.build_cli_args(cli_args) as args:
+            with self.config_file(config) as config_file:
+                conf = Configuration(conf_file=config_file, cli_args=args,
+                                     **kwargs)
+
+                for fn, value in expected.items():
+                    assert getattr(conf, fn)() == value
