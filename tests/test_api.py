@@ -111,6 +111,34 @@ class TestOSBS(object):
                                           TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
         assert isinstance(response, BuildResponse)
 
+    @pytest.mark.parametrize('unique_tag_only', [True, False, None])
+    def test_create_prod_build_unique_tag_only(self, osbs, unique_tag_only):
+        class MockParser(object):
+            labels = {'Name': 'fedora23/something'}
+            baseimage = 'fedora23/python'
+        (flexmock(utils)
+            .should_receive('get_df_parser')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(MockParser()))
+
+        original_create_build_config_and_build = osbs._create_build_config_and_build
+        def check_build_request(build_request):
+            assert build_request.spec.unique_tag_only.value == unique_tag_only
+            return original_create_build_config_and_build(build_request)
+
+        (flexmock(osbs)
+            .should_receive('_create_build_config_and_build')
+            .replace_with(check_build_request)
+            .once())
+        (flexmock(osbs.build_conf)
+            .should_receive('get_unique_tag_only')
+            .and_return(unique_tag_only))
+        response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                          TEST_GIT_BRANCH, TEST_USER,
+                                          TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
+        assert isinstance(response, BuildResponse)
+
+
     def test_create_prod_build_missing_name_label(self, osbs):
         class MockParser(object):
             labels = {}

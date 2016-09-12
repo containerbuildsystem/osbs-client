@@ -370,6 +370,10 @@ class Configuration(object):
         return self._get_value("scratch", self.conf_section, "scratch",
                                default=default_value, is_bool_val=True)
 
+    def get_unique_tag_only(self):
+        return self._get_value("unique_tag_only", self.conf_section, "unique_tag_only",
+                               default=False, is_bool_val=True)
+
     def get_oauth2_token(self):
         # token overrides token_file
         # either in kwargs overrides cli args

@@ -79,6 +79,14 @@ def get_plugin(plugins, plugin_type, plugin_name):
         raise NoSuchPluginException()
 
 
+def has_plugin(plugins, plugin_type, plugin_name):
+    try:
+        get_plugin(plugins, plugin_type, plugin_name)
+    except NoSuchPluginException:
+        return False
+    return True
+
+
 def plugin_value_get(plugins, plugin_type, plugin_name, *args):
     result = get_plugin(plugins, plugin_type, plugin_name)
     for arg in args:
@@ -969,6 +977,42 @@ class TestBuildRequest(object):
         else:
             assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
                                     "args", "hub") == hub
+
+    @pytest.mark.parametrize('unique_tag_only', [False, None, True])
+    def test_render_unique_tag_only(self, unique_tag_only):
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'base_image': 'fedora:latest',
+            'name_label': 'fedora/resultingimage',
+            'openshift_uri': "http://openshift/",
+            'registry_api_versions': ['v1', 'v2'],
+        }
+
+        if unique_tag_only is not None:
+            kwargs['unique_tag_only'] = unique_tag_only
+
+        build_request = BuildRequest(INPUTS_PATH)
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+        strategy = build_json['spec']['strategy']['customStrategy']['env']
+        plugins = get_plugins_from_build_json(build_json)
+
+        if unique_tag_only:
+            assert plugin_value_get(plugins,
+                                    'postbuild_plugins',
+                                    'tag_by_labels',
+                                    'args',
+                                    'unique_tag_only') == True
+            assert not has_plugin(plugins, 'postbuild_plugins', 'tag_from_config')
+        else:
+            tag_and_push_args = get_plugin(plugins,
+                                           'postbuild_plugins',
+                                           'tag_and_push')['args']
+            assert 'unique_tag_only' not in tag_and_push_args
+            assert has_plugin(plugins, 'postbuild_plugins', 'tag_from_config')
 
     def test_render_prod_with_pulp_no_auth(self):
         """
