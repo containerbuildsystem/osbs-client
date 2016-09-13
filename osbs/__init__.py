@@ -10,7 +10,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 import logging
 
 
-__version__ = "0.29"
+__version__ = "0.30"
 
 
 def set_logging(name="osbs", level=logging.DEBUG):
