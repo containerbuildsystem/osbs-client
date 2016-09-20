@@ -301,14 +301,14 @@ class TestBuildRequest(object):
                                   "args", "labels")
 
         assert labels is not None
-        assert labels['Authoritative_Registry'] == authoritative_registry
-        assert labels['Build_Host'] == build_host
-        assert labels['Vendor'] == vendor
+        assert labels['authoritative-source-url'] == authoritative_registry
+        assert labels['com.redhat.build-host'] == build_host
+        assert labels['vendor'] == vendor
         assert labels['distribution-scope'] == distribution_scope
         if architecture:
-            assert labels['Architecture'] is not None
+            assert labels['architecture'] is not None
         else:
-            assert 'Architecture' not in labels
+            assert 'architecture' not in labels
 
         rendered_build_image = build_json["spec"]["strategy"]["customStrategy"]["from"]["name"]
         if not build_imagestream:
@@ -417,10 +417,10 @@ class TestBuildRequest(object):
                                   "args", "labels")
 
         assert labels is not None
-        assert labels['Architecture'] is not None
-        assert labels['Authoritative_Registry'] is not None
-        assert labels['Build_Host'] is not None
-        assert labels['Vendor'] is not None
+        assert labels['architecture'] is not None
+        assert labels['authoritative-source-url'] is not None
+        assert labels['com.redhat.build-host'] is not None
+        assert labels['vendor'] is not None
         assert labels['distribution-scope'] is not None
 
     def test_render_prod_without_koji_request(self):
@@ -498,10 +498,10 @@ class TestBuildRequest(object):
                                   "args", "labels")
 
         assert labels is not None
-        assert labels['Architecture'] is not None
-        assert labels['Authoritative_Registry'] is not None
-        assert labels['Build_Host'] is not None
-        assert labels['Vendor'] is not None
+        assert labels['architecture'] is not None
+        assert labels['authoritative-source-url'] is not None
+        assert labels['com.redhat.build-host'] is not None
+        assert labels['vendor'] is not None
         assert labels['distribution-scope'] is not None
 
     def test_render_prod_with_secret_request(self):
