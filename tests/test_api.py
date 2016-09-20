@@ -97,10 +97,11 @@ class TestOSBS(object):
         response = osbs.create_build(**kwargs)
         assert isinstance(response, BuildResponse)
 
-    def test_create_prod_build(self, osbs):
+    @pytest.mark.parametrize('name_label_name', ['Name', 'name'])
+    def test_create_prod_build(self, osbs, name_label_name):
         # TODO: test situation when a buildconfig already exists
         class MockParser(object):
-            labels = {'Name': 'fedora23/something'}
+            labels = {name_label_name: 'fedora23/something'}
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')

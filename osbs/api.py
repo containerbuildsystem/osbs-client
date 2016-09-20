@@ -347,10 +347,12 @@ class OSBS(object):
         """
         df_parser = utils.get_df_parser(git_uri, git_ref, git_branch=git_branch)
         build_request = self.get_build_request()
-        name_label_name = 'Name'
-        try:
-            name_label = df_parser.labels[name_label_name]
-        except KeyError:
+        labels = df_parser.labels
+        for name_label_name in ['name', 'Name']:
+            if name_label_name in labels:
+                name_label = labels[name_label_name]
+                break
+        else:
             raise OsbsValidationException("required label '{name}' missing "
                                           "from Dockerfile"
                                           .format(name=name_label_name))
