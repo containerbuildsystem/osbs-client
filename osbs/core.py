@@ -12,7 +12,6 @@ import os
 import numbers
 import time
 import base64
-import pycurl
 
 import logging
 from osbs.kerberos_ccache import kerberos_ccache_init
@@ -22,8 +21,8 @@ from osbs.constants import WATCH_MODIFIED, WATCH_DELETED, WATCH_ERROR
 from osbs.constants import (SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
                             SERVICEACCOUNT_CACRT)
 from osbs.exceptions import (OsbsResponseException, OsbsException,
-                             OsbsWatchBuildNotFound, OsbsAuthException,
-                             OsbsNetworkException)
+                             OsbsWatchBuildNotFound, OsbsAuthException)
+from osbs.http import decoded_json
 from osbs.utils import graceful_chain_get
 
 try:
@@ -48,7 +47,7 @@ def check_response(response):
         if hasattr(response, 'content'):
             content = response.content
         else:
-            content = ''.join(response.iter_lines())
+            content = ''.join(decoded_json(response.iter_lines()))
 
         logger.error("[%d] %s", response.status_code, content)
         raise OsbsResponseException(message=content, status_code=response.status_code)
@@ -432,17 +431,13 @@ class Openshift(object):
             try:
                 response = self._get(buildlogs_url, stream=1,
                                      headers={'Connection': 'close'})
-            except OsbsNetworkException as ex:
-                # pycurl reports 'empty reply from server' as
-                # FOLLOWLOCATION. Handle this as though there were no
-                # lines returned.
-                if ex.status_code != pycurl.FOLLOWLOCATION:
-                    raise
-            else:
                 check_response(response)
-                for line in response.iter_lines():
+
+                for line in decoded_json(response.iter_lines()):
                     last_activity = time.time()
                     yield line
+            except httplib.IncompleteRead:
+                pass
 
             idle = time.time() - last_activity
             logger.debug("connection closed after %ds", idle)
@@ -578,7 +573,7 @@ class Openshift(object):
         while True:
             with self._get(url, stream=True, headers={'Connection': 'close'}) as response:
                 check_response(response)
-                for line in response.iter_lines():
+                for line in decoded_json(response.iter_lines()):
                     logger.debug(line)
                     try:
                         j = json.loads(line)

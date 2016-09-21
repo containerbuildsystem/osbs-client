@@ -68,7 +68,8 @@ BuildRequires:  python-pytest-capturelog
 BuildRequires:  python-flexmock
 BuildRequires:  python-six
 BuildRequires:  python-dockerfile-parse
-BuildRequires:  python-pycurl
+BuildRequires:  python-requests
+BuildRequires:  python-requests-kerberos
 %endif # with_check
 
 %if 0%{?with_python3}
@@ -81,7 +82,8 @@ BuildRequires:  python3-pytest-capturelog
 BuildRequires:  python3-flexmock
 BuildRequires:  python3-six
 BuildRequires:  python3-dockerfile-parse
-BuildRequires:  python3-pycurl
+BuildRequires:  python3-requests
+BuildRequires:  python3-requests-kerberos
 %endif # with_check
 %endif # with_python3
 
@@ -99,7 +101,8 @@ Summary:        Python 2 module for OpenShift Build Service
 Group:          Development/Tools
 License:        BSD
 Requires:       python-dockerfile-parse
-Requires:       python-pycurl
+Requires:       python-requests
+Requires:       python-requests-kerberos
 Requires:       python-setuptools
 Requires:       krb5-workstation
 %if 0%{?rhel} && 0%{?rhel} <= 6
@@ -121,7 +124,8 @@ Summary:        Python 3 module for OpenShift Build Service
 Group:          Development/Tools
 License:        BSD
 Requires:       python3-dockerfile-parse
-Requires:       python3-pycurl
+Requires:       python3-requests
+Requires:       python3-requests-kerberos
 Requires:       python3-dateutil
 Requires:       python3-setuptools
 Requires:       krb5-workstation
