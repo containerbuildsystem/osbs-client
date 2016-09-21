@@ -439,8 +439,6 @@ class BuildRequest(object):
             'vendor': self.spec.vendor,
             'authoritative-source-url': self.spec.authoritative_registry,
             'distribution-scope': self.spec.distribution_scope,
-            'com.redhat.build-host': self.spec.build_host,
-            'architecture': self.spec.architecture,
         }
 
         for label, spec in label_spec.items():
