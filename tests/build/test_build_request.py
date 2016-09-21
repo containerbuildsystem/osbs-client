@@ -45,9 +45,7 @@ def get_sample_prod_params():
         'kojiroot': 'http://root/',
         'kojihub': 'http://hub/',
         'sources_command': 'make',
-        'architecture': 'x86_64',
         'vendor': 'Foo Vendor',
-        'build_host': 'our.build.host.example.com',
         'authoritative_registry': 'registry.example.com',
         'distribution_scope': 'authoritative-source-only',
         'registry_api_versions': ['v1'],
@@ -192,10 +190,6 @@ class TestBuildRequest(object):
         None,
         'http://proxy.example.com',
     ])
-    @pytest.mark.parametrize('architecture', [
-        None,
-        'x86_64',
-    ])
     @pytest.mark.parametrize('build_image', [
         None,
         'ultimate-buildroot:v1.0'
@@ -204,11 +198,10 @@ class TestBuildRequest(object):
         None,
         'buildroot-stream:v1.0'
     ])
-    def test_render_prod_request_with_repo(self, architecture, build_image, build_imagestream, proxy):
+    def test_render_prod_request_with_repo(self, build_image, build_imagestream, proxy):
         build_request = BuildRequest(INPUTS_PATH)
         name_label = "fedora/resultingimage"
         vendor = "Foo Vendor"
-        build_host = "our.build.host.example.com"
         authoritative_registry = "registry.example.com"
         distribution_scope = "authoritative-source-only"
         koji_task_id = 4756
@@ -230,9 +223,7 @@ class TestBuildRequest(object):
             'kojihub': "http://hub/",
             'koji_task_id': koji_task_id,
             'sources_command': "make",
-            'architecture': architecture,
             'vendor': vendor,
-            'build_host': build_host,
             'authoritative_registry': authoritative_registry,
             'distribution_scope': distribution_scope,
             'yum_repourls': ["http://example.com/my.repo"],
@@ -301,14 +292,9 @@ class TestBuildRequest(object):
                                   "args", "labels")
 
         assert labels is not None
-        assert labels['Authoritative_Registry'] == authoritative_registry
-        assert labels['Build_Host'] == build_host
-        assert labels['Vendor'] == vendor
+        assert labels['authoritative-source-url'] == authoritative_registry
+        assert labels['vendor'] == vendor
         assert labels['distribution-scope'] == distribution_scope
-        if architecture:
-            assert labels['Architecture'] is not None
-        else:
-            assert 'Architecture' not in labels
 
         rendered_build_image = build_json["spec"]["strategy"]["customStrategy"]["from"]["name"]
         if not build_imagestream:
@@ -341,9 +327,7 @@ class TestBuildRequest(object):
             'kojiroot': "http://root/",
             'kojihub': "http://hub/",
             'sources_command': "make",
-            'architecture': "x86_64",
             'vendor': "Foo Vendor",
-            'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
@@ -417,10 +401,8 @@ class TestBuildRequest(object):
                                   "args", "labels")
 
         assert labels is not None
-        assert labels['Architecture'] is not None
-        assert labels['Authoritative_Registry'] is not None
-        assert labels['Build_Host'] is not None
-        assert labels['Vendor'] is not None
+        assert labels['authoritative-source-url'] is not None
+        assert labels['vendor'] is not None
         assert labels['distribution-scope'] is not None
 
     def test_render_prod_without_koji_request(self):
@@ -440,9 +422,7 @@ class TestBuildRequest(object):
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
             'sources_command': "make",
-            'architecture': "x86_64",
             'vendor': "Foo Vendor",
-            'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
@@ -498,10 +478,8 @@ class TestBuildRequest(object):
                                   "args", "labels")
 
         assert labels is not None
-        assert labels['Architecture'] is not None
-        assert labels['Authoritative_Registry'] is not None
-        assert labels['Build_Host'] is not None
-        assert labels['Vendor'] is not None
+        assert labels['authoritative-source-url'] is not None
+        assert labels['vendor'] is not None
         assert labels['distribution-scope'] is not None
 
     def test_render_prod_with_secret_request(self):
@@ -524,9 +502,7 @@ class TestBuildRequest(object):
             'kojiroot': "http://root/",
             'kojihub': "http://hub/",
             'sources_command': "make",
-            'architecture': "x86_64",
             'vendor': "Foo Vendor",
-            'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
@@ -588,7 +564,6 @@ class TestBuildRequest(object):
             'registry_uri': registry_uri + registry_ver,
             'openshift_uri': "http://openshift/",
             'sources_command': "make",
-            'architecture': "x86_64",
             'vendor': "Foo Vendor",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
@@ -663,9 +638,7 @@ class TestBuildRequest(object):
             'kojiroot': "http://root/",
             'kojihub': "http://hub/",
             'sources_command': "make",
-            'architecture': "x86_64",
             'vendor': "Foo Vendor",
-            'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
@@ -725,9 +698,7 @@ class TestBuildRequest(object):
             'kojiroot': "http://root/",
             'kojihub': "http://hub/",
             'sources_command': "make",
-            'architecture': "x86_64",
             'vendor': "Foo Vendor",
-            'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'pdc_secret': 'foo',
@@ -781,9 +752,7 @@ class TestBuildRequest(object):
             'kojiroot': "http://root/",
             'kojihub': "http://hub/",
             'sources_command': "make",
-            'architecture': "x86_64",
             'vendor': "Foo Vendor",
-            'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': registry_api_versions,
@@ -887,9 +856,7 @@ class TestBuildRequest(object):
             'kojiroot': "http://root/",
             'kojihub': "http://hub/",
             'sources_command': "make",
-            'architecture': "x86_64",
             'vendor': "Foo Vendor",
-            'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
@@ -1031,9 +998,7 @@ class TestBuildRequest(object):
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
             'sources_command': "make",
-            'architecture': "x86_64",
             'vendor': "Foo Vendor",
-            'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'pulp_registry': "foo",
@@ -1106,9 +1071,7 @@ class TestBuildRequest(object):
             'kojiroot': "http://root/",
             'kojihub': "http://hub/",
             'sources_command': "make",
-            'architecture': "x86_64",
             'vendor': "Foo Vendor",
-            'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
@@ -1201,9 +1164,7 @@ class TestBuildRequest(object):
             'kojiroot': "http://root/",
             'kojihub': "http://hub/",
             'sources_command': "make",
-            'architecture': "x86_64",
             'vendor': "Foo Vendor",
-            'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
@@ -1248,9 +1209,7 @@ class TestBuildRequest(object):
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
             'sources_command': "make",
-            'architecture': "x86_64",
             'vendor': "Foo Vendor",
-            'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
@@ -1324,9 +1283,7 @@ class TestBuildRequest(object):
             'kojihub': "http://hub/",
             'sources_command': "make",
             'koji_task_id': koji_task_id,
-            'architecture': "x86_64",
             'vendor': "Foo Vendor",
-            'build_host': "our.build.host.example.com",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],

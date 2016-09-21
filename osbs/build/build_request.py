@@ -436,11 +436,9 @@ class BuildRequest(object):
         plugin = 'add_labels_in_dockerfile'
         implicit_labels = {}
         label_spec = {
-            'Vendor': self.spec.vendor,
-            'Authoritative_Registry': self.spec.authoritative_registry,
+            'vendor': self.spec.vendor,
+            'authoritative-source-url': self.spec.authoritative_registry,
             'distribution-scope': self.spec.distribution_scope,
-            'Build_Host': self.spec.build_host,
-            'Architecture': self.spec.architecture,
         }
 
         for label, spec in label_spec.items():
