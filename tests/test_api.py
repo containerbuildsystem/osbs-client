@@ -243,6 +243,19 @@ class TestOSBS(object):
         prodwithoutkoji = osbs.get_build_request("prod-without-koji")
         assert isinstance(prodwithoutkoji, BuildRequest)
 
+    def test_create_build_from_buildrequest(self, osbs):
+        api_version = osbs.os_conf.get_openshift_api_version()
+        build_json = {
+            'apiVersion': api_version,
+        }
+        build_request = flexmock(
+            render=lambda: build_json,
+            set_openshift_required_version=lambda x: api_version,
+            is_auto_instantiated=lambda: False,
+            scratch=False)
+        response = osbs.create_build_from_buildrequest(build_request)
+        assert isinstance(response, BuildResponse)
+
     def test_set_labels_on_build_api(self, osbs):
         labels = {'label1': 'value1', 'label2': 'value2'}
         response = osbs.set_labels_on_build(TEST_BUILD, labels)
