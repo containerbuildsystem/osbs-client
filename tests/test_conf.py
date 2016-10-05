@@ -8,8 +8,10 @@ of the BSD license. See the LICENSE file for details.
 
 from collections import namedtuple
 from contextlib import contextmanager
+from flexmock import flexmock
 import os
 from osbs.conf import Configuration
+from osbs import utils
 import pytest
 from tempfile import NamedTemporaryFile
 
@@ -50,99 +52,145 @@ class TestConfiguration(object):
         args_tuple = namedtuple('args', args.keys())
         yield args_tuple(**args)
 
-    @pytest.mark.parametrize(('config', 'kwargs', 'cli_args', 'expected'), [
+    @pytest.mark.parametrize(('config', 'kwargs', 'cli_args',
+                              'login', 'expected'), [
         ({'default': {'token': 'conf'}},
          {},
          {},
+         None,
          'conf'),
 
         ({'default': {'token_file': 'conf_file'}},
          {},
          {},
+         None,
          'conf_file'),
 
         ({'default': {'token': 'conf',
                       'token_file': 'conf_file'}},
          {},
          {},
+         None,
          'conf'),
 
         ({'default': {}},
          {'token': 'kw'},
          {},
+         None,
          'kw'),
 
         ({'default': {}},
          {'token_file': 'kw_file'},
          {},
+         None,
          'kw_file'),
 
         ({'default': {}},
          {'token': 'kw',
           'token_file': 'kw_file'},
          {},
+         None,
          'kw'),
 
         ({'default': {'token': 'conf'}},
          {'token': 'kw'},
          {},
+         None,
          'kw'),
 
         ({'default': {'token_file': 'conf_file'}},
          {'token': 'kw'},
          {},
+         None,
          'kw'),
 
         ({'default': {'token': 'conf'}},
          {'token_file': 'kw_file'},
          {},
+         None,
          'kw_file'),
 
         ({'default': {'token_file': 'conf_file'}},
          {'token_file': 'kw_file'},
          {},
+         None,
          'kw_file'),
 
         ({'default': {}},
          {},
          {'token': 'cli'},
+         None,
          'cli'),
 
         ({'default': {}},
          {},
          {'token_file': 'cli_file'},
+         None,
          'cli_file'),
 
         ({'default': {}},
          {},
          {'token': 'cli',
           'token_file': 'cli_file'},
+         None,
          'cli'),
 
         ({'default': {'token': 'conf'}},
          {},
          {'token': 'cli'},
+         None,
          'cli'),
 
         ({'default': {'token_file': 'conf_file'}},
          {},
          {'token': 'cli'},
+         None,
          'cli'),
 
         ({'default': {'token': 'conf'}},
          {},
          {'token_file': 'cli_file'},
+         None,
          'cli_file'),
 
         ({'default': {'token_file': 'conf_file'}},
          {},
          {'token_file': 'cli_file'},
+         None,
          'cli_file'),
+
+        ({'default': {'token_file': 'conf_file'}},
+         {},
+         {},
+         'login_file',
+         'conf_file'),
+
+        ({'default': {}},
+         {},
+         {'token_file': 'cli_file'},
+         'login_file',
+         'cli_file'),
+
+        ({'default': {}},
+         {},
+         {},
+         'login_file',
+         'login_file'),
     ])
-    def test_oauth2_token(self, config, kwargs, cli_args, expected):
+    def test_oauth2_token(self, config, kwargs, cli_args, login, expected):
         if 'token_file' in kwargs:
             tmpf = self.tmpfile_with_content(kwargs['token_file'])
             kwargs['token_file'] = tmpf.name
+
+        if login:
+            login_tmpf = self.tmpfile_with_content(login)
+
+        if 'login_file' == expected:
+            (flexmock(utils)
+                .should_receive('get_instance_token_file_name')
+                .with_args('default')
+                .and_return(login_tmpf.name))
+
 
         with self.build_cli_args(cli_args) as args:
             with self.config_file(config) as config_file:

@@ -14,6 +14,7 @@ import os
 import pytest
 import shutil
 import six
+import stat
 import copy
 import datetime
 from tempfile import NamedTemporaryFile
@@ -271,6 +272,32 @@ class TestOSBS(object):
 
     def test_get_user_api(self, osbs):
         assert 'name' in osbs.get_user()['metadata']
+
+    @pytest.mark.parametrize('subdir', [None, 'new-dir'])
+    def test_login_api(self, tmpdir, osbs, subdir):
+        token = 'spam-bacon-eggs'
+        token_file_dir = str(tmpdir)
+        if subdir:
+            token_file_dir = os.path.join(token_file_dir, subdir)
+        token_file_path = os.path.join(token_file_dir, 'test-token')
+
+        (flexmock(utils)
+            .should_receive('get_instance_token_file_name')
+            .with_args(osbs.os_conf.conf_section)
+            .and_return(token_file_path))
+
+        osbs.login(token)
+
+        with open(token_file_path) as token_file:
+            assert token == token_file.read().strip()
+
+        file_mode = os.stat(token_file_path).st_mode
+        # File owner permission
+        assert file_mode & stat.S_IRWXU
+        # Group permission
+        assert not file_mode & stat.S_IRWXG
+        # Others permission
+        assert not file_mode & stat.S_IRWXO
 
     def test_build_logs_api(self, osbs):
         logs = osbs.get_build_logs(TEST_BUILD)

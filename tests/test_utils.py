@@ -17,7 +17,8 @@ from osbs.utils import (buildconfig_update,
                         get_imagestreamtag_from_image,
                         git_repo_humanish_part_from_uri,
                         get_time_from_rfc3339, strip_registry_from_image,
-                        TarWriter, TarReader, make_name_from_git)
+                        TarWriter, TarReader, make_name_from_git,
+                        get_instance_token_file_name)
 from osbs.exceptions import OsbsException
 import osbs.kerberos_ccache
 
@@ -232,3 +233,9 @@ def test_tarfile(tmpdir, prefix):
         assert f.filename == os.path.join(prefix, "a/b.c")
         content = f.fileobj.read()
         assert content == b"foobar"
+
+
+def test_get_instance_token_file_name():
+    expected = os.path.join(os.path.expanduser('~'), '.osbs', 'spam.token')
+
+    assert get_instance_token_file_name('spam') == expected
