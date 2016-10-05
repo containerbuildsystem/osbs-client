@@ -340,7 +340,11 @@ def cmd_import_image(args, osbs):
 
 def cmd_get_token(args, osbs):  # pylint: disable=W0613
     token = osbs.get_token()
-    print(token)
+    if args.oc:
+        print('oc login --token {} {}'
+              .format(token, osbs.os_conf.get_openshift_base_uri()))
+    else:
+        print(token)
 
 
 def cmd_get_user(args, osbs):
@@ -508,6 +512,8 @@ def cli():
     import_image_parser.set_defaults(func=cmd_import_image)
 
     get_token_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-token'), help='get authentication token')
+    get_token_parser.add_argument("--oc", help="display oc login command",
+                                  action="store_true", default=False)
     get_token_parser.set_defaults(func=cmd_get_token)
 
     get_user_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-user'), help='get info about user')
