@@ -466,6 +466,8 @@ def cli():
         description="OpenShift Build Service client"
     )
     exclusive_group = parser.add_mutually_exclusive_group()
+    # FIXME: default=None is needed to indicate for osbs.conf.Configuration
+    # that the option was not specified
     exclusive_group.add_argument("--verbose", action="store_true", default=None)
     exclusive_group.add_argument("-q", "--quiet", action="store_true")
 
@@ -686,11 +688,11 @@ def main():
 
     is_verbose = os_conf.get_verbosity()
 
-    if is_verbose:
+    if args.quiet:
+        set_logging(level=logging.WARNING)
+    elif is_verbose:
         set_logging(level=logging.DEBUG)
         logger.debug("Logging level set to debug")
-    elif args.quiet:
-        set_logging(level=logging.WARNING)
     else:
         set_logging(level=logging.INFO)
 
