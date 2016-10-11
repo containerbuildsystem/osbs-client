@@ -268,6 +268,18 @@ class OSBS(object):
             build_json['spec'] = {}
         build_json['spec']['serviceAccount'] = 'builder'
         build_json['metadata']['labels']['scratch'] = 'true'
+
+        builder_img = build_json['spec']['strategy']['customStrategy']['from']
+        kind = builder_img['kind']
+        if kind == 'ImageStreamTag':
+            # Only BuildConfigs get to specify an ImageStreamTag. When
+            # creating Builds directly we need to specify a
+            # DockerImage.
+            response = self.get_image_stream_tag(builder_img['name'])
+            ref = response.json()['image']['dockerImageReference']
+            builder_img['kind'] = 'DockerImage'
+            builder_img['name'] = ref
+
         build_config_name = 'scratch-%s' % datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         logger.debug('starting scratch build %s', build_config_name)
         build_json['metadata']['name'] = build_config_name
@@ -535,6 +547,10 @@ class OSBS(object):
     @osbsapi
     def get_serviceaccount_tokens(self, username="~"):
         return self.os.get_serviceaccount_tokens(username)
+
+    @osbsapi
+    def get_image_stream_tag(self, tag_id):
+        return self.os.get_image_stream_tag(tag_id)
 
     @osbsapi
     def get_image_stream(self, stream_id):

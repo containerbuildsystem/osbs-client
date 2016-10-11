@@ -893,3 +893,22 @@ build_image = {build_image}
 
         build_response = osbs.create_build(**kwargs)
         assert build_response.json() == {'spam': 'maps'}
+
+    def test_get_image_stream_tag(self):
+        config = Configuration()
+        osbs = OSBS(config, config)
+
+        name = 'buildroot:latest'
+        (flexmock(osbs.os)
+            .should_receive('get_image_stream_tag')
+            .with_args(name)
+            .once()
+            .and_return(flexmock(json=lambda: {
+                'image': {
+                    'dockerImageReference': 'spam:maps',
+                }
+            })))
+
+        response = osbs.get_image_stream_tag(name)
+        ref = response.json()['image']['dockerImageReference']
+        assert ref == 'spam:maps'
