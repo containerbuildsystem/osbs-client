@@ -772,7 +772,11 @@ build_image = {build_image}
         build_response = osbs._create_build_config_and_build(build_request)
         assert build_response.json == {'spam': 'maps'}
 
-    def test_scratch_build_config(self):
+    @pytest.mark.parametrize(('kind', 'expect_name'), [
+        ('ImageStreamTag', 'registry:5000/buildroot:latest'),
+        ('DockerImage', 'buildroot:latest'),
+    ])
+    def test_scratch_build_config(self, kind, expect_name):
         config = Configuration()
         osbs = OSBS(config, config)
 
@@ -786,6 +790,17 @@ build_image = {build_image}
                     'git-branch': 'branch',
                 },
             },
+
+            'spec': {
+                'strategy': {
+                    'customStrategy': {
+                        'from': {
+                            'kind': kind,
+                            'name': 'buildroot:latest',
+                        },
+                    },
+                },
+            },
         }
 
         build_request = flexmock(
@@ -796,10 +811,29 @@ build_image = {build_image}
         updated_build_json = copy.deepcopy(build_json)
         updated_build_json['kind'] = 'Build'
         updated_build_json['metadata']['labels']['scratch'] = 'true'
-        updated_build_json['spec'] = {}
         updated_build_json['spec']['serviceAccount'] = 'builder'
+        img = updated_build_json['spec']['strategy']['customStrategy']['from']
+        img['kind'] = 'DockerImage'
+        img['name'] = expect_name
         build_name = 'scratch-%s' % datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         updated_build_json['metadata']['name'] = build_name
+
+        if kind == 'ImageStreamTag':
+            (flexmock(osbs.os)
+                .should_receive('get_image_stream_tag')
+                .with_args('buildroot:latest')
+                .once()
+                .and_return(flexmock(json=lambda: {
+                    "apiVersion": "v1",
+                    "kind": "ImageStreamTag",
+                    "image": {
+                        "dockerImageReference": expect_name,
+                    },
+                })))
+        else:
+            (flexmock(osbs.os)
+                .should_receive('get_image_stream_tag')
+                .never())
 
         (flexmock(osbs.os)
             .should_receive('create_build')
@@ -859,3 +893,22 @@ build_image = {build_image}
 
         build_response = osbs.create_build(**kwargs)
         assert build_response.json() == {'spam': 'maps'}
+
+    def test_get_image_stream_tag(self):
+        config = Configuration()
+        osbs = OSBS(config, config)
+
+        name = 'buildroot:latest'
+        (flexmock(osbs.os)
+            .should_receive('get_image_stream_tag')
+            .with_args(name)
+            .once()
+            .and_return(flexmock(json=lambda: {
+                'image': {
+                    'dockerImageReference': 'spam:maps',
+                }
+            })))
+
+        response = osbs.get_image_stream_tag(name)
+        ref = response.json()['image']['dockerImageReference']
+        assert ref == 'spam:maps'

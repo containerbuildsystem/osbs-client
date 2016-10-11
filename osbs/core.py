@@ -699,6 +699,12 @@ class Openshift(object):
                                                 'annotations', annotations,
                                                 self._replace_metadata_things)
 
+    def get_image_stream_tag(self, tag_id):
+        url = self._build_url("imagestreamtags/%s" % tag_id)
+        response = self._get(url)
+        check_response(response)
+        return response
+
     def get_image_stream(self, stream_id):
         url = self._build_url("imagestreams/%s" % stream_id)
         response = self._get(url)
