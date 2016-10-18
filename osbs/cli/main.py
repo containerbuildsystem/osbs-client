@@ -580,8 +580,6 @@ def cli():
     get_build_image_id.add_argument("BUILD_ID", help="build ID", nargs=1)
     get_build_image_id.set_defaults(func=cmd_get_build_image_id)
 
-    logger.error("pause_builds/resume_builds is no longer supported")
-
     backup_builder = subparsers.add_parser(str_on_2_unicode_on_3('backup-builder'),
                                            help='dump builder data (admin)',
                                            description='create backup of all OSBS data')
