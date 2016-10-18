@@ -383,14 +383,6 @@ def cmd_get_build_image_id(args, osbs):
             print(format_str.format(tag=name, image=image_id))
 
 
-def cmd_pause_builds(args, osbs):
-    osbs.pause_builds(quota_name=args.resourcequota)
-
-
-def cmd_resume_builds(args, osbs):
-    osbs.resume_builds(quota_name=args.resourcequota)
-
-
 def cmd_backup(args, osbs):
     dirname = time.strftime("osbs-backup-{0}-{1}-%Y-%m-%d-%H%M%S"
                             .format(args.instance, args.namespace))
@@ -587,18 +579,6 @@ def cli():
                                                description='get build container images for a build in a namespace')
     get_build_image_id.add_argument("BUILD_ID", help="build ID", nargs=1)
     get_build_image_id.set_defaults(func=cmd_get_build_image_id)
-
-    pause_builds = subparsers.add_parser(str_on_2_unicode_on_3('pause-builds'),
-                                         help='stop scheduling new builds (admin)',
-                                         description='stop scheduling new builds and wait until running builds finish')
-    pause_builds.add_argument("-r", "--resourcequota", action="store", help="resourcequota name used to pause builds")
-    pause_builds.set_defaults(func=cmd_pause_builds)
-
-    resume_builds = subparsers.add_parser(str_on_2_unicode_on_3('resume-builds'),
-                                          help='resume scheduling new builds (admin)',
-                                          description='allow builds to be scheduled again after pause-builds')
-    resume_builds.add_argument("-r", "--resourcequota", action="store", help="resourcequota name to remove")
-    resume_builds.set_defaults(func=cmd_resume_builds)
 
     backup_builder = subparsers.add_parser(str_on_2_unicode_on_3('backup-builder'),
                                            help='dump builder data (admin)',
