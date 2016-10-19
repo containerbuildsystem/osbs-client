@@ -72,6 +72,9 @@
     },
     {
       "name": "dockerfile_content"
+    },
+    {
+      "name": "distribution_scope"
     }
   ],
   "prepublish_plugins": [
