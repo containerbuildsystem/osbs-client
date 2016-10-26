@@ -335,6 +335,11 @@ def make_name_from_git(repo, branch, limit=53, separator='-'):
     return repo + separator + branch
 
 
+def get_instance_token_file_name(instance):
+    """Return the token file name for the given instance."""
+    return '{0}/.osbs/{1}.token'.format(os.path.expanduser('~'), instance)
+
+
 def run_command(*popenargs, **kwargs):
     """
     Run command with arguments and return its output as a byte string.

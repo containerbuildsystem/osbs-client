@@ -9,6 +9,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 
 import logging
 import os
+import os.path
 import warnings
 from pkg_resources import parse_version
 
@@ -23,6 +24,7 @@ except ImportError:
 
 from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
                             GENERAL_CONFIGURATION_SECTION, DEFAULT_NAMESPACE)
+from osbs import utils
 
 
 logger = logging.getLogger(__name__)
@@ -403,6 +405,12 @@ class Configuration(object):
                 else:
                     found_key = key
                     break
+
+        if value is None:
+            instance_token_file = utils.get_instance_token_file_name(self.conf_section)
+            if os.path.exists(instance_token_file):
+                found_key = 'token_file'
+                value = instance_token_file
 
         # For token_file, read the file
         if found_key == 'token_file':

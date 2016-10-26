@@ -347,6 +347,10 @@ def cmd_get_token(args, osbs):  # pylint: disable=W0613
         print(token)
 
 
+def cmd_login(args, osbs):
+    osbs.login(args.TOKEN)
+
+
 def cmd_get_user(args, osbs):
     args_username = args.USERNAME
     if args_username is None:
@@ -509,6 +513,12 @@ def cli():
     get_token_parser.add_argument("--oc", help="display oc login command",
                                   action="store_true", default=False)
     get_token_parser.set_defaults(func=cmd_get_token)
+
+
+    get_login_parser = subparsers.add_parser(str_on_2_unicode_on_3('login'),
+                                             help='perform login and store token for later use')
+    get_login_parser.add_argument('TOKEN', help='token to be used for login')
+    get_login_parser.set_defaults(func=cmd_login)
 
     get_user_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-user'), help='get info about user')
     get_user_parser.add_argument("USERNAME", nargs="?", default=None)
