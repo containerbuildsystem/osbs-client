@@ -238,7 +238,6 @@ class BuildRequest(object):
                                                             plugin[1])
         if 'secrets' in self.template['spec']['strategy']['customStrategy']:
             if has_plugin_conf:
-                # origin 1.0.6 and newer
                 secret_path = os.path.join(SECRETS_PATH, secret)
                 logger.info("Configuring %s secret at %s", secret, secret_path)
                 custom = self.template['spec']['strategy']['customStrategy']
@@ -263,24 +262,6 @@ class BuildRequest(object):
                 logger.debug("not setting secret for unused plugin %s",
                              plugin[1])
 
-        elif plugin[1] in ('pulp_push', 'pulp_sync'):
-            # setting pulp_push/pulp_sync secret for origin 1.0.5 and earlier
-            #  we only use this way to preserve backwards compat for pulp_push plugin,
-            #  other plugins must use the new secrets way above
-            logger.info("Configuring %s secret as sourceSecret", secret)
-            if 'sourceSecret' not in self.template['spec']['source']:
-                raise OsbsValidationException("JSON template does not allow secrets")
-
-            old_secret = self.template['spec']['source']['sourceSecret'].get('name')
-            if old_secret and old_secret != secret and not old_secret.startswith("{{"):
-                raise OsbsValidationException("Not possible to set two different source secrets")
-
-            self.template['spec']['source']['sourceSecret']['name'] = secret
-
-        elif has_plugin_conf:
-            raise OsbsValidationException("cannot set more than one secret "
-                                          "unless using OpenShift >= 1.0.6")
-
     def set_secrets(self, secrets):
         """
         :param secrets: dict, {(plugin type, plugin name, argument name): secret name}
@@ -300,8 +281,6 @@ class BuildRequest(object):
 
         if not secret_set:
             # remove references to secret if no secret was set
-            if 'sourceSecret' in self.template['spec']['source']:
-                del self.template['spec']['source']['sourceSecret']
             if 'secrets' in self.template['spec']['strategy']['customStrategy']:
                 del self.template['spec']['strategy']['customStrategy']['secrets']
 
@@ -701,14 +680,9 @@ class BuildRequest(object):
         self.render_check_and_set_rebuild(use_auth=use_auth)
         self.render_store_metadata_in_osv3(use_auth=use_auth)
 
-        # For Origin 1.0.6 we'll use the 'secrets' array; for earlier
-        # versions we'll just use 'sourceSecret'
-        if self._openshift_required_version < parse_version('1.0.6'):
-            if 'secrets' in self.template['spec']['strategy']['customStrategy']:
-                del self.template['spec']['strategy']['customStrategy']['secrets']
-        else:
-            if 'sourceSecret' in self.template['spec']['source']:
-                del self.template['spec']['source']['sourceSecret']
+        # Remove legacy sourceSecret in case an older template is used.
+        if 'sourceSecret' in self.template['spec']['source']:
+            del self.template['spec']['source']['sourceSecret']
 
         if self.spec.build_imagestream.value:
             self.template['spec']['strategy']['customStrategy']['from']['kind'] = 'ImageStreamTag'

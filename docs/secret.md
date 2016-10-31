@@ -11,7 +11,7 @@ Then, when a build container is created, a secret volume is created by OpenShift
 
 ## Creating the resource
 
-### OpenShift >= 0.6.1
+### OpenShift
 
 First, create the Secret resource:
 ```
@@ -23,29 +23,6 @@ You also have to allow the build pod service account to [access the secret](http
 ```
 $ oc secrets add serviceaccount/builder secrets/mysecret --for=mount
 ```
-
-### OpenShift < 0.6.1
-
-For older versions of OpenShift, create the secret from a JSON description:
-```
-$ cat secret.json
-{
-  "apiVersion": "v1beta3",
-  "kind": "Secret",
-  "metadata": {
-    "name": "mysecret",
-    "namespace": "default"
-  },
-  "data": {
-    "key": "-----BEGIN RSA PRIVATE KEY-----\n[...]",
-    "cert": "-----BEGIN CERTIFICATE-----\n[...]"
-  }
-}
-$ osc create -f secret.json
-secrets/mysecret
-```
-
-When you need to change the data, you can use `update` instead of `create`.
 
 ## Configuring OSBS
 
