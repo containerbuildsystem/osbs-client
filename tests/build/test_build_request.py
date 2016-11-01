@@ -277,7 +277,7 @@ class TestBuildRequest(object):
             get_plugin(plugins, "exit_plugins", "sendmail")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
-        assert 'sourceSecret' not in build_json["spec"]["source"]
+
         assert plugin_value_get(plugins, "prebuild_plugins", "add_yum_repo_by_url",
                                 "args", "repourls") == ["http://example.com/my.repo"]
         if proxy:
@@ -395,7 +395,6 @@ class TestBuildRequest(object):
         assert get_plugin(plugins, "exit_plugins", "koji_promote")
         assert plugin_value_get(plugins, "exit_plugins", "koji_promote", "args",
                                 "target") == koji_target
-        assert 'sourceSecret' not in build_json["spec"]["source"]
 
         labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile",
                                   "args", "labels")
@@ -472,7 +471,6 @@ class TestBuildRequest(object):
             get_plugin(plugins, "exit_plugins", "sendmail")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
-        assert 'sourceSecret' not in build_json["spec"]["source"]
 
         labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile",
                                   "args", "labels")
@@ -513,7 +511,6 @@ class TestBuildRequest(object):
 
         # Check that the secret's mountPath matches the plugin's
         # configured path for the secret
-        assert 'sourceSecret' not in build_json["spec"]["source"]
         mount_path = get_secret_mountpath_by_name(build_json, 'mysecret')
         plugins = get_plugins_from_build_json(build_json)
         assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
@@ -547,8 +544,6 @@ class TestBuildRequest(object):
     @pytest.mark.parametrize('source_registry', [None, 'registry.example.com', 'localhost'])
     def test_render_pulp_sync(self, registry_secrets, source_registry):
         build_request = BuildRequest(INPUTS_PATH)
-        # OpenShift Origin >= 1.0.6 is required for v2
-        build_request.set_openshift_required_version(parse_version('1.0.6'))
         pulp_env = 'env'
         pulp_secret = 'pulp-secret'
         registry_uri = 'https://registry.example.com'
@@ -606,7 +601,6 @@ class TestBuildRequest(object):
                                         'registries', 'https://registry.example.com') == {}
 
 
-        assert 'sourceSecret' not in build_json['spec']['source']
         if registry_secrets:
             mount_path = get_secret_mountpath_by_name(build_json,
                                                       registry_secrets[0])
@@ -648,7 +642,6 @@ class TestBuildRequest(object):
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
-        assert 'sourceSecret' not in build_json["spec"]["source"]
         mount_path = get_secret_mountpath_by_name(build_json, 'registry_secret')
         plugins = get_plugins_from_build_json(build_json)
         assert get_plugin(plugins, "postbuild_plugins", "tag_and_push")
@@ -715,8 +708,6 @@ class TestBuildRequest(object):
     ])
     def test_render_prod_request_v1_v2(self, registry_api_versions):
         build_request = BuildRequest(INPUTS_PATH)
-        # OpenShift Origin >= 1.0.6 is required for v2
-        build_request.set_openshift_required_version(parse_version('1.0.6'))
         name_label = "fedora/resultingimage"
         pulp_env = 'v1pulp'
         pulp_secret = pulp_env + 'secret'
@@ -788,7 +779,6 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push",
                                 "args", "registries") == expected_registries
 
-        assert 'sourceSecret' not in build_json['spec']['source']
         secrets = build_json['spec']['strategy']['customStrategy']['secrets']
         for version, plugin in [('v1', 'pulp_push'), ('v2', 'pulp_sync')]:
             if version not in registry_api_versions:
@@ -1049,10 +1039,6 @@ class TestBuildRequest(object):
                                               insecure_registry):
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequest(str(tmpdir))
-        # We're using both pulp and sendmail, both of which require a
-        # Kubernetes secret. This isn't supported until OpenShift
-        # Origin 1.0.6.
-        build_request.set_openshift_required_version(parse_version('1.0.6'))
         name_label = "fedora/resultingimage"
         push_url = "ssh://{username}git.example.com/git/{component}.git"
         pdc_secret_name = 'foo'
@@ -1236,33 +1222,9 @@ class TestBuildRequest(object):
             assert plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push',
                                     'args', 'pulp_secret_path') == mount_path
 
-        # Set required version to 0.5.4
-        build_request = BuildRequest(INPUTS_PATH)
-        build_request.set_openshift_required_version(parse_version('0.5.4'))
-        build_json = build_request.render()
-
-        # Using the sourceSecret scheme
-        assert 'sourceSecret' in build_json['spec']['source']
-        assert (build_json['spec']['source']['sourceSecret']['name'] ==
-                secret_name)
-
-        # Not using the secrets array scheme
-        assert 'secrets' not in build_json['spec']['strategy']['customStrategy']
-
-        # We shouldn't have pulp_secret_path set
-        plugins = get_plugins_from_build_json(build_json)
-        assert 'pulp_secret_path' not in plugin_value_get(plugins,
-                                                          'postbuild_plugins',
-                                                          'pulp_push',
-                                                          'args')
-
     def test_render_prod_request_with_koji_secret(self, tmpdir):
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequest(str(tmpdir))
-        # We're using both pulp and sendmail, both of which require a
-        # Kubernetes secret. This isn't supported until OpenShift
-        # Origin 1.0.6.
-        build_request.set_openshift_required_version(parse_version('1.0.6'))
         name_label = "fedora/resultingimage"
         push_url = "ssh://{username}git.example.com/git/{component}.git"
         koji_certs_secret_name = 'foobar'
