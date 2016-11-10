@@ -1348,3 +1348,52 @@ class TestBuildRequest(object):
         pull_base_image_plugin = get_plugin(
             plugins, 'prebuild_plugins', 'pull_base_image')
         assert pull_base_image_plugin is not None
+
+    def test_render_prod_custom_site_plugin_enable(self):
+        """
+        Test to make sure that when we attempt to enable a plugin, it is
+        actually enabled in the JSON for the build_request post-rendering
+        """
+        build_request = BuildRequest(INPUTS_PATH)
+        build_request.customize_conf['enable_plugins'].append(
+            {
+                "plugin_type": "exit_plugins",
+                "plugin_name": "testing_exit_plugin",
+                "plugin_args": {"foo": "bar"}
+            }
+        )
+        kwargs = get_sample_prod_params()
+        build_request.set_params(**kwargs)
+        build_request.render()
+
+        assert {
+                "name": "testing_exit_plugin",
+                "args": {"foo": "bar"}
+        } in build_request.dj.dock_json['exit_plugins']
+
+    def test_render_prod_custom_site_plugin_disable(self):
+        """
+        Test to make sure that when we attempt to enable a plugin, it is
+        actually enabled in the JSON for the build_request post-rendering
+        """
+
+        plugin_type = "postbuild_plugins"
+        plugin_name = "compress"
+
+        build_request = BuildRequest(INPUTS_PATH)
+        build_request.customize_conf['disable_plugins'].append(
+            {
+                "plugin_type": plugin_type,
+                "plugin_name": plugin_name
+            }
+        )
+        kwargs = get_sample_prod_params()
+        build_request.set_params(**kwargs)
+        build_request.render()
+
+        for plugin in build_request.dj.dock_json[plugin_type]:
+            if plugin['name'] == plugin_name:
+                assert False
+
+
+

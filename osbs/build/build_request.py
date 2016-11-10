@@ -24,7 +24,7 @@ except ImportError:
 
 from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.spec import BuildSpec
-from osbs.constants import SECRETS_PATH, DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE
+from osbs.constants import SECRETS_PATH, DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE, DEFAULT_CUSTOMIZE_CONF
 from osbs.exceptions import OsbsException, OsbsValidationException
 from osbs.utils import looks_like_git_hash, git_repo_humanish_part_from_uri
 
@@ -46,6 +46,7 @@ class BuildRequest(object):
         self.build_json = None       # rendered template
         self._template = None        # template loaded from filesystem
         self._inner_template = None  # dock json
+        self._customize_conf = None  # site customize conf for _inner_template
         self._dj = None
         self._resource_limits = None
         self._openshift_required_version = parse_version('1.0.6')
@@ -134,6 +135,20 @@ class BuildRequest(object):
             with open(path, "r") as fp:
                 self._inner_template = json.load(fp)
         return self._inner_template
+
+    @property
+    def customize_conf(self):
+        if self._customize_conf is None:
+            path = os.path.join(self.build_json_store, DEFAULT_CUSTOMIZE_CONF)
+            logger.debug("loading customize conf from path %s", path)
+            try:
+                with open(path, "r") as fp:
+                    self._customize_conf= json.load(fp)
+            except IOError:
+                # File not found, which is perfectly fine. Set to empty string
+                self._customize_conf = ""
+
+        return self._customize_conf
 
     @property
     def dj(self):
@@ -649,9 +664,62 @@ class BuildRequest(object):
                 self.dj.dock_json_set_arg('postbuild_plugins', 'import_image',
                                           'insecure_registry', True)
 
+    def render_customizations(self):
+        """
+        Customize prod_inner for site specific customizations
+        """
+
+        try:
+            for plugin_dict in self.customize_conf['disable_plugins']:
+                try:
+                    self.dj.remove_plugin(
+                        plugin_dict['plugin_type'],
+                        plugin_dict['plugin_name']
+                    )
+                    logger.debug(
+                        "site-specific plugin disabled -> Type:{} Name:{}".format(
+                            plugin_dict['plugin_type'],
+                            plugin_dict['plugin_name']
+                        )
+                    )
+                except KeyError:
+                    # Malformed config
+                    logger.debug("Invalid custom configuration found for disable_plugins")
+        except TypeError:
+            # None provided to disable, we can ignore this as that's a valid use
+            # case
+            logger.debug("No site-specific plugins to disable")
+            pass
+
+        try:
+            for plugin_dict in self.customize_conf['enable_plugins']:
+                try:
+                    self.dj.add_plugin(
+                        plugin_dict['plugin_type'],
+                        plugin_dict['plugin_name'],
+                        plugin_dict['plugin_args']
+                    )
+                    logger.debug(
+                        "site-specific plugin enabled -> Type:{} Name:{} Args:".format(
+                            plugin_dict['plugin_type'],
+                            plugin_dict['plugin_name'],
+                            plugin_dict['plugin_args']
+                        )
+                    )
+                except KeyError:
+                    # Malformed config
+                    logger.debug("Invalid custom configuration found for enable_plugins")
+        except TypeError:
+            # None provided to enable, we can ignore this as that's a valid use
+            # case
+            pass
+
+
     def render(self, validate=True):
         if validate:
             self.spec.validate()
+
+        self.render_customizations()
 
         # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
         self.template['metadata']['name'] = self.spec.name.value

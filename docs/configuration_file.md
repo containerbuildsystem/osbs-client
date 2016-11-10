@@ -110,3 +110,53 @@ Some options are also mandatory.
 * `memory_limit` (*optional*, `string`) — memory limit to apply to build (for more info, see [documentation for resources](https://github.com/projectatomic/osbs-client/blob/master/docs/resource.md)
 
 * `storage_limit` (*optional*, `string`) — storage limit to apply to build (for more info, see [documentation for resources](https://github.com/projectatomic/osbs-client/blob/master/docs/resource.md)
+
+
+## Build JSON Templates
+
+In the `build_json_dir` there must be `prod.json` and `prod_inner.json` which
+defines the [OpenShift Build](https://docs.openshift.org/latest/dev_guide/builds.html)
+specification that will be used to enable the specific
+[atomic-reactor](https://github.com/projectatomic/atomic-reactor) plugins that
+should be enabled and the config values for each.
+
+There is also a third file that is optional that can exist along side the
+previous two in `build_json_dir` which is `prod_customize.json` and it will
+provide the ability to set site-specific customizations such as removing,
+plugins, adding plugins, or modifying arguments passed to existing plugins.
+
+The syntax of `prod_customize.json` is as follows:
+
+```json
+{
+    "disable_plugins": [
+        {
+            "plugin_type": "foo_type",
+            "plugin_name": "foo_name"
+        },
+        {
+            "plugin_type": "bar_type",
+            "plugin_name": "bar_name"
+        }
+    ],
+
+    "enable_plugins": [
+        {
+            "plugin_type": "foo_type",
+            "plugin_name": "foo_name",
+            "plugin_args": {
+                "foo_arg1": "foo_value1",
+                "foo_arg2": "foo_value2"
+            }
+        }
+    ]
+}
+```
+
+Such that:
+
+* `disable_plugins` will define a list of lists that define the plugin type of the plugin that is to be removed (`prebuild_plugins`, `prepublish_plugins`, `postbuild_plugins`, `exit_plugins`) and the name of the plugin.
+
+* `enable_plugins` is used to add plugins or modify already enabled plugins, these must be defined as key-value pairs as illustrated above.
+
+

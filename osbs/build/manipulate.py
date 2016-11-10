@@ -50,6 +50,17 @@ class DockJsonManipulator(object):
                 self.dock_json[plugin_type].remove(p)
                 break
 
+    def add_plugin(self, plugin_type, plugin_name, args_dict):
+        """
+        if config has plugin, override it, else add it
+        """
+        tmp_djson = [
+            plugin for plugin in self.dock_json[plugin_type]
+            if plugin['name'] != plugin_name
+        ]
+        self.dock_json[plugin_type] = tmp_djson
+        self.dock_json[plugin_type].append({"name": plugin_name, "args": args_dict})
+
     def dock_json_has_plugin_conf(self, plugin_type, plugin_name):
         """
         Check whether a plugin is configured.
