@@ -706,7 +706,8 @@ class TestBuildRequest(object):
         ['v1', 'v2'],
         ['v2'],
     ])
-    def test_render_prod_request_v1_v2(self, registry_api_versions):
+    @pytest.mark.parametrize('scratch', [False, True])
+    def test_render_prod_request_v1_v2(self, registry_api_versions, scratch):
         build_request = BuildRequest(INPUTS_PATH)
         name_label = "fedora/resultingimage"
         pulp_env = 'v1pulp'
@@ -747,6 +748,7 @@ class TestBuildRequest(object):
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': registry_api_versions,
+            'scratch': scratch,
         })
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -799,8 +801,6 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
 
-        assert get_plugin(plugins, "postbuild_plugins", "compress")
-
         if 'v1' in registry_api_versions:
             assert get_plugin(plugins, "postbuild_plugins",
                               "pulp_push")
@@ -829,6 +829,16 @@ class TestBuildRequest(object):
         else:
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, "postbuild_plugins", "pulp_sync")
+
+        if scratch:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "postbuild_plugins", "compress")
+
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "exit_plugins", "koji_promote")
+        else:
+            assert get_plugin(plugins, "postbuild_plugins", "compress")
+            assert get_plugin(plugins, "exit_plugins", "koji_promote")
 
     def test_render_with_yum_repourls(self):
         kwargs = {

@@ -367,7 +367,8 @@ class BuildRequest(object):
             # Note: only one for now, but left in a list like other adjust_for_
             # functions in the event that this needs to be expanded
             for when, which in [
-                ("exit_plugins", "koji_promote"),
+                    ("postbuild_plugins", "compress"),
+                    ("exit_plugins", "koji_promote"),
             ]:
                 logger.info("removing %s from request because there are no triggers",
                             which)
