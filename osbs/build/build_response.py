@@ -27,6 +27,7 @@ class BuildResponse(object):
         """
         self.json = build_json
         self._status = None
+        self._cancelled = None
 
     @property
     def status(self):
@@ -39,6 +40,18 @@ class BuildResponse(object):
         cap_value = value.capitalize()
         logger.info("changing status from %s to %s", self.status, cap_value)
         self.json['status']['phase'] = cap_value
+        self._status = value
+
+    @property
+    def cancelled(self):
+        if self._cancelled is None:
+            self._cancelled = self.json['status'].get('cancelled')
+        return self._cancelled
+
+    @cancelled.setter
+    def cancelled(self, value):
+        self.json['status']['cancelled'] = value
+        self._cancelled = value
 
     def is_finished(self):
         return self.status in BUILD_FINISHED_STATES

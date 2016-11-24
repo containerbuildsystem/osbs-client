@@ -293,7 +293,7 @@ class Openshift(object):
     def cancel_build(self, build_id):
         response = self.get_build(build_id)
         br = BuildResponse(response.json())
-        br.status = BUILD_CANCELLED_STATE
+        br.cancelled = True
         url = self._build_url("builds/%s/" % build_id)
         return self._put(url, data=json.dumps(br.json),
                          headers={"Content-Type": "application/json"})
