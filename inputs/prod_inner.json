@@ -127,10 +127,6 @@
       }
     },
     {
-      "name": "pulp_pull",
-      "args": {}
-    },
-    {
       "args": {
         "imagestream": "{{IMAGESTREAM}}",
         "docker_image_repo": "{{DOCKER_IMAGE_REPO}}",
