@@ -486,7 +486,13 @@ class BuildRequest(object):
 
             if use_auth is not None:
                 self.dj.dock_json_set_arg('exit_plugins', 'koji_promote',
-                                          'use_auth', use_auth)
+                                            'use_auth', use_auth)
+
+            if self.spec.koji_use_kerberos.value:
+                self.dj.dock_json_set_arg('exit_plugins', 'koji_promote',
+                    'koji_principal', self.spec.koji_kerberos_principal.value)
+                self.dj.dock_json_set_arg('exit_plugins', 'koji_promote',
+                    'koji_keytab', self.spec.koji_kerberos_keytab.value)
         else:
             logger.info("removing koji_promote from request as no kojihub "
                         "specified")

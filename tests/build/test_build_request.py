@@ -1279,6 +1279,57 @@ class TestBuildRequest(object):
                                                   koji_certs_secret_name)
         assert get_plugin(plugins, 'exit_plugins', 'koji_promote')['args']['koji_ssl_certs'] == mount_path
 
+    def test_render_prod_request_with_koji_kerberos(self, tmpdir):
+        self.create_image_change_trigger_json(str(tmpdir))
+        build_request = BuildRequest(str(tmpdir))
+        name_label = "fedora/resultingimage"
+        push_url = "ssh://{username}git.example.com/git/{component}.git"
+        koji_task_id = 1234
+        koji_use_kerberos = True
+        koji_kerberos_keytab = "FILE:/tmp/fakekeytab"
+        koji_kerberos_principal = "myprincipal@OSBSDOMAIN.COM"
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'base_image': 'fedora:latest',
+            'name_label': name_label,
+            'registry_uri': "example.com",
+            'openshift_uri': "http://openshift/",
+            'builder_openshift_url': "http://openshift/",
+            'koji_target': "koji-target",
+            'kojiroot': "http://root/",
+            'kojihub': "http://hub/",
+            'sources_command': "make",
+            'koji_task_id': koji_task_id,
+            'koji_use_kerberos': koji_use_kerberos,
+            'koji_kerberos_keytab': koji_kerberos_keytab,
+            'koji_kerberos_principal': koji_kerberos_principal,
+            'vendor': "Foo Vendor",
+            'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
+            'registry_api_versions': ['v1'],
+            'git_push_url': push_url.format(username='', component=TEST_COMPONENT),
+            'git_push_username': 'example',
+        }
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+
+        assert build_json["metadata"]["labels"]["koji-task-id"] == str(koji_task_id)
+
+        plugins = get_plugins_from_build_json(build_json)
+        assert get_plugin(plugins, "exit_plugins", "koji_promote")
+        assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
+                                "args", "kojihub") == kwargs["kojihub"]
+        assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
+                                "args", "url") == kwargs["openshift_uri"]
+
+        assert get_plugin(plugins, 'exit_plugins', 'koji_promote')['args']['koji_principal'] == koji_kerberos_principal
+        assert get_plugin(plugins, 'exit_plugins', 'koji_promote')['args']['koji_keytab'] == koji_kerberos_keytab
+
+
     @pytest.mark.parametrize(('base_image', 'is_custom'), [
         ('fedora', False),
         ('fedora:latest', False),

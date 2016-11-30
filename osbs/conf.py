@@ -211,6 +211,15 @@ class Configuration(object):
     def get_koji_certs_secret(self):
         return self._get_value("koji_certs_secret", self.conf_section, "koji_certs_secret")
 
+    def get_koji_use_kerberos(self):
+        return self._get_value("koji_use_kerberos", self.conf_section, "koji_use_kerberos", is_bool_val=True)
+
+    def get_koji_kerberos_keytab(self):
+        return self._get_value("koji_kerberos_keytab", self.conf_section, "koji_kerberos_keytab")
+
+    def get_koji_kerberos_principal(self):
+        return self._get_value("koji_kerberos_principal", self.conf_section, "koji_kerberos_principal")
+
     def get_sources_command(self):
         return self._get_value("sources_command", self.conf_section, "sources_command")
 
