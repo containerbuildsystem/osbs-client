@@ -16,7 +16,7 @@ from osbs.core import Openshift
 from osbs.http import HttpResponse
 from osbs.conf import Configuration
 from osbs.api import OSBS
-from tests.constants import (TEST_BUILD, TEST_COMPONENT, TEST_GIT_REF,
+from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_COMPONENT, TEST_GIT_REF,
                              TEST_GIT_BRANCH, TEST_BUILD_CONFIG,
                              TEST_GIT_URI_HUMAN_NAME, TEST_KOJI_TASK_ID)
 from tempfile import NamedTemporaryFile
@@ -104,6 +104,20 @@ class Connection(object):
                      "file": "build_test-build-123.json",
                  }
             },
+
+            # Simulate build cancellation
+            (OAPI_PREFIX + "namespaces/default/builds/%s" % TEST_CANCELLED_BUILD,
+             OAPI_PREFIX + "namespaces/default/builds/%s/" % TEST_CANCELLED_BUILD): {
+                 "get": {
+                     # Contains a single build in Completed phase
+                     # named test-build-123
+                     "file": "build_test-build-cancel-123_get.json",
+                 },
+                 "put": {
+                     "file": "build_test-build-cancel-123_put.json",
+                 }
+            },
+
 
             (OAPI_PREFIX + "namespaces/default/builds/%s/log/" % TEST_BUILD,
              OAPI_PREFIX + "namespaces/default/builds/%s/log/?follow=0" % TEST_BUILD,

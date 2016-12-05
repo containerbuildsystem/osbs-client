@@ -12,12 +12,14 @@ import time
 import json
 
 from osbs.http import HttpResponse
-from osbs.constants import BUILD_FINISHED_STATES
+from osbs.constants import (BUILD_FINISHED_STATES, BUILD_RUNNING_STATES,
+                            BUILD_CANCELLED_STATE)
 from osbs.exceptions import (OsbsResponseException, OsbsNetworkException,
                              OsbsException)
 from osbs.core import check_response
 
-from tests.constants import TEST_BUILD, TEST_LABEL, TEST_LABEL_VALUE, TEST_BUILD_CONFIG
+from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
+                             TEST_LABEL_VALUE, TEST_BUILD_CONFIG)
 from tests.fake_api import openshift
 import pytest
 
@@ -141,6 +143,12 @@ class TestOpenshift(object):
         assert response is not None
         assert response.json()["metadata"]["name"] == TEST_BUILD
         assert response.json()["status"]["phase"].lower() in BUILD_FINISHED_STATES
+
+    def test_cancel_build(self, openshift):
+        response = openshift.cancel_build(TEST_CANCELLED_BUILD)
+        assert response is not None
+        assert response.json()["metadata"]["name"] == TEST_CANCELLED_BUILD
+        assert response.json()["status"]["phase"].lower() in BUILD_CANCELLED_STATE
 
     def test_get_build_config(self, openshift):
         mock_response = {"spam": "maps"}

@@ -13,6 +13,7 @@ HERE = os.path.dirname(__file__)
 INPUTS_PATH = os.path.join(HERE, '..', 'inputs')
 
 TEST_BUILD = "test-build-123"
+TEST_CANCELLED_BUILD = "test-build-cancel-123"
 TEST_BUILD_CONFIG = "path-master"
 TEST_GIT_URI = "git://hostname/path"
 TEST_GIT_URI_HUMAN_NAME = "path"
