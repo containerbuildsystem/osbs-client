@@ -670,7 +670,7 @@ class BuildRequest(object):
         """
 
         disable_plugins = self.customize_conf.get('disable_plugins', [])
-        if len(disable_plugins) == 0:
+        if not disable_plugins:
             logger.debug("No site-specific plugins to disable")
         else:
             for plugin_dict in disable_plugins:
@@ -690,7 +690,7 @@ class BuildRequest(object):
                     logger.debug("Invalid custom configuration found for disable_plugins")
 
         enable_plugins = self.customize_conf.get('enable_plugins', [])
-        if len(enable_plugins) == 0:
+        if not enable_plugins:
             logger.debug("No site-specific plugins to enable")
         else:
             for plugin_dict in enable_plugins:
