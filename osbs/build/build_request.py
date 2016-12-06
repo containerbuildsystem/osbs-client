@@ -146,7 +146,7 @@ class BuildRequest(object):
                     self._customize_conf= json.load(fp)
             except IOError:
                 # File not found, which is perfectly fine. Set to empty string
-                self._customize_conf = ""
+                self._customize_conf = {}
 
         return self._customize_conf
 
@@ -669,8 +669,11 @@ class BuildRequest(object):
         Customize prod_inner for site specific customizations
         """
 
-        try:
-            for plugin_dict in self.customize_conf['disable_plugins']:
+        disable_plugins = self.customize_conf.get('disable_plugins', [])
+        if len(disable_plugins) == 0:
+            logger.debug("No site-specific plugins to disable")
+        else:
+            for plugin_dict in disable_plugins:
                 try:
                     self.dj.remove_plugin(
                         plugin_dict['plugin_type'],
@@ -685,14 +688,12 @@ class BuildRequest(object):
                 except KeyError:
                     # Malformed config
                     logger.debug("Invalid custom configuration found for disable_plugins")
-        except TypeError:
-            # None provided to disable, we can ignore this as that's a valid use
-            # case
-            logger.debug("No site-specific plugins to disable")
-            pass
 
-        try:
-            for plugin_dict in self.customize_conf['enable_plugins']:
+        enable_plugins = self.customize_conf.get('enable_plugins', [])
+        if len(enable_plugins) == 0:
+            logger.debug("No site-specific plugins to enable")
+        else:
+            for plugin_dict in enable_plugins:
                 try:
                     self.dj.add_plugin(
                         plugin_dict['plugin_type'],
@@ -709,10 +710,6 @@ class BuildRequest(object):
                 except KeyError:
                     # Malformed config
                     logger.debug("Invalid custom configuration found for enable_plugins")
-        except TypeError:
-            # None provided to enable, we can ignore this as that's a valid use
-            # case
-            pass
 
 
     def render(self, validate=True):

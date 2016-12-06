@@ -1354,12 +1354,17 @@ class TestBuildRequest(object):
         Test to make sure that when we attempt to enable a plugin, it is
         actually enabled in the JSON for the build_request post-rendering
         """
+
+        plugin_type = "exit_plugins"
+        plugin_name = "testing_exit_plugin"
+        plugin_args = {"foo": "bar"}
+
         build_request = BuildRequest(INPUTS_PATH)
         build_request.customize_conf['enable_plugins'].append(
             {
-                "plugin_type": "exit_plugins",
-                "plugin_name": "testing_exit_plugin",
-                "plugin_args": {"foo": "bar"}
+                "plugin_type": plugin_type,
+                "plugin_name": plugin_name,
+                "plugin_args": plugin_args
             }
         )
         kwargs = get_sample_prod_params()
@@ -1367,14 +1372,14 @@ class TestBuildRequest(object):
         build_request.render()
 
         assert {
-                "name": "testing_exit_plugin",
-                "args": {"foo": "bar"}
-        } in build_request.dj.dock_json['exit_plugins']
+                "name": plugin_name,
+                "args": plugin_args
+        } in build_request.dj.dock_json[plugin_type]
 
     def test_render_prod_custom_site_plugin_disable(self):
         """
-        Test to make sure that when we attempt to enable a plugin, it is
-        actually enabled in the JSON for the build_request post-rendering
+        Test to make sure that when we attempt to disable a plugin, it is
+        actually disabled in the JSON for the build_request post-rendering
         """
 
         plugin_type = "postbuild_plugins"
@@ -1394,6 +1399,34 @@ class TestBuildRequest(object):
         for plugin in build_request.dj.dock_json[plugin_type]:
             if plugin['name'] == plugin_name:
                 assert False
+
+    def test_render_prod_custom_site_plugin_override(self):
+        """
+        Test to make sure that when we attempt to override a plugin's args,
+        they are actually overridden in the JSON for the build_request
+        post-rendering
+        """
+
+        plugin_type = "postbuild_plugins"
+        plugin_name = "compress"
+        plugin_args = {"foo": "bar"}
+
+        build_request = BuildRequest(INPUTS_PATH)
+        build_request.customize_conf['enable_plugins'].append(
+            {
+                "plugin_type": plugin_type,
+                "plugin_name": plugin_name,
+                "plugin_args": plugin_args
+            }
+        )
+        kwargs = get_sample_prod_params()
+        build_request.set_params(**kwargs)
+        build_request.render()
+
+        assert {
+                "name": plugin_name,
+                "args": plugin_args
+        } in build_request.dj.dock_json[plugin_type]
 
 
 
