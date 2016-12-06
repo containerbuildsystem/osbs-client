@@ -680,7 +680,7 @@ class BuildRequest(object):
                         plugin_dict['plugin_name']
                     )
                     logger.debug(
-                        "site-specific plugin disabled -> Type:{} Name:{}".format(
+                        "site-specific plugin disabled -> Type:{0} Name:{1}".format(
                             plugin_dict['plugin_type'],
                             plugin_dict['plugin_name']
                         )
@@ -701,7 +701,7 @@ class BuildRequest(object):
                         plugin_dict['plugin_args']
                     )
                     logger.debug(
-                        "site-specific plugin enabled -> Type:{} Name:{} Args:".format(
+                        "site-specific plugin enabled -> Type:{0} Name:{1} Args: {2}".format(
                             plugin_dict['plugin_type'],
                             plugin_dict['plugin_name'],
                             plugin_dict['plugin_args']
