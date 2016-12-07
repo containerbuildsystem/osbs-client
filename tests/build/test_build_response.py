@@ -40,6 +40,23 @@ class TestBuildResponse(object):
         })
         assert build_response.get_koji_build_id() == koji_build_id
 
+    def test_build_cancel(self):
+        build_response = BuildResponse({
+            'status': {
+                'phase': 'Running'
+            }
+        })
+        assert not build_response.cancelled
+        build_response.cancelled = True
+        assert build_response.cancelled
+        assert 'cancelled' in build_response.json['status']
+        assert build_response.json['status']['cancelled']
+        build_response.cancelled = False
+        assert not build_response.cancelled
+        assert 'cancelled' in build_response.json['status']
+        assert not build_response.json['status'].get('cancelled')
+
+
     @pytest.mark.parametrize(('plugin', 'message', 'expected_error_message'), [
         ('dockerbuild', None, 'Error in plugin dockerbuild'),
         ('foo', 'bar', 'Error in plugin foo: bar'),
