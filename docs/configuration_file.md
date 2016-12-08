@@ -53,6 +53,12 @@ Some options are also mandatory.
 
 * `koji_certs_secret` (*optional*, `string`) — name of [kubernetes secret](https://github.com/kubernetes/kubernetes/blob/master/docs/design/secrets.md) to use for koji authentication
 
+* `koji_use_kerberos` (*optional*, `boolean`) — will set [atomic-reactor](https://github.com/projectatomic/atomic-reactor) plugins to use kerberos to authenticate to koji.
+
+* `koji_kerberos_keytab` (*optional*, `string`) - location of the keytab that will be used to initialize kerberos credentials for [atomic-reactor](https://github.com/projectatomic/atomic-reactor) plugins - usually in the form `FILE:<absolute_path>`, see [kerberos documentation](http://web.mit.edu/Kerberos/krb5-latest/doc/basic/keytab_def.html) for other possible values
+
+* `koji_kerberos_principal` (*optional*, `string`) - kerberos principal for the keytab provided in `koji_kerberos_keytab`
+
 * `sources_command` (*optional*, `string`) — command to use to get dist-git artifacts from lookaside cache (e.g. `fedpkg sources`)
 
 * `username`, `password` (*optional*, `string`) — when OpenShift is hidden behind authentication proxy, you can specify username and password for basic authentication
