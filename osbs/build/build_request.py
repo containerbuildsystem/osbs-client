@@ -488,7 +488,9 @@ class BuildRequest(object):
                 self.dj.dock_json_set_arg('exit_plugins', 'koji_promote',
                                             'use_auth', use_auth)
 
-            if self.spec.koji_use_kerberos.value:
+            if (self.spec.koji_use_kerberos.value and
+                    self.spec.koji_kerberos_principal.value and
+                    self.spec.koji_kerberos_keytab.value):
                 self.dj.dock_json_set_arg('exit_plugins', 'koji_promote',
                     'koji_principal', self.spec.koji_kerberos_principal.value)
                 self.dj.dock_json_set_arg('exit_plugins', 'koji_promote',
