@@ -77,7 +77,6 @@ class BuildRequest(object):
         :param distribution_scope: str, distribution scope for this image
                                    (private, authoritative-source-only, restricted, public)
         :param use_auth: bool, use auth from atomic-reactor?
-        :param git_push_url: str, URL for git push
         """
 
         # Here we cater to the koji "scratch" build type, this will disable
@@ -724,16 +723,8 @@ class BuildRequest(object):
         self.dj.dock_json_set_arg('prebuild_plugins', "pull_base_image", "parent_registry",
                                   source_registry.docker_uri if source_registry else None)
 
-        # The rebuild trigger requires git_branch and git_push_url
-        # parameters, but those parameters are optional. If either was
-        # not provided, remove the trigger.
+        # Set to true to disable triggers in BuildConfig
         remove_triggers = False
-        for param_name in ['git_branch', 'git_push_url']:
-            param = getattr(self.spec, param_name)
-            if not param.value:
-                logger.info("removing triggers as no %s specified", param_name)
-                remove_triggers = True
-                # Continue the loop so we log everything that's missing
 
         if self.is_custom_base_image():
             logger.info('removing triggers for custom base image build')

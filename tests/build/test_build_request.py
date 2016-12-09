@@ -1050,7 +1050,6 @@ class TestBuildRequest(object):
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequest(str(tmpdir))
         name_label = "fedora/resultingimage"
-        push_url = "ssh://{username}git.example.com/git/{component}.git"
         pdc_secret_name = 'foo'
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -1071,8 +1070,6 @@ class TestBuildRequest(object):
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
-            'git_push_url': push_url.format(username='', component=TEST_COMPONENT),
-            'git_push_username': 'example',
             'pdc_secret': pdc_secret_name,
             'pdc_url': 'https://pdc.example.com',
             'smtp_uri': 'smtp.example.com',
@@ -1137,57 +1134,38 @@ class TestBuildRequest(object):
                     'name': 'sendmail'}
         assert get_plugin(plugins, 'exit_plugins', 'sendmail') == expected
 
-    @pytest.mark.parametrize('missing', [
-        'git_branch',
-        'git_push_url',
-    ])
-    def test_render_prod_request_trigger_missing_param(self, tmpdir, missing):
+    def test_render_custom_base_image_with_trigger(self, tmpdir):
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequest(str(tmpdir))
-        push_url = "ssh://{username}git.example.com/git/{component}.git"
-        kwargs = {
-            'git_uri': TEST_GIT_URI,
-            'git_ref': TEST_GIT_REF,
-            'git_branch': TEST_GIT_BRANCH,
-            'user': "john-foo",
-            'component': TEST_COMPONENT,
-            'base_image': 'fedora:latest',
-            'name_label': 'fedora/resultingimage',
-            'registry_uri': "registry.example.com",
-            'openshift_uri': "http://openshift/",
-            'builder_openshift_url': "http://openshift/",
-            'koji_target': "koji-target",
-            'kojiroot': "http://root/",
-            'kojihub': "http://hub/",
-            'sources_command': "make",
-            'vendor': "Foo Vendor",
-            'authoritative_registry': "registry.example.com",
-            'distribution_scope': "authoritative-source-only",
-            'registry_api_versions': ['v1'],
-            'git_push_url': push_url.format(username='', component=TEST_COMPONENT),
-            'git_push_username': 'example',
-        }
 
-        # Remove one of the parameters required for rebuild triggers
-        del kwargs[missing]
+        kwargs = get_sample_prod_params()
+        kwargs['base_image'] = 'koji/image-build'
+        kwargs['yum_repourls'] = ["http://example.com/my.repo"]
+        kwargs['pdc_secret'] = 'foo'
+        kwargs['pdc_url'] = 'https://pdc.example.com'
+        kwargs['smtp_uri'] = 'smtp.example.com'
 
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
-        assert build_json["metadata"]["labels"]["git-branch"] is not None
+        assert build_request.is_custom_base_image() is True
 
         # Verify the triggers are now disabled
         assert "triggers" not in build_json["spec"]
 
         # Verify the rebuild plugins are all disabled
         plugins = get_plugins_from_build_json(build_json)
+
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
+
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins",
                        "stop_autorebuild_if_disabled")
+
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
+
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
 
@@ -1236,7 +1214,6 @@ class TestBuildRequest(object):
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequest(str(tmpdir))
         name_label = "fedora/resultingimage"
-        push_url = "ssh://{username}git.example.com/git/{component}.git"
         koji_certs_secret_name = 'foobar'
         koji_task_id = 1234
         kwargs = {
@@ -1259,8 +1236,6 @@ class TestBuildRequest(object):
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
-            'git_push_url': push_url.format(username='', component=TEST_COMPONENT),
-            'git_push_username': 'example',
             'koji_certs_secret': koji_certs_secret_name,
         }
         build_request.set_params(**kwargs)
@@ -1283,7 +1258,6 @@ class TestBuildRequest(object):
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequest(str(tmpdir))
         name_label = "fedora/resultingimage"
-        push_url = "ssh://{username}git.example.com/git/{component}.git"
         koji_task_id = 1234
         koji_use_kerberos = True
         koji_kerberos_keytab = "FILE:/tmp/fakekeytab"
@@ -1311,8 +1285,6 @@ class TestBuildRequest(object):
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
-            'git_push_url': push_url.format(username='', component=TEST_COMPONENT),
-            'git_push_username': 'example',
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
