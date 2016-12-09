@@ -428,12 +428,14 @@ class OSBS(object):
     @osbsapi
     def create_prod_with_secret_build(self, git_uri, git_ref, git_branch, user, component,
                                       target, architecture=None, yum_repourls=None, **kwargs):
+        warnings.warn("create_prod_with_secret_build is deprecated, please use create_build")
         return self.create_prod_build(git_uri, git_ref, git_branch, user, component, target,
                                       architecture, yum_repourls=yum_repourls, **kwargs)
 
     @osbsapi
     def create_prod_without_koji_build(self, git_uri, git_ref, git_branch, user, component,
                                        architecture=None, yum_repourls=None, **kwargs):
+        warnings.warn("create_prod_without_koji_build is deprecated, please use create_build")
         return self.create_prod_build(git_uri, git_ref, git_branch, user, component, None,
                                       architecture, yum_repourls=yum_repourls, **kwargs)
 
