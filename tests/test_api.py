@@ -140,7 +140,6 @@ class TestOSBS(object):
                                           TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
         assert isinstance(response, BuildResponse)
 
-
     def test_create_prod_build_missing_name_label(self, osbs):
         class MockParser(object):
             labels = {}
@@ -153,7 +152,6 @@ class TestOSBS(object):
             osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
                                    TEST_GIT_BRANCH, TEST_USER,
                                    TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
-
 
     @pytest.mark.parametrize('label_name', ['BZComponent', 'com.redhat.component', 'Name', 'name'])
     def test_missing_component_and_name_labels(self, osbs, label_name):
@@ -173,7 +171,6 @@ class TestOSBS(object):
             osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
                                    TEST_GIT_BRANCH, TEST_USER,
                                    TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
-
 
     def test_create_prod_build_missing_args(self, osbs):
         """
@@ -203,7 +200,6 @@ class TestOSBS(object):
                                      component=TEST_COMPONENT,
                                      architecture=TEST_ARCH)
 
-
     @pytest.mark.parametrize('component_label_name', ['com.redhat.component', 'BZComponent'])
     def test_component_is_changed_from_label(self, osbs, component_label_name):
         """
@@ -225,9 +221,7 @@ class TestOSBS(object):
                                      TEST_ARCH)
         assert req.spec.component.value == TEST_COMPONENT
 
-
     def test_missing_component_argument_doesnt_break_build(self, osbs):
-        # TODO: test situation when a buildconfig already exists
         class MockParser(object):
             labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT}
             baseimage = 'fedora23/python'
@@ -236,10 +230,8 @@ class TestOSBS(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
             .and_return(MockParser()))
         response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                     TEST_GIT_BRANCH, TEST_USER)
+                                          TEST_GIT_BRANCH, TEST_USER)
         assert isinstance(response, BuildResponse)
-
-
 
     def test_create_prod_build_set_required_version(self, osbs106):
         class MockParser(object):

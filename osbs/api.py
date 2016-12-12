@@ -362,20 +362,25 @@ class OSBS(object):
         """
 
         def get_required_label(labels, names):
+        """
+        get value of label list, first found is returned
+        names has to be non empty tuple
+        """
+            assert names  # always called with a non-empty literal tuple so names[0] is safe
             for label_name in names:
                 if label_name in labels:
                     return labels[label_name]
 
             raise OsbsValidationException("required label '{name}' missing "
                                           "from Dockerfile"
-                                          .format(name=names[-1]))
+                                          .format(name=names[0]))
 
         df_parser = utils.get_df_parser(git_uri, git_ref, git_branch=git_branch)
         build_request = self.get_build_request()
         labels = df_parser.labels
 
-        name_label = get_required_label(labels, ('Name', 'name'))
-        component = get_required_label(labels, ('BZComponent', 'com.redhat.component'))
+        name_label = get_required_label(labels, ('name', 'Name'))
+        component = get_required_label(labels, ('com.redhat.component', 'BZComponent'))
 
         build_request.set_params(
             git_uri=git_uri,
