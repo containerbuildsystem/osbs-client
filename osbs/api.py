@@ -362,10 +362,10 @@ class OSBS(object):
         """
 
         def get_required_label(labels, names):
-        """
-        get value of label list, first found is returned
-        names has to be non empty tuple
-        """
+            """
+            get value of label list, first found is returned
+            names has to be non empty tuple
+            """
             assert names  # always called with a non-empty literal tuple so names[0] is safe
             for label_name in names:
                 if label_name in labels:
