@@ -365,7 +365,7 @@ class OSBS(object):
             for label_name in names:
                 if label_name in labels:
                     return labels[label_name]
-            
+
             raise OsbsValidationException("required label '{name}' missing "
                                           "from Dockerfile"
                                           .format(name=names[-1]))
