@@ -277,7 +277,6 @@ def cmd_build(args, osbs):
         git_ref=osbs.build_conf.get_git_ref(),
         git_branch=osbs.build_conf.get_git_branch(),
         user=osbs.build_conf.get_user(),
-        component=osbs.build_conf.get_component(),
         tag=osbs.build_conf.get_tag(),
         target=osbs.build_conf.get_koji_target(),
         architecture=osbs.build_conf.get_architecture(),
