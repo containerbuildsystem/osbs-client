@@ -155,8 +155,8 @@ The syntax of `prod_customize.json` is as follows:
 
 Such that:
 
-* `disable_plugins` will define a list of lists that define the plugin type of the plugin that is to be removed (`prebuild_plugins`, `prepublish_plugins`, `postbuild_plugins`, `exit_plugins`) and the name of the plugin.
+* `disable_plugins` will define a list of dicts that define the plugin type of the plugin that is to be removed (`prebuild_plugins`, `prepublish_plugins`, `postbuild_plugins`, `exit_plugins`) and the name of the plugin.
 
-* `enable_plugins` is used to add plugins or modify already enabled plugins by overriding args passed to the plugin, these must be defined as key-value pairs as illustrated above. It should be noted that plugins added here will be executed at the end of the list of plugins in that particular `plugin_type` (`prebuild_plugins`, `prepublish_plugins`, `postbuild_plugins`, `exit_plugins`), unless the plugin has already been previously added and this setting is only being used to override args. In the case of arg override, the plugin order execution will not change.
+* `enable_plugins` will define a list of dicts that is used to add plugins or modify already enabled plugins by overriding args passed to the plugin, these must be defined as key-value pairs as illustrated above. It should be noted that plugins added here will be executed at the end of the list of plugins in that particular `plugin_type` (`prebuild_plugins`, `prepublish_plugins`, `postbuild_plugins`, `exit_plugins`), unless the plugin has already been previously added and this setting is only being used to override args. In the case of arg override, the plugin order execution will not change.
 
 
