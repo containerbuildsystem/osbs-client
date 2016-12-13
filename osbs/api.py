@@ -411,8 +411,6 @@ class OSBS(object):
             pulp_registry=self.os_conf.get_pulp_registry(),
             nfs_server_path=self.os_conf.get_nfs_server_path(),
             nfs_dest_dir=self.build_conf.get_nfs_destination_dir(),
-            git_push_url=self.build_conf.get_git_push_url(),
-            git_push_username=self.build_conf.get_git_push_username(),
             builder_build_json_dir=self.build_conf.get_builder_build_json_store(),
             scratch=self.build_conf.get_scratch(scratch),
             unique_tag_only=self.build_conf.get_unique_tag_only(),

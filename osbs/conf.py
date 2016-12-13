@@ -321,9 +321,8 @@ class Configuration(object):
         key = "builder_build_json_dir"
         builder_build_json_dir = self._get_value(key, self.conf_section, key)
         if builder_build_json_dir is None:
-            fallback_key = "build_json_dir"
-            logger.warning("%r not found, falling back %r", key, fallback_key)
-            builder_build_json_dir = self._get_value(fallback_key, self.conf_section, fallback_key)
+            logger.warning("%r not found, falling back to build_json_dir", key)
+            builder_build_json_dir = self.get_build_json_store()
         return builder_build_json_dir
 
     def get_pulp_secret(self):
@@ -361,12 +360,6 @@ class Configuration(object):
 
     def get_storage_limit(self):
         return self._get_value("storage_limit", self.conf_section, "storage_limit")
-
-    def get_git_push_url(self):
-        return self._get_value("git_push_url", self.conf_section, "git_push_url")
-
-    def get_git_push_username(self):
-        return self._get_value("git_push_username", self.conf_section, "git_push_username")
 
     def get_build_image(self):
         return self._get_value("build_image", self.conf_section, "build_image")

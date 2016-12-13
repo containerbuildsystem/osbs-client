@@ -158,8 +158,6 @@ class BuildSpec(object):
     smtp_uri = BuildParam("smtp_uri", allow_none=True)
     nfs_server_path = BuildParam("nfs_server_path", allow_none=True)
     nfs_dest_dir = BuildParam("nfs_dest_dir", allow_none=True)
-    git_push_url = BuildParam("git_push_url", allow_none=True)
-    git_push_username = BuildParam("git_push_username", allow_none=True)
     builder_build_json_dir = BuildParam("builder_build_json_dir", allow_none=True)
     unique_tag_only = BuildParam("unique_tag_only", allow_none=True)
 
@@ -186,8 +184,6 @@ class BuildSpec(object):
             self.pdc_url,
             self.smtp_uri,
             self.nfs_server_path,
-            self.git_push_url,
-            self.git_push_username,
         ]
 
     def set_params(self, git_uri=None, git_ref=None,
@@ -206,7 +202,7 @@ class BuildSpec(object):
                    pulp_secret=None, pulp_registry=None, pdc_secret=None, pdc_url=None,
                    smtp_uri=None, nfs_server_path=None,
                    nfs_dest_dir=None, git_branch=None, base_image=None,
-                   name_label=None, git_push_url=None, git_push_username=None,
+                   name_label=None,
                    builder_build_json_dir=None, registry_api_versions=None,
                    unique_tag_only=None,
                    **kwargs):
@@ -255,8 +251,6 @@ class BuildSpec(object):
         self.smtp_uri.value = smtp_uri
         self.nfs_server_path.value = nfs_server_path
         self.nfs_dest_dir.value = nfs_dest_dir
-        self.git_push_url.value = git_push_url
-        self.git_push_username.value = git_push_username
         self.git_branch.value = git_branch
         self.name.value = make_name_from_git(self.git_uri.value, self.git_branch.value)
         if not base_image:
