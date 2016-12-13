@@ -1371,3 +1371,97 @@ class TestBuildRequest(object):
         pull_base_image_plugin = get_plugin(
             plugins, 'prebuild_plugins', 'pull_base_image')
         assert pull_base_image_plugin is not None
+
+    def test_render_prod_custom_site_plugin_enable(self):
+        """
+        Test to make sure that when we attempt to enable a plugin, it is
+        actually enabled in the JSON for the build_request after running
+        build_request.render()
+        """
+
+        plugin_type = "exit_plugins"
+        plugin_name = "testing_exit_plugin"
+        plugin_args = {"foo": "bar"}
+
+        build_request = BuildRequest(INPUTS_PATH)
+        build_request.customize_conf['enable_plugins'].append(
+            {
+                "plugin_type": plugin_type,
+                "plugin_name": plugin_name,
+                "plugin_args": plugin_args
+            }
+        )
+        kwargs = get_sample_prod_params()
+        build_request.set_params(**kwargs)
+        build_request.render()
+
+        assert {
+                "name": plugin_name,
+                "args": plugin_args
+        } in build_request.dj.dock_json[plugin_type]
+
+    def test_render_prod_custom_site_plugin_disable(self):
+        """
+        Test to make sure that when we attempt to disable a plugin, it is
+        actually disabled in the JSON for the build_request after running
+        build_request.render()
+        """
+
+        plugin_type = "postbuild_plugins"
+        plugin_name = "compress"
+
+        build_request = BuildRequest(INPUTS_PATH)
+        build_request.customize_conf['disable_plugins'].append(
+            {
+                "plugin_type": plugin_type,
+                "plugin_name": plugin_name
+            }
+        )
+        kwargs = get_sample_prod_params()
+        build_request.set_params(**kwargs)
+        build_request.render()
+
+        for plugin in build_request.dj.dock_json[plugin_type]:
+            if plugin['name'] == plugin_name:
+                assert False
+
+    def test_render_prod_custom_site_plugin_override(self):
+        """
+        Test to make sure that when we attempt to override a plugin's args,
+        they are actually overridden in the JSON for the build_request
+        after running build_request.render()
+        """
+
+        plugin_type = "postbuild_plugins"
+        plugin_name = "compress"
+        plugin_args = {"foo": "bar"}
+
+        kwargs = get_sample_prod_params()
+
+        unmodified_build_request = BuildRequest(INPUTS_PATH)
+        unmodified_build_request.set_params(**kwargs)
+        unmodified_build_request.render()
+
+        for plugin_dict in unmodified_build_request.dj.dock_json[plugin_type]:
+            if plugin_dict['name'] == plugin_name:
+                plugin_index = unmodified_build_request.dj.dock_json[plugin_type].index(plugin_dict)
+
+        build_request = BuildRequest(INPUTS_PATH)
+        build_request.customize_conf['enable_plugins'].append(
+            {
+                "plugin_type": plugin_type,
+                "plugin_name": plugin_name,
+                "plugin_args": plugin_args
+            }
+        )
+        build_request.set_params(**kwargs)
+        build_request.render()
+
+
+        assert {
+                "name": plugin_name,
+                "args": plugin_args
+        } in build_request.dj.dock_json[plugin_type]
+
+        assert unmodified_build_request.dj.dock_json[plugin_type][plugin_index]['name'] == plugin_name
+        assert build_request.dj.dock_json[plugin_type][plugin_index]['name'] == plugin_name

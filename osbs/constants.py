@@ -18,6 +18,7 @@ DEFAULT_CONFIGURATION_FILE = "/etc/osbs.conf"
 DEFAULT_CONFIGURATION_SECTION = "default"
 DEFAULT_OUTER_TEMPLATE = "prod.json"
 DEFAULT_INNER_TEMPLATE = "prod_inner.json"
+DEFAULT_CUSTOMIZE_CONF = "prod_customize.json"
 GENERAL_CONFIGURATION_SECTION = "general"
 POD_FINISHED_STATES = ["failed", "succeeded"]
 POD_FAILED_STATES = ["failed"]
