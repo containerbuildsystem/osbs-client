@@ -338,8 +338,9 @@ class OSBS(object):
     @osbsapi
     def create_prod_build(self, git_uri, git_ref,
                           git_branch,  # may be None
-                          user, component,
-                          target,      # may be None
+                          user,
+                          component=None,
+                          target=None,
                           architecture=None, yum_repourls=None,
                           koji_task_id=None,
                           scratch=None,
@@ -351,25 +352,35 @@ class OSBS(object):
         :param git_ref: str, reference to commit
         :param git_branch: str, branch name (may be None)
         :param user: str, user name
-        :param component: str, component name
-        :param target: str, koji target (may be None)
+        :param component: str, not used anymore
+        :param target: str, koji target
         :param architecture: str, build architecture
         :param yum_repourls: list, URLs for yum repos
         :param koji_task_id: int, koji task ID requesting build
         :param scratch: bool, this is a scratch build
         :return: BuildResponse instance
         """
+
+        def get_required_label(labels, names):
+            """
+            get value of label list, first found is returned
+            names has to be non empty tuple
+            """
+            assert names  # always called with a non-empty literal tuple so names[0] is safe
+            for label_name in names:
+                if label_name in labels:
+                    return labels[label_name]
+
+            raise OsbsValidationException("required label '{name}' missing "
+                                          "from Dockerfile"
+                                          .format(name=names[0]))
+
         df_parser = utils.get_df_parser(git_uri, git_ref, git_branch=git_branch)
         build_request = self.get_build_request()
         labels = df_parser.labels
-        for name_label_name in ['name', 'Name']:
-            if name_label_name in labels:
-                name_label = labels[name_label_name]
-                break
-        else:
-            raise OsbsValidationException("required label '{name}' missing "
-                                          "from Dockerfile"
-                                          .format(name=name_label_name))
+
+        name_label = get_required_label(labels, ('name', 'Name'))
+        component = get_required_label(labels, ('com.redhat.component', 'BZComponent'))
 
         build_request.set_params(
             git_uri=git_uri,
@@ -424,14 +435,14 @@ class OSBS(object):
         return response
 
     @osbsapi
-    def create_prod_with_secret_build(self, git_uri, git_ref, git_branch, user, component,
-                                      target, architecture=None, yum_repourls=None, **kwargs):
+    def create_prod_with_secret_build(self, git_uri, git_ref, git_branch, user, component=None,
+                                      target=None, architecture=None, yum_repourls=None, **kwargs):
         warnings.warn("create_prod_with_secret_build is deprecated, please use create_build")
         return self.create_prod_build(git_uri, git_ref, git_branch, user, component, target,
                                       architecture, yum_repourls=yum_repourls, **kwargs)
 
     @osbsapi
-    def create_prod_without_koji_build(self, git_uri, git_ref, git_branch, user, component,
+    def create_prod_without_koji_build(self, git_uri, git_ref, git_branch, user, component=None,
                                        architecture=None, yum_repourls=None, **kwargs):
         warnings.warn("create_prod_without_koji_build is deprecated, please use create_build")
         return self.create_prod_build(git_uri, git_ref, git_branch, user, component, None,
@@ -451,7 +462,6 @@ class OSBS(object):
         :return: instance of BuildRequest
         """
         kwargs.setdefault('git_branch', None)
-        kwargs.setdefault('target', None)
         return self.create_prod_build(**kwargs)
 
     @osbsapi

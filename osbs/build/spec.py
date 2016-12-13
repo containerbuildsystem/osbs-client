@@ -166,7 +166,6 @@ class BuildSpec(object):
             self.git_uri,
             self.git_ref,
             self.user,
-            self.component,
             self.registry_uris,
             self.openshift_uri,
             self.sources_command,

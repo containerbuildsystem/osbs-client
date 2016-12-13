@@ -186,9 +186,6 @@ class Configuration(object):
         """ user namespace when tagging and pushing image """
         return self._get_value("user", self.conf_section, "user")
 
-    def get_component(self):
-        return self._get_value("component", self.conf_section, "component")
-
     def get_tag(self):
         return self._get_value("tag", self.conf_section, "tag")
 
