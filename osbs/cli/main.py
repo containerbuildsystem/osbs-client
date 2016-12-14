@@ -10,6 +10,7 @@ import collections
 
 import json
 import logging
+import pkg_resources
 
 from textwrap import dedent
 import codecs
@@ -457,6 +458,11 @@ def str_on_2_unicode_on_3(s):
 
 
 def cli():
+    try:
+        version = pkg_resources.get_distribution("osbs-client").version
+    except pkg_resources.DistributionNotFound:
+        version = "GIT"
+
     parser = argparse.ArgumentParser(
         description="OpenShift Build Service client"
     )
@@ -465,6 +471,7 @@ def cli():
     # that the option was not specified
     exclusive_group.add_argument("--verbose", action="store_true", default=None)
     exclusive_group.add_argument("-q", "--quiet", action="store_true")
+    exclusive_group.add_argument("-V", "--version", action="version", version=version)
 
     subparsers = parser.add_subparsers(help='commands')
 
