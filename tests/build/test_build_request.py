@@ -251,6 +251,9 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins",
                        "stop_autorebuild_if_disabled")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins",
+                       "update_parent_image_stream_tag")
 
         assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
                                 "args", "hub") == "http://hub/"
@@ -355,6 +358,9 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins",
                        "stop_autorebuild_if_disabled")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins",
+                       "update_parent_image_stream_tag")
 
         assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
                                 "args", "hub") == "http://hub/"
@@ -445,6 +451,9 @@ class TestBuildRequest(object):
             get_plugin(plugins, "prebuild_plugins",
                        "stop_autorebuild_if_disabled")
         with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins",
+                       "update_parent_image_stream_tag")
+        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "bump_release")
         assert plugin_value_get(plugins, "prebuild_plugins", "distgit_fetch_artefacts",
                                 "args", "command") == "make"
@@ -522,6 +531,9 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins",
                        "stop_autorebuild_if_disabled")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins",
+                       "update_parent_image_stream_tag")
 
         assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
                                 "args", "hub") == "http://hub/"
@@ -654,6 +666,9 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins",
                        "stop_autorebuild_if_disabled")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins",
+                       "update_parent_image_stream_tag")
         assert get_plugin(plugins, "prebuild_plugins", "bump_release")
         assert get_plugin(plugins, "prebuild_plugins", "koji")
         with pytest.raises(NoSuchPluginException):
@@ -890,6 +905,9 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins",
                        "stop_autorebuild_if_disabled")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins",
+                       "update_parent_image_stream_tag")
 
         assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
                                 "args", "hub") == "http://hub/"
@@ -1045,8 +1063,9 @@ class TestBuildRequest(object):
         ("https://registry.example.com", False),
         ("http://registry.example.com", True),
     ])
+    @pytest.mark.parametrize('use_auth', (True, False, None))
     def test_render_prod_request_with_trigger(self, tmpdir, registry_uri,
-                                              insecure_registry):
+                                              insecure_registry, use_auth):
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequest(str(tmpdir))
         name_label = "fedora/resultingimage"
@@ -1073,7 +1092,10 @@ class TestBuildRequest(object):
             'pdc_secret': pdc_secret_name,
             'pdc_url': 'https://pdc.example.com',
             'smtp_uri': 'smtp.example.com',
+            'builder_build_json_dir': '/usr/share/osbs',
         }
+        if use_auth is not None:
+            kwargs['use_auth'] = use_auth
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
@@ -1088,6 +1110,28 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "prebuild_plugins",
                                 "check_and_set_rebuild", "args",
                                 "url") == kwargs["openshift_uri"]
+
+        assert get_plugin(plugins, "prebuild_plugins", "update_parent_image_stream_tag")
+        assert plugin_value_get(plugins, "prebuild_plugins",
+                                "update_parent_image_stream_tag", "args",
+                                "openshift_url") == kwargs["openshift_uri"]
+        assert plugin_value_get(plugins, "prebuild_plugins",
+                                "update_parent_image_stream_tag", "args",
+                                "build_json_dir") == kwargs["builder_build_json_dir"]
+        assert plugin_value_get(plugins, "prebuild_plugins",
+                                "update_parent_image_stream_tag", "args",
+                                "image_stream_tag") == kwargs["base_image"]
+        if use_auth is None:
+            with pytest.raises(KeyError):
+                plugin_value_get(plugins, "prebuild_plugins",
+                                 "update_parent_image_stream_tag", "args",
+                                 "use_auth")
+        else:
+            assert plugin_value_get(plugins, "prebuild_plugins",
+                                    "update_parent_image_stream_tag", "args",
+                                    "use_auth") == use_auth
+
+
         assert get_plugin(plugins, "postbuild_plugins", "import_image")
         assert plugin_value_get(plugins,
                                 "postbuild_plugins", "import_image", "args",
@@ -1162,6 +1206,9 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins",
                        "stop_autorebuild_if_disabled")
+
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins", "update_parent_image_stream_tag")
 
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
