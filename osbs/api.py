@@ -589,6 +589,23 @@ class OSBS(object):
         return self.os.get_image_stream_tag(tag_id)
 
     @osbsapi
+    def ensure_image_stream_tag(self, stream, tag_name, scheduled=False):
+        """Ensures the tag is monitored in ImageStream
+
+        :param stream: dict, ImageStream object
+        :param tag_name: str, name of tag to check, without name of
+                              ImageStream as prefix
+        :param scheduled: bool, if True, importPolicy.scheduled will be
+                                set to True in ImageStreamTag
+        :return: bool, whether or not modifications were performed
+        """
+        img_stream_tag_file = os.path.join(self.os_conf.get_build_json_store(),
+                                           'image_stream_tag.json')
+        tag_template = json.load(open(img_stream_tag_file))
+        return self.os.ensure_image_stream_tag(stream, tag_name, tag_template,
+                                               scheduled)
+
+    @osbsapi
     def get_image_stream(self, stream_id):
         return self.os.get_image_stream(stream_id)
 

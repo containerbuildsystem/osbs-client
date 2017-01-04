@@ -8,6 +8,7 @@ of the BSD license. See the LICENSE file for details.
 from types import GeneratorType
 
 from flexmock import flexmock
+from textwrap import dedent
 import json
 from pkg_resources import parse_version
 import os
@@ -443,13 +444,13 @@ class TestOSBS(object):
             inner.truncate()
 
         with NamedTemporaryFile(mode='wt') as fp:
-            fp.write("""
-[general]
-build_json_dir = {build_json_dir}
-[default]
-openshift_url = /
-registry_uri = registry.example.com
-""".format(build_json_dir=str(tmpdir)))
+            fp.write(dedent("""\
+                [general]
+                build_json_dir = {build_json_dir}
+                [default]
+                openshift_url = /
+                registry_uri = registry.example.com
+                """.format(build_json_dir=str(tmpdir))))
             fp.flush()
             config = Configuration(fp.name)
             osbs = OSBS(config, config)
@@ -463,19 +464,19 @@ registry_uri = registry.example.com
     def test_build_image(self):
         build_image = 'registry.example.com/buildroot:2.0'
         with NamedTemporaryFile(mode='wt') as fp:
-            fp.write("""
-[general]
-build_json_dir = {build_json_dir}
-[default]
-openshift_url = /
-sources_command = /bin/true
-vendor = Example, Inc
-registry_uri = registry.example.com
-build_host = localhost
-authoritative_registry = localhost
-distribution_scope = private
-build_image = {build_image}
-""".format(build_json_dir='inputs', build_image=build_image))
+            fp.write(dedent("""\
+                [general]
+                build_json_dir = {build_json_dir}
+                [default]
+                openshift_url = /
+                sources_command = /bin/true
+                vendor = Example, Inc
+                registry_uri = registry.example.com
+                build_host = localhost
+                authoritative_registry = localhost
+                distribution_scope = private
+                build_image = {build_image}
+                """.format(build_json_dir='inputs', build_image=build_image)))
             fp.flush()
             config = Configuration(fp.name)
             osbs = OSBS(config, config)
@@ -993,3 +994,25 @@ build_image = {build_image}
         response = osbs.get_image_stream_tag(name)
         ref = response.json()['image']['dockerImageReference']
         assert ref == 'spam:maps'
+
+    def test_ensure_image_stream_tag(self):
+        with NamedTemporaryFile(mode='wt') as fp:
+            fp.write(dedent("""\
+                [general]
+                build_json_dir = {build_json_dir}
+                """.format(build_json_dir='inputs')))
+            fp.flush()
+            config = Configuration(fp.name)
+            osbs = OSBS(config, config)
+
+        stream = {'type': 'stream'}
+        tag_name = 'latest'
+        scheduled = False
+        (flexmock(osbs.os)
+            .should_receive('ensure_image_stream_tag')
+            .with_args(stream, tag_name, dict, scheduled)
+            .once()
+            .and_return('eggs'))
+
+        response = osbs.ensure_image_stream_tag(stream, tag_name, scheduled)
+        assert response == 'eggs'
