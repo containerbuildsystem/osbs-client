@@ -105,6 +105,43 @@ def get_secret_mountpath_by_name(build_json, name):
 
 
 class TestBuildRequest(object):
+
+    def assert_import_image_plugin(self, plugins, name_label, registry_uri,
+                                   openshift_uri, use_auth, insecure_registry):
+        assert get_plugin(plugins, "postbuild_plugins", "import_image")
+        assert plugin_value_get(plugins,
+                                "postbuild_plugins", "import_image", "args",
+                                "imagestream") == name_label.replace('/', '-')
+        expected_repo = os.path.join(registry_uri, name_label)
+        expected_repo = expected_repo.replace('https://', '')
+        expected_repo = expected_repo.replace('http://', '')
+        assert plugin_value_get(plugins,
+                                "postbuild_plugins", "import_image", "args",
+                                "docker_image_repo") == expected_repo
+        assert plugin_value_get(plugins,
+                                "postbuild_plugins", "import_image", "args",
+                                "url") == openshift_uri
+
+        if use_auth is not None:
+            assert plugin_value_get(plugins,
+                                    "postbuild_plugins", "import_image", "args",
+                                    "use_auth") == use_auth
+        else:
+            with pytest.raises(KeyError):
+                plugin_value_get(plugins,
+                                 "postbuild_plugins", "import_image", "args",
+                                 "use_auth")
+
+        if insecure_registry:
+            assert plugin_value_get(plugins,
+                                    "postbuild_plugins", "import_image", "args",
+                                    "insecure_registry")
+        else:
+            with pytest.raises(KeyError):
+                plugin_value_get(plugins,
+                                 "postbuild_plugins", "import_image", "args",
+                                 "insecure_registry")
+
     def test_build_request_is_auto_instantiated(self):
         build_json = copy.deepcopy(TEST_BUILD_JSON)
         br = BuildRequest('something')
@@ -1133,29 +1170,13 @@ class TestBuildRequest(object):
                                     "update_parent_image_stream_tag", "args",
                                     "use_auth") == use_auth
 
-
-        assert get_plugin(plugins, "postbuild_plugins", "import_image")
-        assert plugin_value_get(plugins,
-                                "postbuild_plugins", "import_image", "args",
-                                "imagestream") == name_label.replace('/', '-')
-        expected_repo = os.path.join(kwargs["registry_uri"], name_label)
-        expected_repo = expected_repo.replace('https://', '')
-        expected_repo = expected_repo.replace('http://', '')
-        assert plugin_value_get(plugins,
-                                "postbuild_plugins", "import_image", "args",
-                                "docker_image_repo") == expected_repo
-        assert plugin_value_get(plugins,
-                                "postbuild_plugins", "import_image", "args",
-                                "url") == kwargs["openshift_uri"]
-        if insecure_registry:
-            assert plugin_value_get(plugins,
-                                    "postbuild_plugins", "import_image", "args",
-                                    "insecure_registry")
-        else:
-            with pytest.raises(KeyError):
-                plugin_value_get(plugins,
-                                 "postbuild_plugins", "import_image", "args",
-                                 "insecure_registry")
+        self.assert_import_image_plugin(
+                plugins=plugins,
+                name_label=name_label,
+                registry_uri=kwargs['registry_uri'],
+                openshift_uri=kwargs['openshift_uri'],
+                use_auth=use_auth,
+                insecure_registry=insecure_registry)
 
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries", "registry.example.com") == {"insecure": True}
@@ -1180,7 +1201,14 @@ class TestBuildRequest(object):
                     'name': 'sendmail'}
         assert get_plugin(plugins, 'exit_plugins', 'sendmail') == expected
 
-    def test_render_custom_base_image_with_trigger(self, tmpdir):
+    @pytest.mark.parametrize(('registry_uri', 'insecure_registry'), [
+        ("https://registry.example.com", False),
+        ("http://registry.example.com", True),
+    ])
+    @pytest.mark.parametrize('use_auth', (True, False, None))
+    def test_render_custom_base_image_with_trigger(self, tmpdir, registry_uri,
+                                                   insecure_registry, use_auth):
+        name_label = "fedora/resultingimage"
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequest(str(tmpdir))
 
@@ -1190,6 +1218,11 @@ class TestBuildRequest(object):
         kwargs['pdc_secret'] = 'foo'
         kwargs['pdc_url'] = 'https://pdc.example.com'
         kwargs['smtp_uri'] = 'smtp.example.com'
+        kwargs['registry_uri'] = registry_uri
+        kwargs['source_registry_uri'] = registry_uri
+        kwargs['openshift_uri'] = 'http://openshift/'
+        if use_auth is not None:
+            kwargs['use_auth'] = use_auth
 
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -1213,10 +1246,15 @@ class TestBuildRequest(object):
             get_plugin(plugins, "prebuild_plugins", "update_parent_image_stream_tag")
 
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "import_image")
-
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
+
+        self.assert_import_image_plugin(
+                plugins=plugins,
+                name_label=name_label,
+                registry_uri=kwargs['registry_uri'],
+                openshift_uri=kwargs['openshift_uri'],
+                use_auth=use_auth,
+                insecure_registry=insecure_registry)
 
     def test_render_prod_request_new_secrets(self, tmpdir):
         secret_name = 'mysecret'
