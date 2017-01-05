@@ -85,6 +85,9 @@ class DockJsonManipulator(object):
             raise RuntimeError("no such plugin in dock json: \"%s\"" % plugin_name)
         return conf
 
+    def dock_json_set_param(self, param, value):
+        self.dock_json[param] = value
+
     def dock_json_set_arg(self, plugin_type, plugin_name, arg_key, arg_value):
         plugin_conf = self._dock_json_get_plugin_conf_or_fail(plugin_type, plugin_name)
         plugin_conf.setdefault("args", {})
