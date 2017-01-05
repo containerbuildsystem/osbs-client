@@ -215,6 +215,21 @@ class BuildRequest(object):
                                           "add_yum_repo_by_url", "inject_proxy",
                                           self.spec.proxy.value)
 
+    def render_update_parent_image_stream_tag(self, use_auth=None):
+        phase = 'prebuild_plugins'
+        plugin = 'update_parent_image_stream_tag'
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return
+
+        self.dj.dock_json_set_arg(phase, plugin, 'openshift_url',
+                                  self.spec.builder_openshift_url.value)
+        self.dj.dock_json_set_arg(phase, plugin, 'build_json_dir',
+                                  self.spec.builder_build_json_dir.value)
+        self.dj.dock_json_set_arg(phase, plugin, 'image_stream_tag',
+                                  self.spec.trigger_imagestreamtag.value)
+        if use_auth is not None:
+            self.dj.dock_json_set_arg(phase, plugin, 'use_auth', use_auth)
+
     def render_check_and_set_rebuild(self, use_auth=None):
         if self.dj.dock_json_has_plugin_conf('prebuild_plugins',
                                              'check_and_set_rebuild'):
@@ -367,6 +382,7 @@ class BuildRequest(object):
         if not triggers:
             for when, which in [("prebuild_plugins", "check_and_set_rebuild"),
                                 ("prebuild_plugins", "stop_autorebuild_if_disabled"),
+                                ("prebuild_plugins", "update_parent_image_stream_tag"),
                                 ("postbuild_plugins", "import_image"),
                                 ("exit_plugins", "sendmail")]:
                 logger.info("removing %s from request because there are no triggers",
@@ -753,6 +769,7 @@ class BuildRequest(object):
         self.render_add_yum_repo_by_url()
 
         use_auth = self.spec.use_auth.value
+        self.render_update_parent_image_stream_tag(use_auth=use_auth)
         self.render_check_and_set_rebuild(use_auth=use_auth)
         self.render_store_metadata_in_osv3(use_auth=use_auth)
 
