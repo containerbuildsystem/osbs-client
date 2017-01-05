@@ -10,11 +10,13 @@ import json
 import os
 from pkg_resources import parse_version
 import shutil
+import six
 
 from osbs.build.build_request import BuildRequest
 from osbs.constants import (DEFAULT_BUILD_IMAGE, DEFAULT_OUTER_TEMPLATE,
                             DEFAULT_INNER_TEMPLATE)
 from osbs.exceptions import OsbsValidationException
+from osbs import __version__ as expected_version
 
 from flexmock import flexmock
 import pytest
@@ -1465,3 +1467,12 @@ class TestBuildRequest(object):
 
         assert unmodified_build_request.dj.dock_json[plugin_type][plugin_index]['name'] == plugin_name
         assert build_request.dj.dock_json[plugin_type][plugin_index]['name'] == plugin_name
+
+    def test_has_version(self):
+        br = BuildRequest(INPUTS_PATH)
+        br.render()
+        assert 'client-version' in br.dj.dock_json
+
+        actual_version = br.dj.dock_json['client-version']
+        assert isinstance(actual_version, six.string_types)
+        assert expected_version == actual_version

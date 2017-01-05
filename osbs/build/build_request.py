@@ -27,6 +27,7 @@ from osbs.build.spec import BuildSpec
 from osbs.constants import SECRETS_PATH, DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE, DEFAULT_CUSTOMIZE_CONF
 from osbs.exceptions import OsbsException, OsbsValidationException
 from osbs.utils import looks_like_git_hash, git_repo_humanish_part_from_uri
+from osbs import __version__ as client_version
 
 
 logger = logging.getLogger(__name__)
@@ -718,6 +719,8 @@ class BuildRequest(object):
                     # Malformed config
                     logger.debug("Invalid custom configuration found for enable_plugins")
 
+    def render_version(self):
+        self.dj.dock_json_set_param('client-version', client_version)
 
     def render(self, validate=True):
         if validate:
@@ -855,6 +858,7 @@ class BuildRequest(object):
         self.render_pulp_sync()
         self.render_koji_promote(use_auth=use_auth)
         self.render_sendmail()
+        self.render_version()
 
         self.dj.write_dock_json()
         self.build_json = self.template

@@ -1,4 +1,5 @@
 {
+  "client-version": "{{VERSION}}",
   "prebuild_plugins": [
     {
       "args": {
