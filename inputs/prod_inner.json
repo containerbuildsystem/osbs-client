@@ -53,6 +53,10 @@
       "name": "change_from_in_dockerfile"
     },
     {
+      "name": "add_help",
+      "required": false
+    },
+    {
       "name": "add_dockerfile"
     },
     {
