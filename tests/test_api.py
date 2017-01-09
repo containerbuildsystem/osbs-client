@@ -917,11 +917,19 @@ class TestOSBS(object):
                 .should_receive('get_image_stream_tag')
                 .never())
 
+        def verify_build_json(passed_build_json):
+            # Don't compare metadata.name directly as we can't control it
+            assert (isinstance(passed_build_json['metadata'].pop('name'),
+                               six.string_types))
+            del updated_build_json['metadata']['name']
+
+            assert passed_build_json == updated_build_json
+            return flexmock(json=lambda: {'spam': 'maps'})
+
         (flexmock(osbs.os)
             .should_receive('create_build')
-            .with_args(updated_build_json)
-            .once()
-            .and_return(flexmock(json=lambda: {'spam': 'maps'})))
+            .replace_with(verify_build_json)
+            .once())
 
         (flexmock(osbs.os)
             .should_receive('create_build_config')
