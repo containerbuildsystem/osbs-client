@@ -83,7 +83,8 @@
       "name": "inject_yum_repo"
     },
     {
-      "name": "dockerfile_content"
+      "name": "dockerfile_content",
+      "required": false
     },
     {
       "name": "distribution_scope"
