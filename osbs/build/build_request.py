@@ -375,18 +375,43 @@ class BuildRequest(object):
                 del regdict['version']
 
     def adjust_for_triggers(self):
-        """
-        Remove trigger-related plugins if no triggers set
+        """Remove trigger-related plugins when needed
+
+        If there are no triggers defined, it's assumed the
+        feature is disabled and all trigger-related plugins
+        are removed.
+
+        If there are triggers defined, and this is a custom
+        base image, some trigger-related plugins do not apply.
+        All but import_image are disabled in this case.
+
+        Additionally, this method ensures that custom base
+        images never have triggers since triggering a base
+        image rebuild is not a valid scenario.
         """
         triggers = self.template['spec'].get('triggers', [])
-        if not triggers:
-            for when, which in [("prebuild_plugins", "check_and_set_rebuild"),
-                                ("prebuild_plugins", "stop_autorebuild_if_disabled"),
-                                ("prebuild_plugins", "update_parent_image_stream_tag"),
-                                ("postbuild_plugins", "import_image"),
-                                ("exit_plugins", "sendmail")]:
-                logger.info("removing %s from request because there are no triggers",
-                            which)
+
+        remove_plugins = [
+            ("prebuild_plugins", "check_and_set_rebuild"),
+            ("prebuild_plugins", "stop_autorebuild_if_disabled"),
+            ("prebuild_plugins", "update_parent_image_stream_tag"),
+            ("exit_plugins", "sendmail"),
+        ]
+
+        should_remove = False
+        if triggers and self.is_custom_base_image():
+            msg = "removing %s from request because custom base image"
+            del self.template['spec']['triggers']
+            should_remove = True
+
+        elif not triggers:
+            remove_plugins.append(("postbuild_plugins", "import_image"))
+            msg = "removing %s from request because there are no triggers"
+            should_remove = True
+
+        if should_remove:
+            for when, which in remove_plugins:
+                logger.info(msg, which)
                 self.dj.remove_plugin(when, which)
 
     def adjust_for_scratch(self):
@@ -807,16 +832,6 @@ class BuildRequest(object):
         source_registry = self.spec.source_registry_uri.value
         self.dj.dock_json_set_arg('prebuild_plugins', "pull_base_image", "parent_registry",
                                   source_registry.docker_uri if source_registry else None)
-
-        # Set to true to disable triggers in BuildConfig
-        remove_triggers = False
-
-        if self.is_custom_base_image():
-            logger.info('removing triggers for custom base image build')
-            remove_triggers = True
-
-        if remove_triggers and 'triggers' in self.template['spec']:
-            del self.template['spec']['triggers']
 
         self.adjust_for_triggers()
         self.adjust_for_scratch()
