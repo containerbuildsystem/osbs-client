@@ -89,6 +89,9 @@ def test_get_time_from_rfc3339_valid(rfc3339, seconds, tz):
     ('spam', 'b', 10, '-', 'spam-b'),
     ('spam', 'bacon', 10, '^^^', 'spam^^^bac'),
     ('spam', '', 10, '-', 'spam-unkno'),
+    ('spam', 'baco-n', 10, '-', 'spam-baco'),
+    ('spam', 'ba---n', 10, '-', 'spam-ba'),
+    ('spam', '-----n', 10, '-', 'spam'),
     ('https://github.com/blah/spam.git', 'bacon', 10, '-', 'spam-bacon'),
 ])
 def test_make_name_from_git(repo, branch, limit, separator, expected):
