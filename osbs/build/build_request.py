@@ -426,7 +426,7 @@ class BuildRequest(object):
                     ("postbuild_plugins", "compress"),
                     ("exit_plugins", "koji_promote"),
             ]:
-                logger.info("removing %s from request because there are no triggers",
+                logger.info("removing %s from scratch build request",
                             which)
                 self.dj.remove_plugin(when, which)
 
