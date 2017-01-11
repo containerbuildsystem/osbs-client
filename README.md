@@ -49,3 +49,7 @@ $ osbs build -g http://path.to.gitrepo.with.dockerfile/ -b git_branch -c image-n
 ## Deploying OpenShift Build System
 
 We have [documentation](https://github.com/projectatomic/osbs-client/blob/master/docs/osbs_instance_setup.md) how you can setup your own instance.
+
+## Contributing
+
+If you would like to help out, that's great! Please read the [contribution guide](https://github.com/projectatomic/osbs-client/blob/master/docs/contributing.md).
