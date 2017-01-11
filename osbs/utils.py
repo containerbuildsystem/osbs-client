@@ -302,6 +302,10 @@ def make_name_from_git(repo, branch, limit=53, separator='-'):
     Assuming '-XXXX' (5 chars) and '-build' (6 chars) as default
     suffixes, name should be limited to 53 chars (64 - 11).
 
+    Since OpenShift rejects names that end in dash, the
+    generated name may be trimmed resulting in a name shorter
+    than the limit.
+
     :param repo: str, the git repository to be used
     :param branch: str, the git branch to be used
     :param limit: int, max name length
@@ -332,7 +336,12 @@ def make_name_from_git(repo, branch, limit=53, separator='-'):
     repo = ''.join(repo_chars)
     branch = ''.join(branch_chars)
 
-    return repo + separator + branch
+    name = repo + separator + branch
+
+    while name.endswith('-'):
+        name = name[:-1]
+
+    return name
 
 
 def get_instance_token_file_name(instance):
