@@ -361,26 +361,15 @@ class OSBS(object):
         :return: BuildResponse instance
         """
 
-        def get_required_label(labels, names):
-            """
-            get value of label list, first found is returned
-            names has to be non empty tuple
-            """
-            assert names  # always called with a non-empty literal tuple so names[0] is safe
-            for label_name in names:
-                if label_name in labels:
-                    return labels[label_name]
-
-            raise OsbsValidationException("required label '{name}' missing "
-                                          "from Dockerfile"
-                                          .format(name=names[0]))
-
         df_parser = utils.get_df_parser(git_uri, git_ref, git_branch=git_branch)
         build_request = self.get_build_request()
-        labels = df_parser.labels
+        labels = utils.Labels(df_parser.labels)
 
-        name_label = get_required_label(labels, ('name', 'Name'))
-        component = get_required_label(labels, ('com.redhat.component', 'BZComponent'))
+        try:
+            _, name_value = labels.get_name_and_value(utils.Labels.LABEL_TYPE_NAME)
+            _, component = labels.get_name_and_value(utils.Labels.LABEL_TYPE_COMPONENT)
+        except KeyError:
+            raise OsbsValidationException("required label missing from Dockerfile")
 
         build_request.set_params(
             git_uri=git_uri,
@@ -391,7 +380,7 @@ class OSBS(object):
             build_image=self.build_conf.get_build_image(),
             build_imagestream=self.build_conf.get_build_imagestream(),
             base_image=df_parser.baseimage,
-            name_label=name_label,
+            name_label=name_value,
             registry_uris=self.build_conf.get_registry_uris(),
             registry_secrets=self.build_conf.get_registry_secrets(),
             source_registry_uri=self.build_conf.get_source_registry_uri(),
