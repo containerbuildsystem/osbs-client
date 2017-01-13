@@ -142,18 +142,18 @@ class TestBuildRequest(object):
                                  "postbuild_plugins", "import_image", "args",
                                  "insecure_registry")
 
-    def test_build_request_is_auto_instantiated(self):
+    def test_build_request_has_ist_trigger(self):
         build_json = copy.deepcopy(TEST_BUILD_JSON)
         br = BuildRequest('something')
         flexmock(br).should_receive('template').and_return(build_json)
-        assert br.is_auto_instantiated() is True
+        assert br.has_ist_trigger() is True
 
     def test_build_request_isnt_auto_instantiated(self):
         build_json = copy.deepcopy(TEST_BUILD_JSON)
         build_json['spec']['triggers'] = []
         br = BuildRequest('something')
         flexmock(br).should_receive('template').and_return(build_json)
-        assert br.is_auto_instantiated() is False
+        assert br.has_ist_trigger() is False
 
     def test_set_label(self):
         build_json = copy.deepcopy(TEST_BUILD_JSON)
