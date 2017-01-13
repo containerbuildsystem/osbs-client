@@ -25,7 +25,8 @@ from osbs.conf import Configuration
 from osbs.build.build_request import BuildRequest
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
-from osbs.exceptions import OsbsValidationException, OsbsException
+from osbs.build.spec import BuildSpec
+from osbs.exceptions import OsbsValidationException, OsbsException, OsbsResponseException
 from osbs.http import HttpResponse
 from osbs.constants import DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE
 from osbs import utils
@@ -307,7 +308,7 @@ class TestOSBS(object):
         build_request = flexmock(
             render=lambda: build_json,
             set_openshift_required_version=lambda x: api_version,
-            is_auto_instantiated=lambda: False,
+            has_ist_trigger=lambda: False,
             scratch=False)
         response = osbs.create_build_from_buildrequest(build_request)
         assert isinstance(response, BuildResponse)
@@ -639,7 +640,7 @@ class TestOSBS(object):
         build_json = {'apiVersion': 'spam'}
         build_request = flexmock(
             render=lambda: build_json,
-            is_auto_instantiated=lambda: False,
+            has_ist_trigger=lambda: False,
             scratch=False)
 
         with pytest.raises(OsbsValidationException):
@@ -658,6 +659,7 @@ class TestOSBS(object):
                     'git-branch': 'branch',
                 },
             },
+            'spec': {},
         }
 
         existing_build_json = copy.deepcopy(build_json)
@@ -667,7 +669,7 @@ class TestOSBS(object):
 
         build_request = flexmock(
             render=lambda: build_json,
-            is_auto_instantiated=lambda: False,
+            has_ist_trigger=lambda: False,
             scratch=False)
 
         (flexmock(osbs)
@@ -693,6 +695,7 @@ class TestOSBS(object):
                     'git-branch': 'branch',
                 },
             },
+            'spec': {},
         }
 
         existing_build_json = copy.deepcopy(build_json)
@@ -700,7 +703,7 @@ class TestOSBS(object):
 
         build_request = flexmock(
             render=lambda: build_json,
-            is_auto_instantiated=lambda: False,
+            has_ist_trigger=lambda: False,
             scratch=False)
 
         (flexmock(osbs)
@@ -731,6 +734,7 @@ class TestOSBS(object):
                     'git-branch': 'branch',
                 },
             },
+            'spec': {},
         }
 
         existing_build_json = copy.deepcopy(build_json)
@@ -739,7 +743,7 @@ class TestOSBS(object):
 
         build_request = flexmock(
             render=lambda: build_json,
-            is_auto_instantiated=lambda: False,
+            has_ist_trigger=lambda: False,
             scratch=False)
 
         (flexmock(osbs)
@@ -779,11 +783,12 @@ class TestOSBS(object):
                     'git-branch': 'branch',
                 },
             },
+            'spec': {},
         }
 
         build_request = flexmock(
             render=lambda: build_json,
-            is_auto_instantiated=lambda: False,
+            has_ist_trigger=lambda: False,
             scratch=False)
 
         (flexmock(osbs)
@@ -806,12 +811,27 @@ class TestOSBS(object):
         build_response = osbs._create_build_config_and_build(build_request)
         assert build_response.json == {'spam': 'maps'}
 
-    def test_create_build_config_auto_start(self):
-        config = Configuration()
+    @pytest.mark.parametrize('existing_bc', [True, False])
+    @pytest.mark.parametrize('existing_is', [True, False])
+    @pytest.mark.parametrize('existing_ist', [True, False])
+    def test_create_build_config_auto_start(self, existing_bc, existing_is,
+                                            existing_ist):
+        # If ImageStream exists, always expect auto instantiated
+        # build, because this test assumes an auto_instantiated BuildRequest
+        expect_auto = existing_is
+        with NamedTemporaryFile(mode='wt') as fp:
+            fp.write(dedent("""\
+                [general]
+                build_json_dir = inputs
+                """))
+            fp.flush()
+            config = Configuration(fp.name)
+
         osbs = OSBS(config, config)
 
         build_json = {
-            'apiVersion': osbs.os_conf.get_openshift_api_version(),
+            'apiVersion': 'v1',
+            'kind': 'Build',
             'metadata': {
                 'name': 'build',
                 'labels': {
@@ -819,37 +839,139 @@ class TestOSBS(object):
                     'git-branch': 'branch',
                 },
             },
+            'spec': {
+                'triggers': [{'name': 'new_trigger'}]
+            },
         }
+
+        build_config_json = {
+            'apiVersion': 'v1',
+            'kind': 'BuildConfig',
+            'metadata': {
+                'name': 'build',
+                'labels': {
+                    'git-repo-name': 'reponame',
+                    'git-branch': 'branch',
+                },
+            },
+            'spec': {
+                'triggers': [{'name': 'old_trigger'}]
+            },
+            'status': {'lastVersion': 'lastVersion'},
+        }
+
+        image_stream_json = {'apiVersion': 'v', 'kind': 'ImageStream'}
+        image_stream_tag_json = {'apiVersion': 'v1', 'kind': 'ImageStreamTag'}
+
+        spec = BuildSpec()
+        # Params needed to avoid exceptions.
+        spec.set_params(
+            user='user',
+            base_image='fedora23/python',
+            name_label='name_label',
+            source_registry_uri='source_registry_uri',
+            git_uri='https://github.com/user/reponame.git',
+            registry_uris=['http://registry.example.com:5000/v2'],
+        )
 
         build_request = flexmock(
             render=lambda: build_json,
-            is_auto_instantiated=lambda: True,
+            has_ist_trigger=lambda: True,
             scratch=False)
+        # Cannot use spec keyword arg in flexmock constructor
+        # because it appears to be used by flexmock itself
+        build_request.spec = spec
 
+        get_existing_build_config_times = 1
+        if existing_bc and build_request.has_ist_trigger():
+            get_existing_build_config_times += 1
+
+        def mock_get_existing_build_config(*args, **kwargs):
+            return build_config_json if existing_bc else None
         (flexmock(osbs)
             .should_receive('_get_existing_build_config')
+            .times(get_existing_build_config_times)
+            .replace_with(mock_get_existing_build_config))
+
+        def mock_get_image_stream(*args, **kwargs):
+            if not existing_is:
+                raise OsbsResponseException('missing ImageStream',
+                                            status_code=404)
+
+            return flexmock(json=lambda: image_stream_json)
+        (flexmock(osbs.os)
+            .should_receive('get_image_stream')
+            .with_args('fedora23-python')
             .once()
-            .and_return(None))
+            .replace_with(mock_get_image_stream))
+
+        if existing_is:
+            def mock_get_image_stream_tag(*args, **kwargs):
+                if not existing_ist:
+                    raise OsbsResponseException('missing ImageStreamTag',
+                                                status_code=404)
+                return flexmock(json=lambda: image_stream_tag_json)
+            (flexmock(osbs.os)
+                .should_receive('get_image_stream_tag')
+                .with_args('fedora23-python:latest')
+                .once()
+                .replace_with(mock_get_image_stream_tag))
+
+            (flexmock(osbs.os)
+                .should_receive('ensure_image_stream_tag')
+                .with_args(image_stream_json, 'latest', dict, True)
+                .once()
+                .and_return(True))
+
+        update_build_config_times = 0
+
+        if existing_bc:
+            (flexmock(osbs.os)
+                .should_receive('list_builds')
+                .with_args(build_config_id='build')
+                .once()
+                .and_return(flexmock(json=lambda: {'items': []})))
+            update_build_config_times += 1
+
+        else:
+            temp_build_json = copy.deepcopy(build_json)
+            temp_build_json['spec'].pop('triggers', None)
+
+            def mock_create_build_config(encoded_build_json):
+                assert json.loads(encoded_build_json) == temp_build_json
+                return flexmock(json=lambda: build_config_json)
+            (flexmock(osbs.os)
+                .should_receive('create_build_config')
+                .replace_with(mock_create_build_config)
+                .once())
+
+        if build_request.has_ist_trigger():
+            update_build_config_times += 1
 
         (flexmock(osbs.os)
-            .should_receive('create_build_config')
-            .with_args(json.dumps(build_json))
-            .once()
-            .and_return(flexmock(json=lambda: {
-                'status': {'lastVersion': 'lastVersion'}}
-            )))
+            .should_receive('update_build_config')
+            .with_args('build', str)
+            .times(update_build_config_times))
 
-        (flexmock(osbs.os)
-            .should_receive('wait_for_new_build_config_instance')
-            .with_args('build', 'lastVersion')
-            .once()
-            .and_return('build-id'))
+        if expect_auto:
+            (flexmock(osbs.os)
+                .should_receive('wait_for_new_build_config_instance')
+                .with_args('build', 'lastVersion')
+                .once()
+                .and_return('build-id'))
 
-        (flexmock(osbs.os)
-            .should_receive('get_build')
-            .with_args('build-id')
-            .once()
-            .and_return(flexmock(json=lambda: {'spam': 'maps'})))
+            (flexmock(osbs.os)
+                .should_receive('get_build')
+                .with_args('build-id')
+                .once()
+                .and_return(flexmock(json=lambda: {'spam': 'maps'})))
+
+        else:
+            (flexmock(osbs.os)
+                .should_receive('start_build')
+                .with_args('build')
+                .once()
+                .and_return(flexmock(json=lambda: {'spam': 'maps'})))
 
         build_response = osbs._create_build_config_and_build(build_request)
         assert build_response.json == {'spam': 'maps'}
@@ -887,7 +1009,7 @@ class TestOSBS(object):
 
         build_request = flexmock(
             render=lambda: build_json,
-            is_auto_instantiated=lambda: False,
+            has_ist_trigger=lambda: False,
             scratch=True)
 
         updated_build_json = copy.deepcopy(build_json)

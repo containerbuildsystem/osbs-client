@@ -15,6 +15,7 @@ import stat
 import sys
 import warnings
 import datetime
+import requests
 from functools import wraps
 
 from osbs.build.build_request import BuildRequest
@@ -22,7 +23,7 @@ from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
 from osbs.constants import BUILD_RUNNING_STATES
 from osbs.core import Openshift
-from osbs.exceptions import OsbsException, OsbsValidationException
+from osbs.exceptions import OsbsException, OsbsValidationException, OsbsResponseException
 # import utils in this way, so that we can mock standalone functions with flexmock
 from osbs import utils
 
@@ -287,9 +288,35 @@ class OSBS(object):
         build_json['metadata']['name'] = build_config_name
         return BuildResponse(self.os.create_build(build_json).json())
 
-    def _create_build_config_and_build(self, build_request):
-        build = None
+    def _get_image_stream_info_for_build_request(self, build_request):
+        """Return ImageStream, and ImageStreamTag name for base_image of build_request
 
+        If build_request is not auto instantiated, objects are not fetched
+        and None, None is returned.
+        """
+        image_stream = None
+        image_stream_tag_name = None
+
+        if build_request.has_ist_trigger():
+            image_stream_tag_id = build_request.spec.trigger_imagestreamtag.value
+            image_stream_id, image_stream_tag_name = image_stream_tag_id.split(':')
+
+            try:
+                image_stream = self.get_image_stream(image_stream_id).json()
+            except OsbsResponseException as x:
+                if x.status_code != requests.codes.NOT_FOUND:
+                    raise
+
+            if image_stream:
+                try:
+                    self.get_image_stream_tag(image_stream_tag_id).json()
+                except OsbsResponseException as x:
+                    if x.status_code != requests.codes.NOT_FOUND:
+                        raise
+
+        return image_stream, image_stream_tag_name
+
+    def _create_build_config_and_build(self, build_request):
         build_json = build_request.render()
         api_version = build_json['apiVersion']
         if api_version != self.os_conf.get_openshift_api_version():
@@ -300,7 +327,16 @@ class OSBS(object):
         logger.debug('build config to be named "%s"', build_config_name)
         existing_bc = self._get_existing_build_config(build_json)
 
-        if existing_bc is not None:
+        image_stream, image_stream_tag_name = \
+            self._get_image_stream_info_for_build_request(build_request)
+
+        # Remove triggers in BuildConfig to avoid accidental
+        # auto instance of Build. If defined, triggers will
+        # be added to BuildConfig after ImageStreamTag object
+        # is properly configured.
+        triggers = build_json['spec'].pop('triggers', None)
+
+        if existing_bc:
             self._verify_labels_match(build_json, existing_bc)
             # Existing build config may have a different name if matched by
             # git-repo-name and git-branch labels. Continue using existing
@@ -314,25 +350,38 @@ class OSBS(object):
             # Reset name change that may have occurred during
             # update above, since renaming is not supported.
             existing_bc['metadata']['name'] = build_config_name
-            logger.debug('build config for %s already exists, updating...', build_config_name)
+            logger.debug('build config for %s already exists, updating...',
+                         build_config_name)
+
             self.os.update_build_config(build_config_name, json.dumps(existing_bc))
+            if triggers:
+                # Retrieve updated version to pick up lastVersion
+                existing_bc = self._get_existing_build_config(existing_bc)
 
         else:
-            # if it doesn't exist, then create it
-            logger.debug('build config for %s doesn\'t exist, creating...', build_config_name)
-            bc = self.os.create_build_config(json.dumps(build_json)).json()
-            # if there's an "ImageChangeTrigger" on the BuildConfig and "From" is of type
-            #  "ImageStreamTag", the build will be scheduled automatically
-            #  see https://github.com/projectatomic/osbs-client/issues/205
-            if build_request.is_auto_instantiated():
-                prev_version = bc['status']['lastVersion']
-                build_id = self.os.wait_for_new_build_config_instance(build_config_name,
-                                                                      prev_version)
-                build = BuildResponse(self.os.get_build(build_id).json())
+            logger.debug('build config for %s doesn\'t exist, creating...',
+                         build_config_name)
+            existing_bc = self.os.create_build_config(json.dumps(build_json)).json()
 
-        if build is None:
+        if image_stream:
+            changed_ist = self.ensure_image_stream_tag(image_stream,
+                                                       image_stream_tag_name,
+                                                       scheduled=True)
+            logger.debug('Changed parent ImageStreamTag? %s', changed_ist)
+
+        if triggers:
+            existing_bc['spec']['triggers'] = triggers
+            self.os.update_build_config(build_config_name, json.dumps(existing_bc))
+
+        if image_stream and triggers:
+            prev_version = existing_bc['status']['lastVersion']
+            build_id = self.os.wait_for_new_build_config_instance(
+                build_config_name, prev_version)
+            build = BuildResponse(self.os.get_build(build_id).json())
+        else:
             response = self.os.start_build(build_config_name)
             build = BuildResponse(response.json())
+
         return build
 
     @osbsapi

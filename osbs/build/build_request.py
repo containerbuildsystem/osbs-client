@@ -156,8 +156,8 @@ class BuildRequest(object):
             self._dj = DockJsonManipulator(self.template, self.inner_template)
         return self._dj
 
-    def is_auto_instantiated(self):
-        """Return True if this BuildConfig will be automatically instantiated when created."""
+    def has_ist_trigger(self):
+        """Return True if this BuildConfig has ImageStreamTag trigger."""
         triggers = self.template['spec'].get('triggers', [])
         for trigger in triggers:
             if trigger['type'] == 'ImageChange' and \
