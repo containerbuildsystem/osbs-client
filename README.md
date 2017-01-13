@@ -52,4 +52,4 @@ We have [documentation](https://github.com/projectatomic/osbs-client/blob/master
 
 ## Contributing
 
-If you would like to help out, that's great! Please read the [contribution guide](https://github.com/projectatomic/osbs-client/blob/master/docs/contributing.md).
+If you would like to help out, that's great! Please read the [contribution guide](https://github.com/projectatomic/osbs-client/blob/master/CONTRIBUTING.md).
