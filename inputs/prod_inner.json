@@ -17,13 +17,6 @@
       "name": "stop_autorebuild_if_disabled"
     },
     {
-      "args": {
-        "openshift_url": "{{OPENSHIFT_URI}}",
-        "verify_ssl": false
-      },
-      "name": "update_parent_image_stream_tag"
-    },
-    {
       "name": "add_filesystem",
       "args": {
         "koji_hub": "{{KOJI_HUB}}",
