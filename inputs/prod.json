@@ -8,6 +8,7 @@
     }
   },
   "spec": {
+    "runPolicy": "Serial",
     "source": {
       "type": "Git",
       "git": {
