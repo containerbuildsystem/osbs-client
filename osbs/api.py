@@ -434,10 +434,22 @@ class OSBS(object):
                                                customize_conf=customize_conf)
         labels = utils.Labels(df_parser.labels)
 
-        try:
-            _, name_value = labels.get_name_and_value(utils.Labels.LABEL_TYPE_NAME)
-            _, component = labels.get_name_and_value(utils.Labels.LABEL_TYPE_COMPONENT)
-        except KeyError:
+        required_missing = False
+        req_labels = {}
+        # version label isn't used here, but is required label in Dockerfile
+        # and is used and required for atomic reactor
+        # if we don't catch error here, it will fail in atomic reactor later
+        for label in [utils.Labels.LABEL_TYPE_NAME,
+                      utils.Labels.LABEL_TYPE_COMPONENT,
+                      utils.Labels.LABEL_TYPE_VERSION]:
+            try:
+                _, req_labels[label] = labels.get_name_and_value(label)
+            except KeyError:
+                required_missing = True
+                logger.error("required label missing from Dockerfile : %s",
+                             labels.get_name(label))
+
+        if required_missing:
             raise OsbsValidationException("required label missing from Dockerfile")
 
         build_request.set_params(
@@ -445,11 +457,11 @@ class OSBS(object):
             git_ref=git_ref,
             git_branch=git_branch,
             user=user,
-            component=component,
+            component=req_labels[utils.Labels.LABEL_TYPE_COMPONENT],
             build_image=self.build_conf.get_build_image(),
             build_imagestream=self.build_conf.get_build_imagestream(),
             base_image=df_parser.baseimage,
-            name_label=name_value,
+            name_label=req_labels[utils.Labels.LABEL_TYPE_NAME],
             registry_uris=self.build_conf.get_registry_uris(),
             registry_secrets=self.build_conf.get_registry_secrets(),
             source_registry_uri=self.build_conf.get_source_registry_uri(),

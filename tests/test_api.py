@@ -76,7 +76,8 @@ class TestOSBS(object):
 
     def test_create_build_with_deprecated_params(self, osbs):
         class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT}
+            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
+                      'version': 'version1.0'}
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
@@ -106,7 +107,8 @@ class TestOSBS(object):
     def test_create_prod_build(self, osbs, name_label_name):
         # TODO: test situation when a buildconfig already exists
         class MockParser(object):
-            labels = {name_label_name: 'fedora23/something', 'com.redhat.component':  TEST_COMPONENT}
+            labels = {name_label_name: 'fedora23/something', 'com.redhat.component':  TEST_COMPONENT,
+                      'version': 'version1.0'}
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
@@ -124,7 +126,8 @@ class TestOSBS(object):
     def test_create_prod_build_build_request(self, osbs, inner_template,
                                              outer_template, customize_conf):
         class MockParser(object):
-            labels = {'name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT}
+            labels = {'name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
+                      'version': 'test_version'}
             baseimage = 'fedora23/python'
 
         (flexmock(utils)
@@ -163,7 +166,8 @@ class TestOSBS(object):
                                  customize_conf, platform, release,
                                  raises_exception):
         class MockParser(object):
-            labels = {'name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT}
+            labels = {'name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
+                      'version' : 'test_version'}
             baseimage = 'fedora23/python'
 
         (flexmock(utils)
@@ -208,7 +212,8 @@ class TestOSBS(object):
     @pytest.mark.parametrize('unique_tag_only', [True, False, None])
     def test_create_prod_build_unique_tag_only(self, osbs, unique_tag_only):
         class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT}
+            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
+                      'version': 'version1.0'}
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
@@ -300,7 +305,8 @@ class TestOSBS(object):
         """
 
         class MockParser(object):
-            labels = {'Name': 'fedora23/something', component_label_name: TEST_COMPONENT}
+            labels = {'Name': 'fedora23/something', component_label_name: TEST_COMPONENT,
+                      'version': 'version1.0'}
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
@@ -315,7 +321,8 @@ class TestOSBS(object):
 
     def test_missing_component_argument_doesnt_break_build(self, osbs):
         class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT}
+            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
+                      'version': 'version1.0'}
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
@@ -327,7 +334,8 @@ class TestOSBS(object):
 
     def test_create_prod_build_set_required_version(self, osbs106):
         class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT}
+            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
+                      'version': 'version1.0'}
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
@@ -345,7 +353,8 @@ class TestOSBS(object):
     def test_create_prod_with_secret_build(self, osbs):
         # TODO: test situation when a buildconfig already exists
         class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT}
+            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
+                      'version': 'version1.0'}
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
@@ -360,7 +369,8 @@ class TestOSBS(object):
     def test_create_prod_without_koji_build(self, osbs):
         # TODO: test situation when a buildconfig already exists
         class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT}
+            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
+                      'version': 'version1.0'}
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
@@ -614,7 +624,8 @@ class TestOSBS(object):
         assert config.get_build_image() == build_image
 
         class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT}
+            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
+                      'version': 'version1.0'}
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
@@ -1198,7 +1209,8 @@ class TestOSBS(object):
         osbs = OSBS(config, config)
 
         class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT}
+            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
+                      'version': 'version1.0'}
             baseimage = 'fedora23/python'
 
         kwargs = {
@@ -1293,7 +1305,8 @@ class TestOSBS(object):
             osbs = OSBS(config, config)
 
         class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT}
+            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
+                      'version' : 'test_version'}
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
