@@ -22,6 +22,8 @@ import tarfile
 from collections import namedtuple
 from datetime import datetime
 from io import BytesIO
+from base64 import b64encode
+from hashlib import sha256
 
 try:
     # py3
@@ -288,7 +290,7 @@ def get_time_from_rfc3339(rfc3339):
         return timegm(time_tuple)
 
 
-def make_name_from_git(repo, branch, limit=53, separator='-'):
+def make_name_from_git(repo, branch, limit=53, separator='-', hash_size=5):
     """
     return name string representing the given git repo and branch
     to be used as a build name.
@@ -316,12 +318,16 @@ def make_name_from_git(repo, branch, limit=53, separator='-'):
 
     repo = git_repo_humanish_part_from_uri(repo)
     branch = branch or 'unknown'
+    full = repo + branch
+    shaval = sha256(full.encode('utf-8')).digest()
+    hash_str = b64encode(shaval, altchars=b'AZ').decode('ascii')[:hash_size]
 
     repo_chars = []
     branch_chars = []
     groups = ((repo, repo_chars), (branch, branch_chars))
 
-    size = len(separator)
+    size = (2 * len(separator)) + hash_size
+
     for i in range(max(len(repo), len(branch))):
         for group, group_chars in groups:
             if i < len(group):
@@ -335,11 +341,7 @@ def make_name_from_git(repo, branch, limit=53, separator='-'):
 
     repo = ''.join(repo_chars)
     branch = ''.join(branch_chars)
-
-    name = repo + separator + branch
-
-    while name.endswith('-'):
-        name = name[:-1]
+    name = separator.join([repo, branch, hash_str])
 
     return name
 

@@ -89,14 +89,20 @@ def test_get_time_from_rfc3339_valid(rfc3339, seconds, tz):
     ('spam', 'b', 10, '-', 'spam-b'),
     ('spam', 'bacon', 10, '^^^', 'spam^^^bac'),
     ('spam', '', 10, '-', 'spam-unkno'),
-    ('spam', 'baco-n', 10, '-', 'spam-baco'),
-    ('spam', 'ba---n', 10, '-', 'spam-ba'),
-    ('spam', '-----n', 10, '-', 'spam'),
+    ('spam', 'baco-n', 10, '-', 'spam-baco-'),
+    ('spam', 'ba---n', 10, '-', 'spam-ba---'),
+    ('spam', '-----n', 10, '-', 'spam------'),
     ('https://github.com/blah/spam.git', 'bacon', 10, '-', 'spam-bacon'),
 ])
-def test_make_name_from_git(repo, branch, limit, separator, expected):
-    assert make_name_from_git(repo, branch, limit, separator) == expected
+def test_make_name_from_git(repo, branch, limit, separator, expected, hash_size=5):
+    bc_name = make_name_from_git(repo, branch, limit + len(separator) + hash_size, separator, hash_size=hash_size)
 
+    assert expected == bc_name[:-(hash_size + len(separator))]
+
+def test_make_name_from_git_collide():
+    bc1 = make_name_from_git("very_log_repo name_first", "also_long_branch_name", 30, '-')
+    bc2 = make_name_from_git("very_log_repo name_second", "also_long_branch_name", 30, '-')
+    assert bc1 != bc2
 
 @pytest.mark.skipif(sys.version_info[0] < 3,
                     reason="requires python3")

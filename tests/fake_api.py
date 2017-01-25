@@ -12,6 +12,7 @@ import re
 import pytest
 import inspect
 import logging
+import fnmatch
 from osbs.core import Openshift
 from osbs.http import HttpResponse
 from osbs.conf import Configuration
@@ -256,8 +257,13 @@ class Connection(object):
         except KeyError:
             # Try all the tuples
             for k, v in self.DEFINITION.items():
-                if isinstance(k, tuple) and key in k:
-                    return k, v
+                if isinstance(k, tuple):
+                    for tup in k:
+                        if fnmatch.fnmatch(key, tup):
+                            return k, v
+                else:
+                    if fnmatch.fnmatch(key, k):
+                        return k, v
 
             raise ValueError("Can't find '%s' in url mapping definition" % key)
 
