@@ -15,7 +15,6 @@ import stat
 import sys
 import warnings
 import datetime
-import requests
 from functools import wraps
 
 from osbs.build.build_request import BuildRequest
@@ -304,14 +303,14 @@ class OSBS(object):
             try:
                 image_stream = self.get_image_stream(image_stream_id).json()
             except OsbsResponseException as x:
-                if x.status_code != requests.codes.NOT_FOUND:
+                if x.status_code != 404:
                     raise
 
             if image_stream:
                 try:
                     self.get_image_stream_tag(image_stream_tag_id).json()
                 except OsbsResponseException as x:
-                    if x.status_code != requests.codes.NOT_FOUND:
+                    if x.status_code != 404:
                         raise
 
         return image_stream, image_stream_tag_name
