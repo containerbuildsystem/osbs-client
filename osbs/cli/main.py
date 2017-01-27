@@ -432,7 +432,7 @@ def cmd_restore(args, osbs):
 
 def cmd_print_token_url(args, osbs):
     uri = urljoin(osbs.os_conf.get_openshift_base_uri(), "oauth/token/request")
-    print("To complete authentation please navigate to:\n\n{}\n\n".format(uri) +
+    print("To complete authentication please navigate to:\n\n{}\n\n".format(uri) +
           "Set token or token_file in configuration to authenticate requests.")
 
 
