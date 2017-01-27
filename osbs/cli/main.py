@@ -437,9 +437,16 @@ def cmd_print_token_url(args, osbs):
 
 
 def cmd_serviceaccount_token(args, osbs):
+    output_template = '{token}'
+    openshift_uri = None
+    if args.oc:
+        output_template = 'oc login --token {token} {openshift_uri}'
+        openshift_uri = osbs.os_conf.get_openshift_base_uri()
+
     tokens = osbs.get_serviceaccount_tokens(args.SERVICEACCOUNT)
     for token in tokens.values():
-        print(token.decode('ascii'))
+        print(output_template.format(token=token.decode('ascii'),
+                                     openshift_uri=openshift_uri))
         break
 
 
@@ -621,6 +628,8 @@ def cli():
     serviceaccount_builder = subparsers.add_parser(
         str_on_2_unicode_on_3('get-serviceaccount-token'),
         description='get auth token for serviceaccount')
+    serviceaccount_builder.add_argument("--oc", help="display oc login command",
+                                        action="store_true", default=False)
     serviceaccount_builder.add_argument("SERVICEACCOUNT",
                                         help="name of the service account")
     serviceaccount_builder.set_defaults(func=cmd_serviceaccount_token)
