@@ -438,7 +438,9 @@ def cmd_print_token_url(args, osbs):
 
 def cmd_serviceaccount_token(args, osbs):
     tokens = osbs.get_serviceaccount_tokens(args.SERVICEACCOUNT)
-    print(tokens)
+    for token in tokens.values():
+        print(token.decode('ascii'))
+        break
 
 
 def str_on_2_unicode_on_3(s):
