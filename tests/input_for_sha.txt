@@ -1,0 +1,6 @@
+repo_name1   branch_name1
+repo_name1   branch_name2
+repo_name1   branch_name3
+repo_name2   branch_name1
+repo_name3   branch_name1
+repo_name4   branch_name1
