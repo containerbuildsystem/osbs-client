@@ -104,6 +104,20 @@ def test_make_name_from_git_collide():
     bc2 = make_name_from_git("very_log_repo name_second", "also_long_branch_name", 30, '-')
     assert bc1 != bc2
 
+SHA_INPUT_FILE = 'tests/input_for_sha.txt'
+
+def test_make_name_from_git_all_from_file():
+
+    all_sha = set()
+    with open(SHA_INPUT_FILE) as f:
+        lines =  f.read().splitlines()
+
+    for line in lines:
+        repo, branch = line.split()
+        all_sha.add(make_name_from_git(repo, branch, 30, '-'))
+
+    assert len(lines) == len(all_sha)
+
 @pytest.mark.skipif(sys.version_info[0] < 3,
                     reason="requires python3")
 @pytest.mark.parametrize('tz', [

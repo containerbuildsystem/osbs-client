@@ -22,7 +22,6 @@ import tarfile
 from collections import namedtuple
 from datetime import datetime
 from io import BytesIO
-from base64 import b64encode
 from hashlib import sha256
 
 try:
@@ -319,8 +318,8 @@ def make_name_from_git(repo, branch, limit=53, separator='-', hash_size=5):
     repo = git_repo_humanish_part_from_uri(repo)
     branch = branch or 'unknown'
     full = repo + branch
-    shaval = sha256(full.encode('utf-8')).digest()
-    hash_str = b64encode(shaval, altchars=b'AZ').decode('ascii')[:hash_size]
+    shaval = sha256(full.encode('utf-8')).hexdigest()
+    hash_str = shaval[:hash_size]
 
     repo_chars = []
     branch_chars = []
