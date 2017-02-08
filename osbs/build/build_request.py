@@ -745,7 +745,7 @@ class BuildRequest(object):
                     logger.debug("Invalid custom configuration found for enable_plugins")
 
     def render_version(self):
-        self.dj.dock_json_set_param('client-version', client_version)
+        self.dj.dock_json_set_param('client_version', client_version)
 
     def render(self, validate=True):
         if validate:
