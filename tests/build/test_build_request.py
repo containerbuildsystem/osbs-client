@@ -1515,8 +1515,8 @@ class TestBuildRequest(object):
     def test_has_version(self):
         br = BuildRequest(INPUTS_PATH)
         br.render()
-        assert 'client-version' in br.dj.dock_json
+        assert 'client_version' in br.dj.dock_json
 
-        actual_version = br.dj.dock_json['client-version']
+        actual_version = br.dj.dock_json['client_version']
         assert isinstance(actual_version, six.string_types)
         assert expected_version == actual_version
