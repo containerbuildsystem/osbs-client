@@ -289,6 +289,10 @@ def get_time_from_rfc3339(rfc3339):
         return timegm(time_tuple)
 
 
+
+VALID_BUILD_CONFIG_NAME_CHARS = re.compile('[-a-z0-9]')
+
+
 def make_name_from_git(repo, branch, limit=53, separator='-', hash_size=5):
     """
     return name string representing the given git repo and branch
@@ -303,9 +307,10 @@ def make_name_from_git(repo, branch, limit=53, separator='-', hash_size=5):
     Assuming '-XXXX' (5 chars) and '-build' (6 chars) as default
     suffixes, name should be limited to 53 chars (64 - 11).
 
-    Since OpenShift rejects names that end in dash, the
-    generated name may be trimmed resulting in a name shorter
-    than the limit.
+    OpenShift is very peculiar in which BuildConfig names it
+    allows. For this reason, only certain characters are allowed.
+    Any disallowed characters will be removed from repo and
+    branch names.
 
     :param repo: str, the git repository to be used
     :param branch: str, the git branch to be used
@@ -320,6 +325,10 @@ def make_name_from_git(repo, branch, limit=53, separator='-', hash_size=5):
     full = repo + branch
     shaval = sha256(full.encode('utf-8')).hexdigest()
     hash_str = shaval[:hash_size]
+
+    # Sanitize repo and branch names
+    repo = ''.join(filter(VALID_BUILD_CONFIG_NAME_CHARS.match, list(repo)))
+    branch = ''.join(filter(VALID_BUILD_CONFIG_NAME_CHARS.match, list(branch)))
 
     repo_chars = []
     branch_chars = []
@@ -338,11 +347,9 @@ def make_name_from_git(repo, branch, limit=53, separator='-', hash_size=5):
             continue
         break
 
-    repo = ''.join(repo_chars)
-    branch = ''.join(branch_chars)
-    name = separator.join([repo, branch, hash_str])
-
-    return name
+    repo = ''.join(repo_chars).strip('-')
+    branch = ''.join(branch_chars).strip('-')
+    return separator.join(filter(None, (repo, branch, hash_str)))
 
 
 def get_instance_token_file_name(instance):
