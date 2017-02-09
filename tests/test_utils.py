@@ -10,6 +10,7 @@ import os
 import os.path
 import pytest
 import datetime
+import re
 import sys
 from time import tzset
 
@@ -21,6 +22,9 @@ from osbs.utils import (buildconfig_update,
                         get_instance_token_file_name, Labels)
 from osbs.exceptions import OsbsException
 import osbs.kerberos_ccache
+
+
+BC_NAME_REGEX = r'^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
 
 
 def test_buildconfig_update():
@@ -82,22 +86,33 @@ def test_get_time_from_rfc3339_valid(rfc3339, seconds, tz):
 @pytest.mark.parametrize(('repo', 'branch', 'limit', 'separator', 'expected'), [
     ('spam', 'bacon', 10, '-', 'spam-bacon'),
     ('spam', 'bacon', 5, '-', 'sp-ba'),
-    ('spam', 'bacon', 10, '*', 'spam*bacon'),
+    ('spam', 'bacon', 10, 'x', 'spamxbacon'),
     ('spammmmmm', 'bacon', 10, '-', 'spamm-baco'),
     ('spam', 'baconnnnnnn', 10, '-', 'spam-bacon'),
     ('s', 'bacon', 10, '-', 's-bacon'),
     ('spam', 'b', 10, '-', 'spam-b'),
-    ('spam', 'bacon', 10, '^^^', 'spam^^^bac'),
+    ('spam', 'bacon', 10, 'x', 'spamxbacon'),
     ('spam', '', 10, '-', 'spam-unkno'),
-    ('spam', 'baco-n', 10, '-', 'spam-baco-'),
-    ('spam', 'ba---n', 10, '-', 'spam-ba---'),
-    ('spam', '-----n', 10, '-', 'spam------'),
+    ('spam', 'baco-n', 10, '-', 'spam-baco'),
+    ('spam', 'ba---n', 10, '-', 'spam-ba'),
+    ('spam', '-----n', 10, '-', 'spam'),
     ('https://github.com/blah/spam.git', 'bacon', 10, '-', 'spam-bacon'),
+    ('1.2.3.4.5', '6.7.8.9', 10, '-', '12345-6789'),
+    ('1.2.3.4.', '...', 10, '-', '1234'),
+    ('1.2.3.4.', '...f.', 10, '-', '1234-f'),
+    ('1_2_3_4_5', '6_7_8_9', 10, '-', '12345-6789'),
+    ('1_2_3_4_', '_f_', 10, '-', '1234-f'),
+    ('longer-name-than', 'this', 22, '-', 'longer-name-than-this'),
+    ('longer--name--than', 'this', 22, '-', 'longer--name--tha-this'),
 ])
 def test_make_name_from_git(repo, branch, limit, separator, expected, hash_size=5):
     bc_name = make_name_from_git(repo, branch, limit + len(separator) + hash_size, separator, hash_size=hash_size)
 
     assert expected == bc_name[:-(hash_size + len(separator))]
+
+    # Is this a valid name for OpenShift to use?
+    valid = re.compile(BC_NAME_REGEX)
+    assert valid.match(bc_name)
 
 def test_make_name_from_git_collide():
     bc1 = make_name_from_git("very_log_repo name_first", "also_long_branch_name", 30, '-')
@@ -114,7 +129,12 @@ def test_make_name_from_git_all_from_file():
 
     for line in lines:
         repo, branch = line.split()
-        all_sha.add(make_name_from_git(repo, branch, 30, '-'))
+        bc_name = make_name_from_git(repo, branch, 30, '-')
+        all_sha.add(bc_name)
+
+        # Is this a valid name for OpenShift to use?
+        valid = re.compile(BC_NAME_REGEX)
+        assert valid.match(bc_name)
 
     assert len(lines) == len(all_sha)
 
