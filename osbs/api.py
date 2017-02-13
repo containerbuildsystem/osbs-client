@@ -20,7 +20,8 @@ from functools import wraps
 from osbs.build.build_request import BuildRequest
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
-from osbs.constants import BUILD_RUNNING_STATES
+from osbs.constants import (BUILD_RUNNING_STATES, WORKER_OUTER_TEMPLATE,
+                            WORKER_INNER_TEMPLATE, WORKER_CUSTOMIZE_CONF)
 from osbs.core import Openshift
 from osbs.exceptions import OsbsException, OsbsValidationException, OsbsResponseException
 # import utils in this way, so that we can mock standalone functions with flexmock
@@ -141,17 +142,25 @@ class OSBS(object):
         return pod_list[0]
 
     @osbsapi
-    def get_build_request(self, build_type=None):
+    def get_build_request(self, build_type=None, inner_template=None,
+                          outer_template=None, customize_conf=None):
         """
         return instance of BuildRequest
 
         :param build_type: str, unused
+        :param inner_template: str, name of inner template for BuildRequest
+        :param outer_template: str, name of outer template for BuildRequest
+        :param customize_conf: str, name of customization config for BuildRequest
         :return: instance of BuildRequest
         """
         if build_type is not None:
             warnings.warn("build types are deprecated, do not use the build_type argument")
 
-        build_request = BuildRequest(build_json_store=self.os_conf.get_build_json_store())
+        build_request = BuildRequest(
+            build_json_store=self.os_conf.get_build_json_store(),
+            inner_template=inner_template,
+            outer_template=outer_template,
+            customize_conf=customize_conf)
 
         # Apply configured resource limits.
         cpu_limit = self.build_conf.get_cpu_limit()
@@ -392,6 +401,11 @@ class OSBS(object):
                           architecture=None, yum_repourls=None,
                           koji_task_id=None,
                           scratch=None,
+                          platform=None,
+                          release=None,
+                          inner_template=None,
+                          outer_template=None,
+                          customize_conf=None,
                           **kwargs):
         """
         Create a production build
@@ -406,11 +420,18 @@ class OSBS(object):
         :param yum_repourls: list, URLs for yum repos
         :param koji_task_id: int, koji task ID requesting build
         :param scratch: bool, this is a scratch build
+        :param platform: str, the platform name
+        :param release: str, the release value to use
+        :param inner_template: str, name of inner template for BuildRequest
+        :param outer_template: str, name of outer template for BuildRequest
+        :param customize_conf: str, name of customization config for BuildRequest
         :return: BuildResponse instance
         """
 
         df_parser = utils.get_df_parser(git_uri, git_ref, git_branch=git_branch)
-        build_request = self.get_build_request()
+        build_request = self.get_build_request(inner_template=inner_template,
+                                               outer_template=outer_template,
+                                               customize_conf=customize_conf)
         labels = utils.Labels(df_parser.labels)
 
         try:
@@ -445,6 +466,8 @@ class OSBS(object):
             koji_kerberos_keytab=self.build_conf.get_koji_kerberos_keytab(),
             koji_kerberos_principal=self.build_conf.get_koji_kerberos_principal(),
             architecture=architecture,
+            platform=platform,
+            release=release,
             vendor=self.build_conf.get_vendor(),
             build_host=self.build_conf.get_build_host(),
             authoritative_registry=self.build_conf.get_authoritative_registry(),
@@ -500,6 +523,31 @@ class OSBS(object):
         """
         kwargs.setdefault('git_branch', None)
         return self.create_prod_build(**kwargs)
+
+    @osbsapi
+    def create_worker_build(self, *args, **kwargs):
+        """
+        Create a worker build
+
+        Pass through method to create_prod_build with the following
+        modifications:
+            - platform param is required
+            - release param is required
+            - inner template set to worker_inner.json if not set
+            - outer template set to worker.json if not set
+            - customize configuration set to worker_customize.json if not set
+
+        :return: BuildResponse instance
+        """
+        for required in ('platform', 'release'):
+            if not kwargs.get(required):
+                raise ValueError('Worker build requires %s param' % required)
+
+        kwargs.setdefault('inner_template', WORKER_INNER_TEMPLATE)
+        kwargs.setdefault('outer_template', WORKER_OUTER_TEMPLATE)
+        kwargs.setdefault('customize_conf', WORKER_CUSTOMIZE_CONF)
+
+        return self.create_prod_build(*args, **kwargs)
 
     @osbsapi
     def get_build_logs(self, build_id, follow=False, build_json=None, wait_if_missing=False):

@@ -38,12 +38,19 @@ class BuildRequest(object):
     Wraps logic for creating build inputs
     """
 
-    def __init__(self, build_json_store):
+    def __init__(self, build_json_store, inner_template=None,
+                 outer_template=None, customize_conf=None):
         """
         :param build_json_store: str, path to directory with JSON build files
+        :param inner_template: str, path to inner template JSON
+        :param outer_template: str, path to outer template JSON
+        :param customize_conf: str, path to customize configuration JSON
         """
         self.spec = BuildSpec()
         self.build_json_store = build_json_store
+        self._inner_template_path = inner_template or DEFAULT_INNER_TEMPLATE
+        self._outer_template_path = outer_template or DEFAULT_OUTER_TEMPLATE
+        self._customize_conf_path = customize_conf or DEFAULT_CUSTOMIZE_CONF
         self.build_json = None       # rendered template
         self._template = None        # template loaded from filesystem
         self._inner_template = None  # dock json
@@ -117,7 +124,7 @@ class BuildRequest(object):
     @property
     def template(self):
         if self._template is None:
-            path = os.path.join(self.build_json_store, DEFAULT_OUTER_TEMPLATE)
+            path = os.path.join(self.build_json_store, self._outer_template_path)
             logger.debug("loading template from path %s", path)
             try:
                 with open(path, "r") as fp:
@@ -130,7 +137,7 @@ class BuildRequest(object):
     @property
     def inner_template(self):
         if self._inner_template is None:
-            path = os.path.join(self.build_json_store, DEFAULT_INNER_TEMPLATE)
+            path = os.path.join(self.build_json_store, self._inner_template_path)
             logger.debug("loading inner template from path %s", path)
             with open(path, "r") as fp:
                 self._inner_template = json.load(fp)
@@ -139,7 +146,7 @@ class BuildRequest(object):
     @property
     def customize_conf(self):
         if self._customize_conf is None:
-            path = os.path.join(self.build_json_store, DEFAULT_CUSTOMIZE_CONF)
+            path = os.path.join(self.build_json_store, self._customize_conf_path)
             logger.debug("loading customize conf from path %s", path)
             try:
                 with open(path, "r") as fp:
