@@ -273,7 +273,11 @@ def cmd_cancel_build(args, osbs):
 
 
 def cmd_build(args, osbs):
-    build = osbs.create_build(
+    create_func = osbs.create_prod_build
+    if args.worker:
+        create_func = osbs.create_worker_build
+
+    build = create_func(
         git_uri=osbs.build_conf.get_git_uri(),
         git_ref=osbs.build_conf.get_git_ref(),
         git_branch=osbs.build_conf.get_git_branch(),
@@ -283,6 +287,8 @@ def cmd_build(args, osbs):
         architecture=osbs.build_conf.get_architecture(),
         yum_repourls=osbs.build_conf.get_yum_repourls(),
         scratch=args.scratch,
+        platform=args.platform,
+        release=args.release,
     )
     build_id = build.get_build_name()
     # we need to wait for kubelet to schedule the build, otherwise it's 500
@@ -594,6 +600,12 @@ def cli():
                               help="perform a scratch build")
     build_parser.add_argument("--yum-proxy", action='store', required=False,
                               help="set yum proxy to repos from koji/add-yum-repo params")
+    build_parser.add_argument("--worker", action="store_true", required=False,
+                              default=False, help="create worker build")
+    build_parser.add_argument("--platform", action='store', required=False,
+                              help="platform name to use")
+    build_parser.add_argument("--release", action='store', required=False,
+                              help="release value to use")
     group = build_parser.add_mutually_exclusive_group()
     group.add_argument("--build-image", action='store', required=False,
                        help="builder image to use")

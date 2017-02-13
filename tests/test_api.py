@@ -28,7 +28,9 @@ from osbs.build.pod_response import PodResponse
 from osbs.build.spec import BuildSpec
 from osbs.exceptions import OsbsValidationException, OsbsException, OsbsResponseException
 from osbs.http import HttpResponse
-from osbs.constants import DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE
+from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
+                            DEFAULT_INNER_TEMPLATE, WORKER_INNER_TEMPLATE,
+                            DEFAULT_CUSTOMIZE_CONF, WORKER_CUSTOMIZE_CONF)
 from osbs import utils
 
 from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
@@ -114,6 +116,94 @@ class TestOSBS(object):
                                           TEST_GIT_BRANCH, TEST_USER,
                                           TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
         assert isinstance(response, BuildResponse)
+
+    @pytest.mark.parametrize(('inner_template', 'outer_template', 'customize_conf'), (
+        (DEFAULT_INNER_TEMPLATE, DEFAULT_OUTER_TEMPLATE, DEFAULT_CUSTOMIZE_CONF),
+        (WORKER_INNER_TEMPLATE, WORKER_OUTER_TEMPLATE, WORKER_CUSTOMIZE_CONF),
+    ))
+    def test_create_prod_build_build_request(self, osbs, inner_template,
+                                             outer_template, customize_conf):
+        class MockParser(object):
+            labels = {'name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT}
+            baseimage = 'fedora23/python'
+
+        (flexmock(utils)
+            .should_receive('get_df_parser')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(MockParser()))
+
+        (flexmock(osbs)
+            .should_call('get_build_request')
+            .with_args(inner_template=inner_template,
+                       outer_template=outer_template,
+                       customize_conf=customize_conf)
+            .once())
+        response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                          TEST_GIT_BRANCH, TEST_USER,
+                                          inner_template=inner_template,
+                                          outer_template=outer_template,
+                                          customize_conf=customize_conf)
+        assert isinstance(response, BuildResponse)
+
+    @pytest.mark.parametrize(('inner_template', 'outer_template', 'customize_conf'), (
+        (WORKER_INNER_TEMPLATE, WORKER_OUTER_TEMPLATE, WORKER_CUSTOMIZE_CONF),
+        (None, WORKER_OUTER_TEMPLATE, None),
+        (WORKER_INNER_TEMPLATE, None, None),
+        (None, None, WORKER_CUSTOMIZE_CONF),
+        (None, None, None),
+    ))
+    @pytest.mark.parametrize(('platform', 'release', 'raises_exception'), (
+        (None, None, True),
+        ('', '', True),
+        ('spam', None, True),
+        (None, 'bacon', True),
+        ('spam', 'bacon', False),
+    ))
+    def test_create_worker_build(self, osbs, inner_template, outer_template,
+                                 customize_conf, platform, release,
+                                 raises_exception):
+        class MockParser(object):
+            labels = {'name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT}
+            baseimage = 'fedora23/python'
+
+        (flexmock(utils)
+            .should_receive('get_df_parser')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(MockParser()))
+
+        args = [TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH, TEST_USER]
+
+        kwargs = {}
+        if platform is not None:
+            kwargs['platform'] = platform
+        if release is not None:
+            kwargs['release'] = release
+        if inner_template is not None:
+            kwargs['inner_template'] = inner_template
+        if outer_template is not None:
+            kwargs['outer_template'] = outer_template
+        if customize_conf is not None:
+            kwargs['customize_conf'] = customize_conf
+
+        expected_kwargs = {
+            'platform': platform,
+            'release': release,
+            'inner_template': WORKER_INNER_TEMPLATE,
+            'outer_template': WORKER_OUTER_TEMPLATE,
+            'customize_conf': WORKER_CUSTOMIZE_CONF,
+        }
+
+        (flexmock(osbs)
+            .should_call('create_prod_build')
+            .with_args(*args, **expected_kwargs)
+            .times(0 if raises_exception else 1))
+
+        if raises_exception:
+            with pytest.raises(OsbsException):
+                osbs.create_worker_build(*args, **kwargs)
+        else:
+            response = osbs.create_worker_build(*args, **kwargs)
+            assert isinstance(response, BuildResponse)
 
     @pytest.mark.parametrize('unique_tag_only', [True, False, None])
     def test_create_prod_build_unique_tag_only(self, osbs, unique_tag_only):
@@ -290,15 +380,54 @@ class TestOSBS(object):
         # We should get a BuildResponse
         assert isinstance(response, BuildResponse)
 
-    def test_get_build_request_api(self, osbs):
-        build = osbs.get_build_request()
+    @pytest.mark.parametrize('build_type', (
+        None,
+        'simple',
+        'prod',
+        'prod-without-koji'
+    ))
+    def test_get_build_request_api_build_type(self, osbs, build_type):
+        """Verify deprecated build_type param behave properly."""
+        if build_type:
+            build = osbs.get_build_request(build_type)
+        else:
+            build = osbs.get_build_request()
         assert isinstance(build, BuildRequest)
-        simple = osbs.get_build_request("simple")
-        assert isinstance(simple, BuildRequest)
-        prod = osbs.get_build_request("prod")
-        assert isinstance(prod, BuildRequest)
-        prodwithoutkoji = osbs.get_build_request("prod-without-koji")
-        assert isinstance(prodwithoutkoji, BuildRequest)
+
+    @pytest.mark.parametrize(('cpu', 'memory', 'storage', 'set_resource'), (
+        (None, None, None, False),
+        ('spam', None, None, True),
+        (None, 'spam', None, True),
+        (None, None, 'spam', True),
+        ('spam', 'spam', 'spam', True),
+    ))
+    def test_get_build_request_api(self, osbs, cpu, memory, storage, set_resource):
+        inner_template = 'inner.json'
+        outer_template = 'outer.json'
+        build_json_store = 'build/json/store'
+
+        flexmock(osbs.build_conf).should_receive('get_cpu_limit').and_return(cpu)
+        flexmock(osbs.build_conf).should_receive('get_memory_limit').and_return(memory)
+        flexmock(osbs.build_conf).should_receive('get_storage_limit').and_return(storage)
+
+        flexmock(osbs.os_conf).should_receive('get_build_json_store').and_return(build_json_store)
+
+        set_resource_limits_kwargs = {
+            'cpu': cpu,
+            'memory': memory,
+            'storage': storage,
+        }
+
+        (flexmock(BuildRequest)
+            .should_receive('set_resource_limits')
+            .with_args(**set_resource_limits_kwargs)
+            .times(1 if set_resource else 0))
+
+        get_build_request_kwargs = {
+            'inner_template': inner_template,
+            'outer_template': outer_template,
+        }
+        osbs.get_build_request(**get_build_request_kwargs)
 
     def test_create_build_from_buildrequest(self, osbs):
         api_version = osbs.os_conf.get_openshift_api_version()
