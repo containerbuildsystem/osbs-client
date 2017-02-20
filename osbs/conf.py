@@ -422,3 +422,7 @@ class Configuration(object):
                              token_file, ex)
 
         return value
+
+    def get_reactor_config_secret(self):
+        return self._get_value("reactor_config_secret", self.conf_section,
+                               "reactor_config_secret")

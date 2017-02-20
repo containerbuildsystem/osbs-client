@@ -117,6 +117,8 @@ Some options are also mandatory.
 
 * `storage_limit` (*optional*, `string`) — storage limit to apply to build (for more info, see [documentation for resources](https://github.com/projectatomic/osbs-client/blob/master/docs/resource.md)
 
+* `reactor_config_secret` (*optional*, `string`) — name of Kubernetes secret holding [atomic-reactor configuration file](https://github.com/projectatomic/atomic-reactor/blob/master/docs/config.md)
+
 
 ## Build JSON Templates
 
