@@ -2,6 +2,12 @@
   "client_version": "{{VERSION}}",
   "prebuild_plugins": [
     {
+      "name": "reactor_config",
+      "args": {
+        "config_path": "{{CONFIG_PATH}}"
+      }
+    },
+    {
       "args": {
         "label_key": "is_autorebuild",
         "label_value": "true",

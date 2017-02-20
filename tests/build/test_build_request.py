@@ -1520,3 +1520,21 @@ class TestBuildRequest(object):
         actual_version = br.dj.dock_json['client_version']
         assert isinstance(actual_version, six.string_types)
         assert expected_version == actual_version
+
+    @pytest.mark.parametrize('secret', [None, 'osbsconf'])
+    def test_reactor_config(self, secret):
+        br = BuildRequest(INPUTS_PATH)
+        kwargs = get_sample_prod_params()
+        kwargs['reactor_config_secret'] = secret
+        br.set_params(**kwargs)
+        build_json = br.render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        if secret is None:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, 'prebuild_plugins', 'reactor_config')
+        else:
+            assert get_plugin(plugins, 'prebuild_plugins', 'reactor_config')
+            assert plugin_value_get(plugins, 'prebuild_plugins',
+                                    'reactor_config', 'args',
+                                    'config_path').startswith('/')

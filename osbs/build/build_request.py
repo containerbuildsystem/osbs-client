@@ -178,6 +178,11 @@ class BuildRequest(object):
         self.template['metadata'].setdefault('labels', {})
         self.template['metadata']['labels'][name] = value
 
+    def render_reactor_config(self):
+        if self.spec.reactor_config_secret.value is None:
+            logger.debug("removing reactor_config plugin: no secret")
+            self.dj.remove_plugin('prebuild_plugins', 'reactor_config')
+
     def render_resource_limits(self):
         if self._resource_limits is not None:
             resources = self.template['spec'].get('resources', {})
@@ -830,7 +835,12 @@ class BuildRequest(object):
         # Enable/disable plugins as needed for target registry API versions
         self.adjust_for_registry_api_versions()
 
-        self.set_secrets({('postbuild_plugins',
+        self.set_secrets({('prebuild_plugins',
+                           'reactor_config',
+                           'config_path'):
+                          self.spec.reactor_config_secret.value,
+
+                          ('postbuild_plugins',
                            'pulp_push',
                            'pulp_secret_path'):
                           self.spec.pulp_secret.value,
@@ -871,6 +881,7 @@ class BuildRequest(object):
             self.template['metadata']['labels']['koji-task-id'] = str(koji_task_id)
 
         use_auth = self.spec.use_auth.value
+        self.render_reactor_config()
         self.render_add_filesystem()
         self.render_add_labels_in_dockerfile()
         self.render_koji()
