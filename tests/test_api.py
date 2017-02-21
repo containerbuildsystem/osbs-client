@@ -1275,3 +1275,42 @@ class TestOSBS(object):
 
         response = osbs.ensure_image_stream_tag(stream, tag_name, scheduled)
         assert response == 'eggs'
+
+    def test_reactor_config_secret(self):
+        with NamedTemporaryFile(mode='wt') as fp:
+            fp.write(dedent("""\
+                [general]
+                build_json_dir = inputs
+                [default]
+                openshift_url = /
+                sources_command = /bin/true
+                vendor = Example, Inc
+                authoritative_registry = localhost
+                reactor_config_secret = mysecret
+                """))
+            fp.flush()
+            config = Configuration(fp.name)
+            osbs = OSBS(config, config)
+
+        class MockParser(object):
+            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT}
+            baseimage = 'fedora23/python'
+        (flexmock(utils)
+            .should_receive('get_df_parser')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(MockParser()))
+
+        flexmock(OSBS, _create_build_config_and_build=request_as_response)
+
+        req = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                     TEST_GIT_BRANCH, TEST_USER,
+                                     TEST_COMPONENT, TEST_TARGET,
+                                     TEST_ARCH)
+        secrets = req.json['spec']['strategy']['customStrategy']['secrets']
+        expected_secret = {
+            'mountPath': '/var/run/secrets/atomic-reactor/mysecret',
+            'secretSource': {
+                'name': 'mysecret',
+            }
+        }
+        assert expected_secret in secrets
