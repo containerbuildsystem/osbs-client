@@ -485,6 +485,7 @@ class OSBS(object):
             builder_build_json_dir=self.build_conf.get_builder_build_json_store(),
             scratch=self.build_conf.get_scratch(scratch),
             unique_tag_only=self.build_conf.get_unique_tag_only(),
+            reactor_config_secret=self.build_conf.get_reactor_config_secret(),
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         if build_request.scratch:
