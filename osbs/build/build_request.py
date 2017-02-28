@@ -260,18 +260,33 @@ class BuildRequest(object):
 
         self.dj.remove_plugin('postbuild_plugins', 'tag_from_config')
 
-    def set_secret_for_plugin(self, plugin, secret):
-        has_plugin_conf = self.dj.dock_json_has_plugin_conf(plugin[0],
-                                                            plugin[1])
+    def set_secret_for_plugin(self, secret, plugin=None, mount_path=None):
+        """
+        Sets secret for plugin, if no plugin specified
+        it will also set general secret
+
+        :param secret: str, secret name
+        :param plugin: tuple, (plugin type, plugin name, argument name)
+        :param mount_path: str, mount path of secret
+        """
+        has_plugin_conf = False
+        if plugin is not None:
+            has_plugin_conf = self.dj.dock_json_has_plugin_conf(plugin[0],
+                                                                plugin[1])
         if 'secrets' in self.template['spec']['strategy']['customStrategy']:
-            if has_plugin_conf:
-                secret_path = os.path.join(SECRETS_PATH, secret)
-                logger.info("Configuring %s secret at %s", secret, secret_path)
+            if not plugin or has_plugin_conf:
+
                 custom = self.template['spec']['strategy']['customStrategy']
+                if mount_path:
+                    secret_path = mount_path
+                else:
+                    secret_path = os.path.join(SECRETS_PATH, secret)
+
+                logger.info("Configuring %s secret at %s", secret, secret_path)
                 existing = [secret_mount for secret_mount in custom['secrets']
                             if secret_mount['secretSource']['name'] == secret]
                 if existing:
-                    logger.debug("secret %s already set", plugin[1])
+                    logger.debug("secret %s already set", secret)
                 else:
                     custom['secrets'].append({
                         'secretSource': {
@@ -283,7 +298,7 @@ class BuildRequest(object):
                 # there's no need to set args if no plugin secret specified
                 # this is used in tag_and_push plugin, as it sets secret path
                 # for each registry separately
-                if plugin[2] is not None:
+                if plugin and plugin[2] is not None:
                     self.dj.dock_json_set_arg(*(plugin + (secret_path,)))
             else:
                 logger.debug("not setting secret for unused plugin %s",
@@ -301,9 +316,9 @@ class BuildRequest(object):
             if secret is not None:
                 if isinstance(secret, list):
                     for secret_item in secret:
-                        self.set_secret_for_plugin(plugin, secret_item)
+                        self.set_secret_for_plugin(secret_item, plugin=plugin)
                 else:
-                    self.set_secret_for_plugin(plugin, secret)
+                    self.set_secret_for_plugin(secret, plugin=plugin)
                 secret_set = True
 
         if not secret_set:
@@ -641,10 +656,10 @@ class BuildRequest(object):
                                       'docker_registry', docker_registry)
 
             if registry_secret:
-                self.set_secret_for_plugin(('postbuild_plugins',
-                                            'pulp_sync',
-                                            'registry_secret_path'),
-                                           registry_secret)
+                self.set_secret_for_plugin(registry_secret,
+                                           plugin=('postbuild_plugins',
+                                                   'pulp_sync',
+                                                   'registry_secret_path'))
 
             # Verify we have a pulp secret
             if self.spec.pulp_secret.value is None:
@@ -867,7 +882,13 @@ class BuildRequest(object):
                            # add the path to the plugin's
                            # configuration. This is done elsewhere.
                            None):
-                          self.spec.registry_secrets.value})
+                          self.spec.registry_secrets.value,
+
+                          ('buildstep_plugins', 'orchestrate_build', 'osbs_client_config'):
+                          self.spec.client_config_secret.value})
+
+        for (secret, path) in self.spec.token_secrets.value.items():
+            self.set_secret_for_plugin(secret, mount_path=path)
 
         if self.spec.pulp_secret.value:
             # Don't push to docker registry, we're using pulp here

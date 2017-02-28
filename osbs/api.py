@@ -486,6 +486,8 @@ class OSBS(object):
             scratch=self.build_conf.get_scratch(scratch),
             unique_tag_only=self.build_conf.get_unique_tag_only(),
             reactor_config_secret=self.build_conf.get_reactor_config_secret(),
+            client_config_secret=self.build_conf.get_client_config_secret(),
+            token_secrets=self.build_conf.get_token_secrets(),
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         if build_request.scratch:
