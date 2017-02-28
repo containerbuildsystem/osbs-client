@@ -12,6 +12,7 @@ from flexmock import flexmock
 import os
 from osbs.conf import Configuration
 from osbs import utils
+from osbs.exceptions import OsbsValidationException
 import pytest
 from tempfile import NamedTemporaryFile
 
@@ -235,6 +236,20 @@ class TestConfiguration(object):
          {'unique_tag_only': 'false'},
          {'get_unique_tag_only': False}),
 
+        ({'default': {'client_config_secret': 'client_secret'}},
+         {},
+         {},
+         {'get_client_config_secret': 'client_secret'}),
+
+        ({'default': {}},
+         {'client_config_secret': 'client_secret'},
+         {},
+         {'get_client_config_secret': 'client_secret'}),
+
+        ({'default': {}},
+         {},
+         {'client_config_secret': 'client_secret'},
+         {'get_client_config_secret': 'client_secret'}),
     ])
     def test_param_retrieval(self, config, kwargs, cli_args, expected):
         with self.build_cli_args(cli_args) as args:
@@ -244,6 +259,47 @@ class TestConfiguration(object):
 
                 for fn, value in expected.items():
                     assert getattr(conf, fn)() == value
+
+    @pytest.mark.parametrize(('config', 'expected'), [
+        ({'default': {'token_secrets': 'secret'}},
+         {'secret': None}),
+
+        ({'default': {'token_secrets': 'secret:'}},
+         OsbsValidationException),
+
+        ({'default': {'token_secrets': 'secret:/'}},
+         OsbsValidationException),
+
+        ({'default': {'token_secrets': 'secret:path'}},
+         {'secret': 'path'}),
+
+        ({'default': {'token_secrets': 'secret:path:with:colons'}},
+         {'secret': 'path:with:colons'}),
+
+        ({'default': {'token_secrets': 'secret:path secret2:path2'}},
+         {'secret': 'path', 'secret2': 'path2'}),
+
+        ({'default': {'token_secrets': 'secret:path secret2:path2 secret3:path3'}},
+         {'secret': 'path', 'secret2': 'path2', 'secret3': 'path3'}),
+
+        ({'default': {'token_secrets': 'secret:path secret2 secret3:path3'}},
+         {'secret': 'path', 'secret2': None, 'secret3': 'path3'}),
+
+        ({'default': {'token_secrets': '\n   secret:path     secret2\n\n secret3:path3'}},
+         {'secret': 'path', 'secret2': None, 'secret3': 'path3'}),
+
+        ({'default': {'token_secrets': '\t\n   secret:path   \t\t  secret2\n\n \tsecret3:path3 \n\t\n'}},
+         {'secret': 'path', 'secret2': None, 'secret3': 'path3'}),
+    ])
+    def test_get_token_secrets(self, config, expected):
+        with self.config_file(config) as config_file:
+            conf = Configuration(conf_file=config_file)
+
+            if expected is not OsbsValidationException:
+                assert conf.get_token_secrets() == expected
+            else:
+                with pytest.raises(OsbsValidationException):
+                    conf.get_token_secrets()
 
     @pytest.mark.parametrize(('config', 'expected'), [
         ({

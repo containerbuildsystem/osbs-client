@@ -15,7 +15,7 @@ import six
 
 from osbs.build.build_request import BuildRequest
 from osbs.constants import (DEFAULT_BUILD_IMAGE, DEFAULT_OUTER_TEMPLATE,
-                            DEFAULT_INNER_TEMPLATE)
+                            DEFAULT_INNER_TEMPLATE, SECRETS_PATH)
 from osbs.exceptions import OsbsValidationException
 from osbs import __version__ as expected_version
 
@@ -1538,3 +1538,52 @@ class TestBuildRequest(object):
             assert plugin_value_get(plugins, 'prebuild_plugins',
                                     'reactor_config', 'args',
                                     'config_path').startswith('/')
+
+    @pytest.mark.parametrize('secret', [None, 'osbsconf'])
+    def test_client_config_secret(self, secret):
+        br = BuildRequest(INPUTS_PATH)
+        plugin_type = "buildstep_plugins"
+        plugin_name = "orchestrate_build"
+        plugin_args = {"foo": "bar"}
+
+        kwargs = get_sample_prod_params()
+        kwargs['client_config_secret'] = secret
+        br.set_params(**kwargs)
+
+        br.dj.dock_json_set_param(plugin_type, [])
+        br.dj.add_plugin(plugin_type, plugin_name, plugin_args)
+        build_json = br.render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        if secret is not None:
+            assert get_secret_mountpath_by_name(build_json, secret) == os.path.join(SECRETS_PATH, secret)
+            assert get_plugin(plugins, plugin_type, plugin_name)
+            assert plugin_value_get(plugins, plugin_type, plugin_name,
+                                    'args', 'osbs_client_config') == os.path.join(SECRETS_PATH, secret)
+        else:
+            with pytest.raises(AssertionError):
+                get_secret_mountpath_by_name(build_json, secret)
+
+    @pytest.mark.parametrize('secret', [
+        {'secret': None},
+        {'secret': 'path'},
+        {'secret1': 'path1',
+         'secret2': 'path2'
+        },
+        {'secret1': 'path1',
+         'secret2': 'path2',
+         'secret2': 'path3'
+        }
+    ])
+    def test_token_secrets(self, secret):
+        br = BuildRequest(INPUTS_PATH)
+        kwargs = get_sample_prod_params()
+        kwargs['token_secrets'] = secret
+        br.set_params(**kwargs)
+        build_json = br.render()
+
+        for (sec, path) in secret.items():
+            if path:
+                assert get_secret_mountpath_by_name(build_json, sec) == path
+            else:
+                assert get_secret_mountpath_by_name(build_json, sec) == os.path.join(SECRETS_PATH, sec)

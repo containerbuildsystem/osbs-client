@@ -24,6 +24,7 @@ except ImportError:
 
 from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
                             GENERAL_CONFIGURATION_SECTION, DEFAULT_NAMESPACE)
+from osbs.exceptions import OsbsValidationException
 from osbs import utils
 
 
@@ -426,3 +427,30 @@ class Configuration(object):
     def get_reactor_config_secret(self):
         return self._get_value("reactor_config_secret", self.conf_section,
                                "reactor_config_secret")
+
+    def get_client_config_secret(self):
+        return self._get_value("client_config_secret", self.conf_section,
+                               "client_config_secret")
+
+    def get_token_secrets(self):
+        value = self._get_value("token_secrets", self.conf_section,
+                                "token_secrets")
+        token_dict = {}
+        will_raise = False
+        if value:
+            for pairs in value.split():
+                pair = pairs.split(':', 1)
+
+                if len(pair) == 2:
+                    if pair[1] in ["", "/"]:
+                        logger.error("token_secret file path must be valid: %s", pair[1])
+                        will_raise = True
+                        continue
+                    token_dict[pair[0]] = pair[1]
+
+                else:
+                    token_dict[pair[0]] = None
+
+        if will_raise:
+            raise OsbsValidationException("Wrong token_secrets configuration")
+        return token_dict
