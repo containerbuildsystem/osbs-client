@@ -29,9 +29,10 @@
 %global release 1
 
 %global osbs_obsolete_vr 0.14-2
+%{!?osbs_client_version: %global osbs_client_version %(%{__python2} -c "from osbs import __version__ as osbs_version;print(osbs_version)")}
 
 Name:           osbs-client
-Version:        0.34.1
+Version:        %{osbs_client_version}
 %if "x%{postrelease}" != "x0"
 Release:        %{release}.%{postrelease}.git.%{shortcommit}%{?dist}
 %else

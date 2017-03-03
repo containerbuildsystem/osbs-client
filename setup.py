@@ -12,6 +12,7 @@ import sys
 import glob
 
 from setuptools import setup, find_packages
+from osbs import __version__ as osbs_client_version
 
 data_files = {
     "share/osbs": glob.glob("inputs/*.json"),
@@ -34,7 +35,7 @@ def _install_requirements():
 setup(
     name="osbs-client",
     description='Python module and command line client for OpenShift Build Service',
-    version="0.34.1",
+    version=osbs_client_version,
     author='Red Hat, Inc.',
     author_email='atomic-devel@projectatomic.io',
     url='https://github.com/projectatomic/osbs-client',
