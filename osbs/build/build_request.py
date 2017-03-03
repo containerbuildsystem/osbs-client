@@ -183,6 +183,34 @@ class BuildRequest(object):
             logger.debug("removing reactor_config plugin: no secret")
             self.dj.remove_plugin('prebuild_plugins', 'reactor_config')
 
+    def render_orchestrate_build(self):
+        phase = 'buildstep_plugins'
+        plugin = 'orchestrate_build'
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return
+
+        if self.spec.platforms.value is None:
+            logger.debug('removing %s plugin: no platforms', plugin)
+            self.dj.remove_plugin(phase, plugin)
+            return
+
+        # Parameters to be used in call to create_worker_build
+        build_kwargs = {
+            'component': self.spec.component.value,
+            'git_branch': self.spec.git_branch.value,
+            'git_ref': self.spec.git_ref.value,
+            'git_uri': self.spec.git_uri.value,
+            'koji_task_id': self.spec.koji_task_id.value,
+            'scratch': self.scratch,
+            'target': self.spec.koji_target.value,
+            'user': self.spec.user.value,
+            'yum_repourls': self.spec.yum_repourls.value,
+        }
+
+        self.dj.dock_json_set_arg(phase, plugin, 'platforms',
+                                  self.spec.platforms.value)
+        self.dj.dock_json_set_arg(phase, plugin, 'build_kwargs', build_kwargs)
+
     def render_resource_limits(self):
         if self._resource_limits is not None:
             resources = self.template['spec'].get('resources', {})
@@ -239,6 +267,10 @@ class BuildRequest(object):
                                           'use_auth', use_auth)
 
     def render_store_metadata_in_osv3(self, use_auth=None):
+        if not self.dj.dock_json_has_plugin_conf('exit_plugins',
+                                                 'store_metadata_in_osv3'):
+            return
+
         self.dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3",
                                   "url",
                                   self.spec.builder_openshift_url.value)
@@ -481,6 +513,9 @@ class BuildRequest(object):
     def render_add_labels_in_dockerfile(self):
         phase = 'prebuild_plugins'
         plugin = 'add_labels_in_dockerfile'
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return
+
         implicit_labels = {}
         label_spec = {
             'vendor': self.spec.vendor,
@@ -724,6 +759,29 @@ class BuildRequest(object):
                 self.dj.dock_json_set_arg('postbuild_plugins', 'import_image',
                                           'insecure_registry', True)
 
+    def render_distgit_fetch_artefacts(self):
+        phase = 'prebuild_plugins'
+        plugin = 'distgit_fetch_artefacts'
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return
+
+        if self.spec.sources_command.value is not None:
+            self.dj.dock_json_set_arg(phase, plugin, "command",
+                                      self.spec.sources_command.value)
+        else:
+            logger.info('removing {0}, no sources_command was provided'.format(plugin))
+            self.dj.remove_plugin(phase, plugin)
+
+    def render_pull_base_image(self):
+        phase = 'prebuild_plugins'
+        plugin = 'pull_base_image'
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return
+        # pull_base_image wants a docker URI so strip off the scheme part
+        source_registry = self.spec.source_registry_uri.value
+        self.dj.dock_json_set_arg(phase, plugin, 'parent_registry',
+                                  source_registry.docker_uri if source_registry else None)
+
     def render_customizations(self):
         """
         Customize prod_inner for site specific customizations
@@ -831,17 +889,8 @@ class BuildRequest(object):
         else:
             self.set_label('git-branch', 'unknown')
 
-        if self.spec.sources_command.value is not None:
-            self.dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts",
-                                      "command", self.spec.sources_command.value)
-        else:
-            logger.info("removing distgit_fetch_artefacts, no sources_command was provided")
-            self.dj.remove_plugin('prebuild_plugins', 'distgit_fetch_artefacts')
-
-        # pull_base_image wants a docker URI so strip off the scheme part
-        source_registry = self.spec.source_registry_uri.value
-        self.dj.dock_json_set_arg('prebuild_plugins', "pull_base_image", "parent_registry",
-                                  source_registry.docker_uri if source_registry else None)
+        self.render_distgit_fetch_artefacts()
+        self.render_pull_base_image()
 
         self.adjust_for_triggers()
         self.adjust_for_scratch()
@@ -903,6 +952,7 @@ class BuildRequest(object):
 
         use_auth = self.spec.use_auth.value
         self.render_reactor_config()
+        self.render_orchestrate_build()
         self.render_add_filesystem()
         self.render_add_labels_in_dockerfile()
         self.render_koji()

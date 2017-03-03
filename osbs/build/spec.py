@@ -161,6 +161,7 @@ class BuildSpec(object):
     builder_build_json_dir = BuildParam("builder_build_json_dir", allow_none=True)
     unique_tag_only = BuildParam("unique_tag_only", allow_none=True)
     platform = BuildParam("platform", allow_none=True)
+    platforms = BuildParam("platforms", allow_none=True)
     release = BuildParam("release", allow_none=True)
     reactor_config_secret = BuildParam("reactor_config_secret", allow_none=True)
     client_config_secret = BuildParam("client_config_secret", allow_none=True)
@@ -208,7 +209,7 @@ class BuildSpec(object):
                    nfs_dest_dir=None, git_branch=None, base_image=None,
                    name_label=None,
                    builder_build_json_dir=None, registry_api_versions=None,
-                   unique_tag_only=None, platform=None, release=None,
+                   unique_tag_only=None, platform=None, platforms=None, release=None,
                    reactor_config_secret=None, client_config_secret=None,
                    token_secrets=None,
                    **kwargs):
@@ -295,6 +296,7 @@ class BuildSpec(object):
 
         self.unique_tag_only.value = unique_tag_only
         self.platform.value = platform
+        self.platforms.value = platforms
         self.release.value = release
         self.reactor_config_secret.value = reactor_config_secret
         self.client_config_secret.value = client_config_secret

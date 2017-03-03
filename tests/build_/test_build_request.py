@@ -15,7 +15,8 @@ import six
 
 from osbs.build.build_request import BuildRequest
 from osbs.constants import (DEFAULT_BUILD_IMAGE, DEFAULT_OUTER_TEMPLATE,
-                            DEFAULT_INNER_TEMPLATE, SECRETS_PATH)
+                            DEFAULT_INNER_TEMPLATE, SECRETS_PATH,
+                            ORCHESTRATOR_INNER_TEMPLATE)
 from osbs.exceptions import OsbsValidationException
 from osbs import __version__ as expected_version
 
@@ -985,6 +986,47 @@ class TestBuildRequest(object):
             assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
                                     "args", "hub") == hub
 
+    @pytest.mark.parametrize(('platforms', 'secret', 'disabled'), (
+        (['x86_64', 'ppc64le'], 'client_config_secret', False),
+        (None, 'client_config_secret', True),
+        (['x86_64', 'ppc64le'], None, False),
+        (None, None, True),
+    ))
+    def test_render_orchestrate_build(self, platforms, secret, disabled):
+        phase = 'buildstep_plugins'
+        plugin = 'orchestrate_build'
+
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'base_image': 'fedora:latest',
+            'name_label': 'fedora/resultingimage',
+            'registry_uri': "registry.example.com",
+            'openshift_uri': "http://openshift/",
+            'vendor': "Foo Vendor",
+            'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
+            'registry_api_versions': ['v1', 'v2'],
+            'client_config_secret': secret,
+            'platforms': platforms,
+        }
+
+        build_request = BuildRequest(INPUTS_PATH, inner_template=ORCHESTRATOR_INNER_TEMPLATE)
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+        strategy = build_json['spec']['strategy']['customStrategy']['env']
+        plugins = get_plugins_from_build_json(build_json)
+
+        if disabled:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, phase, plugin)
+
+        else:
+            assert plugin_value_get(plugins, phase, plugin, 'args',
+                'platforms') == platforms
+
     @pytest.mark.parametrize('unique_tag_only', [False, None, True])
     def test_render_unique_tag_only(self, unique_tag_only):
         kwargs = {
@@ -1544,14 +1586,14 @@ class TestBuildRequest(object):
         br = BuildRequest(INPUTS_PATH)
         plugin_type = "buildstep_plugins"
         plugin_name = "orchestrate_build"
-        plugin_args = {"foo": "bar"}
 
         kwargs = get_sample_prod_params()
         kwargs['client_config_secret'] = secret
+        kwargs['platforms'] = ['x86_64', 'ppc64le']
         br.set_params(**kwargs)
 
         br.dj.dock_json_set_param(plugin_type, [])
-        br.dj.add_plugin(plugin_type, plugin_name, plugin_args)
+        br.dj.add_plugin(plugin_type, plugin_name, {})
         build_json = br.render()
         plugins = get_plugins_from_build_json(build_json)
 

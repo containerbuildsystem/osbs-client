@@ -30,7 +30,9 @@ from osbs.exceptions import OsbsValidationException, OsbsException, OsbsResponse
 from osbs.http import HttpResponse
 from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             DEFAULT_INNER_TEMPLATE, WORKER_INNER_TEMPLATE,
-                            DEFAULT_CUSTOMIZE_CONF, WORKER_CUSTOMIZE_CONF)
+                            DEFAULT_CUSTOMIZE_CONF, WORKER_CUSTOMIZE_CONF,
+                            ORCHESTRATOR_OUTER_TEMPLATE, ORCHESTRATOR_INNER_TEMPLATE,
+                            ORCHESTRATOR_CUSTOMIZE_CONF)
 from osbs import utils
 
 from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
@@ -227,6 +229,62 @@ class TestOSBS(object):
         else:
             response = osbs.create_worker_build(*args, **kwargs)
             assert isinstance(response, BuildResponse)
+
+    @pytest.mark.parametrize(('inner_template', 'outer_template', 'customize_conf'), (
+        (ORCHESTRATOR_INNER_TEMPLATE, ORCHESTRATOR_OUTER_TEMPLATE, ORCHESTRATOR_CUSTOMIZE_CONF),
+        (None, ORCHESTRATOR_OUTER_TEMPLATE, None),
+        (ORCHESTRATOR_INNER_TEMPLATE, None, None),
+        (None, None, ORCHESTRATOR_CUSTOMIZE_CONF),
+        (None, None, None),
+    ))
+    @pytest.mark.parametrize(('platforms', 'raises_exception'), (
+        (None, True),
+        ([], True),
+        (['spam'], False),
+        (['spam', 'bacon'], False),
+    ))
+    def test_create_orchestrator_build(self, osbs, inner_template, outer_template,
+                                 customize_conf, platforms, raises_exception):
+        class MockParser(object):
+            labels = {'name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT}
+            baseimage = 'fedora23/python'
+
+        (flexmock(utils)
+            .should_receive('get_df_parser')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(MockParser()))
+
+        args = [TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH, TEST_USER]
+
+        kwargs = {}
+        if platforms is not None:
+            kwargs['platforms'] = platforms
+        if inner_template is not None:
+            kwargs['inner_template'] = inner_template
+        if outer_template is not None:
+            kwargs['outer_template'] = outer_template
+        if customize_conf is not None:
+            kwargs['customize_conf'] = customize_conf
+
+        expected_kwargs = {
+            'platforms': platforms,
+            'inner_template': ORCHESTRATOR_INNER_TEMPLATE,
+            'outer_template': ORCHESTRATOR_OUTER_TEMPLATE,
+            'customize_conf': ORCHESTRATOR_CUSTOMIZE_CONF,
+        }
+
+        (flexmock(osbs)
+            .should_call('create_prod_build')
+            .with_args(*args, **expected_kwargs)
+            .times(0 if raises_exception else 1))
+
+        if raises_exception:
+            with pytest.raises(OsbsException):
+                osbs.create_orchestrator_build(*args, **kwargs)
+        else:
+            response = osbs.create_orchestrator_build(*args, **kwargs)
+            assert isinstance(response, BuildResponse)
+
 
     @pytest.mark.parametrize('unique_tag_only', [True, False, None])
     def test_create_prod_build_unique_tag_only(self, osbs, unique_tag_only):
