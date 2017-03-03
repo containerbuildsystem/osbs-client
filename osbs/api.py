@@ -21,7 +21,9 @@ from osbs.build.build_request import BuildRequest
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
 from osbs.constants import (BUILD_RUNNING_STATES, WORKER_OUTER_TEMPLATE,
-                            WORKER_INNER_TEMPLATE, WORKER_CUSTOMIZE_CONF)
+                            WORKER_INNER_TEMPLATE, WORKER_CUSTOMIZE_CONF,
+                            ORCHESTRATOR_OUTER_TEMPLATE, ORCHESTRATOR_INNER_TEMPLATE,
+                            ORCHESTRATOR_CUSTOMIZE_CONF)
 from osbs.core import Openshift
 from osbs.exceptions import OsbsException, OsbsValidationException, OsbsResponseException
 # import utils in this way, so that we can mock standalone functions with flexmock
@@ -402,6 +404,7 @@ class OSBS(object):
                           koji_task_id=None,
                           scratch=None,
                           platform=None,
+                          platforms=None,
                           release=None,
                           inner_template=None,
                           outer_template=None,
@@ -421,6 +424,7 @@ class OSBS(object):
         :param koji_task_id: int, koji task ID requesting build
         :param scratch: bool, this is a scratch build
         :param platform: str, the platform name
+        :param platforms: list<str>, the name of each platform
         :param release: str, the release value to use
         :param inner_template: str, name of inner template for BuildRequest
         :param outer_template: str, name of outer template for BuildRequest
@@ -467,6 +471,7 @@ class OSBS(object):
             koji_kerberos_principal=self.build_conf.get_koji_kerberos_principal(),
             architecture=architecture,
             platform=platform,
+            platforms=platforms,
             release=release,
             vendor=self.build_conf.get_vendor(),
             build_host=self.build_conf.get_build_host(),
@@ -549,6 +554,29 @@ class OSBS(object):
         kwargs.setdefault('inner_template', WORKER_INNER_TEMPLATE)
         kwargs.setdefault('outer_template', WORKER_OUTER_TEMPLATE)
         kwargs.setdefault('customize_conf', WORKER_CUSTOMIZE_CONF)
+
+        return self.create_prod_build(*args, **kwargs)
+
+    @osbsapi
+    def create_orchestrator_build(self, *args, **kwargs):
+        """
+        Create an orchestrator build
+
+        Pass through method to create_prod_build with the following
+        modifications:
+            - platforms param is required
+            - inner template set to orchestrator_inner.json if not set
+            - outer template set to orchestrator.json if not set
+            - customize configuration set to orchestrator_customize.json if not set
+
+        :return: BuildResponse instance
+        """
+        if not kwargs.get('platforms'):
+            raise ValueError('Orchestrator build requires platforms param')
+
+        kwargs.setdefault('inner_template', ORCHESTRATOR_INNER_TEMPLATE)
+        kwargs.setdefault('outer_template', ORCHESTRATOR_OUTER_TEMPLATE)
+        kwargs.setdefault('customize_conf', ORCHESTRATOR_CUSTOMIZE_CONF)
 
         return self.create_prod_build(*args, **kwargs)
 

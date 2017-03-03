@@ -44,6 +44,31 @@ def print_json_nicely(decoded_json):
     print(json.dumps(decoded_json, indent=2))
 
 
+def check_provided_args(args, check, check_func, error_msg):
+    """Checks arguments against a check function
+
+    :param args: argparse.Namespace, all provided arguments
+    :param check: list<str>, each argument to check
+    :param check_func: filter function for items, where each item is a key-value tuple
+    :param error_msg: str, text for ValueError exception
+    :raises ValueError: when any of the required args are not provided
+    """
+    provided = dict((r, getattr(args, r)) for r in check)
+    checked = dict(filter(check_func, provided.items())).keys()
+    if checked:
+        raise ValueError(error_msg.format(', '.join(sorted(checked))))
+
+
+def check_unwanted_args(args, unwanted):
+    check_provided_args(args, unwanted, lambda item: item[-1],
+                         'Unwanted params: {0}')
+
+
+def check_required_args(args, required):
+    check_provided_args(args, required, lambda item: not item[-1],
+                         'Missing required params: {0}')
+
+
 def cmd_get_all_resource_quota(args, osbs):
     quota_name = args.QUOTA_NAME
     logger.debug("quota name = %s", quota_name)
@@ -273,9 +298,22 @@ def cmd_cancel_build(args, osbs):
 
 
 def cmd_build(args, osbs):
-    create_func = osbs.create_prod_build
+    required_args = []
+    unwanted_args = []
     if args.worker:
+        required_args = ['platform', 'release']
+        unwanted_args = ['platforms']
         create_func = osbs.create_worker_build
+    elif args.orchestrator:
+        required_args = ['platforms']
+        unwanted_args = ['platform', 'release']
+        create_func = osbs.create_orchestrator_build
+    else:
+        create_func = osbs.create_prod_build
+        unwanted_args = ['platforms', 'platform', 'release']
+
+    check_required_args(args, required_args)
+    check_unwanted_args(args, unwanted_args)
 
     build = create_func(
         git_uri=osbs.build_conf.get_git_uri(),
@@ -288,6 +326,7 @@ def cmd_build(args, osbs):
         yum_repourls=osbs.build_conf.get_yum_repourls(),
         scratch=args.scratch,
         platform=args.platform,
+        platforms=args.platforms,
         release=args.release,
     )
     build_id = build.get_build_name()
@@ -600,12 +639,30 @@ def cli():
                               help="perform a scratch build")
     build_parser.add_argument("--yum-proxy", action='store', required=False,
                               help="set yum proxy to repos from koji/add-yum-repo params")
-    build_parser.add_argument("--worker", action="store_true", required=False,
-                              default=False, help="create worker build")
-    build_parser.add_argument("--platform", action='store', required=False,
-                              help="platform name to use")
-    build_parser.add_argument("--release", action='store', required=False,
-                              help="release value to use")
+
+    worker_group = build_parser.add_argument_group(
+        title='arguments for --worker',
+        description='Required arguments for creating a worker build')
+    worker_group.add_argument('--platform', action='store', required=False,
+                              help='platform name to use')
+    worker_group.add_argument('--release', action='store', required=False,
+                              help='release value to use')
+
+    orchestrator_group = build_parser.add_argument_group(
+        title='arguments for --orchestrator',
+        description='Required arguments for creating an orchestrator build')
+    orchestrator_group.add_argument(
+        '--platforms', action='append', metavar='PLATFORM',
+        help='name of each platform to use')
+
+    build_type_group = build_parser.add_mutually_exclusive_group()
+    build_type_group.add_argument("--worker", action="store_true", required=False,
+                                  default=False, help="create worker build")
+    build_type_group.add_argument("--orchestrator", action="store_true", required=False,
+                                  default=False, help="create orchestrator build")
+    build_type_group.add_argument("--prod", action="store_true", required=False,
+                                  default=True, help="create prod build")
+
     group = build_parser.add_mutually_exclusive_group()
     group.add_argument("--build-image", action='store', required=False,
                        help="builder image to use")
