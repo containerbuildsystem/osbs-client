@@ -140,7 +140,9 @@
     },
     {
       "name": "pulp_pull",
-      "args": {}
+      "args": {
+        "insecure": false
+      }
     },
     {
       "args": {
