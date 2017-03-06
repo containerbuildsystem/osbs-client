@@ -7,7 +7,7 @@ of the BSD license. See the LICENSE file for details.
 """
 from types import GeneratorType
 
-from flexmock import flexmock
+from flexmock import flexmock, MethodCallError
 from textwrap import dedent
 import json
 from pkg_resources import parse_version
@@ -20,7 +20,7 @@ import copy
 import datetime
 from tempfile import NamedTemporaryFile
 
-from osbs.api import OSBS
+from osbs.api import OSBS, osbsapi
 from osbs.conf import Configuration
 from osbs.build.build_request import BuildRequest
 from osbs.build.build_response import BuildResponse
@@ -49,6 +49,25 @@ def request_as_response(request):
 
 
 class TestOSBS(object):
+    def test_osbsapi_wrapper(self):
+        """
+        Test that a .never() expectation works inside a .raises()
+        block.
+        """
+
+        (flexmock(utils)
+            .should_receive('get_df_parser')
+            .never())
+
+        @osbsapi
+        def dummy_api_function():
+            """A function that calls something it's not supposed to"""
+            utils.get_df_parser(TEST_GIT_URI, TEST_GIT_REF)
+
+        # Check we get the correct exception
+        with pytest.raises(MethodCallError):
+            dummy_api_function()
+
     @pytest.mark.parametrize('koji_task_id', [None, TEST_KOJI_TASK_ID])
     def test_list_builds_api(self, osbs, koji_task_id):
         kwargs = {}

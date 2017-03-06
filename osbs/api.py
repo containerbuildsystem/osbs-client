@@ -41,6 +41,10 @@ def osbsapi(func):
             # Re-raise OsbsExceptions
             raise
         except Exception as ex:
+            # Propogate flexmock errors immediately (used in test cases)
+            if getattr(ex, '__module__', None) == 'flexmock':
+                raise
+
             # Convert anything else to OsbsException
 
             # Python 3 has implicit exception chaining and enhanced
