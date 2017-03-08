@@ -37,7 +37,7 @@ from osbs import utils
 
 from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
                              TEST_GIT_URI, TEST_TARGET, TEST_USER, INPUTS_PATH,
-                             TEST_KOJI_TASK_ID)
+                             TEST_KOJI_TASK_ID, TEST_VERSION)
 from tests.fake_api import openshift, osbs, osbs106
 
 
@@ -48,6 +48,15 @@ def request_as_response(request):
 
     request.json = request.render()
     return request
+
+
+class MockDfParser(object):
+    labels = {
+        'name': 'fedora23/something',
+        'com.redhat.component': TEST_COMPONENT,
+        'version': TEST_VERSION,
+    }
+    baseimage = 'fedora23/python'
 
 
 class TestOSBS(object):
@@ -96,14 +105,10 @@ class TestOSBS(object):
         assert not image_id.startswith("docker:")
 
     def test_create_build_with_deprecated_params(self, osbs):
-        class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
-                      'version': 'version1.0'}
-            baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
+            .and_return(MockDfParser()))
 
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -128,8 +133,11 @@ class TestOSBS(object):
     def test_create_prod_build(self, osbs, name_label_name):
         # TODO: test situation when a buildconfig already exists
         class MockParser(object):
-            labels = {name_label_name: 'fedora23/something', 'com.redhat.component':  TEST_COMPONENT,
-                      'version': 'version1.0'}
+            labels = {
+                name_label_name: 'fedora23/something',
+                'com.redhat.component':  TEST_COMPONENT,
+                'version': TEST_VERSION,
+            }
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
@@ -146,15 +154,10 @@ class TestOSBS(object):
     ))
     def test_create_prod_build_build_request(self, osbs, inner_template,
                                              outer_template, customize_conf):
-        class MockParser(object):
-            labels = {'name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
-                      'version': 'test_version'}
-            baseimage = 'fedora23/python'
-
         (flexmock(utils)
             .should_receive('get_df_parser')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
+            .and_return(MockDfParser()))
 
         (flexmock(osbs)
             .should_call('get_build_request')
@@ -186,15 +189,10 @@ class TestOSBS(object):
     def test_create_worker_build(self, osbs, inner_template, outer_template,
                                  customize_conf, platform, release,
                                  raises_exception):
-        class MockParser(object):
-            labels = {'name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
-                      'version' : 'test_version'}
-            baseimage = 'fedora23/python'
-
         (flexmock(utils)
             .should_receive('get_df_parser')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
+            .and_return(MockDfParser()))
 
         args = [TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH, TEST_USER]
 
@@ -245,14 +243,10 @@ class TestOSBS(object):
     ))
     def test_create_orchestrator_build(self, osbs, inner_template, outer_template,
                                  customize_conf, platforms, raises_exception):
-        class MockParser(object):
-            labels = {'name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT}
-            baseimage = 'fedora23/python'
-
         (flexmock(utils)
             .should_receive('get_df_parser')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
+            .and_return(MockDfParser()))
 
         args = [TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH, TEST_USER]
 
@@ -288,14 +282,10 @@ class TestOSBS(object):
 
     @pytest.mark.parametrize('unique_tag_only', [True, False, None])
     def test_create_prod_build_unique_tag_only(self, osbs, unique_tag_only):
-        class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
-                      'version': 'version1.0'}
-            baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
+            .and_return(MockDfParser()))
 
         original_create_build_config_and_build = osbs._create_build_config_and_build
         def check_build_request(build_request):
@@ -351,13 +341,10 @@ class TestOSBS(object):
         tests if setdefault for arguments works in create_build
         """
 
-        class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT}
-            baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
+            .and_return(MockDfParser()))
         (flexmock(osbs)
             .should_receive('create_prod_build')
             .with_args(git_uri=TEST_GIT_URI,
@@ -382,8 +369,11 @@ class TestOSBS(object):
         """
 
         class MockParser(object):
-            labels = {'Name': 'fedora23/something', component_label_name: TEST_COMPONENT,
-                      'version': 'version1.0'}
+            labels = {
+                'name': 'fedora23/something',
+                component_label_name: TEST_COMPONENT,
+                'version': TEST_VERSION,
+            }
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
@@ -397,27 +387,19 @@ class TestOSBS(object):
         assert req.spec.component.value == TEST_COMPONENT
 
     def test_missing_component_argument_doesnt_break_build(self, osbs):
-        class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
-                      'version': 'version1.0'}
-            baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
+            .and_return(MockDfParser()))
         response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
                                           TEST_GIT_BRANCH, TEST_USER)
         assert isinstance(response, BuildResponse)
 
     def test_create_prod_build_set_required_version(self, osbs106):
-        class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
-                      'version': 'version1.0'}
-            baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
+            .and_return(MockDfParser()))
         (flexmock(BuildRequest)
             .should_receive('set_openshift_required_version')
             .with_args(parse_version('1.0.6'))
@@ -429,14 +411,10 @@ class TestOSBS(object):
 
     def test_create_prod_with_secret_build(self, osbs):
         # TODO: test situation when a buildconfig already exists
-        class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
-                      'version': 'version1.0'}
-            baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
+            .and_return(MockDfParser()))
         response = osbs.create_prod_with_secret_build(TEST_GIT_URI, TEST_GIT_REF,
                                                       TEST_GIT_BRANCH, TEST_USER,
                                                       TEST_COMPONENT, TEST_TARGET,
@@ -445,14 +423,10 @@ class TestOSBS(object):
 
     def test_create_prod_without_koji_build(self, osbs):
         # TODO: test situation when a buildconfig already exists
-        class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
-                      'version': 'version1.0'}
-            baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
+            .and_return(MockDfParser()))
         response = osbs.create_prod_without_koji_build(TEST_GIT_URI, TEST_GIT_REF,
                                                        TEST_GIT_BRANCH, TEST_USER,
                                                        TEST_COMPONENT, TEST_ARCH)
@@ -700,14 +674,10 @@ class TestOSBS(object):
 
         assert config.get_build_image() == build_image
 
-        class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
-                      'version': 'version1.0'}
-            baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
+            .and_return(MockDfParser()))
 
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
 
@@ -1285,11 +1255,6 @@ class TestOSBS(object):
         config = Configuration()
         osbs = OSBS(config, config)
 
-        class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
-                      'version': 'version1.0'}
-            baseimage = 'fedora23/python'
-
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -1306,7 +1271,7 @@ class TestOSBS(object):
         (flexmock(utils)
             .should_receive('get_df_parser')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
+            .and_return(MockDfParser()))
 
         (flexmock(osbs)
             .should_receive('_create_scratch_build')
@@ -1381,14 +1346,10 @@ class TestOSBS(object):
             config = Configuration(fp.name)
             osbs = OSBS(config, config)
 
-        class MockParser(object):
-            labels = {'Name': 'fedora23/something', 'com.redhat.component': TEST_COMPONENT,
-                      'version' : 'test_version'}
-            baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_df_parser')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
+            .and_return(MockDfParser()))
 
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
 
