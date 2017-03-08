@@ -745,6 +745,7 @@ class TestBuildRequest(object):
             build_request.render()
 
     @pytest.mark.parametrize('registry_api_versions', [
+        ['v1'],
         ['v1', 'v2'],
         ['v2'],
     ])
@@ -808,12 +809,12 @@ class TestBuildRequest(object):
         plugins = get_plugins_from_build_json(build_json)
 
         # tag_and_push configuration. Must not have the scheme part.
-        expected_registries = {
-            'registry2.example.com:5000': {
+        expected_registries = {}
+        if 'v2' in registry_api_versions:
+            expected_registries['registry2.example.com:5000'] = {
                 'insecure': True,
-                'secret': '/var/run/secrets/atomic-reactor/registry_secret'
-            },
-        }
+                'secret': '/var/run/secrets/atomic-reactor/registry_secret',
+            }
 
         if 'v1' in registry_api_versions:
             expected_registries['registry1.example.com:5000'] = {
