@@ -297,6 +297,9 @@ def test_get_instance_token_file_name():
         ({"Name" : "old"},
          ("get_name", Labels.LABEL_TYPE_NAME),
          "Name"),
+        ({"Name": "old"},
+         ("get_name", None),
+         TypeError),  # arg is required
         ({},
          ("get_new_names_by_old", None),
          {"Vendor": "vendor", "Name": "name", "Build_Host": "com.redhat.build-host",
