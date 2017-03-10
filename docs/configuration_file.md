@@ -123,6 +123,8 @@ Some options are also mandatory.
 
 * `token_secrets` (*optional*, `string`) — whitespace-separated list of secret names with optional mount path in the format secret[:path], which can be used to hold service account tokens referenced by token_file in the osbs_client_secret osbs.conf
 
+* `arrangement_version` (*optional*, `integer`) — default version of inner template to use when creating orchestrator build
+
 
 ## Build JSON Templates
 

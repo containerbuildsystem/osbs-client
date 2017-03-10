@@ -13,6 +13,7 @@ import os
 from osbs.conf import Configuration
 from osbs import utils
 from osbs.exceptions import OsbsValidationException
+from osbs.constants import DEFAULT_ARRANGEMENT_VERSION
 import pytest
 from tempfile import NamedTemporaryFile
 
@@ -316,3 +317,19 @@ class TestConfiguration(object):
             conf = Configuration(conf_file=config_file)
 
             assert conf.get_builder_build_json_store() == expected
+
+    @pytest.mark.parametrize(('config', 'expected'), [
+        ({'default': {}}, DEFAULT_ARRANGEMENT_VERSION),
+
+        ({'default': {'arrangement_version': 50}}, 50),
+        ({'default': {'arrangement_version': 'one'}}, OsbsValidationException),
+    ])
+    def test_arrangement_version(self, config, expected):
+        with self.config_file(config) as config_file:
+            conf = Configuration(conf_file=config_file)
+
+        if isinstance(expected, type):
+            with pytest.raises(expected):
+                conf.get_arrangement_version()
+        else:
+            assert conf.get_arrangement_version() == expected

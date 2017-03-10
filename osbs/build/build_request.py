@@ -205,6 +205,7 @@ class BuildRequest(object):
             'target': self.spec.koji_target.value,
             'user': self.spec.user.value,
             'yum_repourls': self.spec.yum_repourls.value,
+            'arrangement_version': self.spec.arrangement_version.value,
         }
 
         self.dj.dock_json_set_arg(phase, plugin, 'platforms',
