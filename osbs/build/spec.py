@@ -166,6 +166,7 @@ class BuildSpec(object):
     reactor_config_secret = BuildParam("reactor_config_secret", allow_none=True)
     client_config_secret = BuildParam("client_config_secret", allow_none=True)
     token_secrets = BuildParam("token_secrets", allow_none=True)
+    arrangement_version = BuildParam("arrangement_version", allow_none=True)
 
     def __init__(self):
         self.required_params = [
@@ -211,7 +212,7 @@ class BuildSpec(object):
                    builder_build_json_dir=None, registry_api_versions=None,
                    unique_tag_only=None, platform=None, platforms=None, release=None,
                    reactor_config_secret=None, client_config_secret=None,
-                   token_secrets=None,
+                   token_secrets=None, arrangement_version=None,
                    **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
@@ -301,6 +302,7 @@ class BuildSpec(object):
         self.reactor_config_secret.value = reactor_config_secret
         self.client_config_secret.value = client_config_secret
         self.token_secrets.value = token_secrets or {}
+        self.arrangement_version.value = arrangement_version
 
     def validate(self):
         logger.info("Validating params of %s", self.__class__.__name__)

@@ -16,7 +16,8 @@ import six
 from osbs.build.build_request import BuildRequest
 from osbs.constants import (DEFAULT_BUILD_IMAGE, DEFAULT_OUTER_TEMPLATE,
                             DEFAULT_INNER_TEMPLATE, SECRETS_PATH,
-                            ORCHESTRATOR_INNER_TEMPLATE)
+                            ORCHESTRATOR_INNER_TEMPLATE,
+                            DEFAULT_ARRANGEMENT_VERSION)
 from osbs.exceptions import OsbsValidationException
 from osbs import __version__ as expected_version
 
@@ -992,7 +993,12 @@ class TestBuildRequest(object):
         (['x86_64', 'ppc64le'], None, False),
         (None, None, True),
     ))
-    def test_render_orchestrate_build(self, platforms, secret, disabled):
+    @pytest.mark.parametrize('arrangement_version', [
+        # Only one version defined so far
+        DEFAULT_ARRANGEMENT_VERSION,
+    ])
+    def test_render_orchestrate_build(self, platforms, secret, disabled,
+                                      arrangement_version):
         phase = 'buildstep_plugins'
         plugin = 'orchestrate_build'
 
@@ -1011,9 +1017,12 @@ class TestBuildRequest(object):
             'registry_api_versions': ['v1', 'v2'],
             'client_config_secret': secret,
             'platforms': platforms,
+            'arrangement_version': arrangement_version,
         }
 
-        build_request = BuildRequest(INPUTS_PATH, inner_template=ORCHESTRATOR_INNER_TEMPLATE)
+        inner_template = ORCHESTRATOR_INNER_TEMPLATE.format(
+            arrangement_version=arrangement_version)
+        build_request = BuildRequest(INPUTS_PATH, inner_template=inner_template)
         build_request.set_params(**kwargs)
         build_json = build_request.render()
         strategy = build_json['spec']['strategy']['customStrategy']['env']
@@ -1026,6 +1035,9 @@ class TestBuildRequest(object):
         else:
             assert plugin_value_get(plugins, phase, plugin, 'args',
                 'platforms') == platforms
+            build_kwargs = plugin_value_get(plugins, phase, plugin, 'args',
+                                            'build_kwargs')
+            assert build_kwargs['arrangement_version'] == arrangement_version
 
     @pytest.mark.parametrize('unique_tag_only', [False, None, True])
     def test_render_unique_tag_only(self, unique_tag_only):
@@ -1590,6 +1602,7 @@ class TestBuildRequest(object):
         kwargs = get_sample_prod_params()
         kwargs['client_config_secret'] = secret
         kwargs['platforms'] = ['x86_64', 'ppc64le']
+        kwargs['arrangement_version'] = DEFAULT_ARRANGEMENT_VERSION
         br.set_params(**kwargs)
 
         br.dj.dock_json_set_param(plugin_type, [])

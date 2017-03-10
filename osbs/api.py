@@ -398,44 +398,22 @@ class OSBS(object):
 
         return build
 
-    @osbsapi
-    def create_prod_build(self, git_uri, git_ref,
-                          git_branch,  # may be None
-                          user,
-                          component=None,
-                          target=None,
-                          architecture=None, yum_repourls=None,
-                          koji_task_id=None,
-                          scratch=None,
-                          platform=None,
-                          platforms=None,
-                          release=None,
-                          inner_template=None,
-                          outer_template=None,
-                          customize_conf=None,
-                          **kwargs):
-        """
-        Create a production build
-
-        :param git_uri: str, URI of git repository
-        :param git_ref: str, reference to commit
-        :param git_branch: str, branch name (may be None)
-        :param user: str, user name
-        :param component: str, not used anymore
-        :param target: str, koji target
-        :param architecture: str, build architecture
-        :param yum_repourls: list, URLs for yum repos
-        :param koji_task_id: int, koji task ID requesting build
-        :param scratch: bool, this is a scratch build
-        :param platform: str, the platform name
-        :param platforms: list<str>, the name of each platform
-        :param release: str, the release value to use
-        :param inner_template: str, name of inner template for BuildRequest
-        :param outer_template: str, name of outer template for BuildRequest
-        :param customize_conf: str, name of customization config for BuildRequest
-        :return: BuildResponse instance
-        """
-
+    def _do_create_prod_build(self, git_uri, git_ref,
+                              git_branch,  # may be None
+                              user,
+                              component=None,
+                              target=None,
+                              architecture=None, yum_repourls=None,
+                              koji_task_id=None,
+                              scratch=None,
+                              platform=None,
+                              platforms=None,
+                              release=None,
+                              inner_template=None,
+                              outer_template=None,
+                              customize_conf=None,
+                              arrangement_version=None,
+                              **kwargs):
         df_parser = utils.get_df_parser(git_uri, git_ref, git_branch=git_branch)
         build_request = self.get_build_request(inner_template=inner_template,
                                                outer_template=outer_template,
@@ -509,6 +487,7 @@ class OSBS(object):
             reactor_config_secret=self.build_conf.get_reactor_config_secret(),
             client_config_secret=self.build_conf.get_client_config_secret(),
             token_secrets=self.build_conf.get_token_secrets(),
+            arrangement_version=arrangement_version,
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         if build_request.scratch:
@@ -519,23 +498,51 @@ class OSBS(object):
         return response
 
     @osbsapi
+    def create_prod_build(self, *args, **kwargs):
+        """
+        Create a production build
+
+        :param git_uri: str, URI of git repository
+        :param git_ref: str, reference to commit
+        :param git_branch: str, branch name (may be None)
+        :param user: str, user name
+        :param component: str, not used anymore
+        :param target: str, koji target
+        :param architecture: str, build architecture
+        :param yum_repourls: list, URLs for yum repos
+        :param koji_task_id: int, koji task ID requesting build
+        :param scratch: bool, this is a scratch build
+        :param platform: str, the platform name
+        :param platforms: list<str>, the name of each platform
+        :param release: str, the release value to use
+        :param inner_template: str, name of inner template for BuildRequest
+        :param outer_template: str, name of outer template for BuildRequest
+        :param customize_conf: str, name of customization config for BuildRequest
+        :param arrangement_version: int, numbered arrangement of plugins for orchestration workflow
+        :return: BuildResponse instance
+        """
+        return self._do_create_prod_build(*args, **kwargs)
+
+    @osbsapi
     def create_prod_with_secret_build(self, git_uri, git_ref, git_branch, user, component=None,
                                       target=None, architecture=None, yum_repourls=None, **kwargs):
         warnings.warn("create_prod_with_secret_build is deprecated, please use create_build")
-        return self.create_prod_build(git_uri, git_ref, git_branch, user, component, target,
-                                      architecture, yum_repourls=yum_repourls, **kwargs)
+        return self._do_create_prod_build(git_uri, git_ref, git_branch, user,
+                                          component, target, architecture,
+                                          yum_repourls=yum_repourls, **kwargs)
 
     @osbsapi
     def create_prod_without_koji_build(self, git_uri, git_ref, git_branch, user, component=None,
                                        architecture=None, yum_repourls=None, **kwargs):
         warnings.warn("create_prod_without_koji_build is deprecated, please use create_build")
-        return self.create_prod_build(git_uri, git_ref, git_branch, user, component, None,
-                                      architecture, yum_repourls=yum_repourls, **kwargs)
+        return self._do_create_prod_build(git_uri, git_ref, git_branch, user,
+                                          component, None, architecture,
+                                          yum_repourls=yum_repourls, **kwargs)
 
     @osbsapi
     def create_simple_build(self, **kwargs):
         warnings.warn("simple builds are deprecated, please use the create_build method")
-        return self.create_prod_build(**kwargs)
+        return self._do_create_prod_build(**kwargs)
 
     @osbsapi
     def create_build(self, **kwargs):
@@ -546,7 +553,7 @@ class OSBS(object):
         :return: instance of BuildRequest
         """
         kwargs.setdefault('git_branch', None)
-        return self.create_prod_build(**kwargs)
+        return self._do_create_prod_build(**kwargs)
 
     @osbsapi
     def create_worker_build(self, *args, **kwargs):
@@ -557,21 +564,37 @@ class OSBS(object):
         modifications:
             - platform param is required
             - release param is required
-            - inner template set to worker_inner.json if not set
+            - arrangement_version param is required, which is used to
+              select which worker_inner:n.json template to use
+            - inner template set to worker_inner:n.json if not set
             - outer template set to worker.json if not set
             - customize configuration set to worker_customize.json if not set
 
         :return: BuildResponse instance
         """
-        for required in ('platform', 'release'):
+        missing = set()
+        for required in ('platform', 'release', 'arrangement_version'):
             if not kwargs.get(required):
-                raise ValueError('Worker build requires %s param' % required)
+                missing.add(required)
 
-        kwargs.setdefault('inner_template', WORKER_INNER_TEMPLATE)
+        if missing:
+            raise ValueError("Worker build missing required parameters: %s" %
+                             missing)
+
+        arrangement_version = kwargs.pop('arrangement_version')
+        kwargs.setdefault('inner_template', WORKER_INNER_TEMPLATE.format(
+            arrangement_version=arrangement_version))
         kwargs.setdefault('outer_template', WORKER_OUTER_TEMPLATE)
         kwargs.setdefault('customize_conf', WORKER_CUSTOMIZE_CONF)
 
-        return self.create_prod_build(*args, **kwargs)
+        try:
+            return self._do_create_prod_build(*args, **kwargs)
+        except IOError as ex:
+            if os.path.basename(ex.filename) == kwargs['inner_template']:
+                raise OsbsValidationException("invalid arrangement_version %s" %
+                                              arrangement_version)
+
+            raise
 
     @osbsapi
     def create_orchestrator_build(self, *args, **kwargs):
@@ -581,7 +604,9 @@ class OSBS(object):
         Pass through method to create_prod_build with the following
         modifications:
             - platforms param is required
-            - inner template set to orchestrator_inner.json if not set
+            - arrangement_version param may be used to select which
+              orchestrator_inner:n.json template to use
+            - inner template set to orchestrator_inner:n.json if not set
             - outer template set to orchestrator.json if not set
             - customize configuration set to orchestrator_customize.json if not set
 
@@ -590,11 +615,22 @@ class OSBS(object):
         if not kwargs.get('platforms'):
             raise ValueError('Orchestrator build requires platforms param')
 
-        kwargs.setdefault('inner_template', ORCHESTRATOR_INNER_TEMPLATE)
+        arrangement_version = kwargs.setdefault('arrangement_version',
+                                                self.build_conf.get_arrangement_version())
+
+        kwargs.setdefault('inner_template', ORCHESTRATOR_INNER_TEMPLATE.format(
+            arrangement_version=arrangement_version))
         kwargs.setdefault('outer_template', ORCHESTRATOR_OUTER_TEMPLATE)
         kwargs.setdefault('customize_conf', ORCHESTRATOR_CUSTOMIZE_CONF)
 
-        return self.create_prod_build(*args, **kwargs)
+        try:
+            return self._do_create_prod_build(*args, **kwargs)
+        except IOError as ex:
+            if os.path.basename(ex.filename) == kwargs['inner_template']:
+                raise OsbsValidationException("invalid arrangement_version %s" %
+                                              arrangement_version)
+
+            raise
 
     @osbsapi
     def get_build_logs(self, build_id, follow=False, build_json=None, wait_if_missing=False):

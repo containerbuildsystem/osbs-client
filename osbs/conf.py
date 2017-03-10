@@ -23,7 +23,8 @@ except ImportError:
     from urllib.parse import urljoin
 
 from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
-                            GENERAL_CONFIGURATION_SECTION, DEFAULT_NAMESPACE)
+                            GENERAL_CONFIGURATION_SECTION, DEFAULT_NAMESPACE,
+                            DEFAULT_ARRANGEMENT_VERSION)
 from osbs.exceptions import OsbsValidationException
 from osbs import utils
 
@@ -454,3 +455,12 @@ class Configuration(object):
         if will_raise:
             raise OsbsValidationException("Wrong token_secrets configuration")
         return token_dict
+
+    def get_arrangement_version(self):
+        value = self._get_value("arrangement_version", self.conf_section,
+                                "arrangement_version",
+                                default=DEFAULT_ARRANGEMENT_VERSION)
+        try:
+            return int(value)
+        except ValueError:
+            raise OsbsValidationException("Invalid arrangement_version: %s" % value)
