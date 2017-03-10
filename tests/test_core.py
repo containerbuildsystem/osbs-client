@@ -13,15 +13,15 @@ import time
 import json
 
 from osbs.http import HttpResponse
-from osbs.constants import (BUILD_FINISHED_STATES, BUILD_RUNNING_STATES,
+from osbs.constants import (BUILD_FINISHED_STATES,
                             BUILD_CANCELLED_STATE)
 from osbs.exceptions import (OsbsResponseException, OsbsNetworkException,
                              OsbsException)
-from osbs.core import check_response
+from osbs.core import check_response, Openshift
 
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
                              TEST_LABEL_VALUE, TEST_BUILD_CONFIG)
-from tests.fake_api import openshift
+from tests.fake_api import openshift, OAPI_PREFIX, API_VER
 import pytest
 
 try:
@@ -370,3 +370,24 @@ class TestOpenshift(object):
                         tag_name,
                         self._make_tag_template(),
                         expected_scheduled) == expected_change)
+
+    @pytest.mark.parametrize(('kwargs', 'called'), (
+        ({'use_auth': True, 'use_kerberos': True}, False),
+        ({'use_auth': True, 'username': 'foo', 'password': 'bar'}, False),
+        ({'use_auth': True, 'token': 'foo'}, False),
+        ({'use_auth': False, 'use_kerberos': True}, False),
+        ({'use_auth': False, 'username': 'foo', 'password': 'bar'}, False),
+        ({'use_auth': False, 'token': 'foo'}, False),
+        ({'use_kerberos': True}, False),
+        ({'username': 'foo', 'password': 'bar'}, False),
+        ({'token': 'foo'}, False),
+        ({'use_auth': False}, True),
+        ({}, True),
+    ))
+    def test_use_service_account_token(self, kwargs, called):
+        openshift_mock = flexmock(Openshift).should_receive('can_use_serviceaccount_token')
+        if called:
+            openshift_mock.once()
+        else:
+            openshift_mock.never()
+        Openshift(OAPI_PREFIX, API_VER, "/oauth/authorize", **kwargs)

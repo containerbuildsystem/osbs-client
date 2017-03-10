@@ -84,6 +84,7 @@ class Openshift(object):
 
         self.ca = None
         auth_credentials_provided = bool(use_kerberos or
+                                         token or
                                          (username and password))
         if use_auth is None:
             self.use_auth = auth_credentials_provided
