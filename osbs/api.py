@@ -483,7 +483,6 @@ class OSBS(object):
             nfs_dest_dir=self.build_conf.get_nfs_destination_dir(),
             builder_build_json_dir=self.build_conf.get_builder_build_json_store(),
             scratch=self.build_conf.get_scratch(scratch),
-            unique_tag_only=self.build_conf.get_unique_tag_only(),
             reactor_config_secret=self.build_conf.get_reactor_config_secret(),
             client_config_secret=self.build_conf.get_client_config_secret(),
             token_secrets=self.build_conf.get_token_secrets(),
