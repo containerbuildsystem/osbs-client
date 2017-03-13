@@ -190,6 +190,48 @@ def cmd_list_builds(args, osbs):
         tp.render()
 
 
+def make_digests_str(digests):
+    if digests is not None:
+        try:
+            digests_str = "\n".join(["{registry}/{repository}:{tag} {digest}".format(**dig)
+                                     for dig in digests])
+        except (TypeError, KeyError):
+            digests_str = "(invalid value)"
+    else:
+        digests_str = "(unset)"
+
+    if not digests_str:
+        digests_str = "(empty)"
+
+    return digests_str
+
+
+def make_worker_builds_str(worker_builds):
+    worker_build_template = dedent("""\
+        {platform} WORKER BUILD
+
+        {build_name} on {cluster_url} ({namespace})
+
+        {platform} V2 DIGESTS
+
+        {digests}""")
+
+    worker_builds_formatted = []
+    for platform, worker_build in worker_builds.items():
+
+        digests_str = make_digests_str(worker_build.get('digests', []))
+
+        worker_builds_formatted.append(worker_build_template.format(
+            platform=platform,
+            build_name=worker_build.get('build', {}).get('build-name', '(unset)'),
+            cluster_url=worker_build.get('build', {}).get('cluster-url', '(unset)'),
+            namespace=worker_build.get('build', {}).get('namespace', '(unset)'),
+            digests=digests_str,
+        ))
+
+    return '\n\n'.join(worker_builds_formatted)
+
+
 def cmd_get_build(args, osbs):
     build = osbs.get_build(args.BUILD_ID[0])
     build_json = build.json
@@ -213,15 +255,7 @@ def cmd_get_build(args, osbs):
             }
             repositories_str = repositories_template.format(**repositories_context)
 
-        digests_list = build.get_digests()
-        if digests_list is not None:
-            try:
-                digests_str = "\n".join(["{registry}/{repository}:{tag} {digest}".format(**dig)
-                                         for dig in digests_list])
-            except (TypeError, KeyError):
-                digests_str = "(invalid value)"
-        else:
-            digests_str = "(unset)"
+        digests_str = make_digests_str(build.get_digests())
 
         logs_str = ''
         build_logs = build.get_logs()
@@ -290,6 +324,20 @@ def cmd_get_build(args, osbs):
             "koji_build_id": build.get_koji_build_id() or '(unset)',
             "digests": digests_str,
         }
+
+        worker_builds = json.loads(build.get_annotations().get('worker-builds', '{}'))
+        if worker_builds:
+            worker_builds_str = make_worker_builds_str(worker_builds)
+
+            if worker_builds_str:
+                template += dedent("""\
+
+
+                    WORKER BUILDS
+
+                    {worker_builds}""")
+                context['worker_builds'] = worker_builds_str
+
         print(template.format(**context))
 
 
