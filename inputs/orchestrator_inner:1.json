@@ -35,6 +35,13 @@
   "prepublish_plugins": [],
   "exit_plugins": [
     {
+      "name": "store_metadata_in_osv3",
+      "args": {
+        "url": "{{OPENSHIFT_URI}}",
+        "verify_ssl": false
+      }
+    },
+    {
       "name": "remove_built_image"
     }
   ]
