@@ -281,18 +281,6 @@ class BuildRequest(object):
                                       "store_metadata_in_osv3",
                                       "use_auth", use_auth)
 
-    def render_unique_tag_only(self):
-
-        if not self.spec.unique_tag_only.value:
-            return
-
-        if self.dj.dock_json_has_plugin_conf('postbuild_plugins',
-                                             'tag_by_labels'):
-            self.dj.dock_json_set_arg('postbuild_plugins', 'tag_by_labels',
-                                      'unique_tag_only', True)
-
-        self.dj.remove_plugin('postbuild_plugins', 'tag_from_config')
-
     def set_secret_for_plugin(self, secret, plugin=None, mount_path=None):
         """
         Sets secret for plugin, if no plugin specified
@@ -464,15 +452,19 @@ class BuildRequest(object):
         order to hadle the "scratch build" scenario
         """
         if self.scratch:
-            # Note: only one for now, but left in a list like other adjust_for_
-            # functions in the event that this needs to be expanded
             for when, which in [
                     ("postbuild_plugins", "compress"),
+                    ("postbuild_plugins", "tag_from_config"),
                     ("exit_plugins", "koji_promote"),
             ]:
                 logger.info("removing %s from scratch build request",
                             which)
                 self.dj.remove_plugin(when, which)
+
+            if self.dj.dock_json_has_plugin_conf('postbuild_plugins',
+                                                 'tag_by_labels'):
+                self.dj.dock_json_set_arg('postbuild_plugins', 'tag_by_labels',
+                                          'unique_tag_only', True)
 
     def adjust_for_custom_base_image(self):
         """
@@ -859,8 +851,6 @@ class BuildRequest(object):
             self.template['spec']['output']['to']['name'] = self.spec.image_tag.value
 
         self.render_tag_and_push_registries()
-
-        self.render_unique_tag_only()
 
         if 'triggers' in self.template['spec']:
             imagechange = self.template['spec']['triggers'][0]['imageChange']
