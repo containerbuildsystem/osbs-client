@@ -987,6 +987,44 @@ class TestBuildRequest(object):
             assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
                                     "args", "hub") == hub
 
+    @staticmethod
+    def create_no_plugins_json(outdir):
+        """
+        Create JSON templates with no plugins added.
+
+        :param outdir: str, path to store modified templates
+        """
+
+        # Make temporary copies of the JSON files
+        for basename in [DEFAULT_OUTER_TEMPLATE, DEFAULT_OUTER_TEMPLATE]:
+            shutil.copy(os.path.join(INPUTS_PATH, basename),
+                        os.path.join(outdir, basename))
+
+        # Create a build JSON description with an image change trigger
+        with open(os.path.join(outdir, DEFAULT_INNER_TEMPLATE), 'w') as prod_inner_json:
+            prod_inner_json.write(json.dumps({
+                'prebuild_plugins': [],
+                'prepublish_plugins': [],
+                'postbuild_plugins': [],
+                'exit_plugins': []
+            }))
+            prod_inner_json.flush()
+
+    def test_render_optional_plugins(self, tmpdir):
+        kwargs = get_sample_prod_params()
+
+        self.create_no_plugins_json(str(tmpdir))
+        build_request = BuildRequest(str(tmpdir))
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+        strategy = build_json['spec']['strategy']['customStrategy']['env']
+        plugins = get_plugins_from_build_json(build_json)
+
+        assert plugins['prebuild_plugins'] == []
+        assert plugins['prepublish_plugins'] == []
+        assert plugins['postbuild_plugins'] == []
+        assert plugins['exit_plugins'] == []
+
     @pytest.mark.parametrize(('platforms', 'secret', 'disabled'), (
         (['x86_64', 'ppc64le'], 'client_config_secret', False),
         (None, 'client_config_secret', True),
