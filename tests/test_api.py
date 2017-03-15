@@ -191,9 +191,12 @@ class TestOSBS(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
             .and_return(MockDfParser()))
 
-        args = [TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH, TEST_USER]
-
-        kwargs = {}
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': TEST_USER,
+        }
         if platform is not None:
             kwargs['platform'] = platform
         if release is not None:
@@ -202,6 +205,10 @@ class TestOSBS(object):
             kwargs['arrangement_version'] = arrangement_version
 
         expected_kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': TEST_USER,
             'platform': platform,
             'release': release,
             'inner_template': WORKER_INNER_TEMPLATE.format(arrangement_version=arrangement_version),
@@ -211,14 +218,14 @@ class TestOSBS(object):
 
         (flexmock(osbs)
             .should_call('_do_create_prod_build')
-            .with_args(*args, **expected_kwargs)
+            .with_args(**expected_kwargs)
             .times(0 if raises_exception else 1))
 
         if raises_exception:
             with pytest.raises(OsbsException):
-                osbs.create_worker_build(*args, **kwargs)
+                osbs.create_worker_build(**kwargs)
         else:
-            response = osbs.create_worker_build(*args, **kwargs)
+            response = osbs.create_worker_build(**kwargs)
             assert isinstance(response, BuildResponse)
 
     @pytest.mark.parametrize(('inner_template', 'outer_template',
@@ -256,23 +263,31 @@ class TestOSBS(object):
          WORKER_INNER_TEMPLATE.format(
              arrangement_version=DEFAULT_ARRANGEMENT_VERSION + 1)),
     ))
+    @pytest.mark.parametrize('branch', (None, TEST_GIT_BRANCH))
     def test_create_worker_build(self, osbs, inner_template, outer_template,
                                  customize_conf, arrangement_version,
-                                 exp_inner_template_if_different):
+                                 exp_inner_template_if_different, branch):
         (flexmock(utils)
             .should_receive('get_df_parser')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=branch)
             .and_return(MockDfParser()))
 
-        args = [TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH, TEST_USER]
-
         kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'user': TEST_USER,
             'platform': 'spam',
             'release': 'bacon',
             'arrangement_version': arrangement_version,
         }
+        if branch:
+            kwargs['git_branch'] = branch
 
         expected_kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': branch,
+            'user': TEST_USER,
             'platform': kwargs['platform'],
             'release': kwargs['release'],
             'inner_template': WORKER_INNER_TEMPLATE.format(
@@ -296,10 +311,10 @@ class TestOSBS(object):
 
         (flexmock(osbs)
             .should_receive('_do_create_prod_build')
-            .with_args(*args, **expected_kwargs)
+            .with_args(**expected_kwargs)
             .once())
 
-        osbs.create_worker_build(*args, **kwargs)
+        osbs.create_worker_build(**kwargs)
 
     def test_create_worker_build_invalid_arrangement_version(self, osbs):
         """
@@ -313,8 +328,8 @@ class TestOSBS(object):
 
         invalid_version = DEFAULT_ARRANGEMENT_VERSION + 1
         with pytest.raises(OsbsValidationException) as ex:
-            osbs.create_worker_build(TEST_GIT_URI, TEST_GIT_REF,
-                                     TEST_GIT_BRANCH, TEST_USER,
+            osbs.create_worker_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
+                                     git_branch=TEST_GIT_BRANCH, user=TEST_USER,
                                      platform='spam', release='bacon',
                                      arrangement_version=invalid_version)
 
@@ -356,18 +371,23 @@ class TestOSBS(object):
         (['spam'], False),
         (['spam', 'bacon'], False),
     ))
+    @pytest.mark.parametrize('branch', (None, TEST_GIT_BRANCH))
     def test_create_orchestrator_build(self, osbs, inner_template_fmt,
                                        outer_template, customize_conf,
                                        arrangement_version,
-                                       platforms, raises_exception):
+                                       platforms, raises_exception, branch):
         (flexmock(utils)
             .should_receive('get_df_parser')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=branch)
             .and_return(MockDfParser()))
 
-        args = [TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH, TEST_USER]
-
-        kwargs = {}
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'user': TEST_USER,
+        }
+        if branch:
+            kwargs['git_branch'] = branch
         if platforms is not None:
             kwargs['platforms'] = platforms
         if inner_template_fmt is not None:
@@ -379,6 +399,10 @@ class TestOSBS(object):
             kwargs['customize_conf'] = customize_conf
 
         expected_kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': branch,
+            'user': TEST_USER,
             'platforms': platforms,
             'inner_template': ORCHESTRATOR_INNER_TEMPLATE.format(
                 arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
@@ -388,15 +412,16 @@ class TestOSBS(object):
         }
 
         (flexmock(osbs)
-            .should_call('_do_create_prod_build')
-            .with_args(*args, **expected_kwargs)
-            .times(0 if raises_exception else 1))
+            .should_receive('_do_create_prod_build')
+            .with_args(**expected_kwargs)
+            .times(0 if raises_exception else 1)
+            .and_return(BuildResponse({})))
 
         if raises_exception:
             with pytest.raises(OsbsException):
-                osbs.create_orchestrator_build(*args, **kwargs)
+                osbs.create_orchestrator_build(**kwargs)
         else:
-            response = osbs.create_orchestrator_build(*args, **kwargs)
+            response = osbs.create_orchestrator_build(**kwargs)
             assert isinstance(response, BuildResponse)
 
     def test_create_orchestrator_build_invalid_arrangement_version(self, osbs):
@@ -411,8 +436,8 @@ class TestOSBS(object):
 
         invalid_version = DEFAULT_ARRANGEMENT_VERSION + 1
         with pytest.raises(OsbsValidationException) as ex:
-            osbs.create_orchestrator_build(TEST_GIT_URI, TEST_GIT_REF,
-                                           TEST_GIT_BRANCH, TEST_USER,
+            osbs.create_orchestrator_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
+                                           git_branch=TEST_GIT_BRANCH, user=TEST_USER,
                                            platforms=['spam'],
                                            arrangement_version=invalid_version)
 
