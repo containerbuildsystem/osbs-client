@@ -555,7 +555,7 @@ class OSBS(object):
         return self._do_create_prod_build(**kwargs)
 
     @osbsapi
-    def create_worker_build(self, *args, **kwargs):
+    def create_worker_build(self, **kwargs):
         """
         Create a worker build
 
@@ -586,8 +586,9 @@ class OSBS(object):
         kwargs.setdefault('outer_template', WORKER_OUTER_TEMPLATE)
         kwargs.setdefault('customize_conf', WORKER_CUSTOMIZE_CONF)
 
+        kwargs.setdefault('git_branch', None)
         try:
-            return self._do_create_prod_build(*args, **kwargs)
+            return self._do_create_prod_build(**kwargs)
         except IOError as ex:
             if os.path.basename(ex.filename) == kwargs['inner_template']:
                 raise OsbsValidationException("invalid arrangement_version %s" %
@@ -596,7 +597,7 @@ class OSBS(object):
             raise
 
     @osbsapi
-    def create_orchestrator_build(self, *args, **kwargs):
+    def create_orchestrator_build(self, **kwargs):
         """
         Create an orchestrator build
 
@@ -622,8 +623,9 @@ class OSBS(object):
         kwargs.setdefault('outer_template', ORCHESTRATOR_OUTER_TEMPLATE)
         kwargs.setdefault('customize_conf', ORCHESTRATOR_CUSTOMIZE_CONF)
 
+        kwargs.setdefault('git_branch', None)
         try:
-            return self._do_create_prod_build(*args, **kwargs)
+            return self._do_create_prod_build(**kwargs)
         except IOError as ex:
             if os.path.basename(ex.filename) == kwargs['inner_template']:
                 raise OsbsValidationException("invalid arrangement_version %s" %
