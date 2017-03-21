@@ -24,14 +24,22 @@
 
 %global commit 14012aff94eaff24569b518d2887d74ee94458d6
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
+
 # set to 0 to create a normal release
+%global dev_release 1
+
+%if 0{?dev_release}
+%global postrelease dev
+%global release 0
+%else
 %global postrelease 0
 %global release 1
+%endif
 
 %global osbs_obsolete_vr 0.14-2
 
 Name:           osbs-client
-Version:        0.35
+Version:        0.36
 %if "x%{postrelease}" != "x0"
 Release:        %{release}.%{postrelease}.git.%{shortcommit}%{?dist}
 %else
