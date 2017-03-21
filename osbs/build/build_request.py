@@ -212,6 +212,9 @@ class BuildRequest(object):
                                   self.spec.platforms.value)
         self.dj.dock_json_set_arg(phase, plugin, 'build_kwargs', build_kwargs)
 
+        if not self.spec.build_imagestream.value:
+            self.dj.dock_json_set_arg(phase, plugin, 'worker_build_image', self.spec.build_image.value)
+
     def render_resource_limits(self):
         if self._resource_limits is not None:
             resources = self.template['spec'].get('resources', {})
