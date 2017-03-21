@@ -1044,8 +1044,15 @@ class TestBuildRequest(object):
         # Only one version defined so far
         DEFAULT_ARRANGEMENT_VERSION,
     ])
+    @pytest.mark.parametrize(('build_image', 'build_imagestream', 'worker_build_image'), (
+        ('fedora:latest', None, 'fedora:latest'),
+        (None, 'buildroot-stream:v1.0', KeyError),
+        (None, None, DEFAULT_BUILD_IMAGE),
+        ('fedora:latest', 'buildroot-stream:v1.0', KeyError)
+    ))
     def test_render_orchestrate_build(self, platforms, secret, disabled,
-                                      arrangement_version):
+                                      arrangement_version, build_image,
+                                      build_imagestream, worker_build_image):
         phase = 'buildstep_plugins'
         plugin = 'orchestrate_build'
 
@@ -1066,6 +1073,10 @@ class TestBuildRequest(object):
             'platforms': platforms,
             'arrangement_version': arrangement_version,
         }
+        if build_image:
+            kwargs['build_image'] = build_image
+        if build_imagestream:
+            kwargs['build_imagestream'] = build_imagestream
 
         inner_template = ORCHESTRATOR_INNER_TEMPLATE.format(
             arrangement_version=arrangement_version)
@@ -1085,6 +1096,14 @@ class TestBuildRequest(object):
             build_kwargs = plugin_value_get(plugins, phase, plugin, 'args',
                                             'build_kwargs')
             assert build_kwargs['arrangement_version'] == arrangement_version
+
+            if isinstance(worker_build_image, type):
+                with pytest.raises(worker_build_image):
+                    plugin_value_get(plugins, phase, plugin, 'args',
+                    'worker_build_image')
+            else:
+                assert plugin_value_get(plugins, phase, plugin, 'args',
+                    'worker_build_image') == worker_build_image
 
 
     def test_render_prod_with_pulp_no_auth(self):
