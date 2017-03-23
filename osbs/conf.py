@@ -460,3 +460,6 @@ class Configuration(object):
             return int(value)
         except ValueError:
             raise OsbsValidationException("Invalid arrangement_version: %s" % value)
+
+    def get_can_orchestrate(self):
+        return self._get_value("can_orchestrate", self.conf_section, "can_orchestrate", default=False, is_bool_val=True)

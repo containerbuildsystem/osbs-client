@@ -615,6 +615,10 @@ class OSBS(object):
         if not kwargs.get('platforms'):
             raise ValueError('Orchestrator build requires platforms param')
 
+        if not self.can_orchestrate():
+            raise OsbsValidationException("can't create orchestrate build "
+                                          "when can_orchestrate isn't enabled")
+
         arrangement_version = kwargs.setdefault('arrangement_version',
                                                 self.build_conf.get_arrangement_version())
 
@@ -905,3 +909,7 @@ class OSBS(object):
     @osbsapi
     def get_resource_quota(self, quota_name):
         return self.os.get_resource_quota(quota_name).json()
+
+    @osbsapi
+    def can_orchestrate(self):
+        return self.build_conf.get_can_orchestrate()

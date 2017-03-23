@@ -125,6 +125,8 @@ Some options are also mandatory.
 
 * `arrangement_version` (*optional*, `integer`) — default version of inner template to use when creating orchestrator build
 
+* `can_orchestrate` (*optional*, `boolean`) — allows using orchestrator build, default is false
+
 
 ## Build JSON Templates
 
