@@ -323,6 +323,7 @@ distribution_scope = authoritative-source-only
 koji_root = http://koji.example.com/kojiroot
 koji_hub = http://koji.example.com/kojihub
 use_auth = false
+can_orchestrate = true
 """.format(build_json_dir="inputs"))
         fp.flush()
         dummy_config = Configuration(fp.name)
@@ -331,6 +332,30 @@ use_auth = false
     osbs.os = openshift
     return osbs
 
+@pytest.fixture
+def osbs_cant_orchestrate(openshift):
+    with NamedTemporaryFile(mode="wt") as fp:
+        fp.write("""
+[general]
+build_json_dir = {build_json_dir}
+[default]
+openshift_url = /
+registry_uri = registry.example.com
+sources_command = fedpkg sources
+vendor = Example, Inc.
+build_host = localhost
+authoritative_registry = registry.example.com
+distribution_scope = authoritative-source-only
+koji_root = http://koji.example.com/kojiroot
+koji_hub = http://koji.example.com/kojihub
+use_auth = false
+""".format(build_json_dir="inputs"))
+        fp.flush()
+        dummy_config = Configuration(fp.name)
+        osbs = OSBS(dummy_config, dummy_config)
+
+    osbs.os = openshift
+    return osbs
 
 @pytest.fixture
 def osbs106(openshift):

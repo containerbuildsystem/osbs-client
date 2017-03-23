@@ -39,7 +39,7 @@ from osbs import utils
 from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
                              TEST_GIT_URI, TEST_TARGET, TEST_USER, INPUTS_PATH,
                              TEST_KOJI_TASK_ID, TEST_VERSION)
-from tests.fake_api import openshift, osbs, osbs106
+from tests.fake_api import openshift, osbs, osbs106, osbs_cant_orchestrate
 
 
 def request_as_response(request):
@@ -423,6 +423,24 @@ class TestOSBS(object):
         else:
             response = osbs.create_orchestrator_build(**kwargs)
             assert isinstance(response, BuildResponse)
+
+    def test_create_orchestrator_build_cant_orchestrate(self, osbs_cant_orchestrate):
+        """
+        Test we get OsbsValidationException when can_orchestrate
+        isn't true
+        """
+        (flexmock(utils)
+            .should_receive('get_df_parser')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(MockDfParser()))
+
+        with pytest.raises(OsbsValidationException) as ex:
+            osbs_cant_orchestrate.create_orchestrator_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
+                                                            git_branch=TEST_GIT_BRANCH, user=TEST_USER,
+                                                            platforms=['spam'],
+                                                            arrangement_version=DEFAULT_ARRANGEMENT_VERSION)
+
+        assert 'can\'t create orchestrate build' in ex.value.message
 
     def test_create_orchestrator_build_invalid_arrangement_version(self, osbs):
         """
