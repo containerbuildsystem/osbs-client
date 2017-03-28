@@ -30,10 +30,10 @@ In your OSBS build instance configuration, use the following values:
 
 ```
 pulp_secret = mysecret
-pdc_secret = myothersecret
+koji_certs_secret = myothersecret
 ```
 
-`pulp_secret` and `pdc_secret` names must match the resource names specified in the JSON.
+`pulp_secret` and `koji_certs_secret` names must match the resource names specified in the JSON.
 
 ## Fetching the secrets within the build root
 

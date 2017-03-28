@@ -298,3 +298,39 @@ class TestConfiguration(object):
                 conf.get_arrangement_version()
         else:
             assert conf.get_arrangement_version() == expected
+
+    @pytest.mark.parametrize(('config', 'expected'), [
+        ({'default': {'smtp_additional_addresses': 'user@example.com'}},
+         ['user@example.com']),
+        ({'default': {'smtp_additional_addresses': 'user@example.com,user2@example.com'}},
+         ['user@example.com', 'user2@example.com']),
+        ({'default': {'smtp_additional_addresses': 'user@example.com, user2@example.com'}},
+         ['user@example.com', 'user2@example.com']),
+        ({'default': {'smtp_additional_addresses': '\tuser@example.com,\tuser2@example.com'}},
+         ['user@example.com', 'user2@example.com']),
+        ({'default': {'smtp_additional_addresses':
+                      '\n  user@example.com,     user2@example.com,\n\n user3@example.com'}},
+         ['user@example.com', 'user2@example.com', 'user3@example.com']),
+    ])
+    def test_get_smtp_additional_addresses(self, config, expected):
+        with self.config_file(config) as config_file:
+            conf = Configuration(conf_file=config_file)
+            assert conf.get_smtp_additional_addresses() == expected
+
+    @pytest.mark.parametrize(('config', 'expected'), [
+        ({'default': {'smtp_error_addresses': 'user@example.com'}},
+         ['user@example.com']),
+        ({'default': {'smtp_error_addresses': 'user@example.com,user2@example.com'}},
+         ['user@example.com', 'user2@example.com']),
+        ({'default': {'smtp_error_addresses': 'user@example.com, user2@example.com'}},
+         ['user@example.com', 'user2@example.com']),
+        ({'default': {'smtp_error_addresses': '\tuser@example.com,\tuser2@example.com'}},
+         ['user@example.com', 'user2@example.com']),
+        ({'default': {'smtp_error_addresses':
+                      '\n  user@example.com,     user2@example.com,\n\n user3@example.com'}},
+         ['user@example.com', 'user2@example.com', 'user3@example.com']),
+    ])
+    def test_get_smtp_error_addresses(self, config, expected):
+        with self.config_file(config) as config_file:
+            conf = Configuration(conf_file=config_file)
+            assert conf.get_smtp_error_addresses() == expected

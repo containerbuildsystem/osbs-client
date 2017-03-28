@@ -191,12 +191,9 @@
     },
     {
       "args": {
-        "send_on": ["auto_fail", "auto_success"],
-        "url": "{{OPENSHIFT_URI}}",
-        "pdc_url": "{{PDC_URL}}",
-        "smtp_uri": "{{SMTP_URI}}",
-        "from_address": "osbs@example.com",
-        "error_addresses": ["errors@example.com"]
+        "send_on": ["auto_canceled", "auto_fail", "manual_success", "manual_fail"],
+        "smtp_host": "{{SMTP_HOST}}",
+        "from_address": "{{SMTP_FROM}}"
       },
       "name": "sendmail"
     }
