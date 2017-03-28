@@ -153,9 +153,13 @@ class BuildSpec(object):
     image_tag = BuildParam("image_tag")
     pulp_secret = BuildParam("pulp_secret", allow_none=True)
     pulp_registry = BuildParam("pulp_registry", allow_none=True)
-    pdc_secret = BuildParam("pdc_secret", allow_none=True)
-    pdc_url = BuildParam("pdc_url", allow_none=True)
-    smtp_uri = BuildParam("smtp_uri", allow_none=True)
+    smtp_host = BuildParam("smtp_host", allow_none=True)
+    smtp_from = BuildParam("smtp_from", allow_none=True)
+    smtp_additional_addresses = BuildParam("smtp_additional_addresses", allow_none=True)
+    smtp_error_addresses = BuildParam("smtp_error_addresses", allow_none=True)
+    smtp_email_domain = BuildParam("smtp_email_domain", allow_none=True)
+    smtp_to_submitter = BuildParam("smtp_to_submitter", allow_none=True)
+    smtp_to_pkgowner = BuildParam("smtp_to_pkgowner", allow_none=True)
     nfs_server_path = BuildParam("nfs_server_path", allow_none=True)
     nfs_dest_dir = BuildParam("nfs_dest_dir", allow_none=True)
     builder_build_json_dir = BuildParam("builder_build_json_dir", allow_none=True)
@@ -185,9 +189,8 @@ class BuildSpec(object):
             self.koji_certs_secret,
             self.pulp_secret,
             self.pulp_registry,
-            self.pdc_secret,
-            self.pdc_url,
-            self.smtp_uri,
+            self.smtp_host,
+            self.smtp_from,
             self.nfs_server_path,
         ]
 
@@ -204,9 +207,12 @@ class BuildSpec(object):
                    koji_use_kerberos=None, koji_kerberos_keytab=None,
                    koji_kerberos_principal=None, koji_task_id=None,
                    source_secret=None,  # compatibility name for pulp_secret
-                   pulp_secret=None, pulp_registry=None, pdc_secret=None, pdc_url=None,
-                   smtp_uri=None, nfs_server_path=None,
-                   nfs_dest_dir=None, git_branch=None, base_image=None,
+                   pulp_secret=None, pulp_registry=None,
+                   smtp_host=None, smtp_from=None, smtp_email_domain=None,
+                   smtp_additional_addresses=None, smtp_error_addresses=None,
+                   smtp_to_submitter=None, smtp_to_pkgowner=None,
+                   nfs_server_path=None, nfs_dest_dir=None,
+                   git_branch=None, base_image=None,
                    name_label=None,
                    builder_build_json_dir=None, registry_api_versions=None,
                    platform=None, platforms=None, release=None,
@@ -253,9 +259,13 @@ class BuildSpec(object):
         self.koji_task_id.value = koji_task_id
         self.pulp_secret.value = pulp_secret or source_secret
         self.pulp_registry.value = pulp_registry
-        self.pdc_secret.value = pdc_secret
-        self.pdc_url.value = pdc_url
-        self.smtp_uri.value = smtp_uri
+        self.smtp_host.value = smtp_host
+        self.smtp_from.value = smtp_from
+        self.smtp_additional_addresses.value = smtp_additional_addresses
+        self.smtp_error_addresses.value = smtp_error_addresses
+        self.smtp_email_domain.value = smtp_email_domain
+        self.smtp_to_submitter.value = smtp_to_submitter
+        self.smtp_to_pkgowner.value = smtp_to_pkgowner
         self.nfs_server_path.value = nfs_server_path
         self.nfs_dest_dir.value = nfs_dest_dir
         self.git_branch.value = git_branch

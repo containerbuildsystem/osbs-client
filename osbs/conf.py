@@ -336,14 +336,38 @@ class Configuration(object):
         """
         return self.get_pulp_secret()
 
-    def get_pdc_secret(self):
-        return self._get_value("pdc_secret", self.conf_section, "pdc_secret")
+    def get_smtp_host(self):
+        return self._get_value("smtp_host", self.conf_section, "smtp_host")
 
-    def get_pdc_url(self):
-        return self._get_value("pdc_url", self.conf_section, "pdc_url")
+    def get_smtp_from(self):
+        return self._get_value("smtp_from", self.conf_section, "smtp_from")
 
-    def get_smtp_uri(self):
-        return self._get_value("smtp_uri", self.conf_section, "smtp_uri")
+    def get_smtp_additional_addresses(self):
+        value = self._get_value("smtp_additional_addresses", self.conf_section,
+                                "smtp_additional_addresses")
+
+        if value:
+            return [x.strip() for x in ''.join(value.splitlines()).split(',')]
+        else:
+            return []
+
+    def get_smtp_error_addresses(self):
+        value = self._get_value("smtp_error_addresses", self.conf_section, "smtp_error_addresses")
+        if value:
+            return [x.strip() for x in ''.join(value.splitlines()).split(',')]
+        else:
+            return []
+
+    def get_smtp_email_domain(self):
+        return self._get_value("smtp_email_domain", self.conf_section, "smtp_email_domain")
+
+    def get_smtp_to_submitter(self):
+        return self._get_value("smtp_to_submitter", self.conf_section, "smtp_to_submitter",
+                               is_bool_val=True)
+
+    def get_smtp_to_pkgowner(self):
+        return self._get_value("smtp_to_pkgowner", self.conf_section, "smtp_to_pkgowner",
+                               is_bool_val=True)
 
     def get_nfs_server_path(self):
         return self._get_value("nfs_server_path", self.conf_section, "nfs_server_path")

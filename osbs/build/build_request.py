@@ -69,7 +69,6 @@ class BuildRequest(object):
         these parameters are accepted:
 
         :param pulp_secret: str, resource name of pulp secret
-        :param pdc_secret: str, resource name of pdc secret
         :param koji_target: str, koji tag with packages used to build the image
         :param kojiroot: str, URL from which koji packages are fetched
         :param kojihub: str, URL of the koji hub
@@ -331,7 +330,7 @@ class BuildRequest(object):
     def set_secrets(self, secrets):
         """
         :param secrets: dict, {(plugin type, plugin name, argument name): secret name}
-            for example {('exit_plugins', 'sendmail', 'pdc_secret_path'): 'pdc_secret', ...}
+            for example {('exit_plugins', 'koji_promote', 'koji_ssl_certs'): 'koji_ssl_certs', ...}
         """
         secret_set = False
         for (plugin, secret) in secrets.items():
@@ -448,7 +447,6 @@ class BuildRequest(object):
         remove_plugins = [
             ("prebuild_plugins", "check_and_set_rebuild"),
             ("prebuild_plugins", "stop_autorebuild_if_disabled"),
-            ("exit_plugins", "sendmail"),
         ]
 
         should_remove = False
@@ -636,31 +634,51 @@ class BuildRequest(object):
 
     def render_sendmail(self):
         """
-        if we have pdc_url and smtp_uri, configure sendmail plugin,
+        if we have smtp_host and smtp_from, configure sendmail plugin,
         else remove it
         """
-        if not self.dj.dock_json_has_plugin_conf('exit_plugins', 'sendmail'):
+        phase = 'exit_plugins'
+        plugin = 'sendmail'
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
             return
 
-        if self.spec.pdc_url.value and self.spec.smtp_uri.value:
-            self.dj.dock_json_set_arg('exit_plugins', 'sendmail', 'url',
+        if self.spec.smtp_host.value and self.spec.smtp_from.value:
+            self.dj.dock_json_set_arg(phase, plugin, 'url',
                                       self.spec.builder_openshift_url.value)
-            self.dj.dock_json_set_arg('exit_plugins', 'sendmail', 'pdc_url',
-                                      self.spec.pdc_url.value)
-            self.dj.dock_json_set_arg('exit_plugins', 'sendmail', 'smtp_uri',
-                                      self.spec.smtp_uri.value)
-            self.dj.dock_json_set_arg('exit_plugins', 'sendmail', 'submitter',
-                                      self.spec.user.value)
-            # make sure we'll be able to authenticate to PDC
-            if 'pdc_secret_path' not in \
-                    self.dj.dock_json_get_plugin_conf('exit_plugins',
-                                                      'sendmail')['args']:
-                raise OsbsValidationException('sendmail plugin configured, '
-                                              'but no pdc_secret_path')
+            self.dj.dock_json_set_arg(phase, plugin, 'smtp_host',
+                                      self.spec.smtp_host.value)
+            self.dj.dock_json_set_arg(phase, plugin, 'from_address',
+                                      self.spec.smtp_from.value)
         else:
             logger.info("removing sendmail from request, "
-                        "requires pdc_url and smtp_uri")
-            self.dj.remove_plugin('exit_plugins', 'sendmail')
+                        "requires smtp_host and smtp_from")
+            self.dj.remove_plugin(phase, plugin)
+            return
+
+        if self.spec.kojihub.value and self.spec.kojiroot.value:
+            self.dj.dock_json_set_arg(phase, plugin,
+                                      'koji_hub', self.spec.kojihub.value)
+            self.dj.dock_json_set_arg(phase, plugin,
+                                      "koji_root", self.spec.kojiroot.value)
+
+            if self.spec.smtp_to_submitter.value:
+                self.dj.dock_json_set_arg(phase, plugin, 'to_koji_submitter',
+                                          self.spec.smtp_to_submitter.value)
+            if self.spec.smtp_to_pkgowner.value:
+                self.dj.dock_json_set_arg(phase, plugin, 'to_koji_pkgowner',
+                                          self.spec.smtp_to_pkgowner.value)
+
+        if self.spec.smtp_additional_addresses.value:
+            self.dj.dock_json_set_arg(phase, plugin, 'additional_addresses',
+                                      self.spec.smtp_additional_addresses.value)
+
+        if self.spec.smtp_error_addresses.value:
+            self.dj.dock_json_set_arg(phase, plugin,
+                                      'error_addresses', self.spec.smtp_error_addresses.value)
+
+        if self.spec.smtp_email_domain.value:
+            self.dj.dock_json_set_arg(phase, plugin,
+                                      'email_domain', self.spec.smtp_email_domain.value)
 
     def render_pulp_push(self):
         """
@@ -947,9 +965,6 @@ class BuildRequest(object):
                           # pulp_sync registry_secret_path set
                           # in render_pulp_sync
 
-                          ('exit_plugins', 'sendmail', 'pdc_secret_path'):
-                          self.spec.pdc_secret.value,
-
                           ('exit_plugins', 'koji_promote', 'koji_ssl_certs'):
                           self.spec.koji_certs_secret.value,
 
@@ -957,6 +972,9 @@ class BuildRequest(object):
                           self.spec.koji_certs_secret.value,
 
                           ('prebuild_plugins', 'add_filesystem', 'koji_ssl_certs_dir'):
+                          self.spec.koji_certs_secret.value,
+
+                          ('exit_plugins', 'sendmail', 'koji_ssl_certs_dir'):
                           self.spec.koji_certs_secret.value,
 
                           ('postbuild_plugins', 'tag_and_push',
@@ -972,6 +990,7 @@ class BuildRequest(object):
         self.set_kerberos_auth([
             ('exit_plugins', 'koji_promote'),
             ('exit_plugins', 'koji_tag_build'),
+            ('exit_plugins', 'sendmail')
         ])
 
         for (secret, path) in self.spec.token_secrets.value.items():

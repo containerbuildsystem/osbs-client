@@ -152,6 +152,13 @@
       }
     },
     {
+      "name": "sendmail",
+      "args": {
+          "smtp_host": "{{SMTP_HOST}}",
+          "from_address": "{{SMTP_FROM}}"
+      }
+    },
+    {
       "name": "remove_built_image"
     }
   ]

@@ -101,11 +101,19 @@ Some options are also mandatory.
 
 * `pulp_secret` (*optional*, `string`) — name of [kubernetes secret](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/design/secrets.md) to use for pulp plugin
 
-* `pdc_secret` (*optional*, `string`) - name of kubernetes secret to use for plugins communicating with PDC
+* `smtp_host` (*optional*, `string`) - SMTP server host, e.g. `smtp.mycompany.com`
 
-* `pdc_url` (*optional*, `string`) - URL of PDC server instance, e.g. `https://pdc.mycompany.com`
+* `smtp_from` (*optional*, `string`) - Address to send notifications from, e.g. `user@mycompany.com`
 
-* `smtp_uri` (*optional*, `string`) - URI of SMTP server, e.g. `smtp.mycompany.com`
+* `smtp_additional_addresses` (*optional*, `string`) - A comma-separated list of additional addresses to include in notifications, e.g. `user1@mycompany.com, user2@mycompany.com`
+
+* `smtp_error_addresses` (*optional*, `string`) - if the plugin has encountered an error the notification will be sent to this list of comma-separated addresses, e.g. `osbs-admin@mycompany.com, osbs-contact@mycompany.com`
+
+* `smtp_email_domain` (*optional*, `string`) - construct email for users if it cannot be guessed from Koji's kerberos principals, e.g. `mycompany.com`
+
+* `smtp_to_submitter` (*optional*, `boolean`) - whether Atomic Reactor should send a notification to koji task submitter
+
+* `smtp_to_pkgowner` (*optional*, `boolean`) - whether Atomic Reactor should send a notification to koji package owner
 
 * `nfs_server_path` (*optional*, `string`) — NFS server and path to use for storing built image (it is passed to `mount` command)
 

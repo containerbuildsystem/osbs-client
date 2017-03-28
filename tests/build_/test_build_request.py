@@ -54,8 +54,8 @@ def get_sample_prod_params():
         'authoritative_registry': 'registry.example.com',
         'distribution_scope': 'authoritative-source-only',
         'registry_api_versions': ['v1'],
-        'pdc_url': 'https://pdc.example.com',
-        'smtp_uri': 'smtp.example.com',
+        'smtp_host': 'smtp.example.com',
+        'smtp_from': 'user@example.com',
         'proxy': 'http://proxy.example.com'
     }
 
@@ -316,8 +316,6 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "exit_plugins", "sendmail")
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
 
         assert plugin_value_get(plugins, "prebuild_plugins", "add_yum_repo_by_url",
@@ -373,8 +371,8 @@ class TestBuildRequest(object):
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
-            'pdc_url': 'https://pdc.example.com',
-            'smtp_uri': 'smtp.example.com',
+            'smtp_host': 'smtp.example.com',
+            'smtp_from': 'user@example.com',
             'proxy': proxy
         }
         build_request.set_params(**kwargs)
@@ -430,8 +428,6 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "exit_plugins", "sendmail")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
         assert get_plugin(plugins, "exit_plugins", "koji_promote")
@@ -515,8 +511,6 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "koji_tag_build")
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "exit_plugins", "sendmail")
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
 
         labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile",
@@ -580,8 +574,6 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "exit_plugins", "sendmail")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
@@ -709,8 +701,6 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "exit_plugins", "sendmail")
 
     def test_render_prod_request_requires_newer(self):
         """
@@ -741,9 +731,8 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
-            'pdc_secret': 'foo',
-            'pdc_url': 'https://pdc.example.com',
-            'smtp_uri': 'smtp.example.com',
+            'smtp_host': 'smtp.example.com',
+            'smtp_from': 'user@example.com',
         }
         build_request.set_params(**kwargs)
         with pytest.raises(OsbsValidationException):
@@ -964,8 +953,6 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "exit_plugins", "sendmail")
 
     @pytest.mark.parametrize(('hub', 'disabled'), [
         ('http://hub/', False),
@@ -1185,7 +1172,6 @@ class TestBuildRequest(object):
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequest(str(tmpdir))
         name_label = "fedora/resultingimage"
-        pdc_secret_name = 'foo'
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -1205,9 +1191,13 @@ class TestBuildRequest(object):
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
-            'pdc_secret': pdc_secret_name,
-            'pdc_url': 'https://pdc.example.com',
-            'smtp_uri': 'smtp.example.com',
+            'smtp_host': 'smtp.example.com',
+            'smtp_from': 'user@example.com',
+            'smtp_error_addresses': ['errors@example.com'],
+            'smtp_additional_addresses': 'user2@example.com, user3@example.com',
+            'smtp_email_domain': 'example.com',
+            'smtp_to_submitter': True,
+            'smtp_to_pkgowner': True,
         }
         if use_auth is not None:
             kwargs['use_auth'] = use_auth
@@ -1227,12 +1217,12 @@ class TestBuildRequest(object):
                                 "url") == kwargs["openshift_uri"]
 
         self.assert_import_image_plugin(
-                plugins=plugins,
-                name_label=name_label,
-                registry_uri=kwargs['registry_uri'],
-                openshift_uri=kwargs['openshift_uri'],
-                use_auth=use_auth,
-                insecure_registry=insecure_registry)
+            plugins=plugins,
+            name_label=name_label,
+            registry_uri=kwargs['registry_uri'],
+            openshift_uri=kwargs['openshift_uri'],
+            use_auth=use_auth,
+            insecure_registry=insecure_registry)
 
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries", "registry.example.com") == {"insecure": True}
@@ -1249,15 +1239,21 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "exit_plugins", "koji_tag_build",
                                 "args", "kojihub") == kwargs["kojihub"]
 
-        mount_path = get_secret_mountpath_by_name(build_json, pdc_secret_name)
-        expected = {'args': {'from_address': 'osbs@example.com',
-                             'url': 'http://openshift/',
-                             'pdc_url': 'https://pdc.example.com',
-                             'pdc_secret_path': mount_path,
-                             'send_on': ['auto_fail', 'auto_success'],
+        expected = {'args': {'additional_addresses': 'user2@example.com, user3@example.com',
+                             'email_domain': 'example.com',
                              'error_addresses': ['errors@example.com'],
-                             'smtp_uri': 'smtp.example.com',
-                             'submitter': 'john-foo'},
+                             'from_address': 'user@example.com',
+                             'koji_hub': 'http://hub/',
+                             'koji_root': 'http://root/',
+                             'send_on': [
+                                 'auto_canceled',
+                                 'auto_fail',
+                                 'manual_success',
+                                 'manual_fail'],
+                             'smtp_host': 'smtp.example.com',
+                             'to_koji_pkgowner': True,
+                             'to_koji_submitter': True,
+                             'url': 'http://openshift/'},
                     'name': 'sendmail'}
         assert get_plugin(plugins, 'exit_plugins', 'sendmail') == expected
 
@@ -1275,9 +1271,8 @@ class TestBuildRequest(object):
         kwargs = get_sample_prod_params()
         kwargs['base_image'] = 'koji/image-build'
         kwargs['yum_repourls'] = ["http://example.com/my.repo"]
-        kwargs['pdc_secret'] = 'foo'
-        kwargs['pdc_url'] = 'https://pdc.example.com'
-        kwargs['smtp_uri'] = 'smtp.example.com'
+        kwargs['smtp_host'] = 'smtp.example.com'
+        kwargs['smtp_from'] = 'user@example.com',
         kwargs['registry_uri'] = registry_uri
         kwargs['source_registry_uri'] = registry_uri
         kwargs['openshift_uri'] = 'http://openshift/'
@@ -1302,16 +1297,13 @@ class TestBuildRequest(object):
             get_plugin(plugins, "prebuild_plugins",
                        "stop_autorebuild_if_disabled")
 
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "exit_plugins", "sendmail")
-
         self.assert_import_image_plugin(
-                plugins=plugins,
-                name_label=name_label,
-                registry_uri=kwargs['registry_uri'],
-                openshift_uri=kwargs['openshift_uri'],
-                use_auth=use_auth,
-                insecure_registry=insecure_registry)
+            plugins=plugins,
+            name_label=name_label,
+            registry_uri=kwargs['registry_uri'],
+            openshift_uri=kwargs['openshift_uri'],
+            use_auth=use_auth,
+            insecure_registry=insecure_registry)
 
     def test_render_prod_request_new_secrets(self, tmpdir):
         secret_name = 'mysecret'
