@@ -119,6 +119,16 @@ Some options are also mandatory.
 
 * `storage_limit` (*optional*, `string`) — storage limit to apply to build (for more info, see [documentation for resources](https://github.com/projectatomic/osbs-client/blob/master/docs/resource.md)
 
+* `reactor_config_secret` (*optional*, `string`) — name of Kubernetes secret holding [atomic-reactor configuration file](https://github.com/projectatomic/atomic-reactor/blob/master/docs/config.md)
+
+* `client_config_secret` (*optional*, `string`) — name of Kubernetes secret holding osbs.conf to be used by atomic-reactor in the builder image (this is provided to the orchestrate_build plugin if present)
+
+* `token_secrets` (*optional*, `string`) — whitespace-separated list of secret names with optional mount path in the format secret[:path], which can be used to hold service account tokens referenced by token_file in the osbs_client_secret osbs.conf
+
+* `arrangement_version` (*optional*, `integer`) — default version of inner template to use when creating orchestrator build
+
+* `can_orchestrate` (*optional*, `boolean`) — allows using orchestrator build, default is false
+
 
 ## Build JSON Templates
 

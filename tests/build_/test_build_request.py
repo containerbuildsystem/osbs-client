@@ -8,13 +8,18 @@ of the BSD license. See the LICENSE file for details.
 import copy
 import json
 import os
+import fnmatch
 from pkg_resources import parse_version
 import shutil
+import six
 
 from osbs.build.build_request import BuildRequest
 from osbs.constants import (DEFAULT_BUILD_IMAGE, DEFAULT_OUTER_TEMPLATE,
-                            DEFAULT_INNER_TEMPLATE)
+                            DEFAULT_INNER_TEMPLATE, SECRETS_PATH,
+                            ORCHESTRATOR_INNER_TEMPLATE,
+                            DEFAULT_ARRANGEMENT_VERSION)
 from osbs.exceptions import OsbsValidationException
+from osbs import __version__ as expected_version
 
 from flexmock import flexmock
 import pytest
@@ -103,18 +108,55 @@ def get_secret_mountpath_by_name(build_json, name):
 
 
 class TestBuildRequest(object):
-    def test_build_request_is_auto_instantiated(self):
+
+    def assert_import_image_plugin(self, plugins, name_label, registry_uri,
+                                   openshift_uri, use_auth, insecure_registry):
+        assert get_plugin(plugins, "postbuild_plugins", "import_image")
+        assert plugin_value_get(plugins,
+                                "postbuild_plugins", "import_image", "args",
+                                "imagestream") == name_label.replace('/', '-')
+        expected_repo = os.path.join(registry_uri, name_label)
+        expected_repo = expected_repo.replace('https://', '')
+        expected_repo = expected_repo.replace('http://', '')
+        assert plugin_value_get(plugins,
+                                "postbuild_plugins", "import_image", "args",
+                                "docker_image_repo") == expected_repo
+        assert plugin_value_get(plugins,
+                                "postbuild_plugins", "import_image", "args",
+                                "url") == openshift_uri
+
+        if use_auth is not None:
+            assert plugin_value_get(plugins,
+                                    "postbuild_plugins", "import_image", "args",
+                                    "use_auth") == use_auth
+        else:
+            with pytest.raises(KeyError):
+                plugin_value_get(plugins,
+                                 "postbuild_plugins", "import_image", "args",
+                                 "use_auth")
+
+        if insecure_registry:
+            assert plugin_value_get(plugins,
+                                    "postbuild_plugins", "import_image", "args",
+                                    "insecure_registry")
+        else:
+            with pytest.raises(KeyError):
+                plugin_value_get(plugins,
+                                 "postbuild_plugins", "import_image", "args",
+                                 "insecure_registry")
+
+    def test_build_request_has_ist_trigger(self):
         build_json = copy.deepcopy(TEST_BUILD_JSON)
         br = BuildRequest('something')
         flexmock(br).should_receive('template').and_return(build_json)
-        assert br.is_auto_instantiated() is True
+        assert br.has_ist_trigger() is True
 
     def test_build_request_isnt_auto_instantiated(self):
         build_json = copy.deepcopy(TEST_BUILD_JSON)
         build_json['spec']['triggers'] = []
         br = BuildRequest('something')
         flexmock(br).should_receive('template').and_return(build_json)
-        assert br.is_auto_instantiated() is False
+        assert br.has_ist_trigger() is False
 
     def test_set_label(self):
         build_json = copy.deepcopy(TEST_BUILD_JSON)
@@ -235,7 +277,7 @@ class TestBuildRequest(object):
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
-        assert build_json["metadata"]["name"] == TEST_BUILD_CONFIG
+        assert fnmatch.fnmatch(build_json["metadata"]["name"], TEST_BUILD_CONFIG)
         assert build_json["metadata"]["labels"]["koji-task-id"] == str(koji_task_id)
         assert "triggers" not in build_json["spec"]
         assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
@@ -338,7 +380,7 @@ class TestBuildRequest(object):
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
-        assert build_json["metadata"]["name"] == TEST_BUILD_CONFIG
+        assert fnmatch.fnmatch(build_json["metadata"]["name"], TEST_BUILD_CONFIG)
         assert "triggers" not in build_json["spec"]
         assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
         assert build_json["spec"]["source"]["git"]["ref"] == TEST_GIT_REF
@@ -429,7 +471,7 @@ class TestBuildRequest(object):
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
-        assert build_json["metadata"]["name"] == TEST_BUILD_CONFIG
+        assert fnmatch.fnmatch(build_json["metadata"]["name"], TEST_BUILD_CONFIG)
         assert "triggers" not in build_json["spec"]
         assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
         assert build_json["spec"]["source"]["git"]["ref"] == TEST_GIT_REF
@@ -703,6 +745,7 @@ class TestBuildRequest(object):
             build_request.render()
 
     @pytest.mark.parametrize('registry_api_versions', [
+        ['v1'],
         ['v1', 'v2'],
         ['v2'],
     ])
@@ -753,7 +796,7 @@ class TestBuildRequest(object):
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
-        assert build_json["metadata"]["name"] == TEST_BUILD_CONFIG
+        assert fnmatch.fnmatch(build_json["metadata"]["name"], TEST_BUILD_CONFIG)
         assert "triggers" not in build_json["spec"]
         assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
         assert build_json["spec"]["source"]["git"]["ref"] == TEST_GIT_REF
@@ -766,12 +809,12 @@ class TestBuildRequest(object):
         plugins = get_plugins_from_build_json(build_json)
 
         # tag_and_push configuration. Must not have the scheme part.
-        expected_registries = {
-            'registry2.example.com:5000': {
+        expected_registries = {}
+        if 'v2' in registry_api_versions:
+            expected_registries['registry2.example.com:5000'] = {
                 'insecure': True,
-                'secret': '/var/run/secrets/atomic-reactor/registry_secret'
-            },
-        }
+                'secret': '/var/run/secrets/atomic-reactor/registry_secret',
+            }
 
         if 'v1' in registry_api_versions:
             expected_registries['registry1.example.com:5000'] = {
@@ -835,10 +878,18 @@ class TestBuildRequest(object):
                 get_plugin(plugins, "postbuild_plugins", "compress")
 
             with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "postbuild_plugins", "tag_from_config")
+
+            with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, "exit_plugins", "koji_promote")
+
         else:
             assert get_plugin(plugins, "postbuild_plugins", "compress")
+            assert get_plugin(plugins, "postbuild_plugins", "tag_from_config")
             assert get_plugin(plugins, "exit_plugins", "koji_promote")
+
+        assert (get_plugin(plugins, "postbuild_plugins", "tag_by_labels")
+                .get('args', {}).get('unique_tag_only', False) == scratch)
 
     def test_render_with_yum_repourls(self):
         kwargs = {
@@ -945,8 +996,66 @@ class TestBuildRequest(object):
             assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
                                     "args", "hub") == hub
 
-    @pytest.mark.parametrize('unique_tag_only', [False, None, True])
-    def test_render_unique_tag_only(self, unique_tag_only):
+    @staticmethod
+    def create_no_plugins_json(outdir):
+        """
+        Create JSON templates with no plugins added.
+
+        :param outdir: str, path to store modified templates
+        """
+
+        # Make temporary copies of the JSON files
+        for basename in [DEFAULT_OUTER_TEMPLATE, DEFAULT_OUTER_TEMPLATE]:
+            shutil.copy(os.path.join(INPUTS_PATH, basename),
+                        os.path.join(outdir, basename))
+
+        # Create a build JSON description with an image change trigger
+        with open(os.path.join(outdir, DEFAULT_INNER_TEMPLATE), 'w') as prod_inner_json:
+            prod_inner_json.write(json.dumps({
+                'prebuild_plugins': [],
+                'prepublish_plugins': [],
+                'postbuild_plugins': [],
+                'exit_plugins': []
+            }))
+            prod_inner_json.flush()
+
+    def test_render_optional_plugins(self, tmpdir):
+        kwargs = get_sample_prod_params()
+
+        self.create_no_plugins_json(str(tmpdir))
+        build_request = BuildRequest(str(tmpdir))
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+        strategy = build_json['spec']['strategy']['customStrategy']['env']
+        plugins = get_plugins_from_build_json(build_json)
+
+        assert plugins['prebuild_plugins'] == []
+        assert plugins['prepublish_plugins'] == []
+        assert plugins['postbuild_plugins'] == []
+        assert plugins['exit_plugins'] == []
+
+    @pytest.mark.parametrize(('platforms', 'secret', 'disabled'), (
+        (['x86_64', 'ppc64le'], 'client_config_secret', False),
+        (None, 'client_config_secret', True),
+        (['x86_64', 'ppc64le'], None, False),
+        (None, None, True),
+    ))
+    @pytest.mark.parametrize('arrangement_version', [
+        # Only one version defined so far
+        DEFAULT_ARRANGEMENT_VERSION,
+    ])
+    @pytest.mark.parametrize(('build_image', 'build_imagestream', 'worker_build_image'), (
+        ('fedora:latest', None, 'fedora:latest'),
+        (None, 'buildroot-stream:v1.0', KeyError),
+        (None, None, DEFAULT_BUILD_IMAGE),
+        ('fedora:latest', 'buildroot-stream:v1.0', KeyError)
+    ))
+    def test_render_orchestrate_build(self, platforms, secret, disabled,
+                                      arrangement_version, build_image,
+                                      build_imagestream, worker_build_image):
+        phase = 'buildstep_plugins'
+        plugin = 'orchestrate_build'
+
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -954,32 +1063,48 @@ class TestBuildRequest(object):
             'component': TEST_COMPONENT,
             'base_image': 'fedora:latest',
             'name_label': 'fedora/resultingimage',
+            'registry_uri': "registry.example.com",
             'openshift_uri': "http://openshift/",
+            'vendor': "Foo Vendor",
+            'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1', 'v2'],
+            'client_config_secret': secret,
+            'platforms': platforms,
+            'arrangement_version': arrangement_version,
         }
+        if build_image:
+            kwargs['build_image'] = build_image
+        if build_imagestream:
+            kwargs['build_imagestream'] = build_imagestream
 
-        if unique_tag_only is not None:
-            kwargs['unique_tag_only'] = unique_tag_only
-
-        build_request = BuildRequest(INPUTS_PATH)
+        inner_template = ORCHESTRATOR_INNER_TEMPLATE.format(
+            arrangement_version=arrangement_version)
+        build_request = BuildRequest(INPUTS_PATH, inner_template=inner_template)
         build_request.set_params(**kwargs)
         build_json = build_request.render()
         strategy = build_json['spec']['strategy']['customStrategy']['env']
         plugins = get_plugins_from_build_json(build_json)
 
-        if unique_tag_only:
-            assert plugin_value_get(plugins,
-                                    'postbuild_plugins',
-                                    'tag_by_labels',
-                                    'args',
-                                    'unique_tag_only') == True
-            assert not has_plugin(plugins, 'postbuild_plugins', 'tag_from_config')
+        if disabled:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, phase, plugin)
+
         else:
-            tag_and_push_args = get_plugin(plugins,
-                                           'postbuild_plugins',
-                                           'tag_and_push')['args']
-            assert 'unique_tag_only' not in tag_and_push_args
-            assert has_plugin(plugins, 'postbuild_plugins', 'tag_from_config')
+            assert plugin_value_get(plugins, phase, plugin, 'args',
+                'platforms') == platforms
+            build_kwargs = plugin_value_get(plugins, phase, plugin, 'args',
+                                            'build_kwargs')
+            assert build_kwargs['arrangement_version'] == arrangement_version
+
+            if isinstance(worker_build_image, type):
+                with pytest.raises(worker_build_image):
+                    plugin_value_get(plugins, phase, plugin, 'args',
+                    'worker_build_image')
+            else:
+                assert plugin_value_get(plugins, phase, plugin, 'args',
+                    'worker_build_image') == worker_build_image
+
 
     def test_render_prod_with_pulp_no_auth(self):
         """
@@ -1045,8 +1170,9 @@ class TestBuildRequest(object):
         ("https://registry.example.com", False),
         ("http://registry.example.com", True),
     ])
+    @pytest.mark.parametrize('use_auth', (True, False, None))
     def test_render_prod_request_with_trigger(self, tmpdir, registry_uri,
-                                              insecure_registry):
+                                              insecure_registry, use_auth):
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequest(str(tmpdir))
         name_label = "fedora/resultingimage"
@@ -1074,6 +1200,8 @@ class TestBuildRequest(object):
             'pdc_url': 'https://pdc.example.com',
             'smtp_uri': 'smtp.example.com',
         }
+        if use_auth is not None:
+            kwargs['use_auth'] = use_auth
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
@@ -1088,28 +1216,14 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "prebuild_plugins",
                                 "check_and_set_rebuild", "args",
                                 "url") == kwargs["openshift_uri"]
-        assert get_plugin(plugins, "postbuild_plugins", "import_image")
-        assert plugin_value_get(plugins,
-                                "postbuild_plugins", "import_image", "args",
-                                "imagestream") == name_label.replace('/', '-')
-        expected_repo = os.path.join(kwargs["registry_uri"], name_label)
-        expected_repo = expected_repo.replace('https://', '')
-        expected_repo = expected_repo.replace('http://', '')
-        assert plugin_value_get(plugins,
-                                "postbuild_plugins", "import_image", "args",
-                                "docker_image_repo") == expected_repo
-        assert plugin_value_get(plugins,
-                                "postbuild_plugins", "import_image", "args",
-                                "url") == kwargs["openshift_uri"]
-        if insecure_registry:
-            assert plugin_value_get(plugins,
-                                    "postbuild_plugins", "import_image", "args",
-                                    "insecure_registry")
-        else:
-            with pytest.raises(KeyError):
-                plugin_value_get(plugins,
-                                 "postbuild_plugins", "import_image", "args",
-                                 "insecure_registry")
+
+        self.assert_import_image_plugin(
+                plugins=plugins,
+                name_label=name_label,
+                registry_uri=kwargs['registry_uri'],
+                openshift_uri=kwargs['openshift_uri'],
+                use_auth=use_auth,
+                insecure_registry=insecure_registry)
 
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries", "registry.example.com") == {"insecure": True}
@@ -1134,7 +1248,14 @@ class TestBuildRequest(object):
                     'name': 'sendmail'}
         assert get_plugin(plugins, 'exit_plugins', 'sendmail') == expected
 
-    def test_render_custom_base_image_with_trigger(self, tmpdir):
+    @pytest.mark.parametrize(('registry_uri', 'insecure_registry'), [
+        ("https://registry.example.com", False),
+        ("http://registry.example.com", True),
+    ])
+    @pytest.mark.parametrize('use_auth', (True, False, None))
+    def test_render_custom_base_image_with_trigger(self, tmpdir, registry_uri,
+                                                   insecure_registry, use_auth):
+        name_label = "fedora/resultingimage"
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequest(str(tmpdir))
 
@@ -1144,6 +1265,11 @@ class TestBuildRequest(object):
         kwargs['pdc_secret'] = 'foo'
         kwargs['pdc_url'] = 'https://pdc.example.com'
         kwargs['smtp_uri'] = 'smtp.example.com'
+        kwargs['registry_uri'] = registry_uri
+        kwargs['source_registry_uri'] = registry_uri
+        kwargs['openshift_uri'] = 'http://openshift/'
+        if use_auth is not None:
+            kwargs['use_auth'] = use_auth
 
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -1164,10 +1290,15 @@ class TestBuildRequest(object):
                        "stop_autorebuild_if_disabled")
 
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "import_image")
-
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
+
+        self.assert_import_image_plugin(
+                plugins=plugins,
+                name_label=name_label,
+                registry_uri=kwargs['registry_uri'],
+                openshift_uri=kwargs['openshift_uri'],
+                use_auth=use_auth,
+                insecure_registry=insecure_registry)
 
     def test_render_prod_request_new_secrets(self, tmpdir):
         secret_name = 'mysecret'
@@ -1465,3 +1596,80 @@ class TestBuildRequest(object):
 
         assert unmodified_build_request.dj.dock_json[plugin_type][plugin_index]['name'] == plugin_name
         assert build_request.dj.dock_json[plugin_type][plugin_index]['name'] == plugin_name
+
+    def test_has_version(self):
+        br = BuildRequest(INPUTS_PATH)
+        br.render()
+        assert 'client_version' in br.dj.dock_json
+
+        actual_version = br.dj.dock_json['client_version']
+        assert isinstance(actual_version, six.string_types)
+        assert expected_version == actual_version
+
+    @pytest.mark.parametrize('secret', [None, 'osbsconf'])
+    def test_reactor_config(self, secret):
+        br = BuildRequest(INPUTS_PATH)
+        kwargs = get_sample_prod_params()
+        kwargs['reactor_config_secret'] = secret
+        br.set_params(**kwargs)
+        build_json = br.render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        if secret is None:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, 'prebuild_plugins', 'reactor_config')
+        else:
+            assert get_plugin(plugins, 'prebuild_plugins', 'reactor_config')
+            assert plugin_value_get(plugins, 'prebuild_plugins',
+                                    'reactor_config', 'args',
+                                    'config_path').startswith('/')
+
+    @pytest.mark.parametrize('secret', [None, 'osbsconf'])
+    def test_client_config_secret(self, secret):
+        br = BuildRequest(INPUTS_PATH)
+        plugin_type = "buildstep_plugins"
+        plugin_name = "orchestrate_build"
+
+        kwargs = get_sample_prod_params()
+        kwargs['client_config_secret'] = secret
+        kwargs['platforms'] = ['x86_64', 'ppc64le']
+        kwargs['arrangement_version'] = DEFAULT_ARRANGEMENT_VERSION
+        br.set_params(**kwargs)
+
+        br.dj.dock_json_set_param(plugin_type, [])
+        br.dj.add_plugin(plugin_type, plugin_name, {})
+        build_json = br.render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        if secret is not None:
+            assert get_secret_mountpath_by_name(build_json, secret) == os.path.join(SECRETS_PATH, secret)
+            assert get_plugin(plugins, plugin_type, plugin_name)
+            assert plugin_value_get(plugins, plugin_type, plugin_name,
+                                    'args', 'osbs_client_config') == os.path.join(SECRETS_PATH, secret)
+        else:
+            with pytest.raises(AssertionError):
+                get_secret_mountpath_by_name(build_json, secret)
+
+    @pytest.mark.parametrize('secret', [
+        {'secret': None},
+        {'secret': 'path'},
+        {'secret1': 'path1',
+         'secret2': 'path2'
+        },
+        {'secret1': 'path1',
+         'secret2': 'path2',
+         'secret2': 'path3'
+        }
+    ])
+    def test_token_secrets(self, secret):
+        br = BuildRequest(INPUTS_PATH)
+        kwargs = get_sample_prod_params()
+        kwargs['token_secrets'] = secret
+        br.set_params(**kwargs)
+        build_json = br.render()
+
+        for (sec, path) in secret.items():
+            if path:
+                assert get_secret_mountpath_by_name(build_json, sec) == path
+            else:
+                assert get_secret_mountpath_by_name(build_json, sec) == os.path.join(SECRETS_PATH, sec)

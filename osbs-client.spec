@@ -22,16 +22,24 @@
 %global with_check 1
 %endif
 
-%global commit 696505ae4da4898a4e3689ef18e1f6791b04ea09
+%global commit 14012aff94eaff24569b518d2887d74ee94458d6
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
+
 # set to 0 to create a normal release
+%global dev_release 1
+
+%if 0{?dev_release}
+%global postrelease dev
+%global release 0
+%else
 %global postrelease 0
 %global release 1
+%endif
 
 %global osbs_obsolete_vr 0.14-2
 
 Name:           osbs-client
-Version:        0.33
+Version:        0.36
 %if "x%{postrelease}" != "x0"
 Release:        %{release}.%{postrelease}.git.%{shortcommit}%{?dist}
 %else
@@ -192,6 +200,15 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %endif # with_python3
 
 %changelog
+* Mon Mar 06 2017 Robert Cerven <rcerven@redhat.com> - 0.35-1
+- new upstream release: 0.35
+
+* Mon Feb 6 2017 Vadim Rutkovsky <vrutkovs@redhat.com> - 0.34.1-1
+- new upstream release: 0.34.1
+
+* Mon Feb 6 2017 Vadim Rutkovsky <vrutkovs@redhat.com> - 0.34
+- new upstream release: 0.34
+
 * Fri Nov 11 2016 Tim Waugh <twaugh@redhat.com> - 0.33-1
 - new upstream release
 

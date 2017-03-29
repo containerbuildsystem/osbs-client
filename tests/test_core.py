@@ -6,21 +6,22 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 from flexmock import flexmock
+from textwrap import dedent
 import pycurl
 import six
 import time
 import json
 
 from osbs.http import HttpResponse
-from osbs.constants import (BUILD_FINISHED_STATES, BUILD_RUNNING_STATES,
+from osbs.constants import (BUILD_FINISHED_STATES,
                             BUILD_CANCELLED_STATE)
 from osbs.exceptions import (OsbsResponseException, OsbsNetworkException,
                              OsbsException)
-from osbs.core import check_response
+from osbs.core import check_response, Openshift
 
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
                              TEST_LABEL_VALUE, TEST_BUILD_CONFIG)
-from tests.fake_api import openshift
+from tests.fake_api import openshift, OAPI_PREFIX, API_VER
 import pytest
 
 try:
@@ -91,9 +92,9 @@ class TestOpenshift(object):
 
         (flexmock(openshift)
             .should_receive('_get')
-             # First: timeout in response after 100s
+            # First: timeout in response after 100s
             .and_raise(ex)
-             # Next: return a real response
+            # Next: return a real response
             .and_return(response))
 
         (flexmock(time)
@@ -227,3 +228,166 @@ class TestOpenshift(object):
         with pytest.raises(OsbsException) as exc:
             openshift.get_build_config_by_labels(label_selectors)
         assert str(exc.value).startswith('More than one build config found')
+
+    def test_put_image_stream_tag(self, openshift):
+        tag_name = 'spam'
+        tag_id = 'maps:' + tag_name
+        mock_data = {
+          'kind': 'ImageStreamTag',
+          'apiVersion': 'v1',
+          'tag': {
+            'name': tag_name
+          }
+        }
+
+        expected_url = openshift._build_url('imagestreamtags/' + tag_id)
+        (flexmock(openshift)
+            .should_receive("_put")
+            .with_args(expected_url, data=json.dumps(mock_data),
+                       headers={"Content-Type": "application/json"})
+            .once()
+            .and_return(HttpResponse(200, {}, json.dumps(mock_data))))
+
+        openshift.put_image_stream_tag(tag_id, mock_data)
+
+    def _make_tag_template(self):
+        # TODO: Just read from inputs folder
+        return json.loads(dedent('''\
+            {
+              "kind": "ImageStreamTag",
+              "apiVersion": "v1",
+              "metadata": {
+                "name": "{{IMAGE_STREAM_ID}}:{{TAG_ID}}"
+              },
+              "tag": {
+                "name": "{{TAG_ID}}",
+                "from": {
+                  "kind": "DockerImage",
+                  "name": "{{REPOSITORY}}:{{TAG_ID}}"
+                },
+                "importPolicy": {}
+              }
+            }
+        '''))
+
+    @pytest.mark.parametrize('existing_scheduled', (True, False, None))
+    @pytest.mark.parametrize('existing_insecure', (True, False, None))
+    @pytest.mark.parametrize('expected_scheduled', (True, False))
+    @pytest.mark.parametrize(('s_annotations', 'expected_insecure'), (
+        ({'openshift.io/image.insecureRepository': 'true'}, True),
+        ({'openshift.io/image.insecureRepository': 'false'}, False),
+        ({}, False),
+        (None, False),
+    ))
+    @pytest.mark.parametrize('status_code', (200, 404, 500))
+    def test_ensure_image_stream_tag(self,
+                                     existing_scheduled,
+                                     existing_insecure,
+                                     expected_scheduled,
+                                     s_annotations,
+                                     expected_insecure,
+                                     status_code,
+                                     openshift):
+        stream_name = 'spam'
+        stream_repo = 'some.registry.com/spam'
+        stream = {
+            'metadata': {'name': stream_name},
+            'spec': {'dockerImageRepository': stream_repo}
+        }
+        if s_annotations is not None:
+            stream['metadata']['annotations'] = s_annotations
+
+        tag_name = 'maps'
+        tag_id = '{0}:{1}'.format(stream_name, tag_name)
+
+        expected_url = openshift._build_url('imagestreamtags/' +
+                                            tag_id)
+
+        def verify_image_stream_tag(*args, **kwargs):
+            data = json.loads(kwargs['data'])
+
+            assert (bool(data['tag']['importPolicy'].get('insecure')) ==
+                    expected_insecure)
+            assert (bool(data['tag']['importPolicy'].get('scheduled')) ==
+                    expected_scheduled)
+
+            # Also verify new image stream tags are created properly.
+            if status_code == 404:
+                assert data['metadata']['name'] == tag_id
+                assert data['tag']['name'] == tag_name
+                assert (data['tag']['from']['name'] ==
+                        '{0}:{1}'.format(stream_repo, tag_name))
+
+            return HttpResponse(200, {}, json.dumps('{}'))
+
+        expected_change = False
+        expected_error = status_code == 500
+
+        mock_response = '{}'
+
+        if status_code == 200:
+            existing_image_stream_tag = {'tag': {'importPolicy': {}}}
+
+            if existing_insecure is not None:
+                existing_image_stream_tag['tag']['importPolicy']['insecure'] = \
+                    existing_insecure
+
+            if existing_scheduled is not None:
+                existing_image_stream_tag['tag']['importPolicy']['scheduled'] = \
+                    existing_scheduled
+
+            mock_response = json.dumps(existing_image_stream_tag)
+
+            if expected_insecure != bool(existing_insecure) or \
+               expected_scheduled != bool(existing_scheduled):
+                    expected_change = True
+
+        elif status_code == 404:
+            expected_change = True
+
+        (flexmock(openshift)
+            .should_receive("_get")
+            .with_args(expected_url)
+            .once()
+            .and_return(HttpResponse(status_code, {}, mock_response)))
+
+        if expected_change:
+            (flexmock(openshift)
+                .should_receive("_put")
+                .with_args(expected_url, data=str,
+                           headers={"Content-Type": "application/json"})
+                .replace_with(verify_image_stream_tag)
+                .once())
+
+        if expected_error:
+            with pytest.raises(OsbsResponseException):
+                openshift.ensure_image_stream_tag(
+                    stream, tag_name, self._make_tag_template(), expected_scheduled)
+
+        else:
+            assert (openshift.ensure_image_stream_tag(
+                        stream,
+                        tag_name,
+                        self._make_tag_template(),
+                        expected_scheduled) == expected_change)
+
+    @pytest.mark.parametrize(('kwargs', 'called'), (
+        ({'use_auth': True, 'use_kerberos': True}, False),
+        ({'use_auth': True, 'username': 'foo', 'password': 'bar'}, False),
+        ({'use_auth': True, 'token': 'foo'}, False),
+        ({'use_auth': False, 'use_kerberos': True}, False),
+        ({'use_auth': False, 'username': 'foo', 'password': 'bar'}, False),
+        ({'use_auth': False, 'token': 'foo'}, False),
+        ({'use_kerberos': True}, False),
+        ({'username': 'foo', 'password': 'bar'}, False),
+        ({'token': 'foo'}, False),
+        ({'use_auth': False}, True),
+        ({}, True),
+    ))
+    def test_use_service_account_token(self, kwargs, called):
+        openshift_mock = flexmock(Openshift).should_receive('can_use_serviceaccount_token')
+        if called:
+            openshift_mock.once()
+        else:
+            openshift_mock.never()
+        Openshift(OAPI_PREFIX, API_VER, "/oauth/authorize", **kwargs)

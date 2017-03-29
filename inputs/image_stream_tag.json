@@ -1,0 +1,15 @@
+{
+  "kind": "ImageStreamTag",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "{{IMAGE_STREAM_ID}}:{{TAG_ID}}"
+  },
+  "tag": {
+    "name": "{{TAG_ID}}",
+    "from": {
+      "kind": "DockerImage",
+      "name": "{{REPOSITORY}}:{{TAG_ID}}"
+    },
+    "importPolicy": {}
+  }
+}

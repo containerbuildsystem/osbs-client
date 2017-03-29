@@ -44,6 +44,31 @@ def print_json_nicely(decoded_json):
     print(json.dumps(decoded_json, indent=2))
 
 
+def check_provided_args(args, check, check_func, error_msg):
+    """Checks arguments against a check function
+
+    :param args: argparse.Namespace, all provided arguments
+    :param check: list<str>, each argument to check
+    :param check_func: filter function for items, where each item is a key-value tuple
+    :param error_msg: str, text for ValueError exception
+    :raises ValueError: when any of the required args are not provided
+    """
+    provided = dict((r, getattr(args, r)) for r in check)
+    checked = dict(filter(check_func, provided.items())).keys()
+    if checked:
+        raise ValueError(error_msg.format(', '.join(sorted(checked))))
+
+
+def check_unwanted_args(args, unwanted):
+    check_provided_args(args, unwanted, lambda item: item[-1],
+                         'Unwanted params: {0}')
+
+
+def check_required_args(args, required):
+    check_provided_args(args, required, lambda item: not item[-1],
+                         'Missing required params: {0}')
+
+
 def cmd_get_all_resource_quota(args, osbs):
     quota_name = args.QUOTA_NAME
     logger.debug("quota name = %s", quota_name)
@@ -165,6 +190,48 @@ def cmd_list_builds(args, osbs):
         tp.render()
 
 
+def make_digests_str(digests):
+    if digests is not None:
+        try:
+            digests_str = "\n".join(["{registry}/{repository}:{tag} {digest}".format(**dig)
+                                     for dig in digests])
+        except (TypeError, KeyError):
+            digests_str = "(invalid value)"
+    else:
+        digests_str = "(unset)"
+
+    if not digests_str:
+        digests_str = "(empty)"
+
+    return digests_str
+
+
+def make_worker_builds_str(worker_builds):
+    worker_build_template = dedent("""\
+        {platform} WORKER BUILD
+
+        {build_name} on {cluster_url} ({namespace})
+
+        {platform} V2 DIGESTS
+
+        {digests}""")
+
+    worker_builds_formatted = []
+    for platform, worker_build in worker_builds.items():
+
+        digests_str = make_digests_str(worker_build.get('digests', []))
+
+        worker_builds_formatted.append(worker_build_template.format(
+            platform=platform,
+            build_name=worker_build.get('build', {}).get('build-name', '(unset)'),
+            cluster_url=worker_build.get('build', {}).get('cluster-url', '(unset)'),
+            namespace=worker_build.get('build', {}).get('namespace', '(unset)'),
+            digests=digests_str,
+        ))
+
+    return '\n\n'.join(worker_builds_formatted)
+
+
 def cmd_get_build(args, osbs):
     build = osbs.get_build(args.BUILD_ID[0])
     build_json = build.json
@@ -188,15 +255,7 @@ def cmd_get_build(args, osbs):
             }
             repositories_str = repositories_template.format(**repositories_context)
 
-        digests_list = build.get_digests()
-        if digests_list is not None:
-            try:
-                digests_str = "\n".join(["{registry}/{repository}:{tag} {digest}".format(**dig)
-                                         for dig in digests_list])
-            except (TypeError, KeyError):
-                digests_str = "(invalid value)"
-        else:
-            digests_str = "(unset)"
+        digests_str = make_digests_str(build.get_digests())
 
         logs_str = ''
         build_logs = build.get_logs()
@@ -265,6 +324,20 @@ def cmd_get_build(args, osbs):
             "koji_build_id": build.get_koji_build_id() or '(unset)',
             "digests": digests_str,
         }
+
+        worker_builds = json.loads(build.get_annotations().get('worker-builds', '{}'))
+        if worker_builds:
+            worker_builds_str = make_worker_builds_str(worker_builds)
+
+            if worker_builds_str:
+                template += dedent("""\
+
+
+                    WORKER BUILDS
+
+                    {worker_builds}""")
+                context['worker_builds'] = worker_builds_str
+
         print(template.format(**context))
 
 
@@ -273,7 +346,24 @@ def cmd_cancel_build(args, osbs):
 
 
 def cmd_build(args, osbs):
-    build = osbs.create_build(
+    required_args = []
+    unwanted_args = []
+    if args.worker:
+        required_args = ['platform', 'release']
+        unwanted_args = ['platforms']
+        create_func = osbs.create_worker_build
+    elif args.orchestrator:
+        required_args = ['platforms']
+        unwanted_args = ['platform', 'release']
+        create_func = osbs.create_orchestrator_build
+    else:
+        create_func = osbs.create_prod_build
+        unwanted_args = ['platforms', 'platform', 'release']
+
+    check_required_args(args, required_args)
+    check_unwanted_args(args, unwanted_args)
+
+    build = create_func(
         git_uri=osbs.build_conf.get_git_uri(),
         git_ref=osbs.build_conf.get_git_ref(),
         git_branch=osbs.build_conf.get_git_branch(),
@@ -283,6 +373,9 @@ def cmd_build(args, osbs):
         architecture=osbs.build_conf.get_architecture(),
         yum_repourls=osbs.build_conf.get_yum_repourls(),
         scratch=args.scratch,
+        platform=args.platform,
+        platforms=args.platforms,
+        release=args.release,
     )
     build_id = build.get_build_name()
     # we need to wait for kubelet to schedule the build, otherwise it's 500
@@ -432,13 +525,22 @@ def cmd_restore(args, osbs):
 
 def cmd_print_token_url(args, osbs):
     uri = urljoin(osbs.os_conf.get_openshift_base_uri(), "oauth/token/request")
-    print("To complete authentation please navigate to:\n\n{}\n\n".format(uri) +
+    print("To complete authentication please navigate to:\n\n{}\n\n".format(uri) +
           "Set token or token_file in configuration to authenticate requests.")
 
 
 def cmd_serviceaccount_token(args, osbs):
+    output_template = '{token}'
+    openshift_uri = None
+    if args.oc:
+        output_template = 'oc login --token {token} {openshift_uri}'
+        openshift_uri = osbs.os_conf.get_openshift_base_uri()
+
     tokens = osbs.get_serviceaccount_tokens(args.SERVICEACCOUNT)
-    print(tokens)
+    for token in tokens.values():
+        print(output_template.format(token=token.decode('ascii'),
+                                     openshift_uri=openshift_uri))
+        break
 
 
 def str_on_2_unicode_on_3(s):
@@ -585,6 +687,30 @@ def cli():
                               help="perform a scratch build")
     build_parser.add_argument("--yum-proxy", action='store', required=False,
                               help="set yum proxy to repos from koji/add-yum-repo params")
+
+    worker_group = build_parser.add_argument_group(
+        title='arguments for --worker',
+        description='Required arguments for creating a worker build')
+    worker_group.add_argument('--platform', action='store', required=False,
+                              help='platform name to use')
+    worker_group.add_argument('--release', action='store', required=False,
+                              help='release value to use')
+
+    orchestrator_group = build_parser.add_argument_group(
+        title='arguments for --orchestrator',
+        description='Required arguments for creating an orchestrator build')
+    orchestrator_group.add_argument(
+        '--platforms', action='append', metavar='PLATFORM',
+        help='name of each platform to use')
+
+    build_type_group = build_parser.add_mutually_exclusive_group()
+    build_type_group.add_argument("--worker", action="store_true", required=False,
+                                  default=False, help="create worker build")
+    build_type_group.add_argument("--orchestrator", action="store_true", required=False,
+                                  default=False, help="create orchestrator build")
+    build_type_group.add_argument("--prod", action="store_true", required=False,
+                                  default=True, help="create prod build")
+
     group = build_parser.add_mutually_exclusive_group()
     group.add_argument("--build-image", action='store', required=False,
                        help="builder image to use")
@@ -619,6 +745,8 @@ def cli():
     serviceaccount_builder = subparsers.add_parser(
         str_on_2_unicode_on_3('get-serviceaccount-token'),
         description='get auth token for serviceaccount')
+    serviceaccount_builder.add_argument("--oc", help="display oc login command",
+                                        action="store_true", default=False)
     serviceaccount_builder.add_argument("SERVICEACCOUNT",
                                         help="name of the service account")
     serviceaccount_builder.set_defaults(func=cmd_serviceaccount_token)

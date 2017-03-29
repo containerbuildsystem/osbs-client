@@ -2,27 +2,6 @@
   "client_version": "{{VERSION}}",
   "prebuild_plugins": [
     {
-      "name": "reactor_config",
-      "args": {
-        "config_path": "{{CONFIG_PATH}}"
-      }
-    },
-    {
-      "args": {
-        "label_key": "is_autorebuild",
-        "label_value": "true",
-        "url": "{{OPENSHIFT_URI}}",
-        "verify_ssl": false
-      },
-      "name": "check_and_set_rebuild"
-    },
-    {
-      "args": {
-        "config_file": ".osbs-repo-config"
-      },
-      "name": "stop_autorebuild_if_disabled"
-    },
-    {
       "name": "add_filesystem",
       "args": {
         "koji_hub": "{{KOJI_HUB}}",
@@ -37,16 +16,16 @@
       }
     },
     {
+      "name": "bump_release",
       "args": {
         "hub": "{{KOJI_HUB}}"
-      },
-      "name": "bump_release"
+      }
     },
     {
+      "name": "add_labels_in_dockerfile",
       "args": {
         "labels": "{{IMPLICIT_LABELS}}"
-      },
-      "name": "add_labels_in_dockerfile"
+      }
     },
     {
       "name": "change_from_in_dockerfile"
@@ -59,31 +38,27 @@
       "name": "add_dockerfile"
     },
     {
+      "name": "distgit_fetch_artefacts",
       "args": {
         "command": "{{SOURCES_COMMAND}}"
-      },
-      "name": "distgit_fetch_artefacts"
+      }
     },
     {
+      "name": "koji",
       "args": {
         "root": "{{KOJI_ROOT}}",
         "target": "{{KOJI_TARGET}}",
         "hub": "{{KOJI_HUB}}"
-      },
-      "name": "koji"
+      }
     },
     {
+      "name": "add_yum_repo_by_url",
       "args": {
         "repourls": []
-      },
-      "name": "add_yum_repo_by_url"
+      }
     },
     {
       "name": "inject_yum_repo"
-    },
-    {
-      "name": "dockerfile_content",
-      "required": false
     },
     {
       "name": "distribution_scope"
@@ -96,10 +71,10 @@
   ],
   "postbuild_plugins": [
     {
+      "name": "all_rpm_packages",
       "args": {
         "image_id": "BUILT_IMAGE_ID"
-      },
-      "name": "all_rpm_packages"
+      }
     },
     {
       "name": "tag_by_labels"
@@ -141,16 +116,6 @@
     {
       "name": "pulp_pull",
       "args": {}
-    },
-    {
-      "args": {
-        "imagestream": "{{IMAGESTREAM}}",
-        "docker_image_repo": "{{DOCKER_IMAGE_REPO}}",
-        "url": "{{OPENSHIFT_URI}}",
-        "verify_ssl": false,
-        "build_json_dir": "{{PATH}}"
-      },
-      "name": "import_image"
     }
   ],
   "exit_plugins": [
@@ -172,25 +137,14 @@
       }
     },
     {
+      "name": "store_metadata_in_osv3",
       "args": {
         "url": "{{OPENSHIFT_URI}}",
         "verify_ssl": false
-      },
-      "name": "store_metadata_in_osv3"
+      }
     },
     {
       "name": "remove_built_image"
-    },
-    {
-      "args": {
-        "send_on": ["auto_fail", "auto_success"],
-        "url": "{{OPENSHIFT_URI}}",
-        "pdc_url": "{{PDC_URL}}",
-        "smtp_uri": "{{SMTP_URI}}",
-        "from_address": "osbs@example.com",
-        "error_addresses": ["errors@example.com"]
-      },
-      "name": "sendmail"
     }
   ]
 }

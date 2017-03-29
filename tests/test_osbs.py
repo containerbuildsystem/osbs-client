@@ -23,11 +23,16 @@ def test_if_all_versions_match():
                 raise Exception("Version not found!")
     import osbs
     from osbs import __version__
+    if __version__.endswith('.dev'):
+        version_without_dev = __version__[:-4]
+    else:
+        version_without_dev = __version__
+
     fp = inspect.getfile(osbs)
     project_dir = os.path.dirname(os.path.dirname(fp))
     specfile = os.path.join(project_dir, "osbs-client.spec")
     setup_py = os.path.join(project_dir, "setup.py")
     spec_version = read_version(specfile, r"\nVersion:\s*(.+?)\s*\n")
     setup_py_version = read_version(setup_py, r"version=['\"](.+)['\"]")
-    assert spec_version == __version__
+    assert spec_version == version_without_dev
     assert setup_py_version == __version__

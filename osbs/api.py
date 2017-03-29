@@ -20,9 +20,12 @@ from functools import wraps
 from osbs.build.build_request import BuildRequest
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
-from osbs.constants import BUILD_RUNNING_STATES
+from osbs.constants import (BUILD_RUNNING_STATES, WORKER_OUTER_TEMPLATE,
+                            WORKER_INNER_TEMPLATE, WORKER_CUSTOMIZE_CONF,
+                            ORCHESTRATOR_OUTER_TEMPLATE, ORCHESTRATOR_INNER_TEMPLATE,
+                            ORCHESTRATOR_CUSTOMIZE_CONF)
 from osbs.core import Openshift
-from osbs.exceptions import OsbsException, OsbsValidationException
+from osbs.exceptions import OsbsException, OsbsValidationException, OsbsResponseException
 # import utils in this way, so that we can mock standalone functions with flexmock
 from osbs import utils
 
@@ -40,6 +43,10 @@ def osbsapi(func):
             # Re-raise OsbsExceptions
             raise
         except Exception as ex:
+            # Propogate flexmock errors immediately (used in test cases)
+            if getattr(ex, '__module__', None) == 'flexmock':
+                raise
+
             # Convert anything else to OsbsException
 
             # Python 3 has implicit exception chaining and enhanced
@@ -141,17 +148,25 @@ class OSBS(object):
         return pod_list[0]
 
     @osbsapi
-    def get_build_request(self, build_type=None):
+    def get_build_request(self, build_type=None, inner_template=None,
+                          outer_template=None, customize_conf=None):
         """
         return instance of BuildRequest
 
         :param build_type: str, unused
+        :param inner_template: str, name of inner template for BuildRequest
+        :param outer_template: str, name of outer template for BuildRequest
+        :param customize_conf: str, name of customization config for BuildRequest
         :return: instance of BuildRequest
         """
         if build_type is not None:
             warnings.warn("build types are deprecated, do not use the build_type argument")
 
-        build_request = BuildRequest(build_json_store=self.os_conf.get_build_json_store())
+        build_request = BuildRequest(
+            build_json_store=self.os_conf.get_build_json_store(),
+            inner_template=inner_template,
+            outer_template=outer_template,
+            customize_conf=customize_conf)
 
         # Apply configured resource limits.
         cpu_limit = self.build_conf.get_cpu_limit()
@@ -287,9 +302,35 @@ class OSBS(object):
         build_json['metadata']['name'] = build_config_name
         return BuildResponse(self.os.create_build(build_json).json())
 
-    def _create_build_config_and_build(self, build_request):
-        build = None
+    def _get_image_stream_info_for_build_request(self, build_request):
+        """Return ImageStream, and ImageStreamTag name for base_image of build_request
 
+        If build_request is not auto instantiated, objects are not fetched
+        and None, None is returned.
+        """
+        image_stream = None
+        image_stream_tag_name = None
+
+        if build_request.has_ist_trigger():
+            image_stream_tag_id = build_request.spec.trigger_imagestreamtag.value
+            image_stream_id, image_stream_tag_name = image_stream_tag_id.split(':')
+
+            try:
+                image_stream = self.get_image_stream(image_stream_id).json()
+            except OsbsResponseException as x:
+                if x.status_code != 404:
+                    raise
+
+            if image_stream:
+                try:
+                    self.get_image_stream_tag(image_stream_tag_id).json()
+                except OsbsResponseException as x:
+                    if x.status_code != 404:
+                        raise
+
+        return image_stream, image_stream_tag_name
+
+    def _create_build_config_and_build(self, build_request):
         build_json = build_request.render()
         api_version = build_json['apiVersion']
         if api_version != self.os_conf.get_openshift_api_version():
@@ -300,7 +341,16 @@ class OSBS(object):
         logger.debug('build config to be named "%s"', build_config_name)
         existing_bc = self._get_existing_build_config(build_json)
 
-        if existing_bc is not None:
+        image_stream, image_stream_tag_name = \
+            self._get_image_stream_info_for_build_request(build_request)
+
+        # Remove triggers in BuildConfig to avoid accidental
+        # auto instance of Build. If defined, triggers will
+        # be added to BuildConfig after ImageStreamTag object
+        # is properly configured.
+        triggers = build_json['spec'].pop('triggers', None)
+
+        if existing_bc:
             self._verify_labels_match(build_json, existing_bc)
             # Existing build config may have a different name if matched by
             # git-repo-name and git-branch labels. Continue using existing
@@ -314,84 +364,90 @@ class OSBS(object):
             # Reset name change that may have occurred during
             # update above, since renaming is not supported.
             existing_bc['metadata']['name'] = build_config_name
-            logger.debug('build config for %s already exists, updating...', build_config_name)
+            logger.debug('build config for %s already exists, updating...',
+                         build_config_name)
+
             self.os.update_build_config(build_config_name, json.dumps(existing_bc))
+            if triggers:
+                # Retrieve updated version to pick up lastVersion
+                existing_bc = self._get_existing_build_config(existing_bc)
 
         else:
-            # if it doesn't exist, then create it
-            logger.debug('build config for %s doesn\'t exist, creating...', build_config_name)
-            bc = self.os.create_build_config(json.dumps(build_json)).json()
-            # if there's an "ImageChangeTrigger" on the BuildConfig and "From" is of type
-            #  "ImageStreamTag", the build will be scheduled automatically
-            #  see https://github.com/projectatomic/osbs-client/issues/205
-            if build_request.is_auto_instantiated():
-                prev_version = bc['status']['lastVersion']
-                build_id = self.os.wait_for_new_build_config_instance(build_config_name,
-                                                                      prev_version)
-                build = BuildResponse(self.os.get_build(build_id).json())
+            logger.debug('build config for %s doesn\'t exist, creating...',
+                         build_config_name)
+            existing_bc = self.os.create_build_config(json.dumps(build_json)).json()
 
-        if build is None:
+        if image_stream:
+            changed_ist = self.ensure_image_stream_tag(image_stream,
+                                                       image_stream_tag_name,
+                                                       scheduled=True)
+            logger.debug('Changed parent ImageStreamTag? %s', changed_ist)
+
+        if triggers:
+            existing_bc['spec']['triggers'] = triggers
+            self.os.update_build_config(build_config_name, json.dumps(existing_bc))
+
+        if image_stream and triggers:
+            prev_version = existing_bc['status']['lastVersion']
+            build_id = self.os.wait_for_new_build_config_instance(
+                build_config_name, prev_version)
+            build = BuildResponse(self.os.get_build(build_id).json())
+        else:
             response = self.os.start_build(build_config_name)
             build = BuildResponse(response.json())
+
         return build
 
-    @osbsapi
-    def create_prod_build(self, git_uri, git_ref,
-                          git_branch,  # may be None
-                          user,
-                          component=None,
-                          target=None,
-                          architecture=None, yum_repourls=None,
-                          koji_task_id=None,
-                          scratch=None,
-                          **kwargs):
-        """
-        Create a production build
-
-        :param git_uri: str, URI of git repository
-        :param git_ref: str, reference to commit
-        :param git_branch: str, branch name (may be None)
-        :param user: str, user name
-        :param component: str, not used anymore
-        :param target: str, koji target
-        :param architecture: str, build architecture
-        :param yum_repourls: list, URLs for yum repos
-        :param koji_task_id: int, koji task ID requesting build
-        :param scratch: bool, this is a scratch build
-        :return: BuildResponse instance
-        """
-
-        def get_required_label(labels, names):
-            """
-            get value of label list, first found is returned
-            names has to be non empty tuple
-            """
-            assert names  # always called with a non-empty literal tuple so names[0] is safe
-            for label_name in names:
-                if label_name in labels:
-                    return labels[label_name]
-
-            raise OsbsValidationException("required label '{name}' missing "
-                                          "from Dockerfile"
-                                          .format(name=names[0]))
-
+    def _do_create_prod_build(self, git_uri, git_ref,
+                              git_branch,  # may be None
+                              user,
+                              component=None,
+                              target=None,
+                              architecture=None, yum_repourls=None,
+                              koji_task_id=None,
+                              scratch=None,
+                              platform=None,
+                              platforms=None,
+                              release=None,
+                              inner_template=None,
+                              outer_template=None,
+                              customize_conf=None,
+                              arrangement_version=None,
+                              **kwargs):
         df_parser = utils.get_df_parser(git_uri, git_ref, git_branch=git_branch)
-        build_request = self.get_build_request()
-        labels = df_parser.labels
+        build_request = self.get_build_request(inner_template=inner_template,
+                                               outer_template=outer_template,
+                                               customize_conf=customize_conf)
+        labels = utils.Labels(df_parser.labels)
 
-        name_label = get_required_label(labels, ('name', 'Name'))
-        component = get_required_label(labels, ('com.redhat.component', 'BZComponent'))
+        required_missing = False
+        req_labels = {}
+        # version label isn't used here, but is required label in Dockerfile
+        # and is used and required for atomic reactor
+        # if we don't catch error here, it will fail in atomic reactor later
+        for label in [utils.Labels.LABEL_TYPE_NAME,
+                      utils.Labels.LABEL_TYPE_COMPONENT,
+                      utils.Labels.LABEL_TYPE_VERSION]:
+            try:
+                _, req_labels[label] = labels.get_name_and_value(label)
+            except KeyError:
+                required_missing = True
+                logger.error("required label missing from Dockerfile : %s",
+                             labels.get_name(label))
+
+        if required_missing:
+            raise OsbsValidationException("required label missing from Dockerfile")
 
         build_request.set_params(
             git_uri=git_uri,
             git_ref=git_ref,
             git_branch=git_branch,
             user=user,
-            component=component,
+            component=req_labels[utils.Labels.LABEL_TYPE_COMPONENT],
             build_image=self.build_conf.get_build_image(),
             build_imagestream=self.build_conf.get_build_imagestream(),
             base_image=df_parser.baseimage,
-            name_label=name_label,
+            name_label=req_labels[utils.Labels.LABEL_TYPE_NAME],
             registry_uris=self.build_conf.get_registry_uris(),
             registry_secrets=self.build_conf.get_registry_secrets(),
             source_registry_uri=self.build_conf.get_source_registry_uri(),
@@ -408,6 +464,9 @@ class OSBS(object):
             koji_kerberos_keytab=self.build_conf.get_koji_kerberos_keytab(),
             koji_kerberos_principal=self.build_conf.get_koji_kerberos_principal(),
             architecture=architecture,
+            platform=platform,
+            platforms=platforms,
+            release=release,
             vendor=self.build_conf.get_vendor(),
             build_host=self.build_conf.get_build_host(),
             authoritative_registry=self.build_conf.get_authoritative_registry(),
@@ -424,7 +483,10 @@ class OSBS(object):
             nfs_dest_dir=self.build_conf.get_nfs_destination_dir(),
             builder_build_json_dir=self.build_conf.get_builder_build_json_store(),
             scratch=self.build_conf.get_scratch(scratch),
-            unique_tag_only=self.build_conf.get_unique_tag_only(),
+            reactor_config_secret=self.build_conf.get_reactor_config_secret(),
+            client_config_secret=self.build_conf.get_client_config_secret(),
+            token_secrets=self.build_conf.get_token_secrets(),
+            arrangement_version=arrangement_version,
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         if build_request.scratch:
@@ -435,23 +497,51 @@ class OSBS(object):
         return response
 
     @osbsapi
+    def create_prod_build(self, *args, **kwargs):
+        """
+        Create a production build
+
+        :param git_uri: str, URI of git repository
+        :param git_ref: str, reference to commit
+        :param git_branch: str, branch name (may be None)
+        :param user: str, user name
+        :param component: str, not used anymore
+        :param target: str, koji target
+        :param architecture: str, build architecture
+        :param yum_repourls: list, URLs for yum repos
+        :param koji_task_id: int, koji task ID requesting build
+        :param scratch: bool, this is a scratch build
+        :param platform: str, the platform name
+        :param platforms: list<str>, the name of each platform
+        :param release: str, the release value to use
+        :param inner_template: str, name of inner template for BuildRequest
+        :param outer_template: str, name of outer template for BuildRequest
+        :param customize_conf: str, name of customization config for BuildRequest
+        :param arrangement_version: int, numbered arrangement of plugins for orchestration workflow
+        :return: BuildResponse instance
+        """
+        return self._do_create_prod_build(*args, **kwargs)
+
+    @osbsapi
     def create_prod_with_secret_build(self, git_uri, git_ref, git_branch, user, component=None,
                                       target=None, architecture=None, yum_repourls=None, **kwargs):
         warnings.warn("create_prod_with_secret_build is deprecated, please use create_build")
-        return self.create_prod_build(git_uri, git_ref, git_branch, user, component, target,
-                                      architecture, yum_repourls=yum_repourls, **kwargs)
+        return self._do_create_prod_build(git_uri, git_ref, git_branch, user,
+                                          component, target, architecture,
+                                          yum_repourls=yum_repourls, **kwargs)
 
     @osbsapi
     def create_prod_without_koji_build(self, git_uri, git_ref, git_branch, user, component=None,
                                        architecture=None, yum_repourls=None, **kwargs):
         warnings.warn("create_prod_without_koji_build is deprecated, please use create_build")
-        return self.create_prod_build(git_uri, git_ref, git_branch, user, component, None,
-                                      architecture, yum_repourls=yum_repourls, **kwargs)
+        return self._do_create_prod_build(git_uri, git_ref, git_branch, user,
+                                          component, None, architecture,
+                                          yum_repourls=yum_repourls, **kwargs)
 
     @osbsapi
     def create_simple_build(self, **kwargs):
         warnings.warn("simple builds are deprecated, please use the create_build method")
-        return self.create_prod_build(**kwargs)
+        return self._do_create_prod_build(**kwargs)
 
     @osbsapi
     def create_build(self, **kwargs):
@@ -462,7 +552,90 @@ class OSBS(object):
         :return: instance of BuildRequest
         """
         kwargs.setdefault('git_branch', None)
-        return self.create_prod_build(**kwargs)
+        return self._do_create_prod_build(**kwargs)
+
+    @osbsapi
+    def create_worker_build(self, **kwargs):
+        """
+        Create a worker build
+
+        Pass through method to create_prod_build with the following
+        modifications:
+            - platform param is required
+            - release param is required
+            - arrangement_version param is required, which is used to
+              select which worker_inner:n.json template to use
+            - inner template set to worker_inner:n.json if not set
+            - outer template set to worker.json if not set
+            - customize configuration set to worker_customize.json if not set
+
+        :return: BuildResponse instance
+        """
+        missing = set()
+        for required in ('platform', 'release', 'arrangement_version'):
+            if not kwargs.get(required):
+                missing.add(required)
+
+        if missing:
+            raise ValueError("Worker build missing required parameters: %s" %
+                             missing)
+
+        arrangement_version = kwargs.pop('arrangement_version')
+        kwargs.setdefault('inner_template', WORKER_INNER_TEMPLATE.format(
+            arrangement_version=arrangement_version))
+        kwargs.setdefault('outer_template', WORKER_OUTER_TEMPLATE)
+        kwargs.setdefault('customize_conf', WORKER_CUSTOMIZE_CONF)
+
+        kwargs.setdefault('git_branch', None)
+        try:
+            return self._do_create_prod_build(**kwargs)
+        except IOError as ex:
+            if os.path.basename(ex.filename) == kwargs['inner_template']:
+                raise OsbsValidationException("invalid arrangement_version %s" %
+                                              arrangement_version)
+
+            raise
+
+    @osbsapi
+    def create_orchestrator_build(self, **kwargs):
+        """
+        Create an orchestrator build
+
+        Pass through method to create_prod_build with the following
+        modifications:
+            - platforms param is required
+            - arrangement_version param may be used to select which
+              orchestrator_inner:n.json template to use
+            - inner template set to orchestrator_inner:n.json if not set
+            - outer template set to orchestrator.json if not set
+            - customize configuration set to orchestrator_customize.json if not set
+
+        :return: BuildResponse instance
+        """
+        if not kwargs.get('platforms'):
+            raise ValueError('Orchestrator build requires platforms param')
+
+        if not self.can_orchestrate():
+            raise OsbsValidationException("can't create orchestrate build "
+                                          "when can_orchestrate isn't enabled")
+
+        arrangement_version = kwargs.setdefault('arrangement_version',
+                                                self.build_conf.get_arrangement_version())
+
+        kwargs.setdefault('inner_template', ORCHESTRATOR_INNER_TEMPLATE.format(
+            arrangement_version=arrangement_version))
+        kwargs.setdefault('outer_template', ORCHESTRATOR_OUTER_TEMPLATE)
+        kwargs.setdefault('customize_conf', ORCHESTRATOR_CUSTOMIZE_CONF)
+
+        kwargs.setdefault('git_branch', None)
+        try:
+            return self._do_create_prod_build(**kwargs)
+        except IOError as ex:
+            if os.path.basename(ex.filename) == kwargs['inner_template']:
+                raise OsbsValidationException("invalid arrangement_version %s" %
+                                              arrangement_version)
+
+            raise
 
     @osbsapi
     def get_build_logs(self, build_id, follow=False, build_json=None, wait_if_missing=False):
@@ -587,6 +760,23 @@ class OSBS(object):
     @osbsapi
     def get_image_stream_tag(self, tag_id):
         return self.os.get_image_stream_tag(tag_id)
+
+    @osbsapi
+    def ensure_image_stream_tag(self, stream, tag_name, scheduled=False):
+        """Ensures the tag is monitored in ImageStream
+
+        :param stream: dict, ImageStream object
+        :param tag_name: str, name of tag to check, without name of
+                              ImageStream as prefix
+        :param scheduled: bool, if True, importPolicy.scheduled will be
+                                set to True in ImageStreamTag
+        :return: bool, whether or not modifications were performed
+        """
+        img_stream_tag_file = os.path.join(self.os_conf.get_build_json_store(),
+                                           'image_stream_tag.json')
+        tag_template = json.load(open(img_stream_tag_file))
+        return self.os.ensure_image_stream_tag(stream, tag_name, tag_template,
+                                               scheduled)
 
     @osbsapi
     def get_image_stream(self, stream_id):
@@ -719,3 +909,7 @@ class OSBS(object):
     @osbsapi
     def get_resource_quota(self, quota_name):
         return self.os.get_resource_quota(quota_name).json()
+
+    @osbsapi
+    def can_orchestrate(self):
+        return self.build_conf.get_can_orchestrate()

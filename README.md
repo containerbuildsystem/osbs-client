@@ -16,4 +16,8 @@ We have [a guide](https://github.com/projectatomic/osbs-client/blob/master/docs/
 
 ## Deploying OpenShift Build System
 
-There is a dedicated [documentation](https://github.com/projectatomic/osbs-client/blob/master/docs/osbs_instance_setup.md) how you can setup your own instance.
+We have [documentation](https://github.com/projectatomic/osbs-client/blob/master/docs/osbs_instance_setup.md) how you can setup your own instance.
+
+## Contributing
+
+If you would like to help out, that's great! Please read the [contribution guide](https://github.com/projectatomic/osbs-client/blob/master/CONTRIBUTING.md).

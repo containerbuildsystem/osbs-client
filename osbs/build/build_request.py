@@ -27,6 +27,7 @@ from osbs.build.spec import BuildSpec
 from osbs.constants import SECRETS_PATH, DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE, DEFAULT_CUSTOMIZE_CONF
 from osbs.exceptions import OsbsException, OsbsValidationException
 from osbs.utils import looks_like_git_hash, git_repo_humanish_part_from_uri
+from osbs import __version__ as client_version
 
 
 logger = logging.getLogger(__name__)
@@ -37,12 +38,19 @@ class BuildRequest(object):
     Wraps logic for creating build inputs
     """
 
-    def __init__(self, build_json_store):
+    def __init__(self, build_json_store, inner_template=None,
+                 outer_template=None, customize_conf=None):
         """
         :param build_json_store: str, path to directory with JSON build files
+        :param inner_template: str, path to inner template JSON
+        :param outer_template: str, path to outer template JSON
+        :param customize_conf: str, path to customize configuration JSON
         """
         self.spec = BuildSpec()
         self.build_json_store = build_json_store
+        self._inner_template_path = inner_template or DEFAULT_INNER_TEMPLATE
+        self._outer_template_path = outer_template or DEFAULT_OUTER_TEMPLATE
+        self._customize_conf_path = customize_conf or DEFAULT_CUSTOMIZE_CONF
         self.build_json = None       # rendered template
         self._template = None        # template loaded from filesystem
         self._inner_template = None  # dock json
@@ -116,7 +124,7 @@ class BuildRequest(object):
     @property
     def template(self):
         if self._template is None:
-            path = os.path.join(self.build_json_store, DEFAULT_OUTER_TEMPLATE)
+            path = os.path.join(self.build_json_store, self._outer_template_path)
             logger.debug("loading template from path %s", path)
             try:
                 with open(path, "r") as fp:
@@ -129,7 +137,7 @@ class BuildRequest(object):
     @property
     def inner_template(self):
         if self._inner_template is None:
-            path = os.path.join(self.build_json_store, DEFAULT_INNER_TEMPLATE)
+            path = os.path.join(self.build_json_store, self._inner_template_path)
             logger.debug("loading inner template from path %s", path)
             with open(path, "r") as fp:
                 self._inner_template = json.load(fp)
@@ -138,7 +146,7 @@ class BuildRequest(object):
     @property
     def customize_conf(self):
         if self._customize_conf is None:
-            path = os.path.join(self.build_json_store, DEFAULT_CUSTOMIZE_CONF)
+            path = os.path.join(self.build_json_store, self._customize_conf_path)
             logger.debug("loading customize conf from path %s", path)
             try:
                 with open(path, "r") as fp:
@@ -155,8 +163,8 @@ class BuildRequest(object):
             self._dj = DockJsonManipulator(self.template, self.inner_template)
         return self._dj
 
-    def is_auto_instantiated(self):
-        """Return True if this BuildConfig will be automatically instantiated when created."""
+    def has_ist_trigger(self):
+        """Return True if this BuildConfig has ImageStreamTag trigger."""
         triggers = self.template['spec'].get('triggers', [])
         for trigger in triggers:
             if trigger['type'] == 'ImageChange' and \
@@ -169,6 +177,43 @@ class BuildRequest(object):
             value = ''
         self.template['metadata'].setdefault('labels', {})
         self.template['metadata']['labels'][name] = value
+
+    def render_reactor_config(self):
+        if self.spec.reactor_config_secret.value is None:
+            logger.debug("removing reactor_config plugin: no secret")
+            self.dj.remove_plugin('prebuild_plugins', 'reactor_config')
+
+    def render_orchestrate_build(self):
+        phase = 'buildstep_plugins'
+        plugin = 'orchestrate_build'
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return
+
+        if self.spec.platforms.value is None:
+            logger.debug('removing %s plugin: no platforms', plugin)
+            self.dj.remove_plugin(phase, plugin)
+            return
+
+        # Parameters to be used in call to create_worker_build
+        build_kwargs = {
+            'component': self.spec.component.value,
+            'git_branch': self.spec.git_branch.value,
+            'git_ref': self.spec.git_ref.value,
+            'git_uri': self.spec.git_uri.value,
+            'koji_task_id': self.spec.koji_task_id.value,
+            'scratch': self.scratch,
+            'target': self.spec.koji_target.value,
+            'user': self.spec.user.value,
+            'yum_repourls': self.spec.yum_repourls.value,
+            'arrangement_version': self.spec.arrangement_version.value,
+        }
+
+        self.dj.dock_json_set_arg(phase, plugin, 'platforms',
+                                  self.spec.platforms.value)
+        self.dj.dock_json_set_arg(phase, plugin, 'build_kwargs', build_kwargs)
+
+        if not self.spec.build_imagestream.value:
+            self.dj.dock_json_set_arg(phase, plugin, 'worker_build_image', self.spec.build_image.value)
 
     def render_resource_limits(self):
         if self._resource_limits is not None:
@@ -226,6 +271,10 @@ class BuildRequest(object):
                                           'use_auth', use_auth)
 
     def render_store_metadata_in_osv3(self, use_auth=None):
+        if not self.dj.dock_json_has_plugin_conf('exit_plugins',
+                                                 'store_metadata_in_osv3'):
+            return
+
         self.dj.dock_json_set_arg('exit_plugins', "store_metadata_in_osv3",
                                   "url",
                                   self.spec.builder_openshift_url.value)
@@ -235,30 +284,33 @@ class BuildRequest(object):
                                       "store_metadata_in_osv3",
                                       "use_auth", use_auth)
 
-    def render_unique_tag_only(self):
+    def set_secret_for_plugin(self, secret, plugin=None, mount_path=None):
+        """
+        Sets secret for plugin, if no plugin specified
+        it will also set general secret
 
-        if not self.spec.unique_tag_only.value:
-            return
-
-        if self.dj.dock_json_has_plugin_conf('postbuild_plugins',
-                                             'tag_by_labels'):
-            self.dj.dock_json_set_arg('postbuild_plugins', 'tag_by_labels',
-                                      'unique_tag_only', True)
-
-        self.dj.remove_plugin('postbuild_plugins', 'tag_from_config')
-
-    def set_secret_for_plugin(self, plugin, secret):
-        has_plugin_conf = self.dj.dock_json_has_plugin_conf(plugin[0],
-                                                            plugin[1])
+        :param secret: str, secret name
+        :param plugin: tuple, (plugin type, plugin name, argument name)
+        :param mount_path: str, mount path of secret
+        """
+        has_plugin_conf = False
+        if plugin is not None:
+            has_plugin_conf = self.dj.dock_json_has_plugin_conf(plugin[0],
+                                                                plugin[1])
         if 'secrets' in self.template['spec']['strategy']['customStrategy']:
-            if has_plugin_conf:
-                secret_path = os.path.join(SECRETS_PATH, secret)
-                logger.info("Configuring %s secret at %s", secret, secret_path)
+            if not plugin or has_plugin_conf:
+
                 custom = self.template['spec']['strategy']['customStrategy']
+                if mount_path:
+                    secret_path = mount_path
+                else:
+                    secret_path = os.path.join(SECRETS_PATH, secret)
+
+                logger.info("Configuring %s secret at %s", secret, secret_path)
                 existing = [secret_mount for secret_mount in custom['secrets']
                             if secret_mount['secretSource']['name'] == secret]
                 if existing:
-                    logger.debug("secret %s already set", plugin[1])
+                    logger.debug("secret %s already set", secret)
                 else:
                     custom['secrets'].append({
                         'secretSource': {
@@ -270,7 +322,7 @@ class BuildRequest(object):
                 # there's no need to set args if no plugin secret specified
                 # this is used in tag_and_push plugin, as it sets secret path
                 # for each registry separately
-                if plugin[2] is not None:
+                if plugin and plugin[2] is not None:
                     self.dj.dock_json_set_arg(*(plugin + (secret_path,)))
             else:
                 logger.debug("not setting secret for unused plugin %s",
@@ -288,9 +340,9 @@ class BuildRequest(object):
             if secret is not None:
                 if isinstance(secret, list):
                     for secret_item in secret:
-                        self.set_secret_for_plugin(plugin, secret_item)
+                        self.set_secret_for_plugin(secret_item, plugin=plugin)
                 else:
-                    self.set_secret_for_plugin(plugin, secret)
+                    self.set_secret_for_plugin(secret, plugin=plugin)
                 secret_set = True
 
         if not secret_set:
@@ -359,17 +411,42 @@ class BuildRequest(object):
                 del regdict['version']
 
     def adjust_for_triggers(self):
-        """
-        Remove trigger-related plugins if no triggers set
+        """Remove trigger-related plugins when needed
+
+        If there are no triggers defined, it's assumed the
+        feature is disabled and all trigger-related plugins
+        are removed.
+
+        If there are triggers defined, and this is a custom
+        base image, some trigger-related plugins do not apply.
+        All but import_image are disabled in this case.
+
+        Additionally, this method ensures that custom base
+        images never have triggers since triggering a base
+        image rebuild is not a valid scenario.
         """
         triggers = self.template['spec'].get('triggers', [])
-        if not triggers:
-            for when, which in [("prebuild_plugins", "check_and_set_rebuild"),
-                                ("prebuild_plugins", "stop_autorebuild_if_disabled"),
-                                ("postbuild_plugins", "import_image"),
-                                ("exit_plugins", "sendmail")]:
-                logger.info("removing %s from request because there are no triggers",
-                            which)
+
+        remove_plugins = [
+            ("prebuild_plugins", "check_and_set_rebuild"),
+            ("prebuild_plugins", "stop_autorebuild_if_disabled"),
+            ("exit_plugins", "sendmail"),
+        ]
+
+        should_remove = False
+        if triggers and self.is_custom_base_image():
+            msg = "removing %s from request because custom base image"
+            del self.template['spec']['triggers']
+            should_remove = True
+
+        elif not triggers:
+            remove_plugins.append(("postbuild_plugins", "import_image"))
+            msg = "removing %s from request because there are no triggers"
+            should_remove = True
+
+        if should_remove:
+            for when, which in remove_plugins:
+                logger.info(msg, which)
                 self.dj.remove_plugin(when, which)
 
     def adjust_for_scratch(self):
@@ -378,15 +455,19 @@ class BuildRequest(object):
         order to hadle the "scratch build" scenario
         """
         if self.scratch:
-            # Note: only one for now, but left in a list like other adjust_for_
-            # functions in the event that this needs to be expanded
             for when, which in [
                     ("postbuild_plugins", "compress"),
+                    ("postbuild_plugins", "tag_from_config"),
                     ("exit_plugins", "koji_promote"),
             ]:
-                logger.info("removing %s from request because there are no triggers",
+                logger.info("removing %s from scratch build request",
                             which)
                 self.dj.remove_plugin(when, which)
+
+            if self.dj.dock_json_has_plugin_conf('postbuild_plugins',
+                                                 'tag_by_labels'):
+                self.dj.dock_json_set_arg('postbuild_plugins', 'tag_by_labels',
+                                          'unique_tag_only', True)
 
     def adjust_for_custom_base_image(self):
         """
@@ -428,6 +509,9 @@ class BuildRequest(object):
     def render_add_labels_in_dockerfile(self):
         phase = 'prebuild_plugins'
         plugin = 'add_labels_in_dockerfile'
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return
+
         implicit_labels = {}
         label_spec = {
             'vendor': self.spec.vendor,
@@ -445,24 +529,29 @@ class BuildRequest(object):
         """
         if there is yum repo specified, don't pick stuff from koji
         """
+        phase = 'prebuild_plugins'
+        plugin = 'koji'
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return
+
         if self.spec.yum_repourls.value:
             logger.info("removing koji from request "
                         "because there is yum repo specified")
-            self.dj.remove_plugin("prebuild_plugins", "koji")
+            self.dj.remove_plugin(phase, plugin)
         elif not (self.spec.koji_target.value and
                   self.spec.kojiroot.value and
                   self.spec.kojihub.value):
             logger.info("removing koji from request as not specified")
-            self.dj.remove_plugin("prebuild_plugins", "koji")
+            self.dj.remove_plugin(phase, plugin)
         else:
-            self.dj.dock_json_set_arg('prebuild_plugins', "koji",
+            self.dj.dock_json_set_arg(phase, plugin,
                                       "target", self.spec.koji_target.value)
-            self.dj.dock_json_set_arg('prebuild_plugins', "koji",
+            self.dj.dock_json_set_arg(phase, plugin,
                                       "root", self.spec.kojiroot.value)
-            self.dj.dock_json_set_arg('prebuild_plugins', "koji",
+            self.dj.dock_json_set_arg(phase, plugin,
                                       "hub", self.spec.kojihub.value)
             if self.spec.proxy.value:
-                self.dj.dock_json_set_arg('prebuild_plugins', "koji",
+                self.dj.dock_json_set_arg(phase, plugin,
                                           "proxy", self.spec.proxy.value)
 
     def render_bump_release(self):
@@ -603,10 +692,10 @@ class BuildRequest(object):
                                       'docker_registry', docker_registry)
 
             if registry_secret:
-                self.set_secret_for_plugin(('postbuild_plugins',
-                                            'pulp_sync',
-                                            'registry_secret_path'),
-                                           registry_secret)
+                self.set_secret_for_plugin(registry_secret,
+                                           plugin=('postbuild_plugins',
+                                                   'pulp_sync',
+                                                   'registry_secret_path'))
 
             # Verify we have a pulp secret
             if self.spec.pulp_secret.value is None:
@@ -671,6 +760,29 @@ class BuildRequest(object):
                 self.dj.dock_json_set_arg('postbuild_plugins', 'import_image',
                                           'insecure_registry', True)
 
+    def render_distgit_fetch_artefacts(self):
+        phase = 'prebuild_plugins'
+        plugin = 'distgit_fetch_artefacts'
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return
+
+        if self.spec.sources_command.value is not None:
+            self.dj.dock_json_set_arg(phase, plugin, "command",
+                                      self.spec.sources_command.value)
+        else:
+            logger.info('removing {0}, no sources_command was provided'.format(plugin))
+            self.dj.remove_plugin(phase, plugin)
+
+    def render_pull_base_image(self):
+        phase = 'prebuild_plugins'
+        plugin = 'pull_base_image'
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return
+        # pull_base_image wants a docker URI so strip off the scheme part
+        source_registry = self.spec.source_registry_uri.value
+        self.dj.dock_json_set_arg(phase, plugin, 'parent_registry',
+                                  source_registry.docker_uri if source_registry else None)
+
     def render_customizations(self):
         """
         Customize prod_inner for site specific customizations
@@ -718,6 +830,8 @@ class BuildRequest(object):
                     # Malformed config
                     logger.debug("Invalid custom configuration found for enable_plugins")
 
+    def render_version(self):
+        self.dj.dock_json_set_param('client_version', client_version)
 
     def render(self, validate=True):
         if validate:
@@ -740,8 +854,6 @@ class BuildRequest(object):
             self.template['spec']['output']['to']['name'] = self.spec.image_tag.value
 
         self.render_tag_and_push_registries()
-
-        self.render_unique_tag_only()
 
         if 'triggers' in self.template['spec']:
             imagechange = self.template['spec']['triggers'][0]['imageChange']
@@ -776,27 +888,8 @@ class BuildRequest(object):
         else:
             self.set_label('git-branch', 'unknown')
 
-        if self.spec.sources_command.value is not None:
-            self.dj.dock_json_set_arg('prebuild_plugins', "distgit_fetch_artefacts",
-                                      "command", self.spec.sources_command.value)
-        else:
-            logger.info("removing distgit_fetch_artefacts, no sources_command was provided")
-            self.dj.remove_plugin('prebuild_plugins', 'distgit_fetch_artefacts')
-
-        # pull_base_image wants a docker URI so strip off the scheme part
-        source_registry = self.spec.source_registry_uri.value
-        self.dj.dock_json_set_arg('prebuild_plugins', "pull_base_image", "parent_registry",
-                                  source_registry.docker_uri if source_registry else None)
-
-        # Set to true to disable triggers in BuildConfig
-        remove_triggers = False
-
-        if self.is_custom_base_image():
-            logger.info('removing triggers for custom base image build')
-            remove_triggers = True
-
-        if remove_triggers and 'triggers' in self.template['spec']:
-            del self.template['spec']['triggers']
+        self.render_distgit_fetch_artefacts()
+        self.render_pull_base_image()
 
         self.adjust_for_triggers()
         self.adjust_for_scratch()
@@ -805,7 +898,12 @@ class BuildRequest(object):
         # Enable/disable plugins as needed for target registry API versions
         self.adjust_for_registry_api_versions()
 
-        self.set_secrets({('postbuild_plugins',
+        self.set_secrets({('prebuild_plugins',
+                           'reactor_config',
+                           'config_path'):
+                          self.spec.reactor_config_secret.value,
+
+                          ('postbuild_plugins',
                            'pulp_push',
                            'pulp_secret_path'):
                           self.spec.pulp_secret.value,
@@ -832,7 +930,13 @@ class BuildRequest(object):
                            # add the path to the plugin's
                            # configuration. This is done elsewhere.
                            None):
-                          self.spec.registry_secrets.value})
+                          self.spec.registry_secrets.value,
+
+                          ('buildstep_plugins', 'orchestrate_build', 'osbs_client_config'):
+                          self.spec.client_config_secret.value})
+
+        for (secret, path) in self.spec.token_secrets.value.items():
+            self.set_secret_for_plugin(secret, mount_path=path)
 
         if self.spec.pulp_secret.value:
             # Don't push to docker registry, we're using pulp here
@@ -846,6 +950,8 @@ class BuildRequest(object):
             self.template['metadata']['labels']['koji-task-id'] = str(koji_task_id)
 
         use_auth = self.spec.use_auth.value
+        self.render_reactor_config()
+        self.render_orchestrate_build()
         self.render_add_filesystem()
         self.render_add_labels_in_dockerfile()
         self.render_koji()
@@ -855,6 +961,7 @@ class BuildRequest(object):
         self.render_pulp_sync()
         self.render_koji_promote(use_auth=use_auth)
         self.render_sendmail()
+        self.render_version()
 
         self.dj.write_dock_json()
         self.build_json = self.template

@@ -23,7 +23,9 @@ except ImportError:
     from urllib.parse import urljoin
 
 from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
-                            GENERAL_CONFIGURATION_SECTION, DEFAULT_NAMESPACE)
+                            GENERAL_CONFIGURATION_SECTION, DEFAULT_NAMESPACE,
+                            DEFAULT_ARRANGEMENT_VERSION)
+from osbs.exceptions import OsbsValidationException
 from osbs import utils
 
 
@@ -371,10 +373,6 @@ class Configuration(object):
         return self._get_value("scratch", self.conf_section, "scratch",
                                default=default_value, is_bool_val=True)
 
-    def get_unique_tag_only(self):
-        return self._get_value("unique_tag_only", self.conf_section, "unique_tag_only",
-                               default=False, is_bool_val=True)
-
     def get_oauth2_token(self):
         # token overrides token_file
         # either in kwargs overrides cli args
@@ -422,3 +420,46 @@ class Configuration(object):
                              token_file, ex)
 
         return value
+
+    def get_reactor_config_secret(self):
+        return self._get_value("reactor_config_secret", self.conf_section,
+                               "reactor_config_secret")
+
+    def get_client_config_secret(self):
+        return self._get_value("client_config_secret", self.conf_section,
+                               "client_config_secret")
+
+    def get_token_secrets(self):
+        value = self._get_value("token_secrets", self.conf_section,
+                                "token_secrets")
+        token_dict = {}
+        will_raise = False
+        if value:
+            for pairs in value.split():
+                pair = pairs.split(':', 1)
+
+                if len(pair) == 2:
+                    if pair[1] in ["", "/"]:
+                        logger.error("token_secret file path must be valid: %s", pair[1])
+                        will_raise = True
+                        continue
+                    token_dict[pair[0]] = pair[1]
+
+                else:
+                    token_dict[pair[0]] = None
+
+        if will_raise:
+            raise OsbsValidationException("Wrong token_secrets configuration")
+        return token_dict
+
+    def get_arrangement_version(self):
+        value = self._get_value("arrangement_version", self.conf_section,
+                                "arrangement_version",
+                                default=DEFAULT_ARRANGEMENT_VERSION)
+        try:
+            return int(value)
+        except ValueError:
+            raise OsbsValidationException("Invalid arrangement_version: %s" % value)
+
+    def get_can_orchestrate(self):
+        return self._get_value("can_orchestrate", self.conf_section, "can_orchestrate", default=False, is_bool_val=True)

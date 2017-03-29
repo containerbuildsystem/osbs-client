@@ -159,7 +159,13 @@ class BuildSpec(object):
     nfs_server_path = BuildParam("nfs_server_path", allow_none=True)
     nfs_dest_dir = BuildParam("nfs_dest_dir", allow_none=True)
     builder_build_json_dir = BuildParam("builder_build_json_dir", allow_none=True)
-    unique_tag_only = BuildParam("unique_tag_only", allow_none=True)
+    platform = BuildParam("platform", allow_none=True)
+    platforms = BuildParam("platforms", allow_none=True)
+    release = BuildParam("release", allow_none=True)
+    reactor_config_secret = BuildParam("reactor_config_secret", allow_none=True)
+    client_config_secret = BuildParam("client_config_secret", allow_none=True)
+    token_secrets = BuildParam("token_secrets", allow_none=True)
+    arrangement_version = BuildParam("arrangement_version", allow_none=True)
 
     def __init__(self):
         self.required_params = [
@@ -203,7 +209,9 @@ class BuildSpec(object):
                    nfs_dest_dir=None, git_branch=None, base_image=None,
                    name_label=None,
                    builder_build_json_dir=None, registry_api_versions=None,
-                   unique_tag_only=None,
+                   platform=None, platforms=None, release=None,
+                   reactor_config_secret=None, client_config_secret=None,
+                   token_secrets=None, arrangement_version=None,
                    **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
@@ -286,7 +294,13 @@ class BuildSpec(object):
             timestamp
         )
 
-        self.unique_tag_only.value = unique_tag_only
+        self.platform.value = platform
+        self.platforms.value = platforms
+        self.release.value = release
+        self.reactor_config_secret.value = reactor_config_secret
+        self.client_config_secret.value = client_config_secret
+        self.token_secrets.value = token_secrets or {}
+        self.arrangement_version.value = arrangement_version
 
     def validate(self):
         logger.info("Validating params of %s", self.__class__.__name__)

@@ -69,7 +69,7 @@ class TestBuildSpec(object):
         spec = BuildSpec()
         spec.set_params(**kwargs)
 
-        assert spec.name.value == 'reponame-master'
+        assert spec.name.value.startswith('reponame-master')
         registry = spec.registry_uris.value[0]
         assert registry.uri == 'http://registry.example.com:5000'
         assert registry.docker_uri == 'registry.example.com:5000'

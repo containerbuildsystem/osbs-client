@@ -22,6 +22,7 @@ import tarfile
 from collections import namedtuple
 from datetime import datetime
 from io import BytesIO
+from hashlib import sha256
 
 try:
     # py3
@@ -288,7 +289,11 @@ def get_time_from_rfc3339(rfc3339):
         return timegm(time_tuple)
 
 
-def make_name_from_git(repo, branch, limit=53, separator='-'):
+
+VALID_BUILD_CONFIG_NAME_CHARS = re.compile('[-a-z0-9]')
+
+
+def make_name_from_git(repo, branch, limit=53, separator='-', hash_size=5):
     """
     return name string representing the given git repo and branch
     to be used as a build name.
@@ -302,6 +307,11 @@ def make_name_from_git(repo, branch, limit=53, separator='-'):
     Assuming '-XXXX' (5 chars) and '-build' (6 chars) as default
     suffixes, name should be limited to 53 chars (64 - 11).
 
+    OpenShift is very peculiar in which BuildConfig names it
+    allows. For this reason, only certain characters are allowed.
+    Any disallowed characters will be removed from repo and
+    branch names.
+
     :param repo: str, the git repository to be used
     :param branch: str, the git branch to be used
     :param limit: int, max name length
@@ -312,12 +322,20 @@ def make_name_from_git(repo, branch, limit=53, separator='-'):
 
     repo = git_repo_humanish_part_from_uri(repo)
     branch = branch or 'unknown'
+    full = repo + branch
+    shaval = sha256(full.encode('utf-8')).hexdigest()
+    hash_str = shaval[:hash_size]
+
+    # Sanitize repo and branch names
+    repo = ''.join(filter(VALID_BUILD_CONFIG_NAME_CHARS.match, list(repo)))
+    branch = ''.join(filter(VALID_BUILD_CONFIG_NAME_CHARS.match, list(branch)))
 
     repo_chars = []
     branch_chars = []
     groups = ((repo, repo_chars), (branch, branch_chars))
 
-    size = len(separator)
+    size = (2 * len(separator)) + hash_size
+
     for i in range(max(len(repo), len(branch))):
         for group, group_chars in groups:
             if i < len(group):
@@ -329,10 +347,9 @@ def make_name_from_git(repo, branch, limit=53, separator='-'):
             continue
         break
 
-    repo = ''.join(repo_chars)
-    branch = ''.join(branch_chars)
-
-    return repo + separator + branch
+    repo = ''.join(repo_chars).strip('-')
+    branch = ''.join(branch_chars).strip('-')
+    return separator.join(filter(None, (repo, branch, hash_str)))
 
 
 def get_instance_token_file_name(instance):
@@ -358,3 +375,85 @@ def run_command(*popenargs, **kwargs):
             message="Command %s returned %s\n\n%s" % (cmd, retcode, output)
         )
     return output
+
+
+class Labels(object):
+    """
+    Provide access to a set of labels which have specific semantics
+
+    The set of labels comes from here:
+    https://github.com/projectatomic/ContainerApplicationGenericLabels
+
+    Note that only a subset of label types (those used by OSBS) is supported:
+
+    - LABEL_TYPE_NAME: repository name of the image
+    - LABEL_TYPE_VERSION: version of the image
+    - LABEL_TYPE_RELEASE: release number for this version
+    - LABEL_TYPE_ARCH: architecture for the image
+    - LABEL_TYPE_VENDOR: owner of the image
+    - LABEL_TYPE_SOURCE: authoritative location for publishing
+    - LABEL_TYPE_COMPONENT: Bugzilla (or other tracker) component
+    - LABEL_TYPE_HOST: build host used to create the image
+    """
+    LABEL_TYPE_NAME = object()
+    LABEL_TYPE_VERSION = object()
+    LABEL_TYPE_RELEASE = object()
+    LABEL_TYPE_ARCH = object()
+    LABEL_TYPE_VENDOR = object()
+    LABEL_TYPE_SOURCE = object()
+    LABEL_TYPE_COMPONENT = object()
+    LABEL_TYPE_HOST = object()
+    LABEL_NAMES = {
+        LABEL_TYPE_NAME: ('name', 'Name'),
+        LABEL_TYPE_VERSION: ('version', 'Version'),
+        LABEL_TYPE_RELEASE: ('release', 'Release'),
+        LABEL_TYPE_ARCH: ('architecture', 'Architecture'),
+        LABEL_TYPE_VENDOR: ('vendor', 'Vendor'),
+        LABEL_TYPE_SOURCE: ('authoritative-source-url', 'Authoritative_Registry'),
+        LABEL_TYPE_COMPONENT: ('com.redhat.component', 'BZComponent'),
+        LABEL_TYPE_HOST: ('com.redhat.build-host', 'Build_Host')
+    }
+
+    def __init__(self, df_labels):
+        """
+        Create a new Labels object
+        providing access to actual newest labels as well as old ones
+        """
+        self._df_labels = df_labels
+        self._label_values = {}
+        for label_type, label_names in Labels.LABEL_NAMES.items():
+            for lbl_name in label_names:
+                if lbl_name in df_labels:
+                    self._label_values[label_type] = (lbl_name, df_labels[lbl_name])
+                    break
+
+    def get_name(self, label_type):
+        """
+        returns the most preferred label name
+        if there isn't any correct name in the list
+        it will return newest label name
+        """
+        if label_type in self._label_values:
+            return self._label_values[label_type][0]
+        else:
+            return Labels.LABEL_NAMES[label_type][0]
+
+    @staticmethod
+    def get_new_names_by_old():
+        """Return dictionary, new label name indexed by old label name."""
+        newdict = {}
+
+        for label_type, label_names in Labels.LABEL_NAMES.items():
+            for oldname in label_names[1:]:
+                newdict[oldname] = Labels.LABEL_NAMES[label_type][0]
+        return newdict
+
+    def get_name_and_value(self, label_type):
+        """
+        Return tuple of (label name, label value)
+        Raises KeyError if label doesn't exist
+        """
+        if label_type in self._label_values:
+            return self._label_values[label_type]
+        else:
+            return (label_type, self._df_labels[label_type])
