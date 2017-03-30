@@ -974,6 +974,12 @@ class BuildRequest(object):
                           ('prebuild_plugins', 'add_filesystem', 'koji_ssl_certs_dir'):
                           self.spec.koji_certs_secret.value,
 
+                          ('prebuild_plugins', 'bump_release', 'koji_ssl_certs_dir'):
+                          self.spec.koji_certs_secret.value,
+
+                          ('prebuild_plugins', 'koji', 'koji_ssl_certs_dir'):
+                          self.spec.koji_certs_secret.value,
+
                           ('exit_plugins', 'sendmail', 'koji_ssl_certs_dir'):
                           self.spec.koji_certs_secret.value,
 
