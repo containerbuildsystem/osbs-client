@@ -441,7 +441,10 @@ def cmd_get_token(args, osbs):  # pylint: disable=W0613
 
 
 def cmd_login(args, osbs):
-    osbs.login(args.TOKEN)
+    if args.token and (args.username or args.password):
+        print("Can't use --token and (--user or --password).")
+        return
+    osbs.login(args.token, args.username, args.password)
 
 
 def cmd_get_user(args, osbs):
@@ -625,7 +628,9 @@ def cli():
 
     get_login_parser = subparsers.add_parser(str_on_2_unicode_on_3('login'),
                                              help='perform login and store token for later use')
-    get_login_parser.add_argument('TOKEN', help='token to be used for login')
+    get_login_parser.add_argument('--token', help='token to be used for login', action="store")
+    get_login_parser.add_argument('-u', '--username', help='Username, will prompt if not provided', action="store")
+    get_login_parser.add_argument('-p', '--password', help='Password, will prompt if not provided', action="store")
     get_login_parser.set_defaults(func=cmd_login)
 
     get_user_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-user'), help='get info about user')

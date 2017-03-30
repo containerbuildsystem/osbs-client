@@ -18,6 +18,8 @@ import six
 import stat
 import copy
 import datetime
+import getpass
+import sys
 from tempfile import NamedTemporaryFile
 
 from osbs.api import OSBS, osbsapi
@@ -40,7 +42,14 @@ from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRA
                              TEST_GIT_URI, TEST_TARGET, TEST_USER, INPUTS_PATH,
                              TEST_KOJI_TASK_ID, TEST_VERSION)
 from tests.fake_api import openshift, osbs, osbs106, osbs_cant_orchestrate
+from osbs.core import Openshift
 
+try:
+    # py2
+    import httplib
+except ImportError:
+    # py3
+    import http.client as httplib
 
 def request_as_response(request):
     """
@@ -670,15 +679,41 @@ class TestOSBS(object):
         response = osbs.set_annotations_on_build(TEST_BUILD, annotations)
         assert isinstance(response, HttpResponse)
 
-    def test_get_token_api(self, osbs):
-        assert isinstance(osbs.get_token(), six.string_types)
+    @pytest.mark.parametrize('token', [None, 'token'])
+    def test_get_token_api(self, osbs, token):
+        osbs.os.token = token
+        if token:
+            assert isinstance(osbs.get_token(), six.string_types)
+            assert token == osbs.get_token()
+        else:
+            with pytest.raises(OsbsValidationException):
+                osbs.get_token()
+
+    def test_get_token_api_kerberos(self, osbs):
+        token = "token"
+        osbs.os.use_kerberos = True
+        (flexmock(Openshift)
+            .should_receive('get_oauth_token')
+            .and_return(token))
+
+        assert token == osbs.get_token()
 
     def test_get_user_api(self, osbs):
         assert 'name' in osbs.get_user()['metadata']
 
+    @pytest.mark.parametrize(('token', 'username', 'password'), (
+        (None, None, None),
+        ('token', None, None),
+        (None, 'username', None),
+        (None, None, 'password'),
+        ('token', 'username', None),
+        ('token', None, 'password'),
+        (None, 'username', 'password'),
+        ('token', 'username', 'password'),
+    ))
     @pytest.mark.parametrize('subdir', [None, 'new-dir'])
-    def test_login_api(self, tmpdir, osbs, subdir):
-        token = 'spam-bacon-eggs'
+    @pytest.mark.parametrize('not_valid', [True, False])
+    def test_login_api(self, tmpdir, osbs, token, username, password, subdir, not_valid):
         token_file_dir = str(tmpdir)
         if subdir:
             token_file_dir = os.path.join(token_file_dir, subdir)
@@ -689,18 +724,62 @@ class TestOSBS(object):
             .with_args(osbs.os_conf.conf_section)
             .and_return(token_file_path))
 
-        osbs.login(token)
+        class test_response:
+            status_code= httplib.UNAUTHORIZED
 
-        with open(token_file_path) as token_file:
-            assert token == token_file.read().strip()
+        if not token:
+            (flexmock(Openshift)
+                .should_receive('get_oauth_token')
+                .once()
+                .and_return("token"))
+            if not password:
+                (flexmock(getpass)
+                    .should_receive('getpass')
+                    .once()
+                    .and_return("password"))
+            if not username:
+                try:
+                    (flexmock(sys.modules['__builtin__'])
+                        .should_receive('raw_input')
+                        .once()
+                        .and_return('username'))
+                except:
+                    (flexmock(sys.modules['builtins'])
+                        .should_receive('input')
+                        .once()
+                        .and_return('username'))
 
-        file_mode = os.stat(token_file_path).st_mode
-        # File owner permission
-        assert file_mode & stat.S_IRWXU
-        # Group permission
-        assert not file_mode & stat.S_IRWXG
-        # Others permission
-        assert not file_mode & stat.S_IRWXO
+        if not_valid:
+            (flexmock(osbs.os)
+                .should_receive('get_user')
+                .once()
+                .and_raise(OsbsResponseException('Unauthorized',
+                                                 status_code=401)))
+
+            with pytest.raises(OsbsValidationException):
+                osbs.login(token, username, password)
+
+        else:
+            osbs.login(token, username, password)
+
+            if not token:
+                token = "token"
+
+            with open(token_file_path) as token_file:
+                assert token == token_file.read().strip()
+
+            file_mode = os.stat(token_file_path).st_mode
+            # File owner permission
+            assert file_mode & stat.S_IRWXU
+            # Group permission
+            assert not file_mode & stat.S_IRWXG
+            # Others permission
+            assert not file_mode & stat.S_IRWXO
+
+    def test_login_api_kerberos(self, osbs):
+        osbs.os.use_kerberos = True
+        with pytest.raises(OsbsValidationException):
+            osbs.login("", "", "")
 
     def test_build_logs_api(self, osbs):
         logs = osbs.get_build_logs(TEST_BUILD)

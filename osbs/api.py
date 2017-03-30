@@ -15,6 +15,7 @@ import stat
 import sys
 import warnings
 import datetime
+import getpass
 from functools import wraps
 
 from osbs.build.build_request import BuildRequest
@@ -28,6 +29,13 @@ from osbs.core import Openshift
 from osbs.exceptions import OsbsException, OsbsValidationException, OsbsResponseException
 # import utils in this way, so that we can mock standalone functions with flexmock
 from osbs import utils
+
+try:
+    # py2
+    import httplib
+except ImportError:
+    # py3
+    import http.client as httplib
 
 
 # Decorator for API methods.
@@ -726,10 +734,43 @@ class OSBS(object):
 
     @osbsapi
     def get_token(self):
-        return self.os.get_oauth_token()
+        if self.os.use_kerberos:
+            return self.os.get_oauth_token()
+        else:
+            if self.os.token:
+                return self.os.token
+
+            raise OsbsValidationException("no token stored")
 
     @osbsapi
-    def login(self, token):
+    def login(self, token=None, username=None, password=None):
+        if self.os.use_kerberos:
+             raise OsbsValidationException("can't use login when using kerberos")
+
+        if not token:
+            if username:
+                self.os.username = username
+            else:
+                try:
+                    self.os.username = raw_input("Username: ")
+                except NameError:
+                    self.os.username = input("Username: ")
+
+            if password:
+                self.os.password = password
+            else:
+                self.os.password = getpass.getpass()
+            self.os.use_auth = True
+            token = self.os.get_oauth_token()
+
+        self.os.token = token
+        try:
+            self.os.get_user()
+        except OsbsResponseException as ex:
+            if ex.status_code == httplib.UNAUTHORIZED:
+                raise OsbsValidationException("token is not valid")
+            raise
+
         token_file = utils.get_instance_token_file_name(self.os_conf.conf_section)
         token_file_dir = os.path.dirname(token_file)
 
