@@ -141,6 +141,17 @@ previous two in `build_json_dir` which is `prod_customize.json` and it will
 provide the ability to set site-specific customizations such as removing,
 plugins, adding plugins, or overriding arguments passed to existing plugins.
 
+For orchestrator builds, there are required as well additional json files,
+which have same function as mentioned above, only these are specific for
+orchestrator or worker builds.
+
+Based on `prod.json` there are `worker.json` and `orchestrator.json`.
+
+Based on `prod_inner.json` there are `orchestrator_inner:1.json` and `worker_inner:1.json`,
+where `1` is `arrangement_version` from configuration file, to specify default version.
+
+Based on `prod_customize.json` there are `orchestrator_customize.json` and `worker_customize.json`.
+
 The syntax of `prod_customize.json` is as follows:
 
 ```json
