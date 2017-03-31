@@ -1,5 +1,5 @@
 """
-Copyright (c) 2015 Red Hat, Inc
+Copyright (c) 2015, 2016, 2017 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -350,6 +350,24 @@ class BuildRequest(object):
             if 'secrets' in self.template['spec']['strategy']['customStrategy']:
                 del self.template['spec']['strategy']['customStrategy']['secrets']
 
+    def set_kerberos_auth(self, plugins):
+        if not self.spec.koji_use_kerberos.value:
+            return
+
+        krb_principal = self.spec.koji_kerberos_principal.value
+        krb_keytab = self.spec.koji_kerberos_keytab.value
+
+        if not (krb_principal and krb_keytab):
+            logger.debug('Kerberos auth requested but missing principal and/or keytab values')
+            return
+
+        for phase, plugin in plugins:
+            if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+                continue
+
+            self.dj.dock_json_set_arg(phase, plugin, 'koji_principal', krb_principal)
+            self.dj.dock_json_set_arg(phase, plugin, 'koji_keytab', krb_keytab)
+
     @staticmethod
     def remove_tag_and_push_registries(tag_and_push_registries, version):
         """
@@ -459,6 +477,7 @@ class BuildRequest(object):
                     ("postbuild_plugins", "compress"),
                     ("postbuild_plugins", "tag_from_config"),
                     ("exit_plugins", "koji_promote"),
+                    ("exit_plugins", "koji_tag_build"),
             ]:
                 logger.info("removing %s from scratch build request",
                             which)
@@ -589,19 +608,31 @@ class BuildRequest(object):
 
             if use_auth is not None:
                 self.dj.dock_json_set_arg('exit_plugins', 'koji_promote',
-                                            'use_auth', use_auth)
+                                          'use_auth', use_auth)
 
-            if (self.spec.koji_use_kerberos.value and
-                    self.spec.koji_kerberos_principal.value and
-                    self.spec.koji_kerberos_keytab.value):
-                self.dj.dock_json_set_arg('exit_plugins', 'koji_promote',
-                    'koji_principal', self.spec.koji_kerberos_principal.value)
-                self.dj.dock_json_set_arg('exit_plugins', 'koji_promote',
-                    'koji_keytab', self.spec.koji_kerberos_keytab.value)
         else:
             logger.info("removing koji_promote from request as no kojihub "
                         "specified")
             self.dj.remove_plugin("exit_plugins", "koji_promote")
+
+    def render_koji_tag_build(self):
+        phase = 'exit_plugins'
+        plugin = 'koji_tag_build'
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return
+
+        if not self.spec.kojihub.value:
+            logger.info('Removing %s because no kojihub was specified', plugin)
+            self.dj.remove_plugin(phase, plugin)
+            return
+
+        if not self.spec.koji_target.value:
+            logger.info('Removing %s because no koji_target was specified', plugin)
+            self.dj.remove_plugin(phase, plugin)
+            return
+
+        self.dj.dock_json_set_arg(phase, plugin, 'kojihub', self.spec.kojihub.value)
+        self.dj.dock_json_set_arg(phase, plugin, 'target', self.spec.koji_target.value)
 
     def render_sendmail(self):
         """
@@ -922,6 +953,9 @@ class BuildRequest(object):
                           ('exit_plugins', 'koji_promote', 'koji_ssl_certs'):
                           self.spec.koji_certs_secret.value,
 
+                          ('exit_plugins', 'koji_tag_build', 'koji_ssl_certs'):
+                          self.spec.koji_certs_secret.value,
+
                           ('prebuild_plugins', 'add_filesystem', 'koji_ssl_certs_dir'):
                           self.spec.koji_certs_secret.value,
 
@@ -934,6 +968,11 @@ class BuildRequest(object):
 
                           ('buildstep_plugins', 'orchestrate_build', 'osbs_client_config'):
                           self.spec.client_config_secret.value})
+
+        self.set_kerberos_auth([
+            ('exit_plugins', 'koji_promote'),
+            ('exit_plugins', 'koji_tag_build'),
+        ])
 
         for (secret, path) in self.spec.token_secrets.value.items():
             self.set_secret_for_plugin(secret, mount_path=path)
@@ -960,6 +999,7 @@ class BuildRequest(object):
         self.render_pulp_push()
         self.render_pulp_sync()
         self.render_koji_promote(use_auth=use_auth)
+        self.render_koji_tag_build()
         self.render_sendmail()
         self.render_version()
 

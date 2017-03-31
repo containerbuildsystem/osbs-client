@@ -1,5 +1,5 @@
 """
-Copyright (c) 2015 Red Hat, Inc
+Copyright (c) 2015, 2016, 2017 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -437,6 +437,9 @@ class TestBuildRequest(object):
         assert get_plugin(plugins, "exit_plugins", "koji_promote")
         assert plugin_value_get(plugins, "exit_plugins", "koji_promote", "args",
                                 "target") == koji_target
+        assert get_plugin(plugins, "exit_plugins", "koji_tag_build")
+        assert plugin_value_get(plugins, "exit_plugins", "koji_tag_build", "args",
+                                "target") == koji_target
 
         labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile",
                                   "args", "labels")
@@ -509,6 +512,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "koji_promote")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "exit_plugins", "koji_tag_build")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "sendmail")
         with pytest.raises(NoSuchPluginException):
@@ -883,10 +888,14 @@ class TestBuildRequest(object):
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, "exit_plugins", "koji_promote")
 
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "exit_plugins", "koji_tag_build")
+
         else:
             assert get_plugin(plugins, "postbuild_plugins", "compress")
             assert get_plugin(plugins, "postbuild_plugins", "tag_from_config")
             assert get_plugin(plugins, "exit_plugins", "koji_promote")
+            assert get_plugin(plugins, "exit_plugins", "koji_tag_build")
 
         assert (get_plugin(plugins, "postbuild_plugins", "tag_by_labels")
                 .get('args', {}).get('unique_tag_only', False) == scratch)
@@ -1236,6 +1245,10 @@ class TestBuildRequest(object):
             plugin_value_get(plugins, 'exit_plugins', 'koji_promote',
                              'args', 'metadata_only')  # v1 enabled by default
 
+        assert get_plugin(plugins, "exit_plugins", "koji_tag_build")
+        assert plugin_value_get(plugins, "exit_plugins", "koji_tag_build",
+                                "args", "kojihub") == kwargs["kojihub"]
+
         mount_path = get_secret_mountpath_by_name(build_json, pdc_secret_name)
         expected = {'args': {'from_address': 'osbs@example.com',
                              'url': 'http://openshift/',
@@ -1381,9 +1394,14 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
                                 "args", "url") == kwargs["openshift_uri"]
 
+        assert get_plugin(plugins, "exit_plugins", "koji_tag_build")
+        assert plugin_value_get(plugins, "exit_plugins", "koji_tag_build",
+                                "args", "kojihub") == kwargs["kojihub"]
+
         mount_path = get_secret_mountpath_by_name(build_json,
                                                   koji_certs_secret_name)
         assert get_plugin(plugins, 'exit_plugins', 'koji_promote')['args']['koji_ssl_certs'] == mount_path
+        assert get_plugin(plugins, 'exit_plugins', 'koji_tag_build')['args']['koji_ssl_certs'] == mount_path
 
     def test_render_prod_request_with_koji_kerberos(self, tmpdir):
         self.create_image_change_trigger_json(str(tmpdir))
@@ -1432,6 +1450,12 @@ class TestBuildRequest(object):
         assert get_plugin(plugins, 'exit_plugins', 'koji_promote')['args']['koji_principal'] == koji_kerberos_principal
         assert get_plugin(plugins, 'exit_plugins', 'koji_promote')['args']['koji_keytab'] == koji_kerberos_keytab
 
+        assert get_plugin(plugins, "exit_plugins", "koji_tag_build")
+        assert plugin_value_get(plugins, "exit_plugins", "koji_tag_build",
+                                "args", "kojihub") == kwargs["kojihub"]
+
+        assert get_plugin(plugins, 'exit_plugins', 'koji_tag_build')['args']['koji_principal'] == koji_kerberos_principal
+        assert get_plugin(plugins, 'exit_plugins', 'koji_tag_build')['args']['koji_keytab'] == koji_kerberos_keytab
 
     @pytest.mark.parametrize(('base_image', 'is_custom'), [
         ('fedora', False),
