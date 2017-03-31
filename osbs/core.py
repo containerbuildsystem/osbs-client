@@ -6,6 +6,7 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, unicode_literals, absolute_import
+from functools import wraps
 import json
 import os
 import numbers
@@ -51,6 +52,27 @@ def check_response(response):
 
         logger.error("[%d] %s", response.status_code, content)
         raise OsbsResponseException(message=content, status_code=response.status_code)
+
+
+def retry_on_conflict(func, sleep_seconds=0.5, max_attempts=10):
+    @wraps(func)
+    def retry(*args, **kwargs):
+        last_exception = None
+        for attempt in range(max_attempts):
+            if attempt != 0:
+                time.sleep(sleep_seconds)
+
+            try:
+                return func(*args, **kwargs)
+            except OsbsResponseException as ex:
+                if ex.status_code != httplib.CONFLICT:
+                    raise
+
+                last_exception = ex
+
+        raise last_exception or RuntimeError("operation not attempted")
+
+    return retry
 
 
 # TODO: error handling: create function which handles errors in response object
@@ -641,6 +663,7 @@ class Openshift(object):
     def _replace_metadata_things(metadata, things, values):
         metadata[things] = values
 
+    @retry_on_conflict
     def adjust_attributes_on_object(self, collection, name, things, values, how):
         """
         adjust labels or annotations on object
@@ -657,7 +680,9 @@ class Openshift(object):
         :return:
         """
         url = self._build_url("%s/%s" % (collection, name))
-        build_json = self._get(url).json()
+        response = self._get(url)
+        logger.debug("before modification: %s", response.content)
+        build_json = response.json()
         how(build_json['metadata'], things, values)
         response = self._put(url, data=json.dumps(build_json), use_json=True)
         check_response(response)
