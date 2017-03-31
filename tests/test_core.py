@@ -229,6 +229,58 @@ class TestOpenshift(object):
             openshift.get_build_config_by_labels(label_selectors)
         assert str(exc.value).startswith('More than one build config found')
 
+    @pytest.mark.parametrize(('status_codes', 'should_raise'), [
+        ([httplib.OK], False),
+        ([httplib.CONFLICT, httplib.CONFLICT, httplib.OK], False),
+        ([httplib.CONFLICT, httplib.OK], False),
+        ([httplib.CONFLICT, httplib.CONFLICT, httplib.UNAUTHORIZED], True),
+        ([httplib.UNAUTHORIZED], True),
+        ([httplib.CONFLICT for _ in range(10)], True),
+    ])
+    @pytest.mark.parametrize('update_or_set', ['update', 'set'])
+    @pytest.mark.parametrize('attr_type', ['labels', 'annotations'])
+    @pytest.mark.parametrize('object_type', ['build', 'build_config'])
+    def test_retry_update_attributes(self, openshift,
+                                     status_codes, should_raise,
+                                     update_or_set,
+                                     attr_type,
+                                     object_type):
+        try:
+            fn = getattr(openshift,
+                         "{update}_{attr}_on_{object}"
+                         .format(update=update_or_set,
+                                 attr=attr_type,
+                                 object=object_type))
+        except AttributeError:
+            return  # not every combination is implemented
+
+        get_expectation = (flexmock(openshift)
+                           .should_receive('_get')
+                           .times(len(status_codes)))
+        put_expectation = (flexmock(openshift)
+                           .should_receive('_put')
+                           .times(len(status_codes)))
+        for status_code in status_codes:
+            get_response = HttpResponse(httplib.OK,
+                                        headers={},
+                                        content='{"metadata": {}}')
+            put_response = HttpResponse(status_code,
+                                        headers={},
+                                        content='')
+            get_expectation = get_expectation.and_return(get_response)
+            put_expectation = put_expectation.and_return(put_response)
+
+        (flexmock(time)
+            .should_receive('sleep')
+            .with_args(0.5))
+
+        args = ('any-object-id', {'key': 'value'})
+        if should_raise:
+            with pytest.raises(OsbsResponseException):
+                fn(*args)
+        else:
+            fn(*args)
+
     def test_put_image_stream_tag(self, openshift):
         tag_name = 'spam'
         tag_id = 'maps:' + tag_name
