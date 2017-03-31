@@ -144,6 +144,14 @@
       }
     },
     {
+      "name": "koji_tag_build",
+      "args": {
+        "kojihub": "{{KOJI_HUB}}",
+        "koji_keytab": false,
+        "koji_principal": false
+      }
+    },
+    {
       "name": "remove_built_image"
     }
   ]
