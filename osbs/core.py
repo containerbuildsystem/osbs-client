@@ -62,6 +62,7 @@ def retry_on_conflict(func, sleep_seconds=0.5, max_attempts=10):
             if attempt != 0:
                 time.sleep(sleep_seconds)
 
+            logger.debug("attempt %d to call %s", attempt + 1, func.__name__)
             try:
                 return func(*args, **kwargs)
             except OsbsResponseException as ex:
