@@ -45,6 +45,6 @@ setup(
     },
     install_requires=_install_requirements(),
     data_files=data_files.items(),
-    setup_requires=['pytest-runner'],
+    setup_requires=[],
     tests_require=_get_requirements('tests/requirements.txt'),
 )
