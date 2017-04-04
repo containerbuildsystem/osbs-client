@@ -28,7 +28,7 @@
 # set to 0 to create a normal release
 %global dev_release 1
 
-%if 0{?dev_release}
+%if 0%{?dev_release}
 %global postrelease dev
 %global release 0
 %else
