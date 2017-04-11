@@ -740,7 +740,7 @@ class OSBS(object):
             if self.os.token:
                 return self.os.token
 
-            raise OsbsValidationException("no token stored")
+            raise OsbsValidationException("no token stored for %s" % self.os_conf.conf_section)
 
     @osbsapi
     def login(self, token=None, username=None, password=None):
@@ -788,7 +788,7 @@ class OSBS(object):
                         stat.S_IRUSR | stat.S_IWUSR)
 
         with os.fdopen(fdesc, 'w') as f:
-            f.write(token)
+            f.write(token + '\n')
 
     @osbsapi
     def get_user(self, username="~"):
