@@ -8,14 +8,14 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import print_function, absolute_import, unicode_literals
 
 import logging
-import datetime
 import os
 import re
-from osbs.constants import DEFAULT_GIT_REF, DEFAULT_BUILD_IMAGE
+import random
+from osbs.constants import DEFAULT_GIT_REF, DEFAULT_BUILD_IMAGE, RAND_DIGITS
 from osbs.exceptions import OsbsValidationException
 from osbs.utils import (get_imagestreamtag_from_image,
                         make_name_from_git,
-                        RegistryURI)
+                        RegistryURI, utcnow)
 
 logger = logging.getLogger(__name__)
 
@@ -303,11 +303,12 @@ class BuildSpec(object):
             self.imagestream_insecure_registry.value = insecure
             logger.debug("setting 'imagestream_insecure_registry' to %r", insecure)
 
-        timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-        self.image_tag.value = "%s/%s:%s-%s" % (
+        timestamp = utcnow().strftime('%Y%m%d%H%M%S')
+        self.image_tag.value = "%s/%s:%s-%s-%s" % (
             self.user.value,
             self.component.value,
             self.koji_target.value or 'none',
+            random.randrange(10**(RAND_DIGITS - 1), 10**RAND_DIGITS),
             timestamp
         )
 

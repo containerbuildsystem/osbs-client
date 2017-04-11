@@ -207,7 +207,7 @@ class TestBuildRequest(object):
         assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
         assert build_json["spec"]["source"]["git"]["ref"] == TEST_GIT_REF
 
-        expected_output = "john-foo/component:none-20"
+        expected_output = "john-foo/component:none-"
         if registry_uris:
             expected_output = registry_uris[0] + "/" + expected_output
         assert build_json["spec"]["output"]["to"]["name"].startswith(expected_output)

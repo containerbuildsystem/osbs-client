@@ -20,6 +20,7 @@ import copy
 import datetime
 import getpass
 import sys
+import re
 from tempfile import NamedTemporaryFile
 
 from osbs.api import OSBS, osbsapi
@@ -1427,7 +1428,6 @@ class TestOSBS(object):
             'apiVersion': osbs.os_conf.get_openshift_api_version(),
 
             'metadata': {
-                'name': 'build',
                 'labels': {
                     'git-repo-name': 'reponame',
                     'git-branch': 'branch',
@@ -1443,6 +1443,11 @@ class TestOSBS(object):
                         },
                     },
                 },
+                'output': {
+                    'to': {
+                        'name': 'cindarella/foo:bar-12345-20001010112233'
+                    }
+                }
             },
         }
 
@@ -1461,8 +1466,8 @@ class TestOSBS(object):
         img = updated_build_json['spec']['strategy']['customStrategy']['from']
         img['kind'] = 'DockerImage'
         img['name'] = expect_name
-        build_name = 'scratch-%s' % datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-        updated_build_json['metadata']['name'] = build_name
+        updated_build_json['metadata']['name'] = 'scratch-%s' % (
+            build_json['spec']['output']['to']['name'][-20:])
 
         if kind == 'ImageStreamTag':
             (flexmock(osbs.os)
@@ -1482,11 +1487,6 @@ class TestOSBS(object):
                 .never())
 
         def verify_build_json(passed_build_json):
-            # Don't compare metadata.name directly as we can't control it
-            assert (isinstance(passed_build_json['metadata'].pop('name'),
-                               six.string_types))
-            del updated_build_json['metadata']['name']
-
             assert passed_build_json == updated_build_json
             return flexmock(json=lambda: {'spam': 'maps'})
 
