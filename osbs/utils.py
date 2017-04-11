@@ -289,6 +289,14 @@ def get_time_from_rfc3339(rfc3339):
         return timegm(time_tuple)
 
 
+def utcnow():
+    """
+    Return current time in UTC.
+
+    This function is created to make mocking in unit tests easier.
+    """
+    return datetime.utcnow()
+
 
 VALID_BUILD_CONFIG_NAME_CHARS = re.compile('[-a-z0-9]')
 

@@ -6,10 +6,14 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 import pytest
+from flexmock import flexmock
 
 from osbs.build.spec import BuildIDParam, RegistryURIsParam, BuildSpec
 from osbs.exceptions import OsbsValidationException
-from tests.constants import TEST_USER
+
+import datetime
+import random
+import sys
 
 
 class TestBuildIDParam(object):
@@ -74,3 +78,30 @@ class TestBuildSpec(object):
         assert registry.uri == 'http://registry.example.com:5000'
         assert registry.docker_uri == 'registry.example.com:5000'
         assert registry.version == 'v2'
+
+    @pytest.mark.parametrize('rand,timestr', [
+            ('12345', '20170501123456'),
+            ('67890', '20170731111111'),
+        ])
+    def test_image_tag(self, rand, timestr):
+        kwargs = self.get_minimal_kwargs()
+        kwargs.update({
+            'component': 'foo',
+            'koji_target': 'tothepoint',
+        })
+
+        (flexmock(sys.modules['osbs.build.spec'])
+            .should_receive('utcnow').once()
+            .and_return(datetime.datetime.strptime(timestr, '%Y%m%d%H%M%S')))
+
+        (flexmock(random)
+            .should_receive('randrange').once()
+            .with_args(10**(len(rand) - 1), 10**len(rand))
+            .and_return(int(rand)))
+
+        spec = BuildSpec()
+        spec.set_params(**kwargs)
+
+        img_tag = '{user}/{component}:{koji_target}-{random_number}-{time_string}'
+        img_tag = img_tag.format(random_number=rand, time_string=timestr, **kwargs)
+        assert spec.image_tag.value == img_tag
