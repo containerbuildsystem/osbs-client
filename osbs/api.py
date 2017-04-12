@@ -288,8 +288,6 @@ class OSBS(object):
         logger.debug(build_request)
         build_json = build_request.render()
         build_json['kind'] = 'Build'
-        if 'spec' not in build_json.keys():
-            build_json['spec'] = {}
         build_json['spec']['serviceAccount'] = 'builder'
         build_json['metadata']['labels']['scratch'] = 'true'
 
