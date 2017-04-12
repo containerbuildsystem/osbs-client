@@ -95,6 +95,8 @@ Some options are also mandatory.
 
 * `use_auth` (*optional*, `boolean`) — by default, osbs-client is trying to authenticate against OpenShift master to get OAuth token; you may disable the process with this option
 
+* `token` (*optional*, `string`) - OAuth token used to authenticate against OpenShift
+
 * `builder_use_auth` (*optional*, `boolean`) — whether atomic-reactor plugins which in turn use osbs-client from within the build pod should try to authenticate against OpenShift master; defaults to `use_auth`
 
 * `builder_openshift_url` (*optional*, `string`) — url of OpenShift where builder will connect

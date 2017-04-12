@@ -335,18 +335,7 @@ $ docker pull slavek/atomic-reactor
 
 ### Building build image
 
-You can also build the image yourself using Dockerfile:
-
-
-```
-FROM fedora
-
-RUN yum -y update && \
-    yum -y install atomic-reactor* && \
-    yum clean all
-
-CMD ["atomic-reactor", "--verbose", "inside-build"]
-```
+You can also build the image yourself using Dockerfile from root of this repository.
 
 *Optional packages*
 
@@ -358,7 +347,7 @@ CMD ["atomic-reactor", "--verbose", "inside-build"]
 Time to build it:
 
 ```
-$ docker build --no-cache=true --tag=buildroot ${BUILDROOT_DOCKERFILE_PATH}
+$ docker build --no-cache=true --tag=buildroot .
 ```
 
 ## Docker registry
