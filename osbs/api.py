@@ -249,7 +249,7 @@ class OSBS(object):
         - metadata.labels.git-repo-name AND metadata.labels.git-branch are equal
         """
 
-        git_labels = [(key, build_config['metadata']['labels'][key])
+        git_labels = [(key, build_config['metadata']['labels'].get(key, None))
                       for key in self._GIT_LABEL_KEYS]
         name = build_config['metadata']['name']
 
