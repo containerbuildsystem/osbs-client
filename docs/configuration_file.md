@@ -137,6 +137,7 @@ Some options are also mandatory.
 
 * `can_orchestrate` (*optional*, `boolean`) — allows using orchestrator build, default is false
 
+* `info_url_format` (*optional*, `string`) — format for `url` Dockerfile label, used as a Python format string; replacement field keywords are label names, and they will be replaced with the value of the named label
 
 ## Build JSON Templates
 
