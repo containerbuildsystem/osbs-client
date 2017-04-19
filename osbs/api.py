@@ -499,6 +499,7 @@ class OSBS(object):
             client_config_secret=self.build_conf.get_client_config_secret(),
             token_secrets=self.build_conf.get_token_secrets(),
             arrangement_version=arrangement_version,
+            info_url_format=self.build_conf.get_info_url_format(),
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         if build_request.scratch:

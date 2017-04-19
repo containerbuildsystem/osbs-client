@@ -487,3 +487,7 @@ class Configuration(object):
 
     def get_can_orchestrate(self):
         return self._get_value("can_orchestrate", self.conf_section, "can_orchestrate", default=False, is_bool_val=True)
+
+    def get_info_url_format(self):
+        return self._get_value("info_url_format", self.conf_section,
+                               "info_url_format")

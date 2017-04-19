@@ -542,6 +542,10 @@ class BuildRequest(object):
 
         self.dj.dock_json_merge_arg(phase, plugin, 'labels', implicit_labels)
 
+        if self.spec.info_url_format.value:
+            self.dj.dock_json_set_arg(phase, plugin, 'info_url_format',
+                                      self.spec.info_url_format.value)
+
     def render_koji(self):
         """
         if there is yum repo specified, don't pick stuff from koji

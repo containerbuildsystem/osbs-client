@@ -1702,3 +1702,17 @@ class TestBuildRequest(object):
                 assert get_secret_mountpath_by_name(build_json, sec) == path
             else:
                 assert get_secret_mountpath_by_name(build_json, sec) == os.path.join(SECRETS_PATH, sec)
+
+    def test_info_url_format(self):
+        br = BuildRequest(INPUTS_PATH)
+        kwargs = get_sample_prod_params()
+        info_url_format = "info_url"
+        kwargs['info_url_format'] = info_url_format
+        br.set_params(**kwargs)
+        build_json = br.render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        assert get_plugin(plugins, 'prebuild_plugins', 'add_labels_in_dockerfile')
+        assert plugin_value_get(plugins, 'prebuild_plugins',
+                                'add_labels_in_dockerfile', 'args',
+                                'info_url_format') == info_url_format
