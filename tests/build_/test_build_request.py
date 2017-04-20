@@ -314,6 +314,8 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "postbuild_plugins", "pulp_pull")
+        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
@@ -427,6 +429,8 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "postbuild_plugins", "pulp_pull")
+        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
@@ -505,6 +509,8 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "postbuild_plugins", "pulp_pull")
+        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "koji_promote")
@@ -557,6 +563,7 @@ class TestBuildRequest(object):
         assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
         assert plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push',
                                 'args', 'pulp_secret_path') == mount_path
+        assert get_plugin(plugins, "postbuild_plugins", "pulp_pull")
 
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
@@ -697,6 +704,8 @@ class TestBuildRequest(object):
         assert get_plugin(plugins, "prebuild_plugins", "koji")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "postbuild_plugins", "pulp_pull")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
         with pytest.raises(NoSuchPluginException):
@@ -888,6 +897,7 @@ class TestBuildRequest(object):
 
         assert (get_plugin(plugins, "postbuild_plugins", "tag_by_labels")
                 .get('args', {}).get('unique_tag_only', False) == scratch)
+        assert get_plugin(plugins, "postbuild_plugins", "pulp_pull")
 
     def test_render_with_yum_repourls(self):
         kwargs = {
@@ -951,6 +961,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "pulp_push")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "postbuild_plugins", "pulp_pull")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
 
@@ -1345,6 +1357,7 @@ class TestBuildRequest(object):
             plugins = get_plugins_from_build_json(build_json)
             assert plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push',
                                     'args', 'pulp_secret_path') == mount_path
+        assert get_plugin(plugins, "postbuild_plugins", "pulp_pull")
 
     def test_render_prod_request_with_koji_secret(self, tmpdir):
         self.create_image_change_trigger_json(str(tmpdir))

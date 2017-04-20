@@ -680,6 +680,20 @@ class BuildRequest(object):
             self.dj.dock_json_set_arg(phase, plugin,
                                       'email_domain', self.spec.smtp_email_domain.value)
 
+    def render_pulp_pull(self):
+        """
+        If a pulp registry is specified, use pulp_pull plugin
+        """
+        phase = 'postbuild_plugins'
+        plugin = 'pulp_pull'
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return
+
+        pulp_registry = self.spec.pulp_registry.value
+        if not pulp_registry:
+            logger.info("removing %s from request, requires pulp_registry", pulp_registry)
+            self.dj.remove_plugin(phase, plugin)
+
     def render_pulp_push(self):
         """
         If a pulp registry is specified, use the pulp plugin
@@ -1021,6 +1035,7 @@ class BuildRequest(object):
         self.render_koji()
         self.render_bump_release()
         self.render_import_image(use_auth=use_auth)
+        self.render_pulp_pull()
         self.render_pulp_push()
         self.render_pulp_sync()
         self.render_koji_promote(use_auth=use_auth)
