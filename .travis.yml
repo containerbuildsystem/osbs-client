@@ -8,7 +8,9 @@ python:
 install:
   - "pip install -r requirements.txt"
   - "pip install -r tests/requirements.txt"
-  - "pip install pytest-cov coveralls"
+# coverage 4.3.2 fails with py 2.6:
+# https://bitbucket.org/ned/coveragepy/issues/555/coverage-432-claims-support-for-py26-but
+  - "pip install coverage==4.3.1 pytest-cov coveralls"
   - "if [[ ${TRAVIS_PYTHON_VERSION%.*} -gt 2 ]]; then pip install -r requirements-py3.txt; fi"
 # command to run tests
 script: py.test -vv tests --cov osbs
