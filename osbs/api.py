@@ -293,6 +293,7 @@ class OSBS(object):
             build_json['spec'] = {}
         build_json['spec']['serviceAccount'] = 'builder'
         build_json['metadata']['labels']['scratch'] = 'true'
+        build_json['metadata']['labels']['openshift.io/build.start-policy'] = 'Parallel'
 
         builder_img = build_json['spec']['strategy']['customStrategy']['from']
         kind = builder_img['kind']
