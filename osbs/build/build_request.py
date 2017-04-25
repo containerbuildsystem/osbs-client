@@ -684,6 +684,31 @@ class BuildRequest(object):
             self.dj.dock_json_set_arg(phase, plugin,
                                       'email_domain', self.spec.smtp_email_domain.value)
 
+    def render_fetch_maven_artifacts(self):
+        """Configure fetch_maven_artifacts plugin"""
+        phase = 'prebuild_plugins'
+        plugin = 'fetch_maven_artifacts'
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return
+
+        koji_hub = self.spec.kojihub.value
+        koji_root = self.spec.kojiroot.value
+
+        if not koji_hub and not koji_root:
+            logger.info('Removing %s because kojihub and kojiroot were not specified', plugin)
+            self.dj.remove_plugin(phase, plugin)
+            return
+
+        self.dj.dock_json_set_arg(phase, plugin, 'koji_hub', koji_hub)
+        self.dj.dock_json_set_arg(phase, plugin, "koji_root", koji_root)
+
+        if self.spec.proxy.value:
+            self.dj.dock_json_set_arg(phase, plugin, 'koji_proxyuser', self.spec.proxy.value)
+
+        if self.spec.artifacts_allowed_domains.value:
+            self.dj.dock_json_set_arg(phase, plugin, 'allowed_domains',
+                                      self.spec.artifacts_allowed_domains.value)
+
     def render_pulp_pull(self):
         """
         If a pulp registry is specified, use pulp_pull plugin
@@ -998,6 +1023,9 @@ class BuildRequest(object):
                           ('prebuild_plugins', 'koji', 'koji_ssl_certs_dir'):
                           self.spec.koji_certs_secret.value,
 
+                          ('prebuild_plugins', 'fetch_maven_artifacts', 'koji_ssl_certs_dir'):
+                          self.spec.koji_certs_secret.value,
+
                           ('exit_plugins', 'sendmail', 'koji_ssl_certs_dir'):
                           self.spec.koji_certs_secret.value,
 
@@ -1012,6 +1040,7 @@ class BuildRequest(object):
                           self.spec.client_config_secret.value})
 
         self.set_kerberos_auth([
+            ('prebuild_plugins', 'fetch_maven_artifacts'),
             ('exit_plugins', 'koji_promote'),
             ('exit_plugins', 'koji_tag_build'),
             ('exit_plugins', 'sendmail')
@@ -1045,6 +1074,7 @@ class BuildRequest(object):
         self.render_koji_promote(use_auth=use_auth)
         self.render_koji_tag_build()
         self.render_sendmail()
+        self.render_fetch_maven_artifacts()
         self.render_version()
 
         self.dj.write_dock_json()

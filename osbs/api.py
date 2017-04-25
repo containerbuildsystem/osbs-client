@@ -500,6 +500,7 @@ class OSBS(object):
             token_secrets=self.build_conf.get_token_secrets(),
             arrangement_version=arrangement_version,
             info_url_format=self.build_conf.get_info_url_format(),
+            artifacts_allowed_domains=self.build_conf.get_artifacts_allowed_domains(),
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         if build_request.scratch:

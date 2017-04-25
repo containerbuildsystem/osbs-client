@@ -334,3 +334,24 @@ class TestConfiguration(object):
         with self.config_file(config) as config_file:
             conf = Configuration(conf_file=config_file)
             assert conf.get_smtp_error_addresses() == expected
+
+    @pytest.mark.parametrize(('config', 'expected'), [
+        ({'default': {'artifacts_allowed_domains': 'spam.com'}},
+         ['spam.com']),
+
+        ({'default': {'artifacts_allowed_domains': 'spam.com,eggs.com'}},
+         ['spam.com', 'eggs.com']),
+
+        ({'default': {'artifacts_allowed_domains': 'spam.com, eggs.com'}},
+         ['spam.com', 'eggs.com']),
+
+        ({'default': {'artifacts_allowed_domains': '\tspam.com,\teggs.com'}},
+         ['spam.com', 'eggs.com']),
+
+        ({'default': {'artifacts_allowed_domains': '\n  spam.com,     eggs.com,\n\n bacon.com'}},
+         ['spam.com', 'eggs.com', 'bacon.com']),
+    ])
+    def test_get_allowed_artifacts_domain(self, config, expected):
+        with self.config_file(config) as config_file:
+            conf = Configuration(conf_file=config_file)
+            assert conf.get_artifacts_allowed_domains() == expected

@@ -139,6 +139,8 @@ Some options are also mandatory.
 
 * `info_url_format` (*optional*, `string`) — format for `url` Dockerfile label, used as a Python format string; replacement field keywords are label names, and they will be replaced with the value of the named label
 
+* `artifacts_allowed_domains` (*optional*, `string`) — list of domains allowed to be used when fetching artifacts via URL. When not specified, all domains are allowed.
+
 ## Build JSON Templates
 
 In the `build_json_dir` there must be `prod.json` and `prod_inner.json` which

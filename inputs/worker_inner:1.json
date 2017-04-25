@@ -44,6 +44,14 @@
       }
     },
     {
+      "args": {
+        "koji_root": "{{KOJI_ROOT}}",
+        "koji_hub": "{{KOJI_HUB}}"
+      },
+      "required": false,
+      "name": "fetch_maven_artifacts"
+    },
+    {
       "name": "koji",
       "args": {
         "root": "{{KOJI_ROOT}}",

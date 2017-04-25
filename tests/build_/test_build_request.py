@@ -1004,6 +1004,62 @@ class TestBuildRequest(object):
             assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
                                     "args", "hub") == hub
 
+    @pytest.mark.parametrize(('hub', 'root', 'disabled'), [
+        ('http://hub/', 'http://root/', False),
+        (None, None, True),
+    ])
+    @pytest.mark.parametrize(('allowed_domains'), [
+        [],
+        ['spam.com'],
+        ['spam', 'bacon.com'],
+    ])
+    def test_render_fetch_maven_artifacts(self, hub, root, disabled, allowed_domains):
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'base_image': 'fedora:latest',
+            'name_label': 'fedora/resultingimage',
+            'registry_uri': "registry.example.com",
+            'openshift_uri': "http://openshift/",
+            'sources_command': "make",
+            'vendor': "Foo Vendor",
+            'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
+            'registry_api_versions': ['v1'],
+        }
+
+        if hub:
+            kwargs['kojihub'] = hub
+        if root:
+            kwargs['kojiroot'] = root
+        if allowed_domains:
+            kwargs['artifacts_allowed_domains'] = allowed_domains
+
+        build_request = BuildRequest(INPUTS_PATH)
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        if disabled:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "prebuild_plugins", "fetch_maven_artifacts")
+
+        else:
+            assert plugin_value_get(plugins, "prebuild_plugins", "fetch_maven_artifacts",
+                                    "args", "koji_hub") == hub
+            assert plugin_value_get(plugins, "prebuild_plugins", "fetch_maven_artifacts",
+                                    "args", "koji_root") == root
+
+            if allowed_domains:
+                assert plugin_value_get(plugins, "prebuild_plugins", "fetch_maven_artifacts",
+                                        "args", "allowed_domains") == allowed_domains
+            else:
+                with pytest.raises(KeyError):
+                    plugin_value_get(plugins, "prebuild_plugins", "fetch_maven_artifacts",
+                                     "args", "allowed_domains")
+
     @staticmethod
     def create_no_plugins_json(outdir):
         """
