@@ -491,3 +491,11 @@ class Configuration(object):
     def get_info_url_format(self):
         return self._get_value("info_url_format", self.conf_section,
                                "info_url_format")
+
+    def get_artifacts_allowed_domains(self):
+        value = self._get_value("artifacts_allowed_domains", self.conf_section,
+                                "artifacts_allowed_domains")
+        if value:
+            return [x.strip() for x in value.split(',')]
+        else:
+            return []
