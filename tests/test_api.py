@@ -1399,12 +1399,28 @@ class TestOSBS(object):
         build_response = osbs._create_build_config_and_build(build_request)
         assert build_response.json == {'spam': 'maps'}
 
+    @pytest.mark.parametrize(('nodeselector_str, nodeselector_dict'), [
+        (None, {}),
+        ('foo=  bar', {'foo': 'bar'}),
+        ('foo=bar ,  baz=foo', {'foo': 'bar', 'baz': 'foo'}),
+    ])
     @pytest.mark.parametrize(('kind', 'expect_name'), [
         ('ImageStreamTag', 'registry:5000/buildroot:latest'),
         ('DockerImage', 'buildroot:latest'),
     ])
-    def test_scratch_build_config(self, kind, expect_name):
-        config = Configuration()
+    def test_scratch_build_config(self, kind, expect_name, nodeselector_str, nodeselector_dict):
+        if nodeselector_str:
+            with NamedTemporaryFile(mode='wt') as fp:
+                fp.write(dedent("""\
+                    [general]
+                    build_json_dir = inputs
+                    [default]
+                    low_priority_node_selector = {nodeselector}
+                    """.format(nodeselector=nodeselector_str)))
+                fp.flush()
+                config = Configuration(fp.name)
+        else:
+            config = Configuration()
         osbs = OSBS(config, config)
 
         build_json = {
@@ -1434,11 +1450,14 @@ class TestOSBS(object):
             render=lambda: build_json,
             has_ist_trigger=lambda: False,
             scratch=True)
+        build_request.low_priority_node_selector = config.get_low_priority_node_selector()
 
         updated_build_json = copy.deepcopy(build_json)
         updated_build_json['kind'] = 'Build'
         updated_build_json['metadata']['labels']['scratch'] = 'true'
         updated_build_json['spec']['serviceAccount'] = 'builder'
+        if nodeselector_dict:
+            updated_build_json['spec']['nodeSelector'] = nodeselector_dict
         img = updated_build_json['spec']['strategy']['customStrategy']['from']
         img['kind'] = 'DockerImage'
         img['name'] = expect_name

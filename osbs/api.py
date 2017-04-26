@@ -294,6 +294,9 @@ class OSBS(object):
         build_json['spec']['serviceAccount'] = 'builder'
         build_json['metadata']['labels']['scratch'] = 'true'
 
+        if build_request.low_priority_node_selector:
+            build_json['spec']['nodeSelector'] = build_request.low_priority_node_selector
+
         builder_img = build_json['spec']['strategy']['customStrategy']['from']
         kind = builder_img['kind']
         if kind == 'ImageStreamTag':
@@ -501,6 +504,7 @@ class OSBS(object):
             arrangement_version=arrangement_version,
             info_url_format=self.build_conf.get_info_url_format(),
             artifacts_allowed_domains=self.build_conf.get_artifacts_allowed_domains(),
+            low_priority_node_selector=self.build_conf.get_low_priority_node_selector()
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         if build_request.scratch:

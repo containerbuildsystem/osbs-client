@@ -141,6 +141,8 @@ Some options are also mandatory.
 
 * `artifacts_allowed_domains` (*optional*, `string`) — list of domains allowed to be used when fetching artifacts via URL. When not specified, all domains are allowed.
 
+* `low_priority_node_selector` (*optional*, `string`) — a nodeselector to be applied to builds, which are considered to have less priority than normal ones
+
 ## Build JSON Templates
 
 In the `build_json_dir` there must be `prod.json` and `prod_inner.json` which
