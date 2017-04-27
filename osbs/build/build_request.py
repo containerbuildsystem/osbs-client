@@ -208,12 +208,39 @@ class BuildRequest(object):
             'arrangement_version': self.spec.arrangement_version.value,
         }
 
-        self.dj.dock_json_set_arg(phase, plugin, 'platforms',
-                                  self.spec.platforms.value)
+        self.dj.dock_json_set_arg(phase, plugin, 'platforms', self.spec.platforms.value)
         self.dj.dock_json_set_arg(phase, plugin, 'build_kwargs', build_kwargs)
 
+        # Parameters to be used as Configuration overrides for each worker
+        config_kwargs = {
+            'authoritative_registry': self.spec.authoritative_registry.value,
+            'distribution_scope': self.spec.distribution_scope.value,
+            'info_url_format': self.spec.info_url_format.value,
+            'koji_hub': self.spec.kojihub.value,
+            'koji_root': self.spec.kojiroot.value,
+            'openshift_required_version': self._openshift_required_version,
+            'pulp_registry_name': self.spec.pulp_registry.value,
+            'registry_api_versions': ','.join(self.spec.registry_api_versions.value or []) or None,
+            'smtp_additional_addresses': ','.join(self.spec.smtp_additional_addresses.value or []) or None,
+            'smtp_email_domain': self.spec.smtp_email_domain.value,
+            'smtp_error_addresses': ','.join(self.spec.smtp_error_addresses.value or []) or None,
+            'smtp_from': self.spec.smtp_from.value,
+            'smtp_host': self.spec.smtp_host.value,
+            'smtp_to_pkgowner': self.spec.smtp_to_pkgowner.value,
+            'smtp_to_submitter': self.spec.smtp_to_submitter.value,
+            'source_registry_uri': self.spec.source_registry_uri.value,
+            'sources_command': self.spec.sources_command.value,
+            'vendor': self.spec.vendor.value,
+        }
+
+        # Remove empty values, and always convert to string for better interaction
+        # with Configuration class and JSON encoding
+        config_kwargs = dict((k, str(v)) for k, v in config_kwargs.items() if v is not None)
+
         if not self.spec.build_imagestream.value:
-            self.dj.dock_json_set_arg(phase, plugin, 'worker_build_image', self.spec.build_image.value)
+            config_kwargs['build_image'] = self.spec.build_image.value
+
+        self.dj.dock_json_set_arg(phase, plugin, 'config_kwargs', config_kwargs)
 
     def render_resource_limits(self):
         if self._resource_limits is not None:
