@@ -20,9 +20,11 @@ from osbs.constants import (DEFAULT_BUILD_IMAGE, DEFAULT_OUTER_TEMPLATE,
                             DEFAULT_ARRANGEMENT_VERSION)
 from osbs.exceptions import OsbsValidationException
 from osbs import __version__ as expected_version
+from osbs.conf import Configuration
 
 from flexmock import flexmock
 import pytest
+from pkg_resources import parse_version
 
 from tests.constants import (INPUTS_PATH, TEST_BUILD_CONFIG, TEST_BUILD_JSON,
                              TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
@@ -1058,9 +1060,37 @@ class TestBuildRequest(object):
         (None, None, DEFAULT_BUILD_IMAGE),
         ('fedora:latest', 'buildroot-stream:v1.0', KeyError)
     ))
-    def test_render_orchestrate_build(self, platforms, secret, disabled,
+    @pytest.mark.parametrize('additional_kwargs', (
+        {
+            'authoritative_registry': 'authoritative_registry',
+            'distribution_scope': 'distribution_scope',
+            'info_url_format': 'info_url_format',
+            'kojihub': 'kojihub',
+            'kojiroot': 'kojiroot',
+            'pulp_registry': 'pulp_registry',
+            'registry_api_versions': ['v1', 'v2'],
+            'smtp_additional_addresses': ['spam@food.bz', 'bacon@food.bz'],
+            'smtp_email_domain': 'smtp_email_domain',
+            'smtp_error_addresses': ['error1@foo.com', 'error2@foo.com'],
+            'smtp_from': 'smtp_from',
+            'smtp_host': 'smtp_host',
+            'smtp_to_pkgowner': True,
+            'smtp_to_submitter': False,
+            'source_registry_uri': 'source_registry_uri',
+            'sources_command': 'sources_command',
+            'vendor': 'vendor',
+        },
+        {}
+    ))
+    @pytest.mark.parametrize(('openshift_req_version', 'worker_openshift_req_version'), (
+        (None, '1.0.6'),
+        ('1.3.4', '1.3.4'),
+    ))
+    def test_render_orchestrate_build(self, tmpdir, platforms, secret, disabled,
                                       arrangement_version, build_image,
-                                      build_imagestream, worker_build_image):
+                                      build_imagestream, worker_build_image,
+                                      additional_kwargs, openshift_req_version,
+                                      worker_openshift_req_version):
         phase = 'buildstep_plugins'
         plugin = 'orchestrate_build'
 
@@ -1085,11 +1115,14 @@ class TestBuildRequest(object):
             kwargs['build_image'] = build_image
         if build_imagestream:
             kwargs['build_imagestream'] = build_imagestream
+        kwargs.update(additional_kwargs)
 
         inner_template = ORCHESTRATOR_INNER_TEMPLATE.format(
             arrangement_version=arrangement_version)
         build_request = BuildRequest(INPUTS_PATH, inner_template=inner_template)
         build_request.set_params(**kwargs)
+        if openshift_req_version:
+            build_request.set_openshift_required_version(openshift_req_version)
         build_json = build_request.render()
         strategy = build_json['spec']['strategy']['customStrategy']['env']
         plugins = get_plugins_from_build_json(build_json)
@@ -1105,14 +1138,42 @@ class TestBuildRequest(object):
                                             'build_kwargs')
             assert build_kwargs['arrangement_version'] == arrangement_version
 
+            worker_config_kwargs = plugin_value_get(plugins, phase, plugin, 'args',
+                                                    'config_kwargs')
+
+            worker_config = Configuration(conf_file=None, **worker_config_kwargs)
+
             if isinstance(worker_build_image, type):
                 with pytest.raises(worker_build_image):
-                    plugin_value_get(plugins, phase, plugin, 'args',
-                    'worker_build_image')
+                    worker_config_kwargs['build_image']
+                worker_config.get_build_image() == None
             else:
-                assert plugin_value_get(plugins, phase, plugin, 'args',
-                    'worker_build_image') == worker_build_image
+                assert worker_config_kwargs['build_image'] == worker_build_image
+                assert worker_config.get_build_image() == worker_build_image
 
+            assert (kwargs.get('authoritative_registry') ==
+                    worker_config.get_authoritative_registry())
+            assert kwargs.get('distribution_scope') == worker_config.get_distribution_scope()
+            assert kwargs.get('info_url_format') == worker_config.get_info_url_format()
+            assert kwargs.get('kojihub') == worker_config.get_kojihub()
+            assert kwargs.get('kojiroot') == worker_config.get_kojiroot()
+            assert kwargs.get('pulp_registry') == worker_config.get_pulp_registry()
+            assert (kwargs.get('registry_api_versions') ==
+                    worker_config.get_registry_api_versions())
+            assert (kwargs.get('smtp_additional_addresses') or [] ==
+                    worker_config.get_smtp_additional_addresses())
+            assert kwargs.get('smtp_email_domain') == worker_config.get_smtp_email_domain()
+            assert (kwargs.get('smtp_error_addresses') or [] ==
+                    worker_config.get_smtp_error_addresses())
+            assert kwargs.get('smtp_from') == worker_config.get_smtp_from()
+            assert kwargs.get('smtp_host') == worker_config.get_smtp_host()
+            assert kwargs.get('smtp_to_pkgowner') == worker_config.get_smtp_to_pkgowner()
+            assert kwargs.get('smtp_to_submitter') == worker_config.get_smtp_to_submitter()
+            assert kwargs.get('source_registry_uri') == worker_config.get_source_registry_uri()
+            assert kwargs.get('sources_command') == worker_config.get_sources_command()
+            assert kwargs.get('vendor') == worker_config.get_vendor()
+            assert (parse_version(worker_openshift_req_version) ==
+                    worker_config.get_openshift_required_version())
 
     def test_render_prod_with_pulp_no_auth(self):
         """
