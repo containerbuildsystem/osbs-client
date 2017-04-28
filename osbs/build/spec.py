@@ -172,6 +172,7 @@ class BuildSpec(object):
     arrangement_version = BuildParam("arrangement_version", allow_none=True)
     info_url_format = BuildParam("info_url_format", allow_none=True)
     artifacts_allowed_domains = BuildParam("artifacts_allowed_domains", allow_none=True)
+    equal_labels = BuildParam("equal_labels", allow_none=True)
 
     def __init__(self):
         self.required_params = [
@@ -221,7 +222,7 @@ class BuildSpec(object):
                    reactor_config_secret=None, client_config_secret=None,
                    token_secrets=None, arrangement_version=None,
                    info_url_format=None, artifacts_allowed_domains=None,
-                   **kwargs):
+                   equal_labels=None, **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
         self.user.value = user
@@ -321,6 +322,7 @@ class BuildSpec(object):
         self.arrangement_version.value = arrangement_version
         self.info_url_format.value = info_url_format
         self.artifacts_allowed_domains.value = artifacts_allowed_domains
+        self.equal_labels.value = equal_labels
 
     def validate(self):
         logger.info("Validating params of %s", self.__class__.__name__)

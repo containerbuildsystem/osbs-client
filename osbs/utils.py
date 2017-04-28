@@ -402,6 +402,9 @@ class Labels(object):
     - LABEL_TYPE_SOURCE: authoritative location for publishing
     - LABEL_TYPE_COMPONENT: Bugzilla (or other tracker) component
     - LABEL_TYPE_HOST: build host used to create the image
+    - LABEL_TYPE_RUN: command to run the image
+    - LABEL_TYPE_INSTALL: command to install the image
+    - LABEL_TYPE_UNINSTALL: command to uninstall the image
     """
     LABEL_TYPE_NAME = object()
     LABEL_TYPE_VERSION = object()
@@ -411,6 +414,9 @@ class Labels(object):
     LABEL_TYPE_SOURCE = object()
     LABEL_TYPE_COMPONENT = object()
     LABEL_TYPE_HOST = object()
+    LABEL_TYPE_RUN = object()
+    LABEL_TYPE_INSTALL = object()
+    LABEL_TYPE_UNINSTALL = object()
     LABEL_NAMES = {
         LABEL_TYPE_NAME: ('name', 'Name'),
         LABEL_TYPE_VERSION: ('version', 'Version'),
@@ -419,7 +425,10 @@ class Labels(object):
         LABEL_TYPE_VENDOR: ('vendor', 'Vendor'),
         LABEL_TYPE_SOURCE: ('authoritative-source-url', 'Authoritative_Registry'),
         LABEL_TYPE_COMPONENT: ('com.redhat.component', 'BZComponent'),
-        LABEL_TYPE_HOST: ('com.redhat.build-host', 'Build_Host')
+        LABEL_TYPE_HOST: ('com.redhat.build-host', 'Build_Host'),
+        LABEL_TYPE_RUN: ('run', 'RUN'),
+        LABEL_TYPE_INSTALL: ('install', 'INSTALL'),
+        LABEL_TYPE_UNINSTALL: ('uninstall', 'UNINSTALL')
     }
 
     def __init__(self, df_labels):
