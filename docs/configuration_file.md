@@ -143,6 +143,8 @@ Some options are also mandatory.
 
 * `low_priority_node_selector` (*optional*, `string`) — a nodeselector to be applied to builds, which are considered to have less priority than normal ones
 
+* `equal_labels` (*optional*, `string`) — list of equal-preference label groups; if any of each set is missing, aliases will be added to complete the set; label delimiter ':', group delimiter ',' (e.g. `name1:name2:name3, release1:release2, version1:version2`)
+
 ## Build JSON Templates
 
 In the `build_json_dir` there must be `prod.json` and `prod_inner.json` which

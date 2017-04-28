@@ -355,3 +355,49 @@ class TestConfiguration(object):
         with self.config_file(config) as config_file:
             conf = Configuration(conf_file=config_file)
             assert conf.get_artifacts_allowed_domains() == expected
+
+    @pytest.mark.parametrize(('config', 'expected'), [
+        ({'default': {'equal_labels':
+                      'label1:label2, label3:label4:label5, label6:label7'}},
+         [['label1', 'label2'],
+          ['label3', 'label4', 'label5'],
+          ['label6', 'label7']]),
+
+        ({'default': {'equal_labels':
+                      '\t      label1:label2   , label3:label4:label5, label6:label7    '}},
+         [['label1', 'label2'],
+          ['label3', 'label4', 'label5'],
+          ['label6', 'label7']]),
+
+        ({'default': {'equal_labels':
+                      '     label1:label2: \t\t, label3:label4:label5, label6:label7    '}},
+         OsbsValidationException),
+
+        ({'default': {'equal_labels':
+                      'label1:label2,   , label3:label4:label5, label6:label7    '}},
+         OsbsValidationException),
+
+        ({'default': {'equal_labels': 'label1:'}},
+         OsbsValidationException),
+
+        ({'default': {'equal_labels': 'label1,'}},
+         OsbsValidationException),
+
+        ({'default': {'equal_labels': 'label1 '}},
+         OsbsValidationException),
+
+        ({'default': {'equal_labels': ',label1 '}},
+         OsbsValidationException),
+
+        ({'default': {'equal_labels': ':label1 '}},
+         OsbsValidationException),
+    ])
+    def test_get_equal_labels(self, config, expected):
+        with self.config_file(config) as config_file:
+            conf = Configuration(conf_file=config_file)
+
+            if expected is OsbsValidationException:
+                with pytest.raises(OsbsValidationException):
+                    conf.get_equal_labels()
+            else:
+                assert conf.get_equal_labels() == expected

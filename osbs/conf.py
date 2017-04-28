@@ -10,6 +10,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 import logging
 import os
 import os.path
+import re
 import warnings
 from pkg_resources import parse_version
 
@@ -510,3 +511,24 @@ class Configuration(object):
             nodeselector = dict([k.strip(), v.strip()] for (k, v) in raw_nodeselector.items())
 
         return nodeselector
+
+    def get_equal_labels(self):
+        equal_labels = []
+        equal_labels_str = self._get_value("equal_labels", self.conf_section,
+                                           "equal_labels")
+        if equal_labels_str:
+            # must be in correct format
+            # e.g. `name1:name2:name3, release1:release2, version1:version2`
+            # ',' separator for groups
+            # ':' separator for equal preference labels
+            # there has to be at least 2 labels in equal labels in group
+            if re.match('^[^:,\s]+(:[^:,\s]+)+\s*(,\s*[^:,\s]+(:[^:,\s]+\s*)+)*$',
+                        equal_labels_str):
+                label_groups = equal_labels_str.split(',')
+
+                for label_group in label_groups:
+                    equal_labels.append([label.strip() for label in label_group.split(':')])
+            else:
+                raise OsbsValidationException("Wrong equal_labels configuration")
+
+        return equal_labels
