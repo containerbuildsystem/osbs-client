@@ -347,14 +347,14 @@ class Configuration(object):
                                 "smtp_additional_addresses")
 
         if value:
-            return [x.strip() for x in ''.join(value.splitlines()).split(',')]
+            return [x.strip() for x in value.split(',')]
         else:
             return []
 
     def get_smtp_error_addresses(self):
         value = self._get_value("smtp_error_addresses", self.conf_section, "smtp_error_addresses")
         if value:
-            return [x.strip() for x in ''.join(value.splitlines()).split(',')]
+            return [x.strip() for x in value.split(',')]
         else:
             return []
 
