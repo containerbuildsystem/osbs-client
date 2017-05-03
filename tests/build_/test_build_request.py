@@ -1065,18 +1065,10 @@ class TestBuildRequest(object):
         {
             'authoritative_registry': 'authoritative_registry',
             'distribution_scope': 'distribution_scope',
-            'info_url_format': 'info_url_format',
             'kojihub': 'kojihub',
             'kojiroot': 'kojiroot',
             'pulp_registry': 'pulp_registry',
             'registry_api_versions': ['v1', 'v2'],
-            'smtp_additional_addresses': ['spam@food.bz', 'bacon@food.bz'],
-            'smtp_email_domain': 'smtp_email_domain',
-            'smtp_error_addresses': ['error1@foo.com', 'error2@foo.com'],
-            'smtp_from': 'smtp_from',
-            'smtp_host': 'smtp_host',
-            'smtp_to_pkgowner': True,
-            'smtp_to_submitter': False,
             'source_registry_uri': 'source_registry_uri',
             'sources_command': 'sources_command',
             'vendor': 'vendor',
@@ -1155,21 +1147,11 @@ class TestBuildRequest(object):
             assert (kwargs.get('authoritative_registry') ==
                     worker_config.get_authoritative_registry())
             assert kwargs.get('distribution_scope') == worker_config.get_distribution_scope()
-            assert kwargs.get('info_url_format') == worker_config.get_info_url_format()
             assert kwargs.get('kojihub') == worker_config.get_kojihub()
             assert kwargs.get('kojiroot') == worker_config.get_kojiroot()
             assert kwargs.get('pulp_registry') == worker_config.get_pulp_registry()
             assert (kwargs.get('registry_api_versions') ==
                     worker_config.get_registry_api_versions())
-            assert (kwargs.get('smtp_additional_addresses') or [] ==
-                    worker_config.get_smtp_additional_addresses())
-            assert kwargs.get('smtp_email_domain') == worker_config.get_smtp_email_domain()
-            assert (kwargs.get('smtp_error_addresses') or [] ==
-                    worker_config.get_smtp_error_addresses())
-            assert kwargs.get('smtp_from') == worker_config.get_smtp_from()
-            assert kwargs.get('smtp_host') == worker_config.get_smtp_host()
-            assert kwargs.get('smtp_to_pkgowner') == worker_config.get_smtp_to_pkgowner()
-            assert kwargs.get('smtp_to_submitter') == worker_config.get_smtp_to_submitter()
             assert kwargs.get('source_registry_uri') == worker_config.get_source_registry_uri()
             assert kwargs.get('sources_command') == worker_config.get_sources_command()
             assert kwargs.get('vendor') == worker_config.get_vendor()
