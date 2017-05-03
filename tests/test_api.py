@@ -943,8 +943,12 @@ class TestOSBS(object):
         else:
             assert osbs_obj.get_compression_extension() == expected
 
-    def test_build_image(self):
-        build_image = 'registry.example.com/buildroot:2.0'
+    @pytest.mark.parametrize(('build_image', 'build_imagestream', 'valid'), (
+        ('registry.example.com/buildroot:2.0', '', True),
+        ('', 'buildroot-stream:v1.0', True),
+        ('registry.example.com/buildroot:2.0', 'buildroot-stream:v1.0', False)
+    ))
+    def test_build_image(self, build_image, build_imagestream, valid):
         with NamedTemporaryFile(mode='wt') as fp:
             fp.write(dedent("""\
                 [general]
@@ -958,12 +962,15 @@ class TestOSBS(object):
                 authoritative_registry = localhost
                 distribution_scope = private
                 build_image = {build_image}
-                """.format(build_json_dir='inputs', build_image=build_image)))
+                build_imagestream = {build_imagestream}
+                """.format(build_json_dir='inputs', build_image=build_image,
+                           build_imagestream=build_imagestream)))
             fp.flush()
             config = Configuration(fp.name)
             osbs_obj = OSBS(config, config)
 
         assert config.get_build_image() == build_image
+        assert config.get_build_imagestream() == build_imagestream
 
         (flexmock(utils)
             .should_receive('get_df_parser')
@@ -972,12 +979,29 @@ class TestOSBS(object):
 
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
 
-        req = osbs_obj.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                         TEST_GIT_BRANCH, TEST_USER,
-                                         TEST_COMPONENT, TEST_TARGET,
-                                         TEST_ARCH)
+        if valid:
+            req = osbs_obj.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                             TEST_GIT_BRANCH, TEST_USER,
+                                             TEST_COMPONENT, TEST_TARGET,
+                                             TEST_ARCH)
+        else:
+            with pytest.raises(OsbsValidationException):
+                req = osbs_obj.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                                 TEST_GIT_BRANCH, TEST_USER,
+                                                 TEST_COMPONENT, TEST_TARGET,
+                                                 TEST_ARCH)
+            return
+
         img = req.json['spec']['strategy']['customStrategy']['from']['name']
-        assert img == build_image
+        kind = req.json['spec']['strategy']['customStrategy']['from']['kind']
+
+        if build_image:
+            assert kind == 'DockerImage'
+            assert img == build_image
+
+        if build_imagestream:
+            assert kind == 'ImageStreamTag'
+            assert img == build_imagestream
 
     def test_get_existing_build_config_by_labels(self):
         build_config = {
