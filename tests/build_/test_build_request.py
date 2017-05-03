@@ -234,15 +234,13 @@ class TestBuildRequest(object):
         None,
         'http://proxy.example.com',
     ])
-    @pytest.mark.parametrize('build_image', [
-        None,
-        'ultimate-buildroot:v1.0'
-    ])
-    @pytest.mark.parametrize('build_imagestream', [
-        None,
-        'buildroot-stream:v1.0'
-    ])
-    def test_render_prod_request_with_repo(self, build_image, build_imagestream, proxy):
+    @pytest.mark.parametrize(('build_image', 'build_imagestream', 'valid'), (
+        (None, None, True),
+        ('ultimate-buildroot:v1.0', None, True),
+        (None, 'buildroot-stream:v1.0', True),
+        ('ultimate-buildroot:v1.0', 'buildroot-stream:v1.0', False)
+    ))
+    def test_render_prod_request_with_repo(self, build_image, build_imagestream, proxy, valid):
         build_request = BuildRequest(INPUTS_PATH)
         name_label = "fedora/resultingimage"
         vendor = "Foo Vendor"
@@ -276,7 +274,15 @@ class TestBuildRequest(object):
             'build_imagestream': build_imagestream,
             'proxy': proxy,
         }
-        build_request.set_params(**kwargs)
+
+
+        if valid:
+            build_request.set_params(**kwargs)
+        else:
+            with pytest.raises(OsbsValidationException):
+                build_request.set_params(**kwargs)
+            return
+
         build_json = build_request.render()
 
         assert fnmatch.fnmatch(build_json["metadata"]["name"], TEST_BUILD_CONFIG)
@@ -1110,11 +1116,11 @@ class TestBuildRequest(object):
         # Only one version defined so far
         DEFAULT_ARRANGEMENT_VERSION,
     ])
-    @pytest.mark.parametrize(('build_image', 'build_imagestream', 'worker_build_image'), (
-        ('fedora:latest', None, 'fedora:latest'),
-        (None, 'buildroot-stream:v1.0', KeyError),
-        (None, None, DEFAULT_BUILD_IMAGE),
-        ('fedora:latest', 'buildroot-stream:v1.0', KeyError)
+    @pytest.mark.parametrize(('build_image', 'build_imagestream', 'worker_build_image', 'valid'), (
+        ('fedora:latest', None, 'fedora:latest', True),
+        (None, 'buildroot-stream:v1.0', KeyError, True),
+        (None, None, DEFAULT_BUILD_IMAGE, True),
+        ('fedora:latest', 'buildroot-stream:v1.0', KeyError, False)
     ))
     @pytest.mark.parametrize('additional_kwargs', (
         {
@@ -1146,7 +1152,7 @@ class TestBuildRequest(object):
                                       arrangement_version, build_image,
                                       build_imagestream, worker_build_image,
                                       additional_kwargs, openshift_req_version,
-                                      worker_openshift_req_version):
+                                      worker_openshift_req_version, valid):
         phase = 'buildstep_plugins'
         plugin = 'orchestrate_build'
 
@@ -1176,7 +1182,12 @@ class TestBuildRequest(object):
         inner_template = ORCHESTRATOR_INNER_TEMPLATE.format(
             arrangement_version=arrangement_version)
         build_request = BuildRequest(INPUTS_PATH, inner_template=inner_template)
-        build_request.set_params(**kwargs)
+        if valid:
+            build_request.set_params(**kwargs)
+        else:
+            with pytest.raises(OsbsValidationException):
+                build_request.set_params(**kwargs)
+            return
         if openshift_req_version:
             build_request.set_openshift_required_version(openshift_req_version)
         build_json = build_request.render()
