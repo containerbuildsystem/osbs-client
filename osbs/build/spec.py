@@ -242,6 +242,10 @@ class BuildSpec(object):
             raise OsbsValidationException("yum_repourls must be a list")
         self.yum_repourls.value = yum_repourls or []
         self.use_auth.value = use_auth
+
+        if build_imagestream and build_image:
+            raise OsbsValidationException(
+                'Please only define build_image -OR- build_imagestream, not both')
         self.build_image.value = build_image or DEFAULT_BUILD_IMAGE
         self.build_imagestream.value = build_imagestream
 
