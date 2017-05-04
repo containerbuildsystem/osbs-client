@@ -24,7 +24,6 @@ from osbs.conf import Configuration
 
 from flexmock import flexmock
 import pytest
-from pkg_resources import parse_version
 
 from tests.constants import (INPUTS_PATH, TEST_BUILD_CONFIG, TEST_BUILD_JSON,
                              TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
@@ -1189,7 +1188,7 @@ class TestBuildRequest(object):
                 build_request.set_params(**kwargs)
             return
         if openshift_req_version:
-            build_request.set_openshift_required_version(openshift_req_version)
+            build_request.set_openshift_required_version(parse_version(openshift_req_version))
         build_json = build_request.render()
         strategy = build_json['spec']['strategy']['customStrategy']['env']
         plugins = get_plugins_from_build_json(build_json)

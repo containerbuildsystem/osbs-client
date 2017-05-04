@@ -385,6 +385,31 @@ def run_command(*popenargs, **kwargs):
     return output
 
 
+def sanitize_version(version):
+    """
+    Take parse_version() output and standardize output from older
+    setuptools' parse_version() to match current setuptools.
+    """
+    if hasattr(version, 'base_version'):
+        if version.base_version:
+            parts = version.base_version.split('.')
+        else:
+            parts = []
+    else:
+            parts = []
+            for part in version:
+                if part.startswith('*'):
+                    break
+                parts.append(part)
+    parts = [int(p) for p in parts]
+
+    if len(parts) < 3:
+        parts += [0] * (3 - len(parts))
+
+    major, minor, micro = parts[:3]
+    cleaned_version = '{0}.{1}.{2}'.format(major, minor, micro)
+    return cleaned_version
+
 class Labels(object):
     """
     Provide access to a set of labels which have specific semantics
