@@ -26,7 +26,7 @@ from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.spec import BuildSpec
 from osbs.constants import SECRETS_PATH, DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE, DEFAULT_CUSTOMIZE_CONF
 from osbs.exceptions import OsbsException, OsbsValidationException
-from osbs.utils import looks_like_git_hash, git_repo_humanish_part_from_uri
+from osbs.utils import looks_like_git_hash, git_repo_humanish_part_from_uri, sanitize_version
 from osbs import __version__ as client_version
 
 
@@ -219,7 +219,7 @@ class BuildRequest(object):
             'info_url_format': self.spec.info_url_format.value,
             'koji_hub': self.spec.kojihub.value,
             'koji_root': self.spec.kojiroot.value,
-            'openshift_required_version': self._openshift_required_version,
+            'openshift_required_version': sanitize_version(self._openshift_required_version),
             'pulp_registry_name': self.spec.pulp_registry.value,
             'registry_api_versions': ','.join(self.spec.registry_api_versions.value or []) or None,
             'smtp_additional_addresses': ','.join(self.spec.smtp_additional_addresses.value or []) or None,

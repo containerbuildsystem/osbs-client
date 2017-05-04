@@ -13,13 +13,14 @@ import datetime
 import re
 import sys
 from time import tzset
+from pkg_resources import parse_version
 
 from osbs.utils import (buildconfig_update,
                         get_imagestreamtag_from_image,
                         git_repo_humanish_part_from_uri,
                         get_time_from_rfc3339, strip_registry_from_image,
                         TarWriter, TarReader, make_name_from_git,
-                        get_instance_token_file_name, Labels)
+                        get_instance_token_file_name, Labels, sanitize_version)
 from osbs.exceptions import OsbsException
 import osbs.kerberos_ccache
 
@@ -335,3 +336,33 @@ def test_labels(labels, fnc, expect):
             assert getattr(label, fn)(arg) == expect
         else:
             assert getattr(label, fn)() == expect
+
+
+vstr_re = re.compile('\d+\.\d+\.\d+')
+@pytest.mark.parametrize(('version', 'valid'), [
+    ('1.0.4', True),
+    ('5.3', True),
+    ('2', True),
+    ('7.3.1', True),
+    ('9', True),
+    ('6.8', True),
+    ('10.127.43', True),
+    ('bacon', False),
+    ('5x3yj', False),
+    ('x.y.z', False),
+])
+def test_sanitize_version(version, valid):
+    if valid:
+        assert vstr_re.match(sanitize_version(parse_version(version)))
+    else:
+        # with old-style parse_version(), we'll get a numerical string
+        # back from sanitize_version(), but current parse_version() will
+        # give us a ValueError exception
+        try:
+            val = sanitize_version(parse_version(version))
+            if val != version:
+                return
+        except:
+            pass
+        with pytest.raises(ValueError):
+            sanitize_version(parse_version(version))
