@@ -43,6 +43,7 @@ from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRA
                              TEST_GIT_URI, TEST_TARGET, TEST_USER, INPUTS_PATH,
                              TEST_KOJI_TASK_ID, TEST_VERSION)
 from tests.fake_api import openshift, osbs, osbs106, osbs_cant_orchestrate
+from tests.build_.test_build_request import get_sample_prod_params
 from osbs.core import Openshift
 
 try:
@@ -1400,28 +1401,12 @@ class TestOSBS(object):
         build_response = osbs._create_build_config_and_build(build_request)
         assert build_response.json == {'spam': 'maps'}
 
-    @pytest.mark.parametrize(('nodeselector_str, nodeselector_dict'), [
-        (None, {}),
-        ('foo=  bar', {'foo': 'bar'}),
-        ('foo=bar ,  baz=foo', {'foo': 'bar', 'baz': 'foo'}),
-    ])
     @pytest.mark.parametrize(('kind', 'expect_name'), [
         ('ImageStreamTag', 'registry:5000/buildroot:latest'),
         ('DockerImage', 'buildroot:latest'),
     ])
-    def test_scratch_build_config(self, kind, expect_name, nodeselector_str, nodeselector_dict):
-        if nodeselector_str:
-            with NamedTemporaryFile(mode='wt') as fp:
-                fp.write(dedent("""\
-                    [general]
-                    build_json_dir = inputs
-                    [default]
-                    low_priority_node_selector = {nodeselector}
-                    """.format(nodeselector=nodeselector_str)))
-                fp.flush()
-                config = Configuration(fp.name)
-        else:
-            config = Configuration()
+    def test_scratch_build_config(self, kind, expect_name):
+        config = Configuration()
         osbs = OSBS(config, config)
 
         build_json = {
@@ -1454,15 +1439,13 @@ class TestOSBS(object):
         build_request = flexmock(
             render=lambda: build_json,
             has_ist_trigger=lambda: False,
-            scratch=True)
-        build_request.low_priority_node_selector = config.get_low_priority_node_selector()
+            scratch=True,
+            low_priority_node_selector=None)
 
         updated_build_json = copy.deepcopy(build_json)
         updated_build_json['kind'] = 'Build'
         updated_build_json['metadata']['labels']['scratch'] = 'true'
         updated_build_json['spec']['serviceAccount'] = 'builder'
-        if nodeselector_dict:
-            updated_build_json['spec']['nodeSelector'] = nodeselector_dict
         img = updated_build_json['spec']['strategy']['customStrategy']['from']
         img['kind'] = 'DockerImage'
         img['name'] = expect_name
@@ -1506,9 +1489,71 @@ class TestOSBS(object):
         build_response = osbs._create_scratch_build(build_request)
         assert build_response.json == {'spam': 'maps'}
 
+    @pytest.mark.parametrize(('nodeselector_str, nodeselector_dict'), [
+        (None, {}),
+        ('foo=  bar', {'foo': 'bar'}),
+        ('foo=bar ,  baz=foo', {'foo': 'bar', 'baz': 'foo'}),
+    ])
+    def test_scratch_build_nodeselector(self, nodeselector_str, nodeselector_dict):
+        if nodeselector_str:
+            with NamedTemporaryFile(mode='wt') as fp:
+                fp.write(dedent("""\
+                    [general]
+                    build_json_dir = {inputs}
+                    [default]
+                    low_priority_node_selector = {nodeselector}
+                    """.format(inputs=INPUTS_PATH, nodeselector=nodeselector_str)))
+                fp.flush()
+                config = Configuration(fp.name)
+        else:
+            config = Configuration()
+        osbs = OSBS(config, config)
+
+        build_request = BuildRequest(INPUTS_PATH)
+        kwargs = get_sample_prod_params()
+        kwargs['scratch'] = True
+        kwargs['low_priority_node_selector'] = config.get_low_priority_node_selector()
+        build_request.set_params(**kwargs)
+        build_request_copy = copy.deepcopy(build_request)
+        build_json = build_request_copy.render()
+
+        updated_build_json = copy.deepcopy(build_json)
+        updated_build_json['kind'] = 'Build'
+        updated_build_json['metadata']['labels']['scratch'] = 'true'
+        updated_build_json['spec']['serviceAccount'] = 'builder'
+        if nodeselector_dict:
+            updated_build_json['spec']['nodeSelector'] = nodeselector_dict
+        build_name = 'scratch-%s' % datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        updated_build_json['metadata']['name'] = build_name
+
+        def verify_build_json(passed_build_json):
+            # Don't compare metadata.name directly as we can't control it
+            assert (isinstance(passed_build_json['metadata'].pop('name'),
+                               six.string_types))
+            del updated_build_json['metadata']['name']
+
+            assert passed_build_json == updated_build_json
+            return flexmock(json=lambda: {'spam': 'maps'})
+
+        (flexmock(osbs.os)
+            .should_receive('create_build')
+            .replace_with(verify_build_json)
+            .once())
+
+        (flexmock(osbs.os)
+            .should_receive('create_build_config')
+            .never())
+
+        (flexmock(osbs.os)
+            .should_receive('update_build_config')
+            .never())
+
+        build_response = osbs._create_scratch_build(build_request)
+        assert build_response.json == {'spam': 'maps'}
+
     def test_scratch_param_to_create_build(self):
         config = Configuration()
-        osbs = OSBS(config, config)
+        osbs_obj = OSBS(config, config)
 
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -1528,20 +1573,20 @@ class TestOSBS(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
             .and_return(MockDfParser()))
 
-        (flexmock(osbs)
+        (flexmock(osbs_obj)
             .should_receive('_create_scratch_build')
             .once()
             .and_return(flexmock(json=lambda: {'spam': 'maps'})))
 
-        (flexmock(osbs.os)
+        (flexmock(osbs_obj.os)
             .should_receive('create_build_config')
             .never())
 
-        (flexmock(osbs.os)
+        (flexmock(osbs_obj.os)
             .should_receive('update_build_config')
             .never())
 
-        build_response = osbs.create_build(**kwargs)
+        build_response = osbs_obj.create_build(**kwargs)
         assert build_response.json() == {'spam': 'maps'}
 
     def test_get_image_stream_tag(self):

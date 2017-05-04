@@ -85,6 +85,7 @@ class BuildRequest(object):
         :param distribution_scope: str, distribution scope for this image
                                    (private, authoritative-source-only, restricted, public)
         :param use_auth: bool, use auth from atomic-reactor?
+        :param low_priority_node_selector: dict, a nodeselector for builds with lower priority
         """
 
         # Here we cater to the koji "scratch" build type, this will disable
@@ -95,6 +96,7 @@ class BuildRequest(object):
             pass
 
         self.base_image = kwargs.get('base_image')
+        self.low_priority_node_selector = kwargs.get('low_priority_node_selector')
 
         logger.debug("setting params '%s' for %s", kwargs, self.spec)
         self.spec.set_params(**kwargs)
@@ -420,7 +422,6 @@ class BuildRequest(object):
         """
         Enable/disable plugins depending on supported registry API versions
         """
-
         versions = self.spec.registry_api_versions.value
 
         try:
