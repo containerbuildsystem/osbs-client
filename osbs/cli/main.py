@@ -658,8 +658,6 @@ def cli():
                               help="directory with build jsons")
     build_parser.add_argument("-g", "--git-url", action='store', metavar="URL",
                               required=True, help="URL to git repo (fetch)")
-    build_parser.add_argument("--git-push-url", action='store', metavar="URL",
-                              required=False, help="URL to git repo (push)")
     build_parser.add_argument("--git-push-username", action='store',
                               required=False, help="username for git push")
     build_parser.add_argument("--git-commit", action='store', default="master",
