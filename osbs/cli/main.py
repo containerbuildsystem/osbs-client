@@ -349,7 +349,7 @@ def cmd_build(args, osbs):
     required_args = []
     unwanted_args = []
     if args.worker:
-        required_args = ['platform', 'release']
+        required_args = ['platform', 'release', 'arrangement_version']
         unwanted_args = ['platforms']
         create_func = osbs.create_worker_build
     elif args.orchestrator:
@@ -376,6 +376,7 @@ def cmd_build(args, osbs):
         platform=args.platform,
         platforms=args.platforms,
         release=args.release,
+        arrangement_version=args.arrangement_version,
     )
     build_id = build.get_build_name()
     # we need to wait for kubelet to schedule the build, otherwise it's 500
@@ -696,6 +697,8 @@ def cli():
                               help='platform name to use')
     worker_group.add_argument('--release', action='store', required=False,
                               help='release value to use')
+    worker_group.add_argument('--arrangement-version', action='store', required=False,
+                              help='version of inner template to use')
 
     orchestrator_group = build_parser.add_argument_group(
         title='arguments for --orchestrator',
