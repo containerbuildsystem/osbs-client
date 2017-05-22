@@ -354,30 +354,33 @@ def cmd_build(args, osbs):
         create_func = osbs.create_worker_build
     elif args.orchestrator:
         required_args = ['platforms']
-        unwanted_args = ['platform', 'release']
+        unwanted_args = ['platform', 'release', 'arrangement_version']
         create_func = osbs.create_orchestrator_build
     else:
         create_func = osbs.create_prod_build
-        unwanted_args = ['platforms', 'platform', 'release']
+        unwanted_args = ['platforms', 'platform', 'release', 'arrangement_version']
 
     check_required_args(args, required_args)
     check_unwanted_args(args, unwanted_args)
 
-    build = create_func(
-        git_uri=osbs.build_conf.get_git_uri(),
-        git_ref=osbs.build_conf.get_git_ref(),
-        git_branch=osbs.build_conf.get_git_branch(),
-        user=osbs.build_conf.get_user(),
-        tag=osbs.build_conf.get_tag(),
-        target=osbs.build_conf.get_koji_target(),
-        architecture=osbs.build_conf.get_architecture(),
-        yum_repourls=osbs.build_conf.get_yum_repourls(),
-        scratch=args.scratch,
-        platform=args.platform,
-        platforms=args.platforms,
-        release=args.release,
-        arrangement_version=args.arrangement_version,
-    )
+    build_kwargs = {
+        'git_uri': osbs.build_conf.get_git_uri(),
+        'git_ref': osbs.build_conf.get_git_ref(),
+        'git_branch': osbs.build_conf.get_git_branch(),
+        'user': osbs.build_conf.get_user(),
+        'tag': osbs.build_conf.get_tag(),
+        'target': osbs.build_conf.get_koji_target(),
+        'architecture': osbs.build_conf.get_architecture(),
+        'yum_repourls': osbs.build_conf.get_yum_repourls(),
+        'scratch': args.scratch,
+        'platform': args.platform,
+        'platforms': args.platforms,
+        'release': args.release,
+    }
+    if args.arrangement_version:
+        build_kwargs['arrangement_version'] = args.arrangement_version
+
+    build = create_func(**build_kwargs)
     build_id = build.get_build_name()
     # we need to wait for kubelet to schedule the build, otherwise it's 500
     build = osbs.wait_for_build_to_get_scheduled(build_id)
