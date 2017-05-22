@@ -30,6 +30,7 @@ from osbs.build.pod_response import PodResponse
 from osbs.build.spec import BuildSpec
 from osbs.exceptions import OsbsValidationException, OsbsException, OsbsResponseException
 from osbs.http import HttpResponse
+from osbs.cli.main import cmd_build
 from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             DEFAULT_INNER_TEMPLATE, WORKER_INNER_TEMPLATE,
                             DEFAULT_CUSTOMIZE_CONF, WORKER_CUSTOMIZE_CONF,
@@ -60,6 +61,13 @@ def request_as_response(request):
 
     request.json = request.render()
     return request
+
+
+class CustomTestException(Exception):
+    """
+    Custom Exception used to prematurely end function call
+    """
+    pass
 
 
 class MockDfParser(object):
@@ -1710,3 +1718,80 @@ class TestOSBS(object):
             }
         }
         assert expected_secret in secrets
+
+    @pytest.mark.parametrize(('platform', 'release', 'platforms',  # noqa
+                              'worker', 'orchestrator',
+                              'arrangement_version', 'raises_exception'), [
+        # worker build
+        ("plat", 'rel', None, True, False, 1, False),
+        ("plat", 'rel', None, True, False, None, True),
+        # orchestrator build
+        (None, None, 'platforms', False, True, 1, True),
+        (None, None, 'platforms', False, True, None, False),
+        # prod build
+        (None, None, None, False, False, 1, True),
+        (None, None, None, False, False, None, False),
+    ])
+    def test_arrangement_version(self, osbs, platform, release, platforms,
+                                 worker, orchestrator,
+                                 arrangement_version, raises_exception):
+        class MockArgs(object):
+            def __init__(self, platform, release, platforms, arrangement_version,
+                         worker, orchestrator):
+                self.platform = platform
+                self.release = release
+                self.platforms = platforms
+                self.arrangement_version = arrangement_version
+                self.worker = worker
+                self.orchestrator = orchestrator
+                self.scratch = None
+
+        expected_kwargs = {
+            'platform': platform,
+            'scratch': None,
+            'platforms': platforms,
+            'release': release,
+            'git_uri': None,
+            'git_ref': None,
+            'git_branch': None,
+            'user': None,
+            'tag': None,
+            'target': None,
+            'architecture': None,
+            'yum_repourls': None,
+        }
+        if worker:
+            expected_kwargs['arrangement_version'] = arrangement_version
+
+        if not raises_exception:
+            # and_raise is called to prevent cmd_build to continue
+            # as we only want to check if arguments are correct
+            if worker:
+                (flexmock(osbs)
+                    .should_receive("create_worker_build")
+                    .once()
+                    .with_args(**expected_kwargs)
+                    .and_raise(CustomTestException))
+
+            if orchestrator:
+                (flexmock(osbs)
+                    .should_receive("create_orchestrator_build")
+                    .once()
+                    .with_args(**expected_kwargs)
+                    .and_raise(CustomTestException))
+
+            if not worker and not orchestrator:
+                (flexmock(osbs)
+                    .should_receive("create_prod_build")
+                    .once()
+                    .with_args(**expected_kwargs)
+                    .and_raise(CustomTestException))
+
+        if raises_exception:
+            with pytest.raises(ValueError):
+                cmd_build(MockArgs(platform, release, platforms, arrangement_version,
+                          worker, orchestrator), osbs)
+        else:
+            with pytest.raises(CustomTestException):
+                cmd_build(MockArgs(platform, release, platforms, arrangement_version,
+                                   worker, orchestrator), osbs)
