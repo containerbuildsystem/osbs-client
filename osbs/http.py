@@ -147,7 +147,7 @@ class HttpStream(object):
         return self.req.iter_content(None)
 
     def iter_lines(self):
-        return self.req.iter_lines(decode_unicode=True)
+        return self.req.iter_lines(chunk_size=1, decode_unicode=True)
 
     def close(self):
         if not self.closed:
