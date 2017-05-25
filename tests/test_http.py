@@ -6,6 +6,7 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 import logging
+import sys
 
 from flexmock import flexmock
 import pytest
@@ -26,6 +27,11 @@ def s():
 
 def has_connection():
     # In case we run tests in an environment without internet connection.
+
+    if sys.version_info < (2, 7):
+        # py 2.6 doesn't have SNI support, required for httpbin, as it has SSLv3 certificates
+        return False
+
     try:
         HttpStream("https://httpbin.org/get", "get")
         return True
