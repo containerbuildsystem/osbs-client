@@ -147,7 +147,12 @@ class HttpStream(object):
         return self.req.iter_content(None)
 
     def iter_lines(self):
-        return self.req.iter_lines(chunk_size=1, decode_unicode=True)
+        kwargs = {
+            'decode_unicode': True
+        }
+        if requests.__version__.startswith('2.6.'):
+            kwargs['chunk_size'] = 1
+        return self.req.iter_lines(**kwargs)
 
     def close(self):
         if not self.closed:
