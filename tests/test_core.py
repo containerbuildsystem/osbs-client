@@ -20,7 +20,7 @@ from osbs.core import check_response, Openshift
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
                              TEST_LABEL_VALUE)
 from tests.fake_api import openshift, OAPI_PREFIX, API_VER
-from requests.exceptions import ChunkedEncodingError
+from requests.exceptions import ChunkedEncodingError, ConnectionError
 import pytest
 
 try:
@@ -80,7 +80,11 @@ class TestOpenshift(object):
         labels = openshift.set_labels_on_build(TEST_BUILD, {TEST_LABEL: TEST_LABEL_VALUE})
         assert labels.json() is not None
 
-    def test_stream_logs_no_data(self, openshift):  # noqa
+    @pytest.mark.parametrize('exc', [  # noqa
+        ChunkedEncodingError(''),
+        ConnectionError('Connection aborted.', httplib.BadStatusLine("''",)),
+    ])
+    def test_stream_logs_no_data(self, openshift, exc):
         response = flexmock(status_code=httplib.OK)
         (response
             .should_receive('iter_lines')
@@ -90,7 +94,7 @@ class TestOpenshift(object):
         (flexmock(openshift)
             .should_receive('_get')
             # First: timeout in response after 100s
-            .and_raise(ChunkedEncodingError(''))
+            .and_raise(exc)
             # Next: return a real response
             .and_return(response))
 
