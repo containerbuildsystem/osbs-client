@@ -14,12 +14,11 @@ import json
 from osbs.http import HttpResponse
 from osbs.constants import (BUILD_FINISHED_STATES,
                             BUILD_CANCELLED_STATE)
-from osbs.exceptions import (OsbsResponseException, OsbsNetworkException,
-                             OsbsException)
+from osbs.exceptions import (OsbsResponseException, OsbsException)
 from osbs.core import check_response, Openshift
 
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
-                             TEST_LABEL_VALUE, TEST_BUILD_CONFIG)
+                             TEST_LABEL_VALUE)
 from tests.fake_api import openshift, OAPI_PREFIX, API_VER
 from requests.exceptions import ChunkedEncodingError
 import pytest
@@ -77,12 +76,34 @@ class TestCheckResponse(object):
 
 
 class TestOpenshift(object):
-    def test_set_labels_on_build(self, openshift):
-        l = openshift.set_labels_on_build(TEST_BUILD, {TEST_LABEL: TEST_LABEL_VALUE})
-        assert l.json() is not None
+    def test_set_labels_on_build(self, openshift):  # noqa
+        labels = openshift.set_labels_on_build(TEST_BUILD, {TEST_LABEL: TEST_LABEL_VALUE})
+        assert labels.json() is not None
 
 
-    def test_stream_logs(self, openshift):
+    def test_stream_logs_no_data(self, openshift):  #noqa
+        response = flexmock(status_code=httplib.OK)
+        (response
+            .should_receive('iter_lines')
+            .and_return(["{'stream': 'foo\n'}"])
+            .and_raise(StopIteration))
+
+        (flexmock(openshift)
+            .should_receive('_get')
+            # First: timeout in response after 100s
+            .and_raise(ChunkedEncodingError(''))
+            # Next: return a real response
+            .and_return(response))
+
+        (flexmock(time)
+            .should_receive('time')
+            .and_return(0)
+            .and_return(100))
+
+        logs = openshift.stream_logs(TEST_BUILD)
+        assert len([log for log in logs]) == 1
+
+    def test_stream_logs_connection_close(self, openshift):  # noqa
         response = flexmock(status_code=httplib.OK)
         (response
             .should_receive('iter_lines')
@@ -127,9 +148,9 @@ class TestOpenshift(object):
         assert len([log for log in logs]) == 1
 
     def test_list_builds(self, openshift):
-        l = openshift.list_builds()
-        assert l is not None
-        assert bool(l.json())  # is there at least something
+        list_builds = openshift.list_builds()
+        assert list_builds is not None
+        assert bool(list_builds.json())  # is there at least something
 
     def test_list_pods(self, openshift):
         response = openshift.list_pods(label="openshift.io/build.name=%s" %
