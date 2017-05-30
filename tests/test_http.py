@@ -10,10 +10,12 @@ import sys
 
 from flexmock import flexmock
 import pytest
+import httplib
+import requests
 
 import osbs.http as osbs_http
 from osbs.http import HttpSession, HttpStream
-from osbs.exceptions import OsbsNetworkException
+from osbs.exceptions import OsbsNetworkException, OsbsException
 
 from tests.fake_api import Connection, ResponseMapping
 
@@ -134,3 +136,31 @@ class TestHttpSession(object):
             with s.get("http://httpbin.org/stream/3", stream=True) as s:
                 raise RuntimeError("hi")
         assert s.closed
+
+    @pytest.mark.parametrize('raise_exc', (
+        requests.exceptions.ChunkedEncodingError,
+        requests.exceptions.ConnectionError,
+        httplib.IncompleteRead,
+    ))
+    def test_osbs_exception_wrapping(self, s, raise_exc):
+        (flexmock(HttpStream)
+            .should_receive('__init__')
+            .and_raise(raise_exc('')))
+        with pytest.raises(OsbsException) as exc_info:
+            s.get('http://httpbin.org/get')
+
+        assert not isinstance(exc_info.value, OsbsNetworkException)
+        assert isinstance(exc_info.value.cause, raise_exc)
+
+    @pytest.mark.parametrize('raise_exc', (
+        requests.exceptions.HTTPError,
+    ))
+    def test_osbs_network_exception_wrapping(self, s, raise_exc):
+        response = flexmock(status_code=409)
+        (flexmock(HttpStream)
+            .should_receive('__init__')
+            .and_raise(raise_exc(response=response)))
+        with pytest.raises(OsbsNetworkException) as exc_info:
+            s.get('http://httpbin.org/get')
+
+        assert isinstance(exc_info.value.cause, raise_exc)

@@ -38,17 +38,12 @@ def decoded_json(iterable):
 
     See https://tools.ietf.org/html/rfc4627#section-3
     """
-
-    try:
-        for line in iterable:
-            if isinstance(line, str):
-                yield line
-            else:
-                yield line.decode(requests.utils.guess_json_utf(line))
-    except (requests.exceptions.ChunkedEncodingError,
-            requests.exceptions.ConnectionError,
-            httplib.IncompleteRead):
-        raise StopIteration
+    # TODO: Should this be handled by requests?
+    for line in iterable:
+        if isinstance(line, str):
+            yield line
+        else:
+            yield line.decode(requests.utils.guess_json_utf(line))
 
 
 class HttpSession(object):
@@ -166,11 +161,12 @@ class HttpStream(object):
         if requests.__version__.startswith('2.6.'):
             kwargs['chunk_size'] = 1
         try:
-            return self.req.iter_lines(**kwargs)
+            for line in self.req.iter_lines(**kwargs):
+                yield line
         except (requests.exceptions.ChunkedEncodingError,
                 requests.exceptions.ConnectionError,
                 httplib.IncompleteRead):
-            return []
+            raise StopIteration
 
     def close(self):
         if not self.closed:
