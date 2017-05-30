@@ -21,7 +21,8 @@ from osbs.constants import WATCH_MODIFIED, WATCH_DELETED, WATCH_ERROR
 from osbs.constants import (SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
                             SERVICEACCOUNT_CACRT)
 from osbs.exceptions import (OsbsResponseException, OsbsException,
-                             OsbsWatchBuildNotFound, OsbsAuthException)
+                             OsbsWatchBuildNotFound, OsbsAuthException,
+                             OsbsNetworkException)
 from osbs.http import decoded_json
 from osbs.utils import graceful_chain_get
 from requests.exceptions import ChunkedEncodingError, ConnectionError
@@ -437,10 +438,18 @@ class Openshift(object):
                 for line in decoded_json(response.iter_lines()):
                     last_activity = time.time()
                     yield line
-            except (ChunkedEncodingError,
-                    ConnectionError,
-                    httplib.IncompleteRead):
-                pass
+            # NOTE1: If self._get causes ChunkedEncodingError, ConnectionError,
+            # or IncompleteRead to be raised, they'll be wrapped in
+            # OsbsNetworkException or OsbsException
+            # NOTE2: If decode_json or iter_lines causes ChunkedEncodingError, ConnectionError,
+            # or IncompleteRead to be raised, it'll simply be silenced.
+            # NOTE3: An error may occur in iter_lines during initial contact
+            # with server - prior to streaming data. In this case, exception will be
+            # wrapped in OsbsException or OsbsNetworkException, inspect cause
+            # to detect ConnectionError.
+            except OsbsException as exc:
+                if not isinstance(exc.cause, ConnectionError):
+                    raise
 
             idle = time.time() - last_activity
             logger.debug("connection closed after %ds", idle)

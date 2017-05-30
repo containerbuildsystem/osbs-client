@@ -14,7 +14,7 @@ import json
 from osbs.http import HttpResponse
 from osbs.constants import (BUILD_FINISHED_STATES,
                             BUILD_CANCELLED_STATE)
-from osbs.exceptions import (OsbsResponseException, OsbsException)
+from osbs.exceptions import (OsbsResponseException, OsbsException, OsbsNetworkException)
 from osbs.core import check_response, Openshift
 
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
@@ -81,64 +81,21 @@ class TestOpenshift(object):
         assert labels.json() is not None
 
     @pytest.mark.parametrize('exc', [  # noqa
-        ChunkedEncodingError(''),
         ConnectionError('Connection aborted.', httplib.BadStatusLine("''",)),
     ])
-    def test_stream_logs_no_data(self, openshift, exc):
+    def test_stream_logs_bad_initial_connection(self, openshift, exc):
         response = flexmock(status_code=httplib.OK)
         (response
             .should_receive('iter_lines')
             .and_return(["{'stream': 'foo\n'}"])
             .and_raise(StopIteration))
 
+        wrapped_exc = OsbsNetworkException('http://spam.com', str(exc), status_code=None,
+                                           cause=exc)
         (flexmock(openshift)
             .should_receive('_get')
-            # First: timeout in response after 100s
-            .and_raise(exc)
-            # Next: return a real response
-            .and_return(response))
-
-        (flexmock(time)
-            .should_receive('time')
-            .and_return(0)
-            .and_return(100))
-
-        logs = openshift.stream_logs(TEST_BUILD)
-        assert len([log for log in logs]) == 1
-
-    def test_stream_logs_connection_close(self, openshift):  # noqa
-        response = flexmock(status_code=httplib.OK)
-        (response
-            .should_receive('iter_lines')
-            .and_return(["{'stream': 'foo\n'}"])
-            .and_raise(StopIteration))
-
-        (flexmock(openshift)
-            .should_receive('_get')
-            # First: timeout in response after 100s
-            .and_raise(ChunkedEncodingError(''))
-            # Next: return a real response
-            .and_return(response))
-
-        (flexmock(time)
-            .should_receive('time')
-            .and_return(0)
-            .and_return(100))
-
-        logs = openshift.stream_logs(TEST_BUILD)
-        assert len([log for log in logs]) == 1
-
-    def test_stream_logs_no_data(self, openshift):  # noqa
-        response = flexmock(status_code=httplib.OK)
-        (response
-            .should_receive('iter_lines')
-            .and_return(["{'stream': 'foo\n'}"])
-            .and_raise(StopIteration))
-
-        (flexmock(openshift)
-            .should_receive('_get')
-            # First: timeout in response after 100s
-            .and_raise(httplib.IncompleteRead(''))
+            # First: simulate initial connection problem
+            .and_raise(wrapped_exc)
             # Next: return a real response
             .and_return(response))
 
