@@ -80,8 +80,7 @@ class TestOpenshift(object):
         labels = openshift.set_labels_on_build(TEST_BUILD, {TEST_LABEL: TEST_LABEL_VALUE})
         assert labels.json() is not None
 
-
-    def test_stream_logs_no_data(self, openshift):  #noqa
+    def test_stream_logs_no_data(self, openshift):  # noqa
         response = flexmock(status_code=httplib.OK)
         (response
             .should_receive('iter_lines')

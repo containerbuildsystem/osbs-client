@@ -14,6 +14,13 @@ from __future__ import print_function, absolute_import, unicode_literals
 import sys
 import json
 import logging
+try:
+    # py2
+    import httplib
+except ImportError:
+    # py3
+    import http.client as httplib
+
 
 from osbs.exceptions import OsbsException, OsbsNetworkException, OsbsResponseException
 
@@ -31,11 +38,15 @@ def decoded_json(iterable):
 
     See https://tools.ietf.org/html/rfc4627#section-3
     """
-    for line in iterable:
-        if isinstance(line, str):
-            yield line
-        else:
-            yield line.decode(requests.utils.guess_json_utf(line))
+
+    try:
+        for line in iterable:
+            if isinstance(line, str):
+                yield line
+            else:
+                yield line.decode(requests.utils.guess_json_utf(line))
+    except (requests.exceptions.ChunkedEncodingError, httplib.IncompleteRead):
+        raise StopIteration
 
 
 class HttpSession(object):
@@ -152,7 +163,10 @@ class HttpStream(object):
         }
         if requests.__version__.startswith('2.6.'):
             kwargs['chunk_size'] = 1
-        return self.req.iter_lines(**kwargs)
+        try:
+            return self.req.iter_lines(**kwargs)
+        except (requests.exceptions.ChunkedEncodingError, httplib.IncompleteRead):
+            return []
 
     def close(self):
         if not self.closed:
