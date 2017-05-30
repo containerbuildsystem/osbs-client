@@ -45,7 +45,9 @@ def decoded_json(iterable):
                 yield line
             else:
                 yield line.decode(requests.utils.guess_json_utf(line))
-    except (requests.exceptions.ChunkedEncodingError, httplib.IncompleteRead):
+    except (requests.exceptions.ChunkedEncodingError,
+            requests.exceptions.ConnectionError,
+            httplib.IncompleteRead):
         raise StopIteration
 
 
@@ -165,7 +167,9 @@ class HttpStream(object):
             kwargs['chunk_size'] = 1
         try:
             return self.req.iter_lines(**kwargs)
-        except (requests.exceptions.ChunkedEncodingError, httplib.IncompleteRead):
+        except (requests.exceptions.ChunkedEncodingError,
+                requests.exceptions.ConnectionError,
+                httplib.IncompleteRead):
             return []
 
     def close(self):

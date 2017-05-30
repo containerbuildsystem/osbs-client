@@ -24,7 +24,7 @@ from osbs.exceptions import (OsbsResponseException, OsbsException,
                              OsbsWatchBuildNotFound, OsbsAuthException)
 from osbs.http import decoded_json
 from osbs.utils import graceful_chain_get
-from requests.exceptions import ChunkedEncodingError
+from requests.exceptions import ChunkedEncodingError, ConnectionError
 
 try:
     # py2
@@ -437,7 +437,9 @@ class Openshift(object):
                 for line in decoded_json(response.iter_lines()):
                     last_activity = time.time()
                     yield line
-            except (ChunkedEncodingError, httplib.IncompleteRead):
+            except (ChunkedEncodingError,
+                    ConnectionError,
+                    httplib.IncompleteRead):
                 pass
 
             idle = time.time() - last_activity
