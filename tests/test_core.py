@@ -21,6 +21,7 @@ from osbs.core import check_response, Openshift
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
                              TEST_LABEL_VALUE, TEST_BUILD_CONFIG)
 from tests.fake_api import openshift, OAPI_PREFIX, API_VER
+from requests.exceptions import ChunkedEncodingError
 import pytest
 
 try:
@@ -90,9 +91,31 @@ class TestOpenshift(object):
 
         (flexmock(openshift)
             .should_receive('_get')
-             # First: timeout in response after 100s
+            # First: timeout in response after 100s
+            .and_raise(ChunkedEncodingError(''))
+            # Next: return a real response
+            .and_return(response))
+
+        (flexmock(time)
+            .should_receive('time')
+            .and_return(0)
+            .and_return(100))
+
+        logs = openshift.stream_logs(TEST_BUILD)
+        assert len([log for log in logs]) == 1
+
+    def test_stream_logs_no_data(self, openshift):  # noqa
+        response = flexmock(status_code=httplib.OK)
+        (response
+            .should_receive('iter_lines')
+            .and_return(["{'stream': 'foo\n'}"])
+            .and_raise(StopIteration))
+
+        (flexmock(openshift)
+            .should_receive('_get')
+            # First: timeout in response after 100s
             .and_raise(httplib.IncompleteRead(''))
-             # Next: return a real response
+            # Next: return a real response
             .and_return(response))
 
         (flexmock(time)
