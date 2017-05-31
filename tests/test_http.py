@@ -10,8 +10,14 @@ import sys
 
 from flexmock import flexmock
 import pytest
-import httplib
 import requests
+
+try:
+    # py2
+    import httplib
+except ImportError:
+    # py3
+    import http.client as httplib
 
 import osbs.http as osbs_http
 from osbs.http import HttpSession, HttpStream
