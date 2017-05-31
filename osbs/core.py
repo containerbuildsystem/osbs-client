@@ -443,10 +443,10 @@ class Openshift(object):
             # OsbsNetworkException or OsbsException
             # NOTE2: If decode_json or iter_lines causes ChunkedEncodingError, ConnectionError,
             # or IncompleteRead to be raised, it'll simply be silenced.
-            # NOTE3: An error may occur in iter_lines during initial contact
-            # with server - prior to streaming data. In this case, exception will be
-            # wrapped in OsbsException or OsbsNetworkException, inspect cause
-            # to detect ConnectionError.
+            # NOTE3: An exception may be raised from
+            # check_response(). In this case, exception will be
+            # wrapped in OsbsException or OsbsNetworkException,
+            # inspect cause to detect ConnectionError.
             except OsbsException as exc:
                 if not isinstance(exc.cause, ConnectionError):
                     raise
