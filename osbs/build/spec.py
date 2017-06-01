@@ -305,6 +305,11 @@ class BuildSpec(object):
             logger.debug("setting 'imagestream_insecure_registry' to %r", insecure)
 
         timestamp = utcnow().strftime('%Y%m%d%H%M%S')
+        # RNG is seeded once its imported, so in cli calls scratch builds would get unique name.
+        # On brew builders we import osbs once - thus RNG is seeded once and `randrange`
+        # returns the same values throughout the life of the builder.
+        # Before each `randrange` call we should be calling `.seed` to prevent this
+        random.seed()
         self.image_tag.value = "%s/%s:%s-%s-%s" % (
             self.user.value,
             self.component.value,
