@@ -505,7 +505,8 @@ class OSBS(object):
             info_url_format=self.build_conf.get_info_url_format(),
             artifacts_allowed_domains=self.build_conf.get_artifacts_allowed_domains(),
             low_priority_node_selector=self.build_conf.get_low_priority_node_selector(),
-            equal_labels=self.build_conf.get_equal_labels()
+            equal_labels=self.build_conf.get_equal_labels(),
+            platform_node_selector=self.build_conf.get_platform_node_selector(platform)
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         if build_request.scratch:
