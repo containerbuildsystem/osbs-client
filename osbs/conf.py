@@ -532,3 +532,19 @@ class Configuration(object):
                 raise OsbsValidationException("Wrong equal_labels configuration")
 
         return equal_labels
+
+    def get_platform_node_selector(self, platform):
+        """
+        search the configuration for entries of the form node_selector.platform
+        :return None or str
+
+        :param platform: str, platform to search for, can be null
+        """
+        nodeselector = None
+        if platform:
+            nodeselector_str = self._get_value("node_selector." + platform, self.conf_section,
+                                               "node_selector." + platform)
+            if nodeselector_str:
+                nodeselector = nodeselector_str
+
+        return nodeselector

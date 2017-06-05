@@ -399,3 +399,34 @@ class TestConfiguration(object):
                     conf.get_equal_labels()
             else:
                 assert conf.get_equal_labels() == expected
+
+    @pytest.mark.parametrize(('platform', 'config', 'kwargs', 'expected'), [
+        ('',
+         {},
+         {},
+         None),
+        ('',
+         {'default': {'node_selector.dinner': 'steak.com'}},
+         {},
+         None),
+        ('',
+         {'default': {}},
+         {'node_selector.dinner': 'steak.com'},
+         None),
+        ('breakfast',
+         {'default': {'node_selector.breakfast': 'eggs.com', 'node_selector.dinner': 'steak.com'}},
+         {},
+         'eggs.com'),
+        ('breakfast',
+         {'default': {}},
+         {'node_selector.breakfast': 'eggs.com', 'node_selector.dinner': 'steak.com'},
+         'eggs.com'),
+        ('breakfast',
+         {'default': {'node_selector.breakfast': 'bacon.com'}},
+         {'node_selector.breakfast': 'eggs.com', 'node_selector.dinner': 'steak.com'},
+         'eggs.com'),
+    ])
+    def test_get_node_selector_platform(self, platform, kwargs, config, expected):
+        with self.config_file(config) as config_file:
+            conf = Configuration(conf_file=config_file, **kwargs)
+            assert conf.get_platform_node_selector(platform) == expected
