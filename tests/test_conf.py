@@ -6,10 +6,9 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 
-from collections import namedtuple
 from contextlib import contextmanager
 from flexmock import flexmock
-import os
+import argparse
 from osbs.conf import Configuration
 from osbs import utils
 from osbs.exceptions import OsbsValidationException
@@ -51,8 +50,7 @@ class TestConfiguration(object):
             tmpf = self.tmpfile_with_content(args['token_file'])
             args['token_file'] = tmpf.name
 
-        args_tuple = namedtuple('args', args.keys())
-        yield args_tuple(**args)
+        yield argparse.Namespace(**args)
 
     @pytest.mark.parametrize(('config', 'kwargs', 'cli_args',
                               'login', 'expected'), [
