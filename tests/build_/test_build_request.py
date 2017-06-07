@@ -345,6 +345,7 @@ class TestBuildRequest(object):
         assert labels['authoritative-source-url'] == authoritative_registry
         assert labels['vendor'] == vendor
         assert labels['distribution-scope'] == distribution_scope
+        assert 'release' not in labels
 
         rendered_build_image = build_json["spec"]["strategy"]["customStrategy"]["from"]["name"]
         if not build_imagestream:
@@ -456,6 +457,7 @@ class TestBuildRequest(object):
         assert labels['authoritative-source-url'] is not None
         assert labels['vendor'] is not None
         assert labels['distribution-scope'] is not None
+        assert 'release' not in labels
 
     def test_render_prod_without_koji_request(self):
         build_request = BuildRequest(INPUTS_PATH)
@@ -534,6 +536,7 @@ class TestBuildRequest(object):
         assert labels['authoritative-source-url'] is not None
         assert labels['vendor'] is not None
         assert labels['distribution-scope'] is not None
+        assert 'release' not in labels
 
     def test_render_prod_with_secret_request(self):
         build_request = BuildRequest(INPUTS_PATH)
@@ -974,11 +977,13 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
 
-    @pytest.mark.parametrize(('hub', 'disabled'), [
-        ('http://hub/', False),
-        (None, True),
+    @pytest.mark.parametrize(('hub', 'disabled', 'release'), [
+        ('http://hub/', False, None),
+        ('http://hub/', False, '1.2.1'),
+        (None, True, None),
+        (None, True, '1.2.1'),
     ])
-    def test_render_bump_release(self, hub, disabled):
+    def test_render_bump_release(self, hub, disabled, release):
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -998,19 +1003,37 @@ class TestBuildRequest(object):
         if hub:
             kwargs['kojihub'] = hub
 
+        if release:
+            kwargs['release'] = release
+
         build_request = BuildRequest(INPUTS_PATH)
         build_request.set_params(**kwargs)
         build_json = build_request.render()
         strategy = build_json['spec']['strategy']['customStrategy']['env']
         plugins = get_plugins_from_build_json(build_json)
 
-        if disabled:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, "prebuild_plugins", "bump_release")
+        labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile",
+                                  "args", "labels")
 
-        else:
+        if not disabled and not release:
             assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
                                     "args", "hub") == hub
+            assert 'release' not in labels
+
+        elif not disabled and release:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "prebuild_plugins", "bump_release")
+            assert 'release' in labels
+
+        elif disabled and not release:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "prebuild_plugins", "bump_release")
+            assert 'release' not in labels
+
+        elif disabled and release:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "prebuild_plugins", "bump_release")
+            assert 'release' in labels
 
     @pytest.mark.parametrize(('hub', 'root', 'disabled'), [
         ('http://hub/', 'http://root/', False),

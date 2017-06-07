@@ -9,6 +9,12 @@
       }
     },
     {
+      "name": "add_labels_in_dockerfile",
+      "args": {
+        "labels": "{{IMPLICIT_LABELS}}"
+      }
+    },
+    {
       "name": "bump_release",
       "args": {
         "hub": "{{KOJI_HUB}}"

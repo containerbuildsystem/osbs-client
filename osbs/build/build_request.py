@@ -562,6 +562,7 @@ class BuildRequest(object):
             'vendor': self.spec.vendor,
             'authoritative-source-url': self.spec.authoritative_registry,
             'distribution-scope': self.spec.distribution_scope,
+            'release': self.spec.release,
         }
 
         for label, spec in label_spec.items():
@@ -614,6 +615,12 @@ class BuildRequest(object):
         phase = 'prebuild_plugins'
         plugin = 'bump_release'
         if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return
+
+        if self.spec.release.value:
+            logger.info('removing %s from request as release already specified',
+                        plugin)
+            self.dj.remove_plugin(phase, plugin)
             return
 
         hub = self.spec.kojihub.value
