@@ -76,6 +76,7 @@ class BuildRequest(object):
         :param kojihub: str, URL of the koji hub
         :param koji_certs_secret: str, resource name of secret that holds the koji certificates
         :param koji_task_id: int, Koji Task that created this build config
+        :param filesystem_koji_task_id: int, Koji Task that created the base filesystem
         :param pulp_registry: str, name of pulp registry in dockpulp.conf
         :param nfs_server_path: str, NFS server and path
         :param nfs_dest_dir: str, directory to create on NFS server
@@ -208,6 +209,7 @@ class BuildRequest(object):
             'git_ref': self.spec.git_ref.value,
             'git_uri': self.spec.git_uri.value,
             'koji_task_id': self.spec.koji_task_id.value,
+            'filesystem_koji_task_id': self.spec.filesystem_koji_task_id.value,
             'scratch': self.scratch,
             'target': self.spec.koji_target.value,
             'user': self.spec.user.value,
@@ -568,6 +570,10 @@ class BuildRequest(object):
             if self.spec.platforms.value:
                 self.dj.dock_json_set_arg(phase, plugin, 'architectures',
                                           self.spec.platforms.value)
+
+            if self.spec.filesystem_koji_task_id.value:
+                self.dj.dock_json_set_arg(phase, plugin, 'from_task_id',
+                                          self.spec.filesystem_koji_task_id.value)
 
     def render_add_labels_in_dockerfile(self):
         phase = 'prebuild_plugins'
@@ -1110,8 +1116,11 @@ class BuildRequest(object):
 
         koji_task_id = self.spec.koji_task_id.value
         if koji_task_id is not None:
-            self.template['metadata'].setdefault('labels', {})
-            self.template['metadata']['labels']['koji-task-id'] = str(koji_task_id)
+            self.set_label('koji-task-id', str(koji_task_id))
+
+        filesystem_koji_task_id = self.spec.filesystem_koji_task_id.value
+        if filesystem_koji_task_id is not None:
+            self.set_label('filesystem-koji-task-id', str(filesystem_koji_task_id))
 
         self.template['spec']['nodeSelector'] = self.platform_node_selector
 
