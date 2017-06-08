@@ -23,7 +23,6 @@ from osbs.constants import (SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
 from osbs.exceptions import (OsbsResponseException, OsbsException,
                              OsbsWatchBuildNotFound, OsbsAuthException,
                              OsbsNetworkException)
-from osbs.http import decoded_json
 from osbs.utils import graceful_chain_get
 from requests.exceptions import ChunkedEncodingError, ConnectionError
 
@@ -49,7 +48,7 @@ def check_response(response):
         if hasattr(response, 'content'):
             content = response.content
         else:
-            content = ''.join(decoded_json(response.iter_lines()))
+            content = ''.join(response.iter_lines())
 
         logger.error("[%d] %s", response.status_code, content)
         raise OsbsResponseException(message=content, status_code=response.status_code)
@@ -435,7 +434,7 @@ class Openshift(object):
                                      headers={'Connection': 'close'})
                 check_response(response)
 
-                for line in decoded_json(response.iter_lines()):
+                for line in response.iter_lines():
                     last_activity = time.time()
                     yield line
             # NOTE1: If self._get causes ChunkedEncodingError, ConnectionError,
@@ -585,7 +584,7 @@ class Openshift(object):
         while True:
             with self._get(url, stream=True, headers={'Connection': 'close'}) as response:
                 check_response(response)
-                for line in decoded_json(response.iter_lines()):
+                for line in response.iter_lines():
                     logger.debug(line)
                     try:
                         j = json.loads(line)

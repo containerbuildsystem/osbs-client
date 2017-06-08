@@ -20,7 +20,7 @@ except ImportError:
     import http.client as httplib
 
 import osbs.http as osbs_http
-from osbs.http import HttpSession, HttpStream, decoded_json
+from osbs.http import HttpSession, HttpStream
 from osbs.exceptions import OsbsNetworkException, OsbsException
 
 from tests.fake_api import Connection, ResponseMapping
@@ -62,10 +62,6 @@ class TestHttpSession(object):
                 logger.debug(line)
         assert len(response_multi.headers) > 2
         assert response_multi.headers['content-type'] == 'application/json'
-
-    def test_decoded_json(self, s):
-        inp = ['foo', 'bar', 'baz']
-        assert list(osbs_http.decoded_json(inp)) == inp
 
     def test_single_multi_without_redirs(self, s):
         response_single = s.get("http://httpbin.org/get")
@@ -136,12 +132,6 @@ class TestHttpSession(object):
         response_multi = s.get("http://httpbin.org/encoding/utf8")
         logger.debug(response_multi.headers)
         logger.debug(response_multi.content)
-
-    def test_utf8_encoding_stream(self, s):
-        stream = HttpStream("https://httpbin.org/encoding/utf8", "get")
-        lines = decoded_json(stream.iter_lines())
-        for line in lines:
-            logger.debug(line)
 
     def test_raise(self, s):
         with pytest.raises(RuntimeError):
