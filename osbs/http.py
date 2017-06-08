@@ -43,7 +43,7 @@ def decoded_json(iterable):
         if isinstance(line, str):
             yield line
         else:
-            yield line.decode(requests.utils.guess_json_utf(line))
+            yield line.encode(requests.utils.guess_json_utf(line))
 
 
 class HttpSession(object):

@@ -20,7 +20,7 @@ except ImportError:
     import http.client as httplib
 
 import osbs.http as osbs_http
-from osbs.http import HttpSession, HttpStream
+from osbs.http import HttpSession, HttpStream, decoded_json
 from osbs.exceptions import OsbsNetworkException, OsbsException
 
 from tests.fake_api import Connection, ResponseMapping
@@ -136,6 +136,12 @@ class TestHttpSession(object):
         response_multi = s.get("http://httpbin.org/encoding/utf8")
         logger.debug(response_multi.headers)
         logger.debug(response_multi.content)
+
+    def test_utf8_encoding_stream(self, s):
+        stream = HttpStream("https://httpbin.org/encoding/utf8", "get")
+        lines = decoded_json(stream.iter_lines())
+        for line in lines:
+            logger.debug(line)
 
     def test_raise(self, s):
         with pytest.raises(RuntimeError):
