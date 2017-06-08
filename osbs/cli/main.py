@@ -710,6 +710,9 @@ def cli():
         '--platforms', action='append', metavar='PLATFORM',
         help='name of each platform to use')
 
+    build_parser.add_argument('--source-registry-uri', action='store', required=False,
+                              help="set source registry for pulling parent image")
+
     build_type_group = build_parser.add_mutually_exclusive_group()
     build_type_group.add_argument("--worker", action="store_true", required=False,
                                   default=False, help="create worker build")
