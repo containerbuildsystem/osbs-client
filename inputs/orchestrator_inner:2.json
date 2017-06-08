@@ -2,6 +2,13 @@
   "client_version": "{{VERSION}}",
   "prebuild_plugins": [
     {
+      "name": "add_filesystem",
+      "args": {
+        "koji_hub": "{{KOJI_HUB}}",
+        "repos": []
+      }
+    },
+    {
       "name": "pull_base_image",
       "args": {
         "parent_registry": "{{REGISTRY_URI}}",

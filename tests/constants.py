@@ -29,6 +29,7 @@ TEST_BUILD_POD = "build-test-build-123"
 TEST_LABEL = "test-label"
 TEST_LABEL_VALUE = "sample-value"
 TEST_KOJI_TASK_ID = 12345
+TEST_FILESYSTEM_KOJI_TASK_ID = 67890
 
 TEST_BUILD_JSON = {
     "metadata": {

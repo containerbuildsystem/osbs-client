@@ -27,7 +27,8 @@ import pytest
 
 from tests.constants import (INPUTS_PATH, TEST_BUILD_CONFIG, TEST_BUILD_JSON,
                              TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
-                             TEST_GIT_URI, TEST_GIT_URI_HUMAN_NAME)
+                             TEST_GIT_URI, TEST_GIT_URI_HUMAN_NAME,
+                             TEST_FILESYSTEM_KOJI_TASK_ID)
 
 USE_DEFAULT_TRIGGERS = object()
 
@@ -59,7 +60,9 @@ def get_sample_prod_params():
         'registry_api_versions': ['v1'],
         'smtp_host': 'smtp.example.com',
         'smtp_from': 'user@example.com',
-        'proxy': 'http://proxy.example.com'
+        'proxy': 'http://proxy.example.com',
+        'platforms': ['x86_64'],
+        'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID
     }
 
 
@@ -1688,6 +1691,8 @@ class TestBuildRequest(object):
         assert add_filesystem_args['koji_hub'] == kwargs['kojihub']
         assert add_filesystem_args['koji_proxyuser'] == kwargs['proxy']
         assert add_filesystem_args['repos'] == kwargs['yum_repourls']
+        assert add_filesystem_args['architectures'] == kwargs['platforms']
+        assert add_filesystem_args['from_task_id'] == kwargs['filesystem_koji_task_id']
 
     def test_prod_non_custom_base_image(self, tmpdir):
         build_request = BuildRequest(INPUTS_PATH)
