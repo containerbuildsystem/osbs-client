@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Copyright (c) 2015 Red Hat, Inc
 All rights reserved.
@@ -103,6 +104,20 @@ class TestOpenshift(object):
             .should_receive('time')
             .and_return(0)
             .and_return(100))
+
+        logs = openshift.stream_logs(TEST_BUILD)
+        assert len([log for log in logs]) == 1
+
+    def test_stream_logs_utf8(self, openshift):  # noqa
+        response = flexmock(status_code=httplib.OK)
+        (response
+            .should_receive('iter_lines')
+            .and_return(["{'stream': 'Uňícode íš hářd\n'}"])
+            .and_raise(StopIteration))
+
+        (flexmock(openshift)
+            .should_receive('_get')
+            .and_return(response))
 
         logs = openshift.stream_logs(TEST_BUILD)
         assert len([log for log in logs]) == 1
