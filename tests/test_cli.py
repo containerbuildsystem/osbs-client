@@ -8,7 +8,6 @@ of the BSD license. See the LICENSE file for details.
 import pytest
 import sys
 
-from flexmock import flexmock
 from textwrap import dedent
 from osbs.cli.main import (str_on_2_unicode_on_3, check_required_args,
                            check_unwanted_args, make_worker_builds_str,

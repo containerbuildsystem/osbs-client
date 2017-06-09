@@ -21,7 +21,7 @@ from osbs.core import check_response, Openshift
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
                              TEST_LABEL_VALUE)
 from tests.fake_api import openshift, OAPI_PREFIX, API_VER
-from requests.exceptions import ChunkedEncodingError, ConnectionError
+from requests.exceptions import ConnectionError
 import pytest
 
 try:

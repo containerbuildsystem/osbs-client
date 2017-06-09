@@ -16,15 +16,14 @@ import base64
 import logging
 from osbs.kerberos_ccache import kerberos_ccache_init
 from osbs.build.build_response import BuildResponse
-from osbs.constants import DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNNING_STATES, BUILD_CANCELLED_STATE
+from osbs.constants import DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNNING_STATES
 from osbs.constants import WATCH_MODIFIED, WATCH_DELETED, WATCH_ERROR
 from osbs.constants import (SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
                             SERVICEACCOUNT_CACRT)
 from osbs.exceptions import (OsbsResponseException, OsbsException,
-                             OsbsWatchBuildNotFound, OsbsAuthException,
-                             OsbsNetworkException)
+                             OsbsWatchBuildNotFound, OsbsAuthException)
 from osbs.utils import graceful_chain_get
-from requests.exceptions import ChunkedEncodingError, ConnectionError
+from requests.exceptions import ConnectionError
 
 try:
     # py2

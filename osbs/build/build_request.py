@@ -15,18 +15,16 @@ from pkg_resources import parse_version
 
 try:
     # py2
-    import urlparse
     from itertools import izip_longest as zip_longest
 except ImportError:
     # py3
-    import urllib.parse as urlparse
     from itertools import zip_longest
 
 from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.spec import BuildSpec
 from osbs.constants import SECRETS_PATH, DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE, DEFAULT_CUSTOMIZE_CONF
 from osbs.exceptions import OsbsException, OsbsValidationException
-from osbs.utils import looks_like_git_hash, git_repo_humanish_part_from_uri, sanitize_version
+from osbs.utils import git_repo_humanish_part_from_uri, sanitize_version
 from osbs import __version__ as client_version
 
 
