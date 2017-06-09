@@ -292,7 +292,7 @@ class OSBS(object):
         build_json['metadata']['labels']['scratch'] = 'true'
 
         if build_request.low_priority_node_selector:
-            build_json['spec']['nodeSelector'] = build_request.low_priority_node_selector
+            build_json['spec']['nodeSelector'].update(build_request.low_priority_node_selector)
 
         builder_img = build_json['spec']['strategy']['customStrategy']['from']
         kind = builder_img['kind']
@@ -475,7 +475,6 @@ class OSBS(object):
             koji_kerberos_keytab=self.build_conf.get_koji_kerberos_keytab(),
             koji_kerberos_principal=self.build_conf.get_koji_kerberos_principal(),
             architecture=architecture,
-            platform=platform,
             platforms=platforms,
             release=release,
             vendor=self.build_conf.get_vendor(),
