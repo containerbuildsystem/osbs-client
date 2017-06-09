@@ -60,6 +60,8 @@ class BuildRequest(object):
         self.scratch = None
         self.base_image = None
         self.low_priority_node_selector = None
+        # forward reference
+        self.platform_node_selector = None
 
     def set_params(self, **kwargs):
         """
@@ -85,6 +87,7 @@ class BuildRequest(object):
                                    (private, authoritative-source-only, restricted, public)
         :param use_auth: bool, use auth from atomic-reactor?
         :param low_priority_node_selector: dict, a nodeselector for builds with lower priority
+        :param platform_node_selector: dict, a nodeselector for a specific platform
         """
 
         # Here we cater to the koji "scratch" build type, this will disable
@@ -96,6 +99,7 @@ class BuildRequest(object):
 
         self.base_image = kwargs.get('base_image')
         self.low_priority_node_selector = kwargs.get('low_priority_node_selector')
+        self.platform_node_selector = kwargs.get('platform_node_selector', {})
 
         logger.debug("setting params '%s' for %s", kwargs, self.spec)
         self.spec.set_params(**kwargs)
@@ -1090,6 +1094,8 @@ class BuildRequest(object):
         if koji_task_id is not None:
             self.template['metadata'].setdefault('labels', {})
             self.template['metadata']['labels']['koji-task-id'] = str(koji_task_id)
+
+        self.template['spec']['nodeSelector'] = self.platform_node_selector
 
         use_auth = self.spec.use_auth.value
         self.render_reactor_config()

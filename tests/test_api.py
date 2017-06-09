@@ -980,6 +980,56 @@ class TestOSBS(object):
             assert kind == 'ImageStreamTag'
             assert img == build_imagestream
 
+    def test_worker_build_image_with_platform_node(self):
+        build_image = 'registry.example.com/buildroot:2.0'
+        with NamedTemporaryFile(mode='wt') as fp:
+            fp.write(dedent("""\
+                [general]
+                build_json_dir = {build_json_dir}
+                [default]
+                openshift_url = /
+                sources_command = /bin/true
+                vendor = Example, Inc
+                registry_uri = registry.example.com
+                build_host = localhost
+                authoritative_registry = localhost
+                distribution_scope = private
+                node_selector.meal = breakfast=bacon.com, lunch=ham.com
+                build_image = {build_image}
+                """.format(build_json_dir='inputs', build_image=build_image)))
+            fp.flush()
+            config = Configuration(fp.name)
+            osbs_obj = OSBS(config, config)
+
+        assert config.get_build_image() == build_image
+
+        arrangement = DEFAULT_ARRANGEMENT_VERSION
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': TEST_USER,
+            'platform': 'meal',
+            'release': 'bacon',
+            'arrangement_version': arrangement,
+            'inner_template': WORKER_INNER_TEMPLATE.format(arrangement_version=arrangement),
+            'outer_template': WORKER_OUTER_TEMPLATE,
+            'customize_conf': WORKER_CUSTOMIZE_CONF,
+        }
+
+        (flexmock(utils)
+            .should_receive('get_df_parser')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(MockDfParser()))
+
+        flexmock(OSBS, _create_build_config_and_build=request_as_response)
+
+        req = osbs_obj.create_worker_build(**kwargs)
+        img = req.json['spec']['strategy']['customStrategy']['from']['name']
+        assert img == build_image
+        node_selector = req.json['spec']['nodeSelector']
+        assert node_selector == {'breakfast': 'bacon.com', 'lunch': 'ham.com'}
+
     def test_get_existing_build_config_by_labels(self):
         build_config = {
             'metadata': {
@@ -1543,20 +1593,38 @@ class TestOSBS(object):
         build_response = osbs_obj._create_scratch_build(build_request)
         assert build_response.json == {'spam': 'maps'}
 
-    @pytest.mark.parametrize(('nodeselector_str, nodeselector_dict'), [
-        (None, {}),
-        ('foo=  bar', {'foo': 'bar'}),
-        ('foo=bar ,  baz=foo', {'foo': 'bar', 'baz': 'foo'}),
+    @pytest.mark.parametrize(('platform', 'platform_nodeselector', 'platform_nodeselector_dict',
+                              'lowpriority_nodeselector', 'lowpriority_nodeselector_dict'), [
+        (None, '', {}, None, {}),
+        (None, '', {}, 'foo=  bar', {'foo': 'bar'}),
+        (None, '', {}, 'foo=bar ,  baz=foo', {'foo': 'bar', 'baz': 'foo'}),
+        ('meal', 'breakfast=bacon.com, lunch=ham.com',
+         {'breakfast': 'bacon.com', 'lunch': 'ham.com'}, None, {}),
+        ('meal', 'breakfast=bacon.com, lunch=ham.com',
+         {'breakfast': 'bacon.com', 'lunch': 'ham.com'}, 'foo=  bar', {'foo': 'bar'}),
+        ('meal', 'breakfast=bacon.com, lunch=ham.com',
+         {'breakfast': 'bacon.com', 'lunch': 'ham.com'}, 'foo=bar ,  baz=foo',
+         {'foo': 'bar', 'baz': 'foo'}),
     ])
-    def test_scratch_build_nodeselector(self, nodeselector_str, nodeselector_dict):
-        if nodeselector_str:
+    def test_scratch_build_nodeselector(self, platform, platform_nodeselector,
+                                        platform_nodeselector_dict,
+                                        lowpriority_nodeselector, lowpriority_nodeselector_dict):
+        if platform or lowpriority_nodeselector:
             with NamedTemporaryFile(mode='wt') as fp:
                 fp.write(dedent("""\
                     [general]
                     build_json_dir = {inputs}
                     [default]
-                    low_priority_node_selector = {nodeselector}
-                    """.format(inputs=INPUTS_PATH, nodeselector=nodeselector_str)))
+                    """.format(inputs=INPUTS_PATH)))
+                if platform:
+                    fp.write(dedent("""\
+                        node_selector.{platform_str} = {platform_nodeselector_str}
+                    """.format(platform_str=platform,
+                               platform_nodeselector_str=platform_nodeselector)))
+                if lowpriority_nodeselector:
+                    fp.write(dedent("""\
+                        low_priority_node_selector = {lowpriority_nodeselector_str}
+                    """.format(lowpriority_nodeselector_str=lowpriority_nodeselector)))
                 fp.flush()
                 config = Configuration(fp.name)
         else:
@@ -1567,6 +1635,8 @@ class TestOSBS(object):
         kwargs = get_sample_prod_params()
         kwargs['scratch'] = True
         kwargs['low_priority_node_selector'] = config.get_low_priority_node_selector()
+        if platform:
+            kwargs['platform_node_selector'] = config.get_platform_node_selector(platform)
         build_request.set_params(**kwargs)
         build_request_copy = copy.deepcopy(build_request)
         build_json = build_request_copy.render()
@@ -1575,8 +1645,8 @@ class TestOSBS(object):
         updated_build_json['kind'] = 'Build'
         updated_build_json['metadata']['labels']['scratch'] = 'true'
         updated_build_json['spec']['serviceAccount'] = 'builder'
-        if nodeselector_dict:
-            updated_build_json['spec']['nodeSelector'] = nodeselector_dict
+        if lowpriority_nodeselector_dict:
+            updated_build_json['spec']['nodeSelector'].update(lowpriority_nodeselector_dict)
         build_name = 'scratch-%s' % datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         updated_build_json['metadata']['name'] = build_name
 
@@ -1587,6 +1657,10 @@ class TestOSBS(object):
             del updated_build_json['metadata']['name']
 
             assert passed_build_json == updated_build_json
+            if platform or lowpriority_nodeselector:
+                valid_dict = platform_nodeselector_dict
+                valid_dict.update(lowpriority_nodeselector_dict)
+                assert passed_build_json['spec']['nodeSelector'] == valid_dict
             return flexmock(json=lambda: {'spam': 'maps'})
 
         (flexmock(osbs_obj.os)

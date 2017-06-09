@@ -163,7 +163,6 @@ class BuildSpec(object):
     nfs_server_path = BuildParam("nfs_server_path", allow_none=True)
     nfs_dest_dir = BuildParam("nfs_dest_dir", allow_none=True)
     builder_build_json_dir = BuildParam("builder_build_json_dir", allow_none=True)
-    platform = BuildParam("platform", allow_none=True)
     platforms = BuildParam("platforms", allow_none=True)
     release = BuildParam("release", allow_none=True)
     reactor_config_secret = BuildParam("reactor_config_secret", allow_none=True)
@@ -218,7 +217,7 @@ class BuildSpec(object):
                    git_branch=None, base_image=None,
                    name_label=None,
                    builder_build_json_dir=None, registry_api_versions=None,
-                   platform=None, platforms=None, release=None,
+                   platforms=None, release=None,
                    reactor_config_secret=None, client_config_secret=None,
                    token_secrets=None, arrangement_version=None,
                    info_url_format=None, artifacts_allowed_domains=None,
@@ -318,7 +317,6 @@ class BuildSpec(object):
             timestamp
         )
 
-        self.platform.value = platform
         self.platforms.value = platforms
         self.release.value = release
         self.reactor_config_secret.value = reactor_config_secret
