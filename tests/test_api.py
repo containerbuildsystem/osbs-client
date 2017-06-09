@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Copyright (c) 2015 Red Hat, Inc
 All rights reserved.
@@ -832,13 +833,19 @@ class TestOSBS(object):
     def test_build_logs_api(self, osbs):  # noqa
         logs = osbs.get_build_logs(TEST_BUILD)
         assert isinstance(logs, six.string_types)
-        assert logs == "line 1"
+        assert logs == dedent("""\
+            line 1
+            Uňícode íš hářd
+            """)
 
     # osbs is a fixture here
     def test_build_logs_api_follow(self, osbs):  # noqa
         logs = osbs.get_build_logs(TEST_BUILD, follow=True)
         assert isinstance(logs, GeneratorType)
-        assert next(logs) == "line 1"
+        assert next(logs) == dedent("""\
+            line 1
+            Uňícode íš hářd
+            """)
         with pytest.raises(StopIteration):
             assert next(logs)
 

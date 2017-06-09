@@ -45,7 +45,7 @@ class StreamingResponse(object):
         self.headers = headers or {}
 
     def iter_lines(self):
-        yield self.content.decode("utf-8")
+        yield self.content
 
     def __enter__(self):
         return self
@@ -395,7 +395,7 @@ class ResponseMapping(object):
         json_path = os.path.join(this_dir, "mock_jsons", self.version, file_name)
         logger.debug("File: %s", json_path)
         with open(json_path, "r") as fd:
-            return fd.read().encode("utf-8")
+            return fd.read()
 
     def response_mapping(self, url_path, method):
         key, value_to_use = self.lookup(url_path)
