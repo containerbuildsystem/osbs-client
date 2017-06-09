@@ -19,11 +19,8 @@ except ImportError:
     # py3
     import http.client as httplib
 
-import osbs.http as osbs_http
 from osbs.http import HttpSession, HttpStream
 from osbs.exceptions import OsbsNetworkException, OsbsException
-
-from tests.fake_api import Connection, ResponseMapping
 
 logger = logging.getLogger(__file__)
 
