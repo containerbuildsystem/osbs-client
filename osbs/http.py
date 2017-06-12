@@ -141,7 +141,7 @@ class HttpStream(object):
     def iter_chunks(self):
         return self.req.iter_content(None)
 
-    def iter_lines(self):
+    def iter_lines(self, encode=True):
         kwargs = {
             'decode_unicode': True
         }
@@ -153,14 +153,20 @@ class HttpStream(object):
 
         try:
             for line in self.req.iter_lines(**kwargs):
-                guessed_encoding = requests.utils.guess_json_utf(line)
-                if guessed_encoding != self.req.encoding:
-                    line = line.encode(self.req.encoding).decode(guessed_encoding)
+                if encode:
+                    line = self._encode_line(line)
                 yield line
         except (requests.exceptions.ChunkedEncodingError,
                 requests.exceptions.ConnectionError,
                 httplib.IncompleteRead):
             raise StopIteration
+
+    def _encode_line(self, line):
+        try:
+            line = line.encode(self.req.encoding)
+        except UnicodeEncodeError:
+            line = line.encode(self.req.encoding, errors='replace')
+        return line
 
     def close(self):
         if not self.closed:
