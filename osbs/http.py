@@ -147,8 +147,15 @@ class HttpStream(object):
         }
         if requests.__version__.startswith('2.6.'):
             kwargs['chunk_size'] = 1
+
+        if not self.req.encoding:
+            self.req.encoding = 'utf-8'
+
         try:
             for line in self.req.iter_lines(**kwargs):
+                guessed_encoding = requests.utils.guess_json_utf(line)
+                if guessed_encoding != self.req.encoding:
+                    line = line.encode(self.req.encoding).decode(guessed_encoding)
                 yield line
         except (requests.exceptions.ChunkedEncodingError,
                 requests.exceptions.ConnectionError,
