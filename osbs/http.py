@@ -56,7 +56,7 @@ class HttpSession(object):
                 return stream
 
             with stream as s:
-                content = s.req.text
+                content = s.req.content
                 return HttpResponse(s.status_code, s.headers, content)
         except requests.exceptions.HTTPError as ex:
             raise OsbsNetworkException(url, str(ex), ex.response.status_code,
@@ -143,30 +143,24 @@ class HttpStream(object):
 
     def iter_lines(self, encode=True):
         kwargs = {
-            'decode_unicode': True
+            # 'decode_unicode': True
         }
         if requests.__version__.startswith('2.6.'):
             kwargs['chunk_size'] = 1
 
-        if not self.req.encoding:
-            self.req.encoding = 'utf-8'
+        import pdb; pdb.set_trace()
+
+        encoding = self.req.encoding or 'UTF-8'
 
         try:
             for line in self.req.iter_lines(**kwargs):
-                if encode:
-                    line = self._encode_line(line)
-                yield line
+                if encoding == 'ISO-8859-1':
+                    encoding = 'UTF-8'
+                yield line.decode(encoding)
         except (requests.exceptions.ChunkedEncodingError,
                 requests.exceptions.ConnectionError,
                 httplib.IncompleteRead):
             raise StopIteration
-
-    def _encode_line(self, line):
-        try:
-            line = line.encode(self.req.encoding)
-        except UnicodeEncodeError:
-            line = line.encode(self.req.encoding, errors='replace')
-        return line
 
     def close(self):
         if not self.closed:
