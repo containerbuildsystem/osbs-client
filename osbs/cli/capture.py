@@ -20,18 +20,26 @@ class IterLinesSaver(object):
     Wrap HttpStream.iter_lines() and save responses.
     """
 
-    def __init__(self, path, fn):
+    def __init__(self, encoding, path, fn):
+        self.encoding = encoding or 'utf-8'
         self.path = path
         self.fn = fn
         self.line = 0
 
     def iter_lines(self):
+        encoding = self.encoding
         for line in self.fn():
             path = "{f}-{n:0>3}.json".format(f=self.path, n=self.line)
             logger.debug("capturing to %s", path)
+            try:
+                text = line.decode(encoding, errors='replace')
+            except TypeError:
+                # py26
+                text = line.decode(encoding)
+
             with open(path, "w") as outf:
                 try:
-                    json.dump(json.loads(line), outf, sort_keys=True, indent=4)
+                    json.dump(json.loads(text), outf, sort_keys=True, indent=4)
                 except ValueError:
                     outf.write(line)
 
@@ -68,7 +76,7 @@ class ResponseSaver(object):
 
         if kwargs.get('stream', False):
             stream = self.fn(url, method, *args, **kwargs)
-            stream.iter_lines = IterLinesSaver(path,
+            stream.iter_lines = IterLinesSaver(stream.encoding, path,
                                                stream.iter_lines).iter_lines
             return stream
         else:
@@ -76,7 +84,7 @@ class ResponseSaver(object):
             logger.debug("capturing to %s.json", path)
             with open(path + ".json", "w") as outf:
                 try:
-                    json.dump(json.loads(response.content), outf,
+                    json.dump(json.loads(response.text), outf,
                               sort_keys=True, indent=4)
                 except ValueError:
                     outf.write(response.content)

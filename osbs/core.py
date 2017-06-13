@@ -24,6 +24,7 @@ from osbs.exceptions import (OsbsResponseException, OsbsException,
                              OsbsWatchBuildNotFound, OsbsAuthException)
 from osbs.utils import graceful_chain_get
 from requests.exceptions import ConnectionError
+from requests.utils import guess_json_utf
 
 try:
     # py2
@@ -44,13 +45,19 @@ logger = logging.getLogger(__name__)
 
 def check_response(response):
     if response.status_code not in (httplib.OK, httplib.CREATED):
-        if hasattr(response, 'content'):
-            content = response.content
+        if hasattr(response, 'text'):
+            text = response.text
         else:
-            content = ''.join(response.iter_lines())
+            encoding = response.encoding or 'utf-8'
+            content = b''.join(response.iter_lines())
+            try:
+                text = content.decode(encoding, errors='replace')
+            except TypeError:
+                # py26
+                text = content.decode(encoding)
 
-        logger.error("[%d] %s", response.status_code, content)
-        raise OsbsResponseException(message=content, status_code=response.status_code)
+        logger.error("[%d] %s", response.status_code, text)
+        raise OsbsResponseException(message=text, status_code=response.status_code)
 
 
 def retry_on_conflict(func, sleep_seconds=0.5, max_attempts=10):
@@ -413,7 +420,7 @@ class Openshift(object):
         stream logs from build
 
         :param build_id: str
-        :return: iterator
+        :return: iterator yielding Unicode text
         """
         kwargs = {'follow': 1}
 
@@ -433,13 +440,20 @@ class Openshift(object):
                                      headers={'Connection': 'close'})
                 check_response(response)
 
+                encoding = response.encoding
+                if not encoding:
+                    # The HTTP response headers didn't tell us the
+                    # encoding; make a reasonable guess
+                    encoding = 'utf-8'
+
                 for line in response.iter_lines():
                     last_activity = time.time()
-                    yield line
+                    yield line.decode(encoding)
+
             # NOTE1: If self._get causes ChunkedEncodingError, ConnectionError,
             # or IncompleteRead to be raised, they'll be wrapped in
             # OsbsNetworkException or OsbsException
-            # NOTE2: If decode_json or iter_lines causes ChunkedEncodingError, ConnectionError,
+            # NOTE2: If iter_lines causes ChunkedEncodingError, ConnectionError,
             # or IncompleteRead to be raised, it'll simply be silenced.
             # NOTE3: An exception may be raised from
             # check_response(). In this case, exception will be
@@ -467,7 +481,7 @@ class Openshift(object):
         :param follow: bool, fetch logs as they come?
         :param build_json: dict, to save one get-build query
         :param wait_if_missing: bool, if build doesn't exist, wait
-        :return: None, str or iterator
+        :return: None, Unicode text or iterator yielding Unicode text
         """
         # does build exist?
         try:
@@ -494,7 +508,7 @@ class Openshift(object):
         buildlogs_url = self._build_url("builds/%s/log/" % build_id)
         response = self._get(buildlogs_url, headers={'Connection': 'close'})
         check_response(response)
-        return response.content
+        return response.text
 
     def list_builds(self, build_config_id=None, koji_task_id=None,
                     field_selector=None):
@@ -583,10 +597,24 @@ class Openshift(object):
         while True:
             with self._get(url, stream=True, headers={'Connection': 'close'}) as response:
                 check_response(response)
+                encoding = response.encoding
                 for line in response.iter_lines():
                     logger.debug(line)
+
+                    if not encoding and len(line) > 3:
+                        encoding = guess_json_utf(line)
+                        try:
+                            text = line.decode(encoding)
+                        except UnicodeDecodeError:
+                            # Not UTF?
+                            logger.error("Unable to guess encoding, skipping")
+                            encoding = None
+                            continue
+                    else:
+                        text = line.decode(encoding)
+
                     try:
-                        j = json.loads(line)
+                        j = json.loads(text)
                     except ValueError:
                         logger.error("Cannot decode watch event: %s", line)
                         continue
@@ -687,7 +715,7 @@ class Openshift(object):
         """
         url = self._build_url("%s/%s" % (collection, name))
         response = self._get(url)
-        logger.debug("before modification: %s", response.content)
+        logger.debug("before modification: %s", response.text)
         build_json = response.json()
         how(build_json['metadata'], things, values)
         response = self._put(url, data=json.dumps(build_json), use_json=True)
