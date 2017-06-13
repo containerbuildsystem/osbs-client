@@ -545,6 +545,8 @@ class Configuration(object):
             nodeselector_str = self._get_value("node_selector." + platform, self.conf_section,
                                                "node_selector." + platform)
             if nodeselector_str:
-                nodeselector = nodeselector_str
+                constraints = nodeselector_str.split(',')
+                raw_nodeselector = dict([constraint.split('=', 1) for constraint in constraints])
+                nodeselector = dict([k.strip(), v.strip()] for (k, v) in raw_nodeselector.items())
 
         return nodeselector
