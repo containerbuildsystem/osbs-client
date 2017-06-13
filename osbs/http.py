@@ -148,8 +148,6 @@ class HttpStream(object):
         if requests.__version__.startswith('2.6.'):
             kwargs['chunk_size'] = 1
 
-        import pdb; pdb.set_trace()
-
         encoding = self.req.encoding or 'UTF-8'
 
         try:
