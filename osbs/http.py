@@ -143,7 +143,13 @@ class HttpStream(object):
 
     def iter_lines(self):
         kwargs = {
-            'decode_unicode': True
+            # OpenShift does not respond with any encoding value.
+            # This causes requests module to guess it as ISO-8859-1.
+            # Likely, the encoding is actually UTF-8, but we can't
+            # guarantee it. Therefore, we take the approach of simply
+            # passing through the encoded data with no effort to
+            # attempt decoding it.
+            'decode_unicode': False
         }
         if requests.__version__.startswith('2.6.'):
             kwargs['chunk_size'] = 1
