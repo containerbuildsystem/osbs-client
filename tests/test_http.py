@@ -50,7 +50,7 @@ class TestHttpSession(object):
     def test_single_multi_secure_without_redirs(self, s):
         response_single = s.get("https://httpbin.org/get")
         logger.debug(response_single.headers)
-        logger.debug(response_single.content)
+        logger.debug(response_single.text)
         assert len(response_single.headers) > 2
         assert response_single.headers['content-type'] == 'application/json'
         response_multi = s.get("https://httpbin.org/stream/3", stream=True)
@@ -63,7 +63,7 @@ class TestHttpSession(object):
     def test_single_multi_without_redirs(self, s):
         response_single = s.get("http://httpbin.org/get")
         logger.debug(response_single.headers)
-        logger.debug(response_single.content)
+        logger.debug(response_single.text)
         response_multi = s.get("http://httpbin.org/stream/3", stream=True)
         with response_multi as r:
             for line in r.iter_lines():
@@ -72,7 +72,7 @@ class TestHttpSession(object):
     def test_single_multi_secure(self, s):
         response_single = s.get("https://httpbin.org/get", allow_redirects=False)
         logger.debug(response_single.headers)
-        logger.debug(response_single.content)
+        logger.debug(response_single.text)
         response_multi = s.get("https://httpbin.org/stream/3", stream=True, allow_redirects=False)
         with response_multi as r:
             for line in r.iter_lines():
@@ -81,7 +81,7 @@ class TestHttpSession(object):
     def test_single_multi(self, s):
         response_single = s.get("http://httpbin.org/get", allow_redirects=False)
         logger.debug(response_single.headers)
-        logger.debug(response_single.content)
+        logger.debug(response_single.text)
         response_multi = s.get("http://httpbin.org/stream/3", stream=True, allow_redirects=False)
         with response_multi as r:
             for line in r.iter_lines():
@@ -103,7 +103,7 @@ class TestHttpSession(object):
         response_single = s.get("http://httpbin.org/basic-auth/user/pwd",
                                 username="user", password="pwd")
         logger.debug(response_single.headers)
-        logger.debug(response_single.content)
+        logger.debug(response_single.text)
         response = s.get("http://httpbin.org/stream/3", stream=True)
         logger.debug(response.headers)
         with response as r:
@@ -123,12 +123,12 @@ class TestHttpSession(object):
                 logger.debug(line)
         response_single = s.get("http://httpbin.org/get")
         logger.debug(response_single.headers)
-        logger.debug(response_single.content)
+        logger.debug(response_single.text)
 
     def test_utf8_encoding(self, s):
         response_multi = s.get("http://httpbin.org/encoding/utf8")
         logger.debug(response_multi.headers)
-        logger.debug(response_multi.content)
+        logger.debug(response_multi.text)
 
     def test_raise(self, s):
         with pytest.raises(RuntimeError):

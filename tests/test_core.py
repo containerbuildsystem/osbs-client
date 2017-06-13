@@ -8,6 +8,7 @@ of the BSD license. See the LICENSE file for details.
 """
 from flexmock import flexmock
 from textwrap import dedent
+import logging
 import six
 import time
 import json
@@ -22,6 +23,7 @@ from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
                              TEST_LABEL_VALUE)
 from tests.fake_api import openshift, OAPI_PREFIX, API_VER
 from requests.exceptions import ConnectionError
+import requests
 import pytest
 
 try:
@@ -36,8 +38,10 @@ class Response(object):
     def __init__(self, status_code, content=None, iterable=None):
         self.status_code = status_code
         self.iterable = iterable
+        self.encoding = 'utf-8'
         if content is not None:
             self.content = content
+            self.text = content.decode(self.encoding)
 
     def iter_lines(self):
         for line in self.iterable:
@@ -45,14 +49,14 @@ class Response(object):
 
 
 class TestCheckResponse(object):
-    @pytest.mark.parametrize('content', [None, 'OK'])
+    @pytest.mark.parametrize('content', [None, b'OK'])
     @pytest.mark.parametrize('status_code', [httplib.OK, httplib.CREATED])
     def test_check_response_ok(self, status_code, content):
         response = Response(status_code, content=content)
         check_response(response)
 
     def test_check_response_bad_stream(self, caplog):
-        iterable = ['iter', 'lines']
+        iterable = [x.encode('utf-8') for x in [u'itér', u'línes']]
         status_code = httplib.CONFLICT
         response = Response(status_code, iterable=iterable)
         with pytest.raises(OsbsResponseException):
@@ -60,20 +64,20 @@ class TestCheckResponse(object):
 
         logged = [l.getMessage() for l in caplog.records()]
         assert len(logged) == 1
-        assert logged[0] == '[{code}] {message}'.format(code=status_code,
-                                                        message='iterlines')
+        assert logged[0] == u'[{code}] {message}'.format(code=status_code,
+                                                         message=u'itérlínes')
 
     def test_check_response_bad_nostream(self, caplog):
         status_code = httplib.CONFLICT
-        content = 'content'
-        response = Response(status_code, content=content)
+        text = u'Téxt'
+        response = Response(status_code, content=text.encode('utf-8'))
         with pytest.raises(OsbsResponseException):
             check_response(response)
 
         logged = [l.getMessage() for l in caplog.records()]
         assert len(logged) == 1
-        assert logged[0] == '[{code}] {message}'.format(code=status_code,
-                                                        message=content)
+        assert logged[0] == u'[{code}] {message}'.format(code=status_code,
+                                                         message=text)
 
 
 class TestOpenshift(object):
@@ -85,10 +89,10 @@ class TestOpenshift(object):
         ConnectionError('Connection aborted.', httplib.BadStatusLine("''",)),
     ])
     def test_stream_logs_bad_initial_connection(self, openshift, exc):
-        response = flexmock(status_code=httplib.OK)
+        response = flexmock(status_code=httplib.OK, encoding='utf-8')
         (response
             .should_receive('iter_lines')
-            .and_return(["{'stream': 'foo\n'}"])
+            .and_return([b"{'stream': 'foo\n'}"])
             .and_raise(StopIteration))
 
         wrapped_exc = OsbsNetworkException('http://spam.com', str(exc), status_code=None,
@@ -109,10 +113,10 @@ class TestOpenshift(object):
         assert len([log for log in logs]) == 1
 
     def test_stream_logs_utf8(self, openshift):  # noqa
-        response = flexmock(status_code=httplib.OK)
+        response = flexmock(status_code=httplib.OK, encoding='utf-8')
         (response
             .should_receive('iter_lines')
-            .and_return(["{'stream': 'Uňícode íš hářd\n'}"])
+            .and_return([u"{'stream': 'Uňícode íš hářd\n'}".encode('utf-8')])
             .and_raise(StopIteration))
 
         (flexmock(openshift)
@@ -121,6 +125,40 @@ class TestOpenshift(object):
 
         logs = openshift.stream_logs(TEST_BUILD)
         assert len([log for log in logs]) == 1
+
+    def test_stream_logs_no_encoding_in_headers(self, caplog):
+        server = Openshift('/oapi/v1/', 'v1', '/oauth/authorize',
+                           k8s_api_url='/api/v1/')
+
+        class BadResponse(object):
+            """
+            Don't specify the encoding; check that UTF-8 is assumed
+            """
+
+            encoding = None
+            status_code = httplib.OK
+            headers = {}
+
+            def iter_lines(self, decode_unicode=False):
+                text = u'Lógs'
+                if decode_unicode:
+                    yield text
+                else:
+                    yield text.encode('utf-8')
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, typ, val, tb):
+                pass
+
+        (flexmock(requests)
+            .should_receive('request')
+            .and_return(BadResponse()))
+
+        with caplog.atLevel(logging.ERROR):
+            for result in server.stream_logs('anything'):
+                break
 
     def test_list_builds(self, openshift):
         list_builds = openshift.list_builds()
@@ -139,6 +177,55 @@ class TestOpenshift(object):
     def test_get_user(self, openshift):
         l = openshift.get_user()
         assert l.json() is not None
+
+    def test_watch_resource(self, caplog):
+        server = Openshift('/oapi/v1/', 'v1', '/oauth/authorize',
+                           k8s_api_url='/api/v1/')
+
+        class BadResponse(object):
+            """
+            Don't specify the encoding; check that the bytes are inspected to
+            correctly guess the encoding based on the knowledge that
+            it is JSON data.
+            """
+
+            encoding = None
+            status_code = httplib.OK
+            headers = {}
+
+            def iter_lines(self, decode_unicode=False):
+                # Should cause an error to be logged but the resource
+                # should continue to be watched
+                assert not decode_unicode
+
+                val = b'{"\xfffoo":"bar"}'
+                yield val
+
+                val = u'{"object": "fóo", "type": "bár"}'
+                # Should be correctly decoded as UTF-8
+                yield val.encode('utf-8')
+
+                # Should be correctly decoded as UTF-16
+                yield val.encode('utf-16')
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, typ, val, tb):
+                pass
+
+        (flexmock(requests)
+            .should_receive('request')
+            .and_return(BadResponse()))
+
+        with caplog.atLevel(logging.ERROR):
+            for result in server.watch_resource('anything'):
+                break
+
+        # We must complain about the bad encoding
+        errors_logged = [l for l in caplog.records()
+                         if 'encoding' in l.getMessage()]
+        assert errors_logged
 
     def test_watch_build(self, openshift):
         response = openshift.wait_for_build_to_finish(TEST_BUILD)
@@ -272,10 +359,10 @@ class TestOpenshift(object):
         for status_code in status_codes:
             get_response = HttpResponse(httplib.OK,
                                         headers={},
-                                        content='{"metadata": {}}')
+                                        text='{"metadata": {}}')
             put_response = HttpResponse(status_code,
                                         headers={},
-                                        content='')
+                                        text='')
             get_expectation = get_expectation.and_return(get_response)
             put_expectation = put_expectation.and_return(put_response)
 

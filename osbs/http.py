@@ -56,8 +56,8 @@ class HttpSession(object):
                 return stream
 
             with stream as s:
-                content = s.req.text
-                return HttpResponse(s.status_code, s.headers, content)
+                text = s.req.text
+                return HttpResponse(s.status_code, s.headers, text)
         except requests.exceptions.HTTPError as ex:
             raise OsbsNetworkException(url, str(ex), ex.response.status_code,
                                        cause=ex, traceback=sys.exc_info()[2])
@@ -134,6 +134,7 @@ class HttpStream(object):
 
         self.headers = self.req.headers
         self.status_code = self.req.status_code
+        self.encoding = self.req.encoding
 
     def _get_received_data(self):
         return self.req.text
@@ -141,10 +142,7 @@ class HttpStream(object):
     def iter_chunks(self):
         return self.req.iter_content(None)
 
-    def iter_lines(self):
-        kwargs = {
-            'decode_unicode': True
-        }
+    def iter_lines(self, **kwargs):
         if requests.__version__.startswith('2.6.'):
             kwargs['chunk_size'] = 1
         try:
@@ -173,13 +171,13 @@ class HttpStream(object):
 
 
 class HttpResponse(object):
-    def __init__(self, status_code, headers, content):
+    def __init__(self, status_code, headers, text):
         self.status_code = status_code
         self.headers = headers
-        self.content = content
+        self.text = text
 
     def json(self, check=True):
         if check and self.status_code not in (0, requests.codes.OK, requests.codes.CREATED):
-            raise OsbsResponseException(self.content, self.status_code)
+            raise OsbsResponseException(self.text, self.status_code)
 
-        return json.loads(self.content)
+        return json.loads(self.text)
