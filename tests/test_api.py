@@ -28,6 +28,7 @@ from osbs.conf import Configuration
 from osbs.build.build_request import BuildRequest
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
+from osbs.build.config_map_response import ConfigMapResponse
 from osbs.build.spec import BuildSpec
 from osbs.exceptions import OsbsValidationException, OsbsException, OsbsResponseException
 from osbs.http import HttpResponse
@@ -1908,3 +1909,31 @@ class TestOSBS(object):
                                            inner_template=inner_template,
                                            outer_template=outer_template,
                                            customize_conf=customize_conf)
+
+    # osbs is a fixture here
+    @pytest.mark.parametrize(('name', 'data'), [  # noqa
+        ('special-config',
+         {
+             "special.how": "very",
+             "special.type": "charm"
+         }),
+    ])
+    def test_config_map(self, osbs, name, data):
+        obj = {
+            'apiVersion': 'v1',
+            'kind': 'ConfigMap',
+            'metadata': {'name': name},
+            'data': data,
+        }
+        (flexmock(osbs.os)
+            .should_call('create_config_map')
+            .with_args(obj))
+
+        config_map = osbs.create_config_map(name, data)
+        assert isinstance(config_map, ConfigMapResponse)
+        assert config_map.get_data() == data
+        config_map = osbs.get_config_map(name)
+        assert isinstance(config_map, ConfigMapResponse)
+        assert config_map.get_data() == data
+        config_map = osbs.delete_config_map(name)
+        assert config_map is None

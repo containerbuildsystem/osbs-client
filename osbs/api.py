@@ -20,6 +20,7 @@ from functools import wraps
 from osbs.build.build_request import BuildRequest
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
+from osbs.build.config_map_response import ConfigMapResponse
 from osbs.constants import (BUILD_RUNNING_STATES, WORKER_OUTER_TEMPLATE,
                             WORKER_INNER_TEMPLATE, WORKER_CUSTOMIZE_CONF,
                             ORCHESTRATOR_OUTER_TEMPLATE, ORCHESTRATOR_INNER_TEMPLATE,
@@ -965,3 +966,50 @@ class OSBS(object):
     @osbsapi
     def can_orchestrate(self):
         return self.build_conf.get_can_orchestrate()
+
+    @osbsapi
+    def create_config_map(self, name, data):
+        """
+        Create an ConfigMap object on the server
+
+        Raises exception on error
+
+        :param name: str, name of configMap
+        :param data: dict, dictionary of data to be stored
+        :returns: ConfigMapResponse containing the ConfigMap with name and data
+        """
+        config_data_file = os.path.join(self.os_conf.get_build_json_store(), 'config_map.json')
+        config_data = json.load(open(config_data_file))
+        config_data['metadata']['name'] = name
+        config_data['data'] = data
+
+        response = self.os.create_config_map(config_data)
+        config_map_response = ConfigMapResponse(response.json())
+        return config_map_response
+
+    @osbsapi
+    def get_config_map(self, name):
+        """
+        Get a ConfigMap object from the server
+
+        Raises exception on error
+
+        :param name: str, name of configMap to get from the server
+        :returns: ConfigMapResponse containing the ConfigMap with the requested name
+        """
+        response = self.os.get_config_map(name)
+        config_map_response = ConfigMapResponse(response.json())
+        return config_map_response
+
+    @osbsapi
+    def delete_config_map(self, name):
+        """
+        Delete a ConfigMap object from the server
+
+        Raises exception on error
+
+        :param name: str, name of configMap to delete from the server
+        :returns: True on success
+        """
+        response = self.os.delete_config_map(name)
+        return response
