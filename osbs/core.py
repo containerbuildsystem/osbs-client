@@ -24,6 +24,7 @@ from osbs.exceptions import (OsbsResponseException, OsbsException,
                              OsbsWatchBuildNotFound, OsbsAuthException)
 from osbs.utils import graceful_chain_get
 from requests.exceptions import ConnectionError
+from requests.utils import guess_json_utf
 
 try:
     # py2
@@ -47,7 +48,7 @@ def check_response(response):
         if hasattr(response, 'content'):
             content = response.content
         else:
-            content = ''.join(response.iter_lines())
+            content = b''.join(response.iter_lines())
 
         logger.error("[%d] %s", response.status_code, content)
         raise OsbsResponseException(message=content, status_code=response.status_code)
@@ -583,10 +584,15 @@ class Openshift(object):
         while True:
             with self._get(url, stream=True, headers={'Connection': 'close'}) as response:
                 check_response(response)
+                encoding = None
                 for line in response.iter_lines():
                     logger.debug(line)
+
+                    if not encoding:
+                        encoding = guess_json_utf(line)
+
                     try:
-                        j = json.loads(line)
+                        j = json.loads(line.decode(encoding))
                     except ValueError:
                         logger.error("Cannot decode watch event: %s", line)
                         continue

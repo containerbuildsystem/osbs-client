@@ -45,7 +45,7 @@ class StreamingResponse(object):
         self.headers = headers or {}
 
     def iter_lines(self):
-        yield self.content.decode("utf-8")
+        yield self.content
 
     def __enter__(self):
         return self

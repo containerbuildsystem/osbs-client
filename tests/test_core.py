@@ -47,14 +47,14 @@ class Response(object):
 
 
 class TestCheckResponse(object):
-    @pytest.mark.parametrize('content', [None, 'OK'])
+    @pytest.mark.parametrize('content', [None, b'OK'])
     @pytest.mark.parametrize('status_code', [httplib.OK, httplib.CREATED])
     def test_check_response_ok(self, status_code, content):
         response = Response(status_code, content=content)
         check_response(response)
 
     def test_check_response_bad_stream(self, caplog):
-        iterable = ['iter', 'lines']
+        iterable = [b'iter', b'lines']
         status_code = httplib.CONFLICT
         response = Response(status_code, iterable=iterable)
         with pytest.raises(OsbsResponseException):
@@ -63,11 +63,11 @@ class TestCheckResponse(object):
         logged = [l.getMessage() for l in caplog.records()]
         assert len(logged) == 1
         assert logged[0] == '[{code}] {message}'.format(code=status_code,
-                                                        message='iterlines')
+                                                        message=b'iterlines')
 
     def test_check_response_bad_nostream(self, caplog):
         status_code = httplib.CONFLICT
-        content = 'content'
+        content = b'content'
         response = Response(status_code, content=content)
         with pytest.raises(OsbsResponseException):
             check_response(response)
@@ -90,7 +90,7 @@ class TestOpenshift(object):
         response = flexmock(status_code=httplib.OK)
         (response
             .should_receive('iter_lines')
-            .and_return(["{'stream': 'foo\n'}"])
+            .and_return([b"{'stream': 'foo\n'}"])
             .and_raise(StopIteration))
 
         wrapped_exc = OsbsNetworkException('http://spam.com', str(exc), status_code=None,
@@ -114,7 +114,7 @@ class TestOpenshift(object):
         response = flexmock(status_code=httplib.OK)
         (response
             .should_receive('iter_lines')
-            .and_return(["{'stream': 'Uňícode íš hářd\n'}"])
+            .and_return([u"{'stream': 'Uňícode íš hářd\n'}".encode('utf-8')])
             .and_raise(StopIteration))
 
         (flexmock(openshift)

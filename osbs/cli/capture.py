@@ -10,6 +10,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 import json
 import os
 import logging
+from requests.utils import guess_json_utf
 
 
 logger = logging.getLogger(__name__)
@@ -26,12 +27,18 @@ class IterLinesSaver(object):
         self.line = 0
 
     def iter_lines(self):
+        encoding = None
         for line in self.fn():
             path = "{f}-{n:0>3}.json".format(f=self.path, n=self.line)
             logger.debug("capturing to %s", path)
+
+            if not encoding:
+                encoding = guess_json_utf(line)
+
             with open(path, "w") as outf:
                 try:
-                    json.dump(json.loads(line), outf, sort_keys=True, indent=4)
+                    json.dump(json.loads(line.decode(encoding)), outf,
+                              sort_keys=True, indent=4)
                 except ValueError:
                     outf.write(line)
 
