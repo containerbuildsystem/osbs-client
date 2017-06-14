@@ -831,14 +831,16 @@ class TestOSBS(object):
     # osbs is a fixture here
     def test_build_logs_api(self, osbs):  # noqa
         logs = osbs.get_build_logs(TEST_BUILD)
-        assert isinstance(logs, six.string_types)
+        assert isinstance(logs, six.text_type)  # Note! Inconsistent
         assert logs == "line 1"
 
     # osbs is a fixture here
     def test_build_logs_api_follow(self, osbs):  # noqa
         logs = osbs.get_build_logs(TEST_BUILD, follow=True)
         assert isinstance(logs, GeneratorType)
-        assert next(logs) == "line 1"
+        content = next(logs)
+        assert isinstance(content, six.binary_type)
+        assert content == b"line 1"
         with pytest.raises(StopIteration):
             assert next(logs)
 

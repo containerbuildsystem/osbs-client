@@ -104,6 +104,7 @@ Requires:       python-dockerfile-parse
 Requires:       python-requests
 Requires:       python-requests-kerberos
 Requires:       python-setuptools
+Requires:       python-six
 Requires:       krb5-workstation
 %if 0%{?rhel} && 0%{?rhel} <= 6
 Requires:       python-argparse
@@ -128,6 +129,7 @@ Requires:       python3-requests
 Requires:       python3-requests-kerberos
 Requires:       python3-dateutil
 Requires:       python3-setuptools
+Requires:       python3-six
 Requires:       krb5-workstation
 
 Provides:       python3-osbs = %{version}-%{release}
