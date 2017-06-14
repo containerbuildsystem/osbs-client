@@ -237,6 +237,23 @@ class Connection(object):
                     "file": None,  # not really empty but not relevant
                 },
             },
+
+            (API_PREFIX + "namespaces/default/configmaps/",
+             API_PREFIX + "namespaces/default/configmaps/special-config"): {
+                "post": {
+                    # Contains a configMap
+                    "file": "create_config_map.json",
+                },
+                "get": {
+                    # Contains a configMap
+                    "file": "create_config_map.json",
+                },
+                "delete": {
+                    # doesn't return anything
+                    "file": None,
+                },
+            },
+
         }
 
     @staticmethod

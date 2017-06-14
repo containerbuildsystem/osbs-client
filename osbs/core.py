@@ -875,6 +875,23 @@ class Openshift(object):
         check_response(response)
         return response
 
+    def create_config_map(self, config_data):
+        url = self._build_k8s_url("configmaps/")
+        response = self._post(url, data=json.dumps(config_data))
+        check_response(response)
+        return response
+
+    def get_config_map(self, config_name):
+        url = self._build_k8s_url("configmaps/%s" % config_name)
+        response = self._get(url)
+        check_response(response)
+        return response
+
+    def delete_config_map(self, config_name):
+        url = self._build_k8s_url("configmaps/%s" % config_name)
+        response = self._delete(url, data='{}')
+        check_response(response)
+
 
 if __name__ == '__main__':
     o = Openshift(openshift_api_url="https://localhost:8443/oapi/v1/",
