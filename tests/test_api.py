@@ -288,10 +288,10 @@ class TestOSBS(object):
          WORKER_INNER_TEMPLATE.format(
              arrangement_version=DEFAULT_ARRANGEMENT_VERSION + 1)),
     ))
-    @pytest.mark.parametrize('branch', (None, TEST_GIT_BRANCH))
     def test_create_worker_build(self, osbs, inner_template, outer_template,
                                  customize_conf, arrangement_version,
-                                 exp_inner_template_if_different, branch):
+                                 exp_inner_template_if_different):
+        branch = TEST_GIT_BRANCH
         (flexmock(utils)
             .should_receive('get_df_parser')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=branch)
@@ -403,11 +403,11 @@ class TestOSBS(object):
         (['spam'], False),
         (['spam', 'bacon'], False),
     ))
-    @pytest.mark.parametrize('branch', (None, TEST_GIT_BRANCH))
     def test_create_orchestrator_build(self, osbs, inner_template_fmt,
                                        outer_template, customize_conf,
                                        arrangement_version,
-                                       platforms, raises_exception, branch):
+                                       platforms, raises_exception):
+        branch = TEST_GIT_BRANCH
         (flexmock(utils)
             .should_receive('get_df_parser')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=branch)
@@ -531,32 +531,6 @@ class TestOSBS(object):
             osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
                                    TEST_GIT_BRANCH, TEST_USER,
                                    TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
-
-    # osbs is a fixture here
-    def test_create_build_missing_args(self, osbs):  # noqa
-        """
-        tests if setdefault for arguments works in create_build
-        """
-
-        (flexmock(utils)
-            .should_receive('get_df_parser')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockDfParser()))
-        (flexmock(osbs)
-            .should_receive('_do_create_prod_build')
-            .with_args(git_uri=TEST_GIT_URI,
-                       git_ref=TEST_GIT_REF,
-                       git_branch=None,
-                       user=TEST_USER,
-                       component=TEST_COMPONENT,
-                       architecture=TEST_ARCH)
-            .once()
-            .and_return(None))
-        osbs.create_build(git_uri=TEST_GIT_URI,
-                          git_ref=TEST_GIT_REF,
-                          user=TEST_USER,
-                          component=TEST_COMPONENT,
-                          architecture=TEST_ARCH)
 
     # osbs is a fixture here
     @pytest.mark.parametrize('component_label_name', ['com.redhat.component', 'BZComponent'])  # noqa
@@ -1822,3 +1796,41 @@ class TestOSBS(object):
             with pytest.raises(CustomTestException):
                 cmd_build(MockArgs(platform, release, platforms, arrangement_version,
                                    worker, orchestrator), osbs)
+
+    # osbs is a fixture here
+    @pytest.mark.parametrize('branch_name', [  # noqa
+        TEST_GIT_BRANCH,
+        '',
+        None
+    ])
+    def test_do_create_prod_build_branch_required(self, osbs, branch_name):
+        (flexmock(utils)
+            .should_receive('get_df_parser')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=branch_name)
+            .and_return(MockDfParser()))
+
+        inner_template = DEFAULT_INNER_TEMPLATE
+        outer_template = DEFAULT_OUTER_TEMPLATE
+        customize_conf = DEFAULT_CUSTOMIZE_CONF
+
+        (flexmock(osbs)
+            .should_call('get_build_request')
+            .with_args(inner_template=inner_template,
+                       outer_template=outer_template,
+                       customize_conf=customize_conf)
+            .once())
+
+        if branch_name:
+            response = osbs._do_create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                                  branch_name, TEST_USER,
+                                                  inner_template=inner_template,
+                                                  outer_template=outer_template,
+                                                  customize_conf=customize_conf)
+            assert isinstance(response, BuildResponse)
+        else:
+            with pytest.raises(OsbsException):
+                osbs._do_create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                           branch_name, TEST_USER,
+                                           inner_template=inner_template,
+                                           outer_template=outer_template,
+                                           customize_conf=customize_conf)
