@@ -11,6 +11,8 @@ Exceptions raised by OSBS
 from __future__ import print_function, absolute_import, unicode_literals
 
 import json
+from requests.utils import guess_json_utf
+import six
 from traceback import format_tb
 
 
@@ -49,6 +51,10 @@ class OsbsResponseException(OsbsException):
 
         # try decoding openshift Status object
         # https://docs.openshift.org/latest/rest_api/openshift_v1.html#v1-status
+        if isinstance(message, six.binary_type):
+            encoding = guess_json_utf(message)
+            message = message.decode(encoding)
+
         try:
             self.json = json.loads(message)
         except ValueError:
