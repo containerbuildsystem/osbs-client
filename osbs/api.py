@@ -410,7 +410,7 @@ class OSBS(object):
         return build
 
     def _do_create_prod_build(self, git_uri, git_ref,
-                              git_branch,  # may be None
+                              git_branch,
                               user,
                               component=None,
                               target=None,
@@ -445,6 +445,9 @@ class OSBS(object):
                 required_missing = True
                 logger.error("required label missing from Dockerfile : %s",
                              labels.get_name(label))
+
+        if not git_branch:
+            raise OsbsValidationException("required argument 'git_branch' can't be None")
 
         if required_missing:
             raise OsbsValidationException("required label missing from Dockerfile")
@@ -523,7 +526,7 @@ class OSBS(object):
 
         :param git_uri: str, URI of git repository
         :param git_ref: str, reference to commit
-        :param git_branch: str, branch name (may be None)
+        :param git_branch: str, branch name
         :param user: str, user name
         :param component: str, not used anymore
         :param target: str, koji target
@@ -571,7 +574,6 @@ class OSBS(object):
         :param kwargs: keyword args for build
         :return: instance of BuildRequest
         """
-        kwargs.setdefault('git_branch', None)
         return self._do_create_prod_build(**kwargs)
 
     @osbsapi
@@ -605,8 +607,6 @@ class OSBS(object):
             arrangement_version=arrangement_version))
         kwargs.setdefault('outer_template', WORKER_OUTER_TEMPLATE)
         kwargs.setdefault('customize_conf', WORKER_CUSTOMIZE_CONF)
-
-        kwargs.setdefault('git_branch', None)
         try:
             return self._do_create_prod_build(**kwargs)
         except IOError as ex:
@@ -646,8 +646,6 @@ class OSBS(object):
             arrangement_version=arrangement_version))
         kwargs.setdefault('outer_template', ORCHESTRATOR_OUTER_TEMPLATE)
         kwargs.setdefault('customize_conf', ORCHESTRATOR_CUSTOMIZE_CONF)
-
-        kwargs.setdefault('git_branch', None)
         try:
             return self._do_create_prod_build(**kwargs)
         except IOError as ex:

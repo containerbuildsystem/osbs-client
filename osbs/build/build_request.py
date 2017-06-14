@@ -1008,10 +1008,7 @@ class BuildRequest(object):
         # use case must be handled properly, the git URI must be taken into
         # account.
         self.set_label('git-repo-name', repo_name)
-        if self.spec.git_branch.value:
-            self.set_label('git-branch', self.spec.git_branch.value)
-        else:
-            self.set_label('git-branch', 'unknown')
+        self.set_label('git-branch', self.spec.git_branch.value)
 
         self.render_distgit_fetch_artefacts()
         self.render_pull_base_image()

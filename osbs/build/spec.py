@@ -117,7 +117,7 @@ class SourceRegistryURIParam(BuildParam):
 class BuildSpec(object):
     git_uri = BuildParam('git_uri')
     git_ref = BuildParam('git_ref', default=DEFAULT_GIT_REF)
-    git_branch = BuildParam('git_branch', allow_none=True)
+    git_branch = BuildParam('git_branch')
     user = UserParam()
     component = BuildParam('component')
     registry_uris = RegistryURIsParam()
