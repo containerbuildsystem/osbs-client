@@ -46,6 +46,12 @@ class Response(object):
             yield line
 
 
+def make_json_response(obj):
+    return HttpResponse(200,
+                        headers={"Content-Type": "application/json"},
+                        content=json.dumps(obj).encode('utf-8'))
+
+
 class TestCheckResponse(object):
     @pytest.mark.parametrize('content', [None, b'OK'])
     @pytest.mark.parametrize('status_code', [httplib.OK, httplib.CREATED])
@@ -193,7 +199,7 @@ class TestOpenshift(object):
             .should_receive("_get")
             .with_args(expected_url)
             .once()
-            .and_return(HttpResponse(200, {}, json.dumps(mock_response))))
+            .and_return(make_json_response(mock_response)))
         response = openshift.get_build_config(build_config_name)
         assert response['spam'] == 'maps'
 
@@ -204,7 +210,7 @@ class TestOpenshift(object):
             .should_receive("_get")
             .with_args(expected_url)
             .once()
-            .and_return(HttpResponse(404, {}, '')))
+            .and_return(HttpResponse(404, {}, b'')))
         with pytest.raises(OsbsResponseException):
             openshift.get_build_config(build_config_name)
 
@@ -221,7 +227,7 @@ class TestOpenshift(object):
             .should_receive("_get")
             .with_args(expected_url)
             .once()
-            .and_return(HttpResponse(200, {}, json.dumps(mock_response))))
+            .and_return(make_json_response(mock_response)))
         response = openshift.get_build_config_by_labels(label_selectors)
         assert response['spam'] == 'maps'
 
@@ -238,7 +244,7 @@ class TestOpenshift(object):
             .should_receive("_get")
             .with_args(expected_url)
             .once()
-            .and_return(HttpResponse(200, {}, json.dumps(mock_response))))
+            .and_return(make_json_response(mock_response)))
 
         with pytest.raises(OsbsException) as exc:
             openshift.get_build_config_by_labels(label_selectors)
@@ -257,7 +263,7 @@ class TestOpenshift(object):
             .should_receive("_get")
             .with_args(expected_url)
             .once()
-            .and_return(HttpResponse(200, {}, json.dumps(mock_response))))
+            .and_return(make_json_response(mock_response)))
 
         with pytest.raises(OsbsException) as exc:
             openshift.get_build_config_by_labels(label_selectors)
@@ -295,12 +301,10 @@ class TestOpenshift(object):
                            .should_receive('_put')
                            .times(len(status_codes)))
         for status_code in status_codes:
-            get_response = HttpResponse(httplib.OK,
-                                        headers={},
-                                        content='{"metadata": {}}')
+            get_response = make_json_response({"metadata": {}})
             put_response = HttpResponse(status_code,
                                         headers={},
-                                        content='')
+                                        content=b'')
             get_expectation = get_expectation.and_return(get_response)
             put_expectation = put_expectation.and_return(put_response)
 
@@ -332,7 +336,7 @@ class TestOpenshift(object):
             .with_args(expected_url, data=json.dumps(mock_data),
                        headers={"Content-Type": "application/json"})
             .once()
-            .and_return(HttpResponse(200, {}, json.dumps(mock_data))))
+            .and_return(make_json_response(mock_data)))
 
         openshift.put_image_stream_tag(tag_id, mock_data)
 
@@ -404,12 +408,17 @@ class TestOpenshift(object):
                 assert (data['tag']['from']['name'] ==
                         '{0}:{1}'.format(stream_repo, tag_name))
 
-            return HttpResponse(200, {}, json.dumps('{}'))
+            return make_json_response({})
 
         expected_change = False
         expected_error = status_code == 500
 
-        mock_response = '{}'
+        mock_response = {}
+
+        expectation = (flexmock(openshift)
+                       .should_receive("_get")
+                       .with_args(expected_url)
+                       .once())
 
         if status_code == 200:
             existing_image_stream_tag = {'tag': {'importPolicy': {}}}
@@ -422,20 +431,21 @@ class TestOpenshift(object):
                 existing_image_stream_tag['tag']['importPolicy']['scheduled'] = \
                     existing_scheduled
 
-            mock_response = json.dumps(existing_image_stream_tag)
+            mock_response = existing_image_stream_tag
 
             if expected_insecure != bool(existing_insecure) or \
                expected_scheduled != bool(existing_scheduled):
                     expected_change = True
 
-        elif status_code == 404:
-            expected_change = True
+            expectation.and_return(make_json_response(mock_response))
 
-        (flexmock(openshift)
-            .should_receive("_get")
-            .with_args(expected_url)
-            .once()
-            .and_return(HttpResponse(status_code, {}, mock_response)))
+        else:
+            expectation.and_return(HttpResponse(status_code,
+                                                headers={},
+                                                content=b''))
+
+        if status_code == 404:
+            expected_change = True
 
         if expected_change:
             (flexmock(openshift)

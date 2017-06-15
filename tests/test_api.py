@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Copyright (c) 2015 Red Hat, Inc
 All rights reserved.
@@ -831,8 +832,8 @@ class TestOSBS(object):
     # osbs is a fixture here
     def test_build_logs_api(self, osbs):  # noqa
         logs = osbs.get_build_logs(TEST_BUILD)
-        assert isinstance(logs, six.text_type)  # Note! Inconsistent
-        assert logs == "line 1"
+        assert isinstance(logs, six.binary_type)
+        assert logs == u"líne 1".encode('utf-8')
 
     # osbs is a fixture here
     def test_build_logs_api_follow(self, osbs):  # noqa
@@ -840,7 +841,7 @@ class TestOSBS(object):
         assert isinstance(logs, GeneratorType)
         content = next(logs)
         assert isinstance(content, six.binary_type)
-        assert content == b"line 1"
+        assert content == u"líne 1".encode('utf-8')
         with pytest.raises(StopIteration):
             assert next(logs)
 

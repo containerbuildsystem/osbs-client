@@ -661,11 +661,14 @@ class OSBS(object):
         """
         provide logs from build
 
+        NOTE: since there is no way to determine the text encoding in use
+        the bytes are returned exactly as they came from the container.
+
         :param build_id: str
         :param follow: bool, fetch logs as they come?
         :param build_json: dict, to save one get-build query
         :param wait_if_missing: bool, if build doesn't exist, wait
-        :return: None, str or iterator
+        :return: None, bytes, or iterable of bytes
         """
         return self.os.logs(build_id, follow=follow, build_json=build_json,
                             wait_if_missing=wait_if_missing)
