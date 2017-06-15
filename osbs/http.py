@@ -25,6 +25,7 @@ except ImportError:
 from osbs.exceptions import OsbsException, OsbsNetworkException, OsbsResponseException
 
 import requests
+from requests.utils import guess_json_utf
 try:
     from requests_kerberos import HTTPKerberosAuth
 except ImportError:
@@ -56,7 +57,7 @@ class HttpSession(object):
                 return stream
 
             with stream as s:
-                content = s.req.text
+                content = s.req.content
                 return HttpResponse(s.status_code, s.headers, content)
         except requests.exceptions.HTTPError as ex:
             raise OsbsNetworkException(url, str(ex), ex.response.status_code,
@@ -185,7 +186,9 @@ class HttpResponse(object):
         self.content = content
 
     def json(self, check=True):
+        encoding = guess_json_utf(self.content)
+        text = self.content.decode(encoding)
         if check and self.status_code not in (0, requests.codes.OK, requests.codes.CREATED):
-            raise OsbsResponseException(self.content, self.status_code)
+            raise OsbsResponseException(text, self.status_code)
 
-        return json.loads(self.content)
+        return json.loads(text)
