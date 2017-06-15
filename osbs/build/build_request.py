@@ -59,6 +59,7 @@ class BuildRequest(object):
         # For the koji "scratch" build type
         self.scratch = None
         self.base_image = None
+        self.low_priority_node_selector = None
 
     def set_params(self, **kwargs):
         """
