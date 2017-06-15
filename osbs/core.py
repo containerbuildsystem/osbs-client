@@ -43,14 +43,14 @@ from .http import HttpSession
 logger = logging.getLogger(__name__)
 
 
-def check_response(response):
+def check_response(response, log_level=logging.ERROR):
     if response.status_code not in (httplib.OK, httplib.CREATED):
         if hasattr(response, 'content'):
             content = response.content
         else:
             content = b''.join(response.iter_lines())
 
-        logger.error("[%d] %s", response.status_code, content)
+        logger.log(log_level, "[%d] %s", response.status_code, content)
         raise OsbsResponseException(message=content, status_code=response.status_code)
 
 
@@ -740,7 +740,7 @@ class Openshift(object):
     def get_image_stream_tag(self, tag_id):
         url = self._build_url("imagestreamtags/%s" % tag_id)
         response = self._get(url)
-        check_response(response)
+        check_response(response, log_level=logging.DEBUG)
         return response
 
     def put_image_stream_tag(self, tag_id, tag):
@@ -793,7 +793,7 @@ class Openshift(object):
     def get_image_stream(self, stream_id):
         url = self._build_url("imagestreams/%s" % stream_id)
         response = self._get(url)
-        check_response(response)
+        check_response(response, log_level=logging.DEBUG)
         return response
 
     def create_image_stream(self, stream_json):
