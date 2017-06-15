@@ -1267,13 +1267,33 @@ class TestBuildRequest(object):
         with pytest.raises(OsbsValidationException):
             build_request.render()
 
+    def test_render_prod_with_empty_triggers(self, tmpdir):
+
+        self.create_image_change_trigger_json(str(tmpdir), custom_triggers=[])
+        build_request = BuildRequest(str(tmpdir))
+        kwargs = get_sample_prod_params()
+        build_request.set_params(**kwargs)
+        build_request.render()
+
     @staticmethod
-    def create_image_change_trigger_json(outdir):
+    def create_image_change_trigger_json(outdir, custom_triggers=None):
         """
         Create JSON templates with an image change trigger added.
 
         :param outdir: str, path to store modified templates
         """
+
+        triggers = custom_triggers if custom_triggers is not None else [
+            {
+                "type": "ImageChange",
+                "imageChange": {
+                    "from": {
+                        "kind": "ImageStreamTag",
+                        "name": "{{BASE_IMAGE_STREAM}}"
+                    }
+                }
+            }
+        ]
 
         # Make temporary copies of the JSON files
         for basename in [DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE]:
@@ -1285,17 +1305,7 @@ class TestBuildRequest(object):
             build_json = json.load(prod_json)
 
             # Add the image change trigger
-            build_json['spec']['triggers'] = [
-                {
-                    "type": "ImageChange",
-                    "imageChange": {
-                        "from": {
-                            "kind": "ImageStreamTag",
-                            "name": "{{BASE_IMAGE_STREAM}}"
-                        }
-                    }
-                }
-            ]
+            build_json['spec']['triggers'] = triggers
 
             prod_json.seek(0)
             json.dump(build_json, prod_json)
