@@ -59,29 +59,49 @@ class TestCheckResponse(object):
         response = Response(status_code, content=content)
         check_response(response)
 
-    def test_check_response_bad_stream(self, caplog):
+    @pytest.mark.parametrize('log_errors', (True, False))
+    def test_check_response_bad_stream(self, caplog, log_errors):
         iterable = [b'iter', b'lines']
         status_code = httplib.CONFLICT
         response = Response(status_code, iterable=iterable)
+        if log_errors:
+            log_type = logging.ERROR
+        else:
+            log_type = logging.DEBUG
+
         with pytest.raises(OsbsResponseException):
-            check_response(response)
+            if log_errors:
+                check_response(response)
+            else:
+                check_response(response, log_level=log_type)
 
-        logged = [l.getMessage() for l in caplog.records()]
+        logged = [(l.getMessage(), l.levelno) for l in caplog.records()]
         assert len(logged) == 1
-        assert logged[0] == '[{code}] {message}'.format(code=status_code,
-                                                        message=b'iterlines')
+        assert logged[0][0] == '[{code}] {message}'.format(code=status_code,
+                                                           message=b'iterlines')
+        assert logged[0][1] == log_type
 
-    def test_check_response_bad_nostream(self, caplog):
+    @pytest.mark.parametrize('log_errors', (True, False))
+    def test_check_response_bad_nostream(self, caplog, log_errors):
         status_code = httplib.CONFLICT
         content = b'content'
         response = Response(status_code, content=content)
-        with pytest.raises(OsbsResponseException):
-            check_response(response)
+        if log_errors:
+            log_type = logging.ERROR
+        else:
+            log_type = logging.DEBUG
 
-        logged = [l.getMessage() for l in caplog.records()]
+        with pytest.raises(OsbsResponseException):
+            if log_errors:
+                check_response(response)
+            else:
+                check_response(response, log_level=log_type)
+
+        logged = [(l.getMessage(), l.levelno) for l in caplog.records()]
         assert len(logged) == 1
-        assert logged[0] == '[{code}] {message}'.format(code=status_code,
-                                                        message=content)
+        assert logged[0][0] == '[{code}] {message}'.format(code=status_code,
+                                                           message=content)
+        assert logged[0][1] == log_type
 
 
 class TestOpenshift(object):
