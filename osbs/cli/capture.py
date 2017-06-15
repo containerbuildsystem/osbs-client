@@ -81,10 +81,12 @@ class ResponseSaver(object):
         else:
             response = self.fn(url, method, *args, **kwargs)
             logger.debug("capturing to %s.json", path)
+
+            encoding = guess_json_utf(response.content)
             with open(path + ".json", "w") as outf:
                 try:
-                    json.dump(json.loads(response.content), outf,
-                              sort_keys=True, indent=4)
+                    json.dump(json.loads(response.content.decode(encoding)),
+                              outf, sort_keys=True, indent=4)
                 except ValueError:
                     outf.write(response.content)
 

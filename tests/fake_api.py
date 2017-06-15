@@ -269,7 +269,7 @@ class Connection(object):
 
     @staticmethod
     def response(status_code=200, content=b'', headers=None):
-        return HttpResponse(status_code, headers or {}, content.decode("utf-8"))
+        return HttpResponse(status_code, headers or {}, content=content)
 
     def request(self, url, method, stream=None, *args, **kwargs):
         parsed_url = urlparse.urlparse(url)
@@ -394,8 +394,8 @@ class ResponseMapping(object):
         this_dir = os.path.dirname(this_file)
         json_path = os.path.join(this_dir, "mock_jsons", self.version, file_name)
         logger.debug("File: %s", json_path)
-        with open(json_path, "r") as fd:
-            return fd.read().encode("utf-8")
+        with open(json_path, "rb") as fd:
+            return fd.read()
 
     def response_mapping(self, url_path, method):
         key, value_to_use = self.lookup(url_path)
