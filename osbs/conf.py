@@ -522,7 +522,7 @@ class Configuration(object):
             # ',' separator for groups
             # ':' separator for equal preference labels
             # there has to be at least 2 labels in equal labels in group
-            if re.match('^[^:,\s]+(:[^:,\s]+)+\s*(,\s*[^:,\s]+(:[^:,\s]+\s*)+)*$',
+            if re.match(r'^[^:,\s]+(:[^:,\s]+)+\s*(,\s*[^:,\s]+(:[^:,\s]+\s*)+)*$',
                         equal_labels_str):
                 label_groups = equal_labels_str.split(',')
 
