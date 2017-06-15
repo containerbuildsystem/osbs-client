@@ -981,7 +981,7 @@ class BuildRequest(object):
 
         self.render_tag_and_push_registries()
 
-        if 'triggers' in self.template['spec']:
+        if self.has_ist_trigger():
             imagechange = self.template['spec']['triggers'][0]['imageChange']
             imagechange['from']['name'] = self.spec.trigger_imagestreamtag.value
 
