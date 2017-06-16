@@ -855,7 +855,7 @@ class Openshift(object):
                     status = obj.get('status', {})
                     newtags = status.get('tags', [])
                     logger.debug("tags after import: %r", newtags)
-                    return newtags != oldtags
+                    return True
 
         return False
 

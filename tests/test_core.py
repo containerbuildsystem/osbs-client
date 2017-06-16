@@ -13,15 +13,17 @@ import six
 import time
 import json
 import logging
+import inspect
+import os
 
 from osbs.http import HttpResponse
 from osbs.constants import (BUILD_FINISHED_STATES,
-                            BUILD_CANCELLED_STATE)
+                            BUILD_CANCELLED_STATE, WATCH_MODIFIED)
 from osbs.exceptions import (OsbsResponseException, OsbsException, OsbsNetworkException)
 from osbs.core import check_response, Openshift
 
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
-                             TEST_LABEL_VALUE)
+                             TEST_LABEL_VALUE, TEST_IMAGESTREAM)
 from tests.fake_api import openshift, OAPI_PREFIX, API_VER
 from requests.exceptions import ConnectionError
 import pytest
@@ -487,3 +489,25 @@ class TestOpenshift(object):
         else:
             openshift_mock.never()
         Openshift(OAPI_PREFIX, API_VER, "/oauth/authorize", **kwargs)
+
+    @pytest.mark.parametrize('modify', [True, False])  # noqa
+    def test_import_image(self, openshift, modify):
+        """
+        tests that import_image return True
+        regardless if tags were changed
+        """
+        this_file = inspect.getfile(TestCheckResponse)
+        this_dir = os.path.dirname(this_file)
+
+        json_path = os.path.join(this_dir, "mock_jsons", openshift._con.version, 'imagestream.json')
+        resource_json = json.load(open(json_path))
+
+        # keep just 1 tag, so it will be different from oldtags (3 tags)
+        if modify:
+            resource_json['status']['tags'] = [resource_json['status']['tags'][0]]
+
+        (flexmock(Openshift)
+            .should_receive('watch_resource')
+            .and_yield((WATCH_MODIFIED, resource_json)))
+
+        assert openshift.import_image(TEST_IMAGESTREAM)
