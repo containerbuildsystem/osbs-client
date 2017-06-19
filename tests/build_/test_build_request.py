@@ -29,6 +29,8 @@ from tests.constants import (INPUTS_PATH, TEST_BUILD_CONFIG, TEST_BUILD_JSON,
                              TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
                              TEST_GIT_URI, TEST_GIT_URI_HUMAN_NAME)
 
+USE_DEFAULT_TRIGGERS = object()
+
 
 class NoSuchPluginException(Exception):
     pass
@@ -1290,23 +1292,34 @@ class TestBuildRequest(object):
         with pytest.raises(OsbsValidationException):
             build_request.render()
 
-    def test_render_prod_with_empty_triggers(self, tmpdir):
+    @pytest.mark.parametrize('triggers', [
+        None,
+        [],
+        [{
+            "type": "Generic",
+            "generic": {
+                "secret": "secret101",
+                "allowEnv": True
+            }
+        }]
+    ])
+    def test_render_prod_with_falsey_triggers(self, tmpdir, triggers):
 
-        self.create_image_change_trigger_json(str(tmpdir), custom_triggers=[])
+        self.create_image_change_trigger_json(str(tmpdir), custom_triggers=triggers)
         build_request = BuildRequest(str(tmpdir))
         kwargs = get_sample_prod_params()
         build_request.set_params(**kwargs)
         build_request.render()
 
     @staticmethod
-    def create_image_change_trigger_json(outdir, custom_triggers=None):
+    def create_image_change_trigger_json(outdir, custom_triggers=USE_DEFAULT_TRIGGERS):
         """
         Create JSON templates with an image change trigger added.
 
         :param outdir: str, path to store modified templates
         """
 
-        triggers = custom_triggers if custom_triggers is not None else [
+        triggers = custom_triggers if custom_triggers is not USE_DEFAULT_TRIGGERS else [
             {
                 "type": "ImageChange",
                 "imageChange": {
