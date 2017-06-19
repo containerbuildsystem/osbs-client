@@ -1165,6 +1165,7 @@ class TestBuildRequest(object):
             'source_registry_uri': 'source_registry_uri',
             'sources_command': 'sources_command',
             'vendor': 'vendor',
+            'equal_labels': [['label1', 'label2'], ['label3', 'label4']],
         },
         {}
     ))
@@ -1251,10 +1252,10 @@ class TestBuildRequest(object):
             assert kwargs.get('pulp_registry') == worker_config.get_pulp_registry()
             assert (kwargs.get('registry_api_versions') ==
                     worker_config.get_registry_api_versions())
-            assert (kwargs.get('smtp_additional_addresses') or [] ==
+            assert (kwargs.get('smtp_additional_addresses', []) ==
                     worker_config.get_smtp_additional_addresses())
             assert kwargs.get('smtp_email_domain') == worker_config.get_smtp_email_domain()
-            assert (kwargs.get('smtp_error_addresses') or [] ==
+            assert (kwargs.get('smtp_error_addresses', []) ==
                     worker_config.get_smtp_error_addresses())
             assert kwargs.get('smtp_from') == worker_config.get_smtp_from()
             assert kwargs.get('smtp_host') == worker_config.get_smtp_host()
@@ -1263,6 +1264,8 @@ class TestBuildRequest(object):
             assert kwargs.get('source_registry_uri') == worker_config.get_source_registry_uri()
             assert kwargs.get('sources_command') == worker_config.get_sources_command()
             assert kwargs.get('vendor') == worker_config.get_vendor()
+            assert (kwargs.get('equal_labels', []) ==
+                    worker_config.get_equal_labels())
             assert (parse_version(worker_openshift_req_version) ==
                     worker_config.get_openshift_required_version())
 

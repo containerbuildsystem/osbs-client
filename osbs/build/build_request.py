@@ -217,6 +217,13 @@ class BuildRequest(object):
         self.dj.dock_json_set_arg(phase, plugin, 'platforms', self.spec.platforms.value)
         self.dj.dock_json_set_arg(phase, plugin, 'build_kwargs', build_kwargs)
 
+        equal_labels_string = None
+        equal_labels_sets = []
+        if self.spec.equal_labels.value:
+            for equal_set in self.spec.equal_labels.value:
+                equal_labels_sets.append(':'.join(equal_set))
+            equal_labels_string = ','.join(equal_labels_sets)
+
         # Parameters to be used as Configuration overrides for each worker
         config_kwargs = {
             'authoritative_registry': self.spec.authoritative_registry.value,
@@ -237,6 +244,7 @@ class BuildRequest(object):
             'source_registry_uri': self.spec.source_registry_uri.value,
             'sources_command': self.spec.sources_command.value,
             'vendor': self.spec.vendor.value,
+            'equal_labels': equal_labels_string,
         }
 
         # Remove empty values, and always convert to string for better interaction
