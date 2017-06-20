@@ -9,7 +9,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 
 import logging
 
-from osbs.version import __version__
+from osbs.version import __version__  # noqa
 
 
 def set_logging(name="osbs", level=logging.DEBUG):

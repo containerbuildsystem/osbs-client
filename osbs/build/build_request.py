@@ -22,7 +22,8 @@ except ImportError:
 
 from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.spec import BuildSpec
-from osbs.constants import SECRETS_PATH, DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE, DEFAULT_CUSTOMIZE_CONF
+from osbs.constants import (SECRETS_PATH, DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE,
+                            DEFAULT_CUSTOMIZE_CONF)
 from osbs.exceptions import OsbsException, OsbsValidationException
 from osbs.utils import git_repo_humanish_part_from_uri, sanitize_version
 from osbs import __version__ as client_version
@@ -154,7 +155,7 @@ class BuildRequest(object):
             logger.debug("loading customize conf from path %s", path)
             try:
                 with open(path, "r") as fp:
-                    self._customize_conf= json.load(fp)
+                    self._customize_conf = json.load(fp)
             except IOError:
                 # File not found, which is perfectly fine. Set to empty string
                 self._customize_conf = {}
@@ -234,7 +235,8 @@ class BuildRequest(object):
             'openshift_required_version': sanitize_version(self._openshift_required_version),
             'pulp_registry_name': self.spec.pulp_registry.value,
             'registry_api_versions': ','.join(self.spec.registry_api_versions.value or []) or None,
-            'smtp_additional_addresses': ','.join(self.spec.smtp_additional_addresses.value or []) or None,
+            'smtp_additional_addresses': ','.join(self.spec.smtp_additional_addresses.value or [])
+                                         or None,
             'smtp_email_domain': self.spec.smtp_email_domain.value,
             'smtp_error_addresses': ','.join(self.spec.smtp_error_addresses.value or []) or None,
             'smtp_from': self.spec.smtp_from.value,
@@ -871,7 +873,6 @@ class BuildRequest(object):
                         "requires pulp_registry and a v2 registry")
             self.dj.remove_plugin("postbuild_plugins", "pulp_sync")
             self.dj.remove_plugin("exit_plugins", "delete_from_registry")
-
 
     def render_import_image(self, use_auth=None):
         """

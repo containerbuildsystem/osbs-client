@@ -191,7 +191,6 @@ class TestConfiguration(object):
                 .with_args('default')
                 .and_return(login_tmpf.name))
 
-
         with self.build_cli_args(cli_args) as args:
             with self.config_file(config) as config_file:
                 conf = Configuration(conf_file=config_file, cli_args=args,
@@ -252,7 +251,8 @@ class TestConfiguration(object):
         ({'default': {'token_secrets': '\n   secret:path     secret2\n\n secret3:path3'}},
          {'secret': 'path', 'secret2': None, 'secret3': 'path3'}),
 
-        ({'default': {'token_secrets': '\t\n   secret:path   \t\t  secret2\n\n \tsecret3:path3 \n\t\n'}},
+        ({'default': {'token_secrets': '\t\n   secret:path   \t\t  secret2\n\n '
+                      '\tsecret3:path3 \n\t\n'}},
          {'secret': 'path', 'secret2': None, 'secret3': 'path3'}),
     ])
     def test_get_token_secrets(self, config, expected):

@@ -233,7 +233,8 @@ class Openshift(object):
         try:
             redir_url = r.headers['location']
         except KeyError:
-            logger.error("[%s] 'Location' header is missing in response, cannot retrieve token", r.status_code)
+            logger.error("[%s] 'Location' header is missing in response, cannot retrieve token",
+                         r.status_code)
             return ""
         parsed_url = urlparse.urlparse(redir_url)
         fragment = parsed_url.fragment
@@ -396,7 +397,8 @@ class Openshift(object):
             if changetype == WATCH_MODIFIED:
                 version = graceful_chain_get(obj, 'status', 'lastVersion')
                 if not isinstance(version, numbers.Integral):
-                    logger.error("BuildConfig %s has unexpected lastVersion: %s", build_config_id, version)
+                    logger.error("BuildConfig %s has unexpected lastVersion: %s", build_config_id,
+                                 version)
                     continue
 
                 if version > prev_version:
@@ -649,7 +651,8 @@ class Openshift(object):
         #   2. our object was not found and we keep waiting (in the loop)
         # Therefore, let's raise here
         logger.error("build '%s' was not found during wait", build_id)
-        raise OsbsWatchBuildNotFound("build '%s' was not found and response stream ended" % build_id)
+        raise OsbsWatchBuildNotFound("build '%s' was not found and response stream ended" %
+                                     build_id)
 
     def wait_for_build_to_finish(self, build_id):
         for retry in range(1, 10):

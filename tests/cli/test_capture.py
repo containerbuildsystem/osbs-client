@@ -12,7 +12,7 @@ import pytest
 
 from osbs.constants import DEFAULT_NAMESPACE
 from osbs.cli.capture import setup_json_capture
-from tests.fake_api import openshift, osbs
+from tests.fake_api import openshift, osbs  # noqa
 from tests.constants import TEST_BUILD
 from osbs.conf import Configuration
 
@@ -22,7 +22,7 @@ API_PREFIX = "/oapi/{v}/".format(v=API_VER)
 PREFIX = API_PREFIX.replace('/', '_')
 
 
-@pytest.fixture
+@pytest.fixture  # noqa
 def osbs_with_capture(osbs, tmpdir):
     setup_json_capture(osbs, osbs.os_conf, str(tmpdir))
     return osbs
@@ -39,6 +39,7 @@ def test_json_capture_no_watch(osbs_with_capture, tmpdir):
             obj = json.load(fp)
 
         assert obj
+
 
 def test_json_capture_watch(osbs_with_capture, tmpdir):
     osbs_with_capture.wait_for_build_to_finish(TEST_BUILD)

@@ -26,7 +26,8 @@ from osbs.conf import Configuration
 from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
                             CLI_LIST_BUILDS_DEFAULT_COLS, PY3, BACKUP_RESOURCES,
                             BUILD_FINISHED_STATES, CLI_WATCH_BUILDS_DEFAULT_COLS)
-from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsAuthException, OsbsResponseException
+from osbs.exceptions import (OsbsNetworkException, OsbsException, OsbsAuthException,
+                             OsbsResponseException)
 from osbs.cli.capture import setup_json_capture
 from osbs.utils import (strip_registry_from_image, paused_builds, TarReader,
                         TarWriter, get_time_from_rfc3339, graceful_chain_get)
@@ -61,12 +62,12 @@ def check_provided_args(args, check, check_func, error_msg):
 
 def check_unwanted_args(args, unwanted):
     check_provided_args(args, unwanted, lambda item: item[-1],
-                         'Unwanted params: {0}')
+                        'Unwanted params: {0}')
 
 
 def check_required_args(args, required):
     check_provided_args(args, required, lambda item: not item[-1],
-                         'Missing required params: {0}')
+                        'Missing required params: {0}')
 
 
 def cmd_get_all_resource_quota(args, osbs):
@@ -584,33 +585,38 @@ def cli():
 
     subparsers = parser.add_subparsers(help='commands')
 
-    list_builds_parser = subparsers.add_parser(str_on_2_unicode_on_3('list-builds'), help='list builds in OSBS',
+    list_builds_parser = subparsers.add_parser(str_on_2_unicode_on_3('list-builds'),
+                                               help='list builds in OSBS',
                                                description="list all builds in the namespace")
     list_builds_parser.add_argument("FILTER", help="list only builds which contain provided string",
                                     nargs="?")
     list_builds_parser.add_argument("--columns",
-                                    help="comma-separated list of columns to display, possible values: "
-                                    "base_image, base_image_id, commit, image, unique_image, image_id, "
-                                    "name, status, time_created")
+                                    help="comma-separated list of columns to display, possible "
+                                    "values: base_image, base_image_id, commit, image, "
+                                    "unique_image, image_id, name, status, time_created")
     # this may be a bit confusing, but for users, "running" means not done but
     # for us, "running" means scheduled on kubelet
-    list_builds_parser.add_argument("--running", help="list only running builds", action="store_true")
+    list_builds_parser.add_argument("--running", help="list only running builds",
+                                    action="store_true")
     list_builds_parser.add_argument("--from-json",
                                     help="fetch builds list from JSON file instead of from server")
 
     list_builds_parser.set_defaults(func=cmd_list_builds)
 
-    watch_build_parser = subparsers.add_parser(str_on_2_unicode_on_3('watch-build'), help='wait till build finishes')
+    watch_build_parser = subparsers.add_parser(str_on_2_unicode_on_3('watch-build'),
+                                               help='wait till build finishes')
     watch_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
     watch_build_parser.set_defaults(func=cmd_watch_build)
 
-    watch_builds_parser = subparsers.add_parser(str_on_2_unicode_on_3('watch-builds'), help='watch running builds')
+    watch_builds_parser = subparsers.add_parser(str_on_2_unicode_on_3('watch-builds'),
+                                                help='watch running builds')
     watch_builds_parser.add_argument("--columns",
-                                     help="comma-separated list of columns to display, possible values: "
-                                     "changetype, status, created, name")
+                                     help="comma-separated list of columns to display, possible "
+                                     "values: changetype, status, created, name")
     watch_builds_parser.set_defaults(func=cmd_watch_builds)
 
-    get_build_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-build'), help='get info about build')
+    get_build_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-build'),
+                                             help='get info about build')
     get_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
     get_build_parser.set_defaults(func=cmd_get_build)
 
@@ -624,30 +630,35 @@ def cli():
     import_image_parser.add_argument("NAME", help="ImageStream name", nargs=1)
     import_image_parser.set_defaults(func=cmd_import_image)
 
-    get_token_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-token'), help='get authentication token')
+    get_token_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-token'),
+                                             help='get authentication token')
     get_token_parser.add_argument("--oc", help="display oc login command",
                                   action="store_true", default=False)
     get_token_parser.set_defaults(func=cmd_get_token)
 
-
     get_login_parser = subparsers.add_parser(str_on_2_unicode_on_3('login'),
                                              help='perform login and store token for later use')
     get_login_parser.add_argument('--token', help='token to be used for login', action="store")
-    get_login_parser.add_argument('-u', '--username', help='Username, will prompt if not provided', action="store")
-    get_login_parser.add_argument('-p', '--password', help='Password, will prompt if not provided', action="store")
+    get_login_parser.add_argument('-u', '--username', help='Username, will prompt if not provided',
+                                  action="store")
+    get_login_parser.add_argument('-p', '--password', help='Password, will prompt if not provided',
+                                  action="store")
     get_login_parser.set_defaults(func=cmd_login)
 
-    get_user_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-user'), help='get info about user')
+    get_user_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-user'),
+                                            help='get info about user')
     get_user_parser.add_argument("USERNAME", nargs="?", default=None)
     get_user_parser.set_defaults(func=cmd_get_user)
 
-    build_logs_parser = subparsers.add_parser(str_on_2_unicode_on_3('build-logs'), help='get or follow build logs')
+    build_logs_parser = subparsers.add_parser(str_on_2_unicode_on_3('build-logs'),
+                                              help='get or follow build logs')
     build_logs_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
-    build_logs_parser.add_argument("-f", "--follow", help="follow logs as they come", action="store_true",
-                                   default=False)
-    build_logs_parser.add_argument("--wait-if-missing", help="if build is not created yet, wait", action="store_true",
-                                   default=False)
-    build_logs_parser.add_argument("--from-docker-build", help="return logs from `docker build` instead",
+    build_logs_parser.add_argument("-f", "--follow", help="follow logs as they come",
+                                   action="store_true", default=False)
+    build_logs_parser.add_argument("--wait-if-missing", help="if build is not created yet, wait",
+                                   action="store_true", default=False)
+    build_logs_parser.add_argument("--from-docker-build",
+                                   help="return logs from `docker build` instead",
                                    action="store_true", default=False)
     build_logs_parser.set_defaults(func=cmd_build_logs)
 
@@ -657,7 +668,8 @@ def cli():
     get_quota_parser.add_argument("QUOTA_NAME", help="name of quota", nargs="?", default=None)
     get_quota_parser.set_defaults(func=cmd_get_all_resource_quota)
 
-    build_parser = subparsers.add_parser(str_on_2_unicode_on_3('build'), help='build an image in OSBS')
+    build_parser = subparsers.add_parser(str_on_2_unicode_on_3('build'),
+                                         help='build an image in OSBS')
     build_parser.add_argument("--build-json-dir", action="store", metavar="PATH",
                               help="directory with build jsons")
     build_parser.add_argument("-g", "--git-url", action='store', metavar="URL",
@@ -693,9 +705,9 @@ def cli():
     build_parser.add_argument("--yum-proxy", action='store', required=False,
                               help="set yum proxy to repos from koji/add-yum-repo params")
 
-    worker_group = build_parser.add_argument_group(
-        title='arguments for --worker',
-        description='Required arguments for creating a worker build')
+    worker_group = build_parser.add_argument_group(title='arguments for --worker',
+                                                   description='Required arguments for creating a '
+                                                   'worker build')
     worker_group.add_argument('--platform', action='store', required=False,
                               help='platform name to use')
     worker_group.add_argument('--release', action='store', required=False,
@@ -703,12 +715,11 @@ def cli():
     worker_group.add_argument('--arrangement-version', action='store', required=False,
                               help='version of inner template to use')
 
-    orchestrator_group = build_parser.add_argument_group(
-        title='arguments for --orchestrator',
-        description='Required arguments for creating an orchestrator build')
-    orchestrator_group.add_argument(
-        '--platforms', action='append', metavar='PLATFORM',
-        help='name of each platform to use')
+    orchestrator_group = build_parser.add_argument_group(title='arguments for --orchestrator',
+                                                         description='Required arguments for '
+                                                         'creating an orchestrator build')
+    orchestrator_group.add_argument('--platforms', action='append', metavar='PLATFORM',
+                                    help='name of each platform to use')
 
     build_parser.add_argument('--source-registry-uri', action='store', required=False,
                               help="set source registry for pulling parent image")
@@ -730,26 +741,30 @@ def cli():
 
     get_build_image_id = subparsers.add_parser(str_on_2_unicode_on_3('get-build-image-id'),
                                                help='get build container image ID',
-                                               description='get build container images for a build in a namespace')
+                                               description='get build container images for a '
+                                               'build in a namespace')
     get_build_image_id.add_argument("BUILD_ID", help="build ID", nargs=1)
     get_build_image_id.set_defaults(func=cmd_get_build_image_id)
 
     backup_builder = subparsers.add_parser(str_on_2_unicode_on_3('backup-builder'),
                                            help='dump builder data (admin)',
                                            description='create backup of all OSBS data')
-    backup_builder.add_argument("-f", "--filename", help="name of the resulting tar.bz2 file (use - for stdout)")
+    backup_builder.add_argument("-f", "--filename",
+                                help="name of the resulting tar.bz2 file (use - for stdout)")
     backup_builder.set_defaults(func=cmd_backup)
 
     restore_builder = subparsers.add_parser(str_on_2_unicode_on_3('restore-builder'),
                                             help='restore builder data (admin)',
                                             description='restore OSBS data from backup')
-    restore_builder.add_argument("BACKUP_ARCHIVE", help="name of the tar.bz2 archive to restore (use - for stdin)")
+    restore_builder.add_argument("BACKUP_ARCHIVE",
+                                 help="name of the tar.bz2 archive to restore (use - for stdin)")
     restore_builder.add_argument("--continue-on-error", action='store_true',
                                  help="don't stop when restoring a resource fails")
     restore_builder.set_defaults(func=cmd_restore)
 
     token_url_builder = subparsers.add_parser(str_on_2_unicode_on_3('print-token-url'),
-                                              description='print a url to oauth authentication page')
+                                              description='print a url to oauth authentication '
+                                              'page')
     token_url_builder.set_defaults(func=cmd_print_token_url)
 
     serviceaccount_builder = subparsers.add_parser(
@@ -770,7 +785,8 @@ def cli():
     parser.add_argument("--config", action='store', metavar="PATH",
                         help="path to configuration file", default=DEFAULT_CONFIGURATION_FILE)
     parser.add_argument("--instance", "-i", action='store', metavar="SECTION_NAME",
-                        help="section within config for requested instance", default=DEFAULT_CONFIGURATION_SECTION)
+                        help="section within config for requested instance",
+                        default=DEFAULT_CONFIGURATION_SECTION)
     parser.add_argument("--username", action='store',
                         help="name of user to use for Basic Authentication in OSBS")
     parser.add_argument("--password", action='store',
@@ -875,6 +891,7 @@ def main():
         else:
             logger.error("Exception caught: %s", repr(ex))
             return -1
+
 
 if __name__ == '__main__':
     sys.exit(main())

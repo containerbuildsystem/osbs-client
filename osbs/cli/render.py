@@ -118,8 +118,8 @@ class TablePrinter(TableFormatter):
                 self.default_column_space = self.total_free_space // self.col_count
                 self.default_column_space_remainder = self.total_free_space % self.col_count
                 logger.debug("total free space: %d, column space: %d, remainder: %d, columns: %d",
-                             self.total_free_space, self.default_column_space, self.default_column_space_remainder,
-                             self.col_count)
+                             self.total_free_space, self.default_column_space,
+                             self.default_column_space_remainder, self.col_count)
         else:
             self.total_free_space = None
 

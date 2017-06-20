@@ -335,7 +335,8 @@ class BuildSpec(object):
                     logger.debug("param '%s' is None; None is allowed", param.name)
                 else:
                     logger.error("param '%s' is None; None is NOT allowed", param.name)
-                    raise OsbsValidationException("param '%s' is not valid: None is not allowed" % param.name)
+                    raise OsbsValidationException("param '%s' is not valid: None is not allowed" %
+                                                  param.name)
 
     def __repr__(self):
         return "Spec(%s)" % self.__dict__

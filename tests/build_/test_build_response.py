@@ -9,6 +9,7 @@ import json
 import pytest
 from osbs.build.build_response import BuildResponse
 
+
 class TestBuildResponse(object):
     def test_get_logs(self):
         msg = "This is an error message"
@@ -55,7 +56,6 @@ class TestBuildResponse(object):
         assert not build_response.cancelled
         assert 'cancelled' in build_response.json['status']
         assert not build_response.json['status'].get('cancelled')
-
 
     @pytest.mark.parametrize(('plugin', 'message', 'expected_error_message'), [
         ('dockerbuild', None, 'Error in plugin dockerbuild'),

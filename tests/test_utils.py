@@ -107,7 +107,8 @@ def test_get_time_from_rfc3339_valid(rfc3339, seconds, tz):
     ('longer--name--than', 'this', 22, '-', 'longer--name--tha-this'),
 ])
 def test_make_name_from_git(repo, branch, limit, separator, expected, hash_size=5):
-    bc_name = make_name_from_git(repo, branch, limit + len(separator) + hash_size, separator, hash_size=hash_size)
+    bc_name = make_name_from_git(repo, branch, limit + len(separator) + hash_size, separator,
+                                 hash_size=hash_size)
 
     assert expected == bc_name[:-(hash_size + len(separator))]
 
@@ -115,18 +116,21 @@ def test_make_name_from_git(repo, branch, limit, separator, expected, hash_size=
     valid = re.compile(BC_NAME_REGEX)
     assert valid.match(bc_name)
 
+
 def test_make_name_from_git_collide():
     bc1 = make_name_from_git("very_log_repo name_first", "also_long_branch_name", 30, '-')
     bc2 = make_name_from_git("very_log_repo name_second", "also_long_branch_name", 30, '-')
     assert bc1 != bc2
 
+
 SHA_INPUT_FILE = 'tests/input_for_sha.txt'
+
 
 def test_make_name_from_git_all_from_file():
 
     all_sha = set()
     with open(SHA_INPUT_FILE) as f:
-        lines =  f.read().splitlines()
+        lines = f.read().splitlines()
 
     for line in lines:
         repo, branch = line.split()
@@ -138,6 +142,7 @@ def test_make_name_from_git_all_from_file():
         assert valid.match(bc_name)
 
     assert len(lines) == len(all_sha)
+
 
 @pytest.mark.skipif(sys.version_info[0] < 3,
                     reason="requires python3")
@@ -284,6 +289,7 @@ def test_get_instance_token_file_name():
 
     assert get_instance_token_file_name('spam') == expected
 
+
 @pytest.mark.parametrize(('labels', 'fnc', 'expect'), [
     ({},
      ("get_name", Labels.LABEL_TYPE_COMPONENT),
@@ -291,11 +297,11 @@ def test_get_instance_token_file_name():
     ({},
      ("get_name", "doesnt_exist"),
      Exception),
-    ({"Name" : "old",
-      "name" : "new"},
+    ({"Name": "old",
+      "name": "new"},
      ("get_name", Labels.LABEL_TYPE_NAME),
      "name"),
-    ({"Name" : "old"},
+    ({"Name": "old"},
      ("get_name", Labels.LABEL_TYPE_NAME),
      "Name"),
     ({"Name": "old"},
@@ -310,8 +316,8 @@ def test_get_instance_token_file_name():
       "RUN": "run",
       "INSTALL": "install",
       "UNINSTALL": "uninstall"}),
-    ({"Name" : "old",
-      "name" : "new"},
+    ({"Name": "old",
+      "name": "new"},
      ("get_name_and_value", Labels.LABEL_TYPE_NAME),
      ("name", "new")),
     ({},
@@ -339,6 +345,8 @@ def test_labels(labels, fnc, expect):
 
 
 vstr_re = re.compile('\d+\.\d+\.\d+')
+
+
 @pytest.mark.parametrize(('version', 'valid'), [
     ('1.0.4', True),
     ('5.3', True),

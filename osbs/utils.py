@@ -410,6 +410,7 @@ def sanitize_version(version):
     cleaned_version = '{0}.{1}.{2}'.format(major, minor, micro)
     return cleaned_version
 
+
 class Labels(object):
     """
     Provide access to a set of labels which have specific semantics
