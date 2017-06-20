@@ -42,7 +42,8 @@ class Configuration(object):
      * dict
     """
 
-    def __init__(self, conf_file=DEFAULT_CONFIGURATION_FILE, conf_section=DEFAULT_CONFIGURATION_SECTION,
+    def __init__(self, conf_file=DEFAULT_CONFIGURATION_FILE,
+                 conf_section=DEFAULT_CONFIGURATION_SECTION,
                  cli_args=None, **kwargs):
         """
         sample initialization:
@@ -212,13 +213,15 @@ class Configuration(object):
         return self._get_value("koji_certs_secret", self.conf_section, "koji_certs_secret")
 
     def get_koji_use_kerberos(self):
-        return self._get_value("koji_use_kerberos", self.conf_section, "koji_use_kerberos", is_bool_val=True)
+        return self._get_value("koji_use_kerberos", self.conf_section, "koji_use_kerberos",
+                               is_bool_val=True)
 
     def get_koji_kerberos_keytab(self):
         return self._get_value("koji_kerberos_keytab", self.conf_section, "koji_kerberos_keytab")
 
     def get_koji_kerberos_principal(self):
-        return self._get_value("koji_kerberos_principal", self.conf_section, "koji_kerberos_principal")
+        return self._get_value("koji_kerberos_principal", self.conf_section,
+                               "koji_kerberos_principal")
 
     def get_sources_command(self):
         return self._get_value("sources_command", self.conf_section, "sources_command")
@@ -487,7 +490,8 @@ class Configuration(object):
             raise OsbsValidationException("Invalid arrangement_version: %s" % value)
 
     def get_can_orchestrate(self):
-        return self._get_value("can_orchestrate", self.conf_section, "can_orchestrate", default=False, is_bool_val=True)
+        return self._get_value("can_orchestrate", self.conf_section, "can_orchestrate",
+                               default=False, is_bool_val=True)
 
     def get_info_url_format(self):
         return self._get_value("info_url_format", self.conf_section,

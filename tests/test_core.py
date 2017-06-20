@@ -24,7 +24,7 @@ from osbs.core import check_response, Openshift
 
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
                              TEST_LABEL_VALUE, TEST_IMAGESTREAM)
-from tests.fake_api import openshift, OAPI_PREFIX, API_VER
+from tests.fake_api import openshift, OAPI_PREFIX, API_VER  # noqa
 from requests.exceptions import ConnectionError
 import pytest
 
@@ -175,25 +175,25 @@ class TestOpenshift(object):
             for result in server.stream_logs('anything'):
                 assert isinstance(result, six.binary_type)
 
-    def test_list_builds(self, openshift):
+    def test_list_builds(self, openshift):  # noqa
         list_builds = openshift.list_builds()
         assert list_builds is not None
         assert bool(list_builds.json())  # is there at least something
 
-    def test_list_pods(self, openshift):
+    def test_list_pods(self, openshift):  # noqa
         response = openshift.list_pods(label="openshift.io/build.name=%s" %
                                        TEST_BUILD)
         assert isinstance(response, HttpResponse)
 
-    def test_get_oauth_token(self, openshift):
+    def test_get_oauth_token(self, openshift):  # noqa
         token = openshift.get_oauth_token()
         assert token is not None
 
-    def test_get_user(self, openshift):
+    def test_get_user(self, openshift):  # noqa
         l = openshift.get_user()
         assert l.json() is not None
 
-    def test_watch_build(self, openshift):
+    def test_watch_build(self, openshift):  # noqa
         response = openshift.wait_for_build_to_finish(TEST_BUILD)
         status_lower = response["status"]["phase"].lower()
         assert response["metadata"]["name"] == TEST_BUILD
@@ -201,19 +201,19 @@ class TestOpenshift(object):
         assert isinstance(TEST_BUILD, six.text_type)
         assert isinstance(status_lower, six.text_type)
 
-    def test_create_build(self, openshift):
+    def test_create_build(self, openshift):  # noqa
         response = openshift.create_build({})
         assert response is not None
         assert response.json()["metadata"]["name"] == TEST_BUILD
         assert response.json()["status"]["phase"].lower() in BUILD_FINISHED_STATES
 
-    def test_cancel_build(self, openshift):
+    def test_cancel_build(self, openshift):  # noqa
         response = openshift.cancel_build(TEST_CANCELLED_BUILD)
         assert response is not None
         assert response.json()["metadata"]["name"] == TEST_CANCELLED_BUILD
         assert response.json()["status"]["phase"].lower() in BUILD_CANCELLED_STATE
 
-    def test_get_build_config(self, openshift):
+    def test_get_build_config(self, openshift):  # noqa
         mock_response = {"spam": "maps"}
         build_config_name = 'some-build-config-name'
         expected_url = openshift._build_url("buildconfigs/%s/" % build_config_name)
@@ -225,7 +225,7 @@ class TestOpenshift(object):
         response = openshift.get_build_config(build_config_name)
         assert response['spam'] == 'maps'
 
-    def test_get_missing_build_config(self, openshift):
+    def test_get_missing_build_config(self, openshift):  # noqa
         build_config_name = 'some-build-config-name'
         expected_url = openshift._build_url("buildconfigs/%s/" % build_config_name)
         (flexmock(openshift)
@@ -236,9 +236,8 @@ class TestOpenshift(object):
         with pytest.raises(OsbsResponseException):
             openshift.get_build_config(build_config_name)
 
-    def test_get_build_config_by_labels(self, openshift):
+    def test_get_build_config_by_labels(self, openshift):  # noqa
         mock_response = {"items": [{"spam": "maps"}]}
-        build_config_name = 'some-build-config-name'
         label_selectors = (
             ('label-1', 'value-1'),
             ('label-2', 'value-2'),
@@ -253,9 +252,8 @@ class TestOpenshift(object):
         response = openshift.get_build_config_by_labels(label_selectors)
         assert response['spam'] == 'maps'
 
-    def test_get_missing_build_config_by_labels(self, openshift):
+    def test_get_missing_build_config_by_labels(self, openshift):  # noqa
         mock_response = {"items": []}
-        build_config_name = 'some-build-config-name'
         label_selectors = (
             ('label-1', 'value-1'),
             ('label-2', 'value-2'),
@@ -272,9 +270,8 @@ class TestOpenshift(object):
             openshift.get_build_config_by_labels(label_selectors)
         assert str(exc.value).startswith('Build config not found')
 
-    def test_get_multiple_build_config_by_labels(self, openshift):
+    def test_get_multiple_build_config_by_labels(self, openshift):  # noqa
         mock_response = {"items": [{"spam": "maps"}, {"eggs": "sgge"}]}
-        build_config_name = 'some-build-config-name'
         label_selectors = (
             ('label-1', 'value-1'),
             ('label-2', 'value-2'),
@@ -291,7 +288,7 @@ class TestOpenshift(object):
             openshift.get_build_config_by_labels(label_selectors)
         assert str(exc.value).startswith('More than one build config found')
 
-    @pytest.mark.parametrize(('status_codes', 'should_raise'), [
+    @pytest.mark.parametrize(('status_codes', 'should_raise'), [  # noqa
         ([httplib.OK], False),
         ([httplib.CONFLICT, httplib.CONFLICT, httplib.OK], False),
         ([httplib.CONFLICT, httplib.OK], False),
@@ -341,7 +338,7 @@ class TestOpenshift(object):
         else:
             fn(*args)
 
-    def test_put_image_stream_tag(self, openshift):
+    def test_put_image_stream_tag(self, openshift):  # noqa
         tag_name = 'spam'
         tag_id = 'maps:' + tag_name
         mock_data = {
@@ -382,7 +379,7 @@ class TestOpenshift(object):
             }
         '''))
 
-    @pytest.mark.parametrize('existing_scheduled', (True, False, None))
+    @pytest.mark.parametrize('existing_scheduled', (True, False, None))  # noqa
     @pytest.mark.parametrize('existing_insecure', (True, False, None))
     @pytest.mark.parametrize('expected_scheduled', (True, False))
     @pytest.mark.parametrize(('s_annotations', 'expected_insecure'), (

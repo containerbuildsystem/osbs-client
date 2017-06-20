@@ -43,7 +43,8 @@ def osbsapi(func):
     def catch_exceptions(*args, **kwargs):
         # XXX: remove this in the future
         if kwargs.pop("namespace", None):
-            warnings.warn("OSBS.%s: the 'namespace' argument is no longer supported" % func.__name__)
+            warnings.warn("OSBS.%s: the 'namespace' argument is no longer supported" %
+                          func.__name__)
         try:
             return func(*args, **kwargs)
         except OsbsException:
@@ -227,9 +228,7 @@ class OSBS(object):
             new_label_value = new_labels.get(key)
             existing_label_value = existing_labels.get(key)
 
-            if (existing_label_value and
-                existing_label_value != new_label_value):
-
+            if (existing_label_value and existing_label_value != new_label_value):
                 msg = (
                     'Git labels collide with existing build config "%s". '
                     'Existing labels: %r, '
@@ -757,7 +756,7 @@ class OSBS(object):
     @osbsapi
     def login(self, token=None, username=None, password=None):
         if self.os.use_kerberos:
-             raise OsbsValidationException("can't use login when using kerberos")
+            raise OsbsValidationException("can't use login when using kerberos")
 
         if not token:
             if username:

@@ -219,10 +219,10 @@ class TestBuildRequest(object):
         assert pull_base_image is not None
         assert ('args' not in pull_base_image or
                 'parent_registry' not in pull_base_image['args'] or
-                pull_base_image['args']['parent_registry'] == None)
+                not pull_base_image['args']['parent_registry'])
 
-        assert plugin_value_get(plugins, "exit_plugins", "store_metadata_in_osv3", "args", "url") == \
-            "http://openshift/"
+        assert plugin_value_get(plugins, "exit_plugins", "store_metadata_in_osv3", "args",
+                                "url") == "http://openshift/"
 
         for r in registry_uris:
             assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
@@ -275,7 +275,6 @@ class TestBuildRequest(object):
             'build_imagestream': build_imagestream,
             'proxy': proxy,
         }
-
 
         if valid:
             build_request.set_params(**kwargs)
@@ -353,7 +352,8 @@ class TestBuildRequest(object):
             assert rendered_build_image == (build_image if build_image else DEFAULT_BUILD_IMAGE)
         else:
             assert rendered_build_image == build_imagestream
-            assert build_json["spec"]["strategy"]["customStrategy"]["from"]["kind"] == "ImageStreamTag"
+            assert build_json["spec"]["strategy"]["customStrategy"]["from"]["kind"] == \
+                "ImageStreamTag"
 
     @pytest.mark.parametrize('proxy', [
         None,
@@ -658,7 +658,6 @@ class TestBuildRequest(object):
                                         'delete_from_registry', 'args',
                                         'registries', 'https://registry.example.com') == {}
 
-
         if registry_secrets:
             mount_path = get_secret_mountpath_by_name(build_json,
                                                       registry_secrets[0])
@@ -839,13 +838,12 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push",
                                 "args", "registries") == expected_registries
 
-        secrets = build_json['spec']['strategy']['customStrategy']['secrets']
         for version, plugin in [('v1', 'pulp_push'), ('v2', 'pulp_sync')]:
             if version not in registry_api_versions:
                 continue
 
-            path = plugin_value_get(plugins, "postbuild_plugins", plugin,
-                                        "args", "pulp_secret_path")
+            path = plugin_value_get(plugins, "postbuild_plugins", plugin, "args",
+                                    "pulp_secret_path")
             mount_path = get_secret_mountpath_by_name(build_json, pulp_secret)
             assert mount_path == path
 
@@ -943,7 +941,6 @@ class TestBuildRequest(object):
         kwargs['yum_repourls'] = ['http://example.com/repo1.repo', 'http://example.com/repo2.repo']
         build_request.set_params(**kwargs)
         build_json = build_request.render()
-        strategy = build_json['spec']['strategy']['customStrategy']['env']
         plugins = get_plugins_from_build_json(build_json)
 
         repourls = None
@@ -1010,7 +1007,6 @@ class TestBuildRequest(object):
         build_request = BuildRequest(INPUTS_PATH)
         build_request.set_params(**kwargs)
         build_json = build_request.render()
-        strategy = build_json['spec']['strategy']['customStrategy']['env']
         plugins = get_plugins_from_build_json(build_json)
 
         labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile",
@@ -1122,7 +1118,6 @@ class TestBuildRequest(object):
         build_request = BuildRequest(str(tmpdir))
         build_request.set_params(**kwargs)
         build_json = build_request.render()
-        strategy = build_json['spec']['strategy']['customStrategy']['env']
         plugins = get_plugins_from_build_json(build_json)
 
         assert plugins['prebuild_plugins'] == []
@@ -1216,7 +1211,6 @@ class TestBuildRequest(object):
         if openshift_req_version:
             build_request.set_openshift_required_version(parse_version(openshift_req_version))
         build_json = build_request.render()
-        strategy = build_json['spec']['strategy']['customStrategy']['env']
         plugins = get_plugins_from_build_json(build_json)
 
         if disabled:
@@ -1224,10 +1218,8 @@ class TestBuildRequest(object):
                 get_plugin(plugins, phase, plugin)
 
         else:
-            assert plugin_value_get(plugins, phase, plugin, 'args',
-                'platforms') == platforms
-            build_kwargs = plugin_value_get(plugins, phase, plugin, 'args',
-                                            'build_kwargs')
+            assert plugin_value_get(plugins, phase, plugin, 'args', 'platforms') == platforms
+            build_kwargs = plugin_value_get(plugins, phase, plugin, 'args', 'build_kwargs')
             assert build_kwargs['arrangement_version'] == arrangement_version
 
             worker_config_kwargs = plugin_value_get(plugins, phase, plugin, 'args',
@@ -1238,7 +1230,7 @@ class TestBuildRequest(object):
             if isinstance(worker_build_image, type):
                 with pytest.raises(worker_build_image):
                     worker_config_kwargs['build_image']
-                worker_config.get_build_image() == None
+                assert not worker_config.get_build_image()
             else:
                 assert worker_config_kwargs['build_image'] == worker_build_image
                 assert worker_config.get_build_image() == worker_build_image
@@ -1581,8 +1573,10 @@ class TestBuildRequest(object):
 
         mount_path = get_secret_mountpath_by_name(build_json,
                                                   koji_certs_secret_name)
-        assert get_plugin(plugins, 'exit_plugins', 'koji_promote')['args']['koji_ssl_certs'] == mount_path
-        assert get_plugin(plugins, 'exit_plugins', 'koji_tag_build')['args']['koji_ssl_certs'] == mount_path
+        assert get_plugin(plugins, 'exit_plugins',
+                          'koji_promote')['args']['koji_ssl_certs'] == mount_path
+        assert get_plugin(plugins, 'exit_plugins',
+                          'koji_tag_build')['args']['koji_ssl_certs'] == mount_path
 
     def test_render_prod_request_with_koji_kerberos(self, tmpdir):
         self.create_image_change_trigger_json(str(tmpdir))
@@ -1628,15 +1622,19 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
                                 "args", "url") == kwargs["openshift_uri"]
 
-        assert get_plugin(plugins, 'exit_plugins', 'koji_promote')['args']['koji_principal'] == koji_kerberos_principal
-        assert get_plugin(plugins, 'exit_plugins', 'koji_promote')['args']['koji_keytab'] == koji_kerberos_keytab
+        assert get_plugin(plugins, 'exit_plugins',
+                          'koji_promote')['args']['koji_principal'] == koji_kerberos_principal
+        assert get_plugin(plugins, 'exit_plugins',
+                          'koji_promote')['args']['koji_keytab'] == koji_kerberos_keytab
 
         assert get_plugin(plugins, "exit_plugins", "koji_tag_build")
         assert plugin_value_get(plugins, "exit_plugins", "koji_tag_build",
                                 "args", "kojihub") == kwargs["kojihub"]
 
-        assert get_plugin(plugins, 'exit_plugins', 'koji_tag_build')['args']['koji_principal'] == koji_kerberos_principal
-        assert get_plugin(plugins, 'exit_plugins', 'koji_tag_build')['args']['koji_keytab'] == koji_kerberos_keytab
+        assert get_plugin(plugins, 'exit_plugins',
+                          'koji_tag_build')['args']['koji_principal'] == koji_kerberos_principal
+        assert get_plugin(plugins, 'exit_plugins',
+                          'koji_tag_build')['args']['koji_keytab'] == koji_kerberos_keytab
 
     @pytest.mark.parametrize(('base_image', 'is_custom'), [
         ('fedora', False),
@@ -1652,7 +1650,7 @@ class TestBuildRequest(object):
         kwargs = get_sample_prod_params()
         kwargs['base_image'] = base_image
         build_request.set_params(**kwargs)
-        build_json = build_request.render()
+        build_json = build_request.render()  # noqa
 
         assert build_request.is_custom_base_image() == is_custom
 
@@ -1793,13 +1791,13 @@ class TestBuildRequest(object):
         build_request.set_params(**kwargs)
         build_request.render()
 
-
         assert {
                 "name": plugin_name,
                 "args": plugin_args
         } in build_request.dj.dock_json[plugin_type]
 
-        assert unmodified_build_request.dj.dock_json[plugin_type][plugin_index]['name'] == plugin_name
+        assert unmodified_build_request.dj.dock_json[plugin_type][plugin_index]['name'] == \
+            plugin_name
         assert build_request.dj.dock_json[plugin_type][plugin_index]['name'] == plugin_name
 
     def test_has_version(self):
@@ -1847,10 +1845,12 @@ class TestBuildRequest(object):
         plugins = get_plugins_from_build_json(build_json)
 
         if secret is not None:
-            assert get_secret_mountpath_by_name(build_json, secret) == os.path.join(SECRETS_PATH, secret)
+            assert get_secret_mountpath_by_name(build_json, secret) == os.path.join(SECRETS_PATH,
+                                                                                    secret)
             assert get_plugin(plugins, plugin_type, plugin_name)
             assert plugin_value_get(plugins, plugin_type, plugin_name,
-                                    'args', 'osbs_client_config') == os.path.join(SECRETS_PATH, secret)
+                                    'args', 'osbs_client_config') == os.path.join(SECRETS_PATH,
+                                                                                  secret)
         else:
             with pytest.raises(AssertionError):
                 get_secret_mountpath_by_name(build_json, secret)
@@ -1860,11 +1860,11 @@ class TestBuildRequest(object):
         {'secret': 'path'},
         {'secret1': 'path1',
          'secret2': 'path2'
-        },
+         },
         {'secret1': 'path1',
          'secret2': 'path2',
-         'secret2': 'path3'
-        }
+         'secret3': 'path3'
+         },
     ])
     def test_token_secrets(self, secret):
         br = BuildRequest(INPUTS_PATH)
@@ -1877,7 +1877,8 @@ class TestBuildRequest(object):
             if path:
                 assert get_secret_mountpath_by_name(build_json, sec) == path
             else:
-                assert get_secret_mountpath_by_name(build_json, sec) == os.path.join(SECRETS_PATH, sec)
+                assert get_secret_mountpath_by_name(build_json, sec) == os.path.join(SECRETS_PATH,
+                                                                                     sec)
 
     def test_info_url_format(self):
         br = BuildRequest(INPUTS_PATH)

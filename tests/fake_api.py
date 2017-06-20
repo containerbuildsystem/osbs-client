@@ -87,7 +87,8 @@ class Connection(object):
                 }
             },
 
-            OAPI_PREFIX + "namespaces/default/builds/?labelSelector=koji-task-id%3D{task}".format(task=TEST_KOJI_TASK_ID): {
+            OAPI_PREFIX + "namespaces/default/builds/"
+                          "?labelSelector=koji-task-id%3D{task}".format(task=TEST_KOJI_TASK_ID): {
                 "get": {
                     # Contains a list of builds
                     "file": "builds_list.json",
@@ -347,6 +348,7 @@ can_orchestrate = true
     osbs.os = openshift
     return osbs
 
+
 @pytest.fixture
 def osbs_cant_orchestrate(openshift):
     with NamedTemporaryFile(mode="wt") as fp:
@@ -371,6 +373,7 @@ use_auth = false
 
     osbs.os = openshift
     return osbs
+
 
 @pytest.fixture
 def osbs106(openshift):

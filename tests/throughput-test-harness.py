@@ -17,7 +17,10 @@ DEFAULT_KOJI_BIN = "koji"
 DEFAULT_KOJI_TARGET = "extras-rhel-7.2-candidate"
 DEFAULT_GIT_REMOTE = "origin"
 
-class SubprocessError(Exception): pass
+
+class SubprocessError(Exception):
+    pass
+
 
 def run(*args):
     logging.info("running: %s", " ".join(args))
@@ -32,6 +35,7 @@ def run(*args):
         raise SubprocessError("Subprocess failed w/ return code {0}".format(p.returncode))
 
     return out
+
 
 def bump_release(df_path, branch):
     parser = DockerfileParser(df_path)
@@ -49,12 +53,14 @@ def bump_release(df_path, branch):
     parser.labels["Release"] = newrelease
     return newrelease
 
+
 def set_initial_release(df_path, branch):
     parser = DockerfileParser(df_path)
     oldrelease = parser.labels.get("Release", "1")
     newrelease = "{0}.{1}.iteration001".format(oldrelease, branch)
     parser.labels["Release"] = newrelease
     return newrelease
+
 
 def get_branches(branch_prefix):
     branches = run("git", "branch", "--list")
@@ -63,6 +69,7 @@ def get_branches(branch_prefix):
     if not branches:
         raise RuntimeError("No branches starting with %s found" % branch_prefix)
     return branches
+
 
 def cmd_create_branches(args):
     branches = ["{0}{1:03d}".format(args.branch_prefix, n+1) for n in range(args.number)]
@@ -81,10 +88,11 @@ def cmd_create_branches(args):
     logging.info("Pusing ALL branches to %s", args.git_remote)
     run("git", "push", "--force", args.git_remote, *branches)
 
+
 def cmd_delete_branches(args):
     branches = get_branches(args.branch_prefix)
 
-    #otherwise we get Cannot delete the branch 'branch005' which you are currently on.
+    # otherwise we get Cannot delete the branch 'branch005' which you are currently on.
     run("git", "checkout", "master")
 
     logging.info("Deleting %d branches", len(branches))
@@ -92,6 +100,7 @@ def cmd_delete_branches(args):
 
     logging.info("Deleting remote branches in %s", args.git_remote)
     run("git", "push", "--force", args.git_remote, *[":"+b for b in branches])
+
 
 def cmd_bump_release(args):
     branches = get_branches(args.branch_prefix)
@@ -104,6 +113,7 @@ def cmd_bump_release(args):
 
     logging.info("Pusing ALL branches to %s", args.git_remote)
     run("git", "push", "--force", args.git_remote, *branches)
+
 
 def cmd_start_builds(args):
     branches = get_branches(args.branch_prefix)
@@ -167,6 +177,7 @@ def cmd_start_builds(args):
         for b, ex in failed_builds.items():
             logging.error("Branch %s:", b, exc_info=ex)
 
+
 def main():
     parser = argparse.ArgumentParser(description="OSBS throughput test harness",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -193,15 +204,20 @@ def main():
 
     start_builds = subparsers.add_parser("start-builds",
                                          formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    start_builds.add_argument("--stagger-number", metavar="N", type=int, default=DEFAULT_STAGGER_NUMBER,
+    start_builds.add_argument("--stagger-number", metavar="N", type=int,
+                              default=DEFAULT_STAGGER_NUMBER,
                               help="wait between starting N first builds")
-    start_builds.add_argument("--stagger-wait", metavar="SECONDS", type=int, default=DEFAULT_STAGGER_WAIT,
+    start_builds.add_argument("--stagger-wait", metavar="SECONDS", type=int,
+                              default=DEFAULT_STAGGER_WAIT,
                               help="amount of time to wait between initial builds")
     start_builds.add_argument("--use-koji", default=False, action="store_true",
                               help="use koji to submit builds (default: use osbs")
     start_builds.add_argument("--koji-bin", default=DEFAULT_KOJI_BIN, help="koji executable")
-    start_builds.add_argument("--koji-target", default=DEFAULT_KOJI_TARGET, help="koji target to build in")
-    start_builds.add_argument("--git-url", help="url of git repo to pass to koji (autodetected if not specified)")
+    start_builds.add_argument("--koji-target", default=DEFAULT_KOJI_TARGET,
+                              help="koji target to build in")
+    start_builds.add_argument("--git-url",
+                              help="url of git repo to pass to koji "
+                              "(autodetected if not specified)")
     start_builds.add_argument("--repo-url", help="url of rpm repo to install for builds")
     start_builds.set_defaults(func=cmd_start_builds)
 
@@ -209,6 +225,7 @@ def main():
 
     args = parser.parse_args()
     args.func(args)
+
 
 if __name__ == '__main__':
     sys.exit(main())

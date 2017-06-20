@@ -19,19 +19,18 @@ logger = logging.getLogger("osbs.tests")
 
 
 def test_missing_config():
-    os_conf = Configuration(conf_file="/nonexistent/path",
-                            conf_section="default")
+    os_conf = Configuration(conf_file="/nonexistent/path", conf_section="default")  # noqa
+
 
 def test_no_config():
-    os_conf = Configuration(conf_file=None,
-                            openshift_uri='https://example:8443')
-    assert os_conf.get_openshift_oauth_api_uri() == \
-            'https://example:8443/oauth/authorize'
+    os_conf = Configuration(conf_file=None, openshift_uri='https://example:8443')
+    assert os_conf.get_openshift_oauth_api_uri() == 'https://example:8443/oauth/authorize'
+
 
 def test_missing_section():
     with NamedTemporaryFile() as f:
-        os_conf = Configuration(conf_file=f.name,
-                                conf_section="missing")
+        os_conf = Configuration(conf_file=f.name, conf_section="missing")  # noqa
+
 
 def test_no_build_image():
     with NamedTemporaryFile(mode='w+') as f:
@@ -44,6 +43,7 @@ build_host=localhost
         os_conf = Configuration(conf_file=f.name,
                                 conf_section="default")
         assert os_conf.get_build_image() is None
+
 
 def test_no_inputs():
     with NamedTemporaryFile(mode='w+') as f:
