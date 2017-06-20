@@ -142,6 +142,16 @@ def graceful_chain_del(d, *args):
         pass
 
 
+def has_triggers(build_config):
+    return graceful_chain_get(build_config, 'spec', 'triggers') is not None
+
+
+def clean_triggers(orig, new):
+    if not has_triggers(new) and has_triggers(orig):
+        orig['spec']['triggers'] = [t for t in orig['spec']['triggers']
+                                    if t.get('type', None) != 'ImageChange']
+
+
 def buildconfig_update(orig, new, remove_nonexistent_keys=False):
     """Performs update of given `orig` BuildConfig with values from `new` BuildConfig.
     Both BuildConfigs have to be represented as `dict`s.
@@ -154,6 +164,7 @@ def buildconfig_update(orig, new, remove_nonexistent_keys=False):
       (see https://github.com/projectatomic/osbs-client/pull/273#issuecomment-148038314)
     """
     if isinstance(orig, dict) and isinstance(new, dict):
+        clean_triggers(orig, new)
         if remove_nonexistent_keys:
             missing = set(orig.keys()) - set(new.keys())
             for k in missing:
