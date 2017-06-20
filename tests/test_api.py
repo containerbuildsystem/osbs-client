@@ -1202,6 +1202,20 @@ class TestOSBS(object):
             has_ist_trigger=lambda: False,
             scratch=False)
 
+        spec = BuildSpec()
+        # Params needed to avoid exceptions.
+        spec.set_params(
+            user='user',
+            base_image='fedora23/python',
+            name_label='name_label',
+            source_registry_uri='source_registry_uri',
+            git_uri='https://github.com/user/reponame.git',
+            registry_uris=['http://registry.example.com:5000/v2'],
+        )
+        # Cannot use spec keyword arg in flexmock constructor
+        # because it appears to be used by flexmock itself
+        build_request.spec = spec
+
         (flexmock(osbs_obj)
             .should_receive('_get_existing_build_config')
             .once()
@@ -1235,6 +1249,19 @@ class TestOSBS(object):
             render=lambda: build_json,
             has_ist_trigger=lambda: False,
             scratch=False)
+        spec = BuildSpec()
+        # Params needed to avoid exceptions.
+        spec.set_params(
+            user='user',
+            base_image='fedora23/python',
+            name_label='name_label',
+            source_registry_uri='source_registry_uri',
+            git_uri='https://github.com/user/reponame.git',
+            registry_uris=['http://registry.example.com:5000/v2'],
+        )
+        # Cannot use spec keyword arg in flexmock constructor
+        # because it appears to be used by flexmock itself
+        build_request.spec = spec
 
         (flexmock(osbs_obj)
             .should_receive('_get_existing_build_config')
@@ -1275,6 +1302,20 @@ class TestOSBS(object):
             render=lambda: build_json,
             has_ist_trigger=lambda: False,
             scratch=False)
+
+        spec = BuildSpec()
+        # Params needed to avoid exceptions.
+        spec.set_params(
+            user='user',
+            base_image='fedora23/python',
+            name_label='name_label',
+            source_registry_uri='source_registry_uri',
+            git_uri='https://github.com/user/reponame.git',
+            registry_uris=['http://registry.example.com:5000/v2'],
+        )
+        # Cannot use spec keyword arg in flexmock constructor
+        # because it appears to be used by flexmock itself
+        build_request.spec = spec
 
         (flexmock(osbs_obj)
             .should_receive('_get_existing_build_config')
@@ -1321,6 +1362,20 @@ class TestOSBS(object):
             has_ist_trigger=lambda: False,
             scratch=False)
 
+        spec = BuildSpec()
+        # Params needed to avoid exceptions.
+        spec.set_params(
+            user='user',
+            base_image='fedora23/python',
+            name_label='name_label',
+            source_registry_uri='source_registry_uri',
+            git_uri='https://github.com/user/reponame.git',
+            registry_uris=['http://registry.example.com:5000/v2'],
+        )
+        # Cannot use spec keyword arg in flexmock constructor
+        # because it appears to be used by flexmock itself
+        build_request.spec = spec
+
         (flexmock(osbs_obj)
             .should_receive('_get_existing_build_config')
             .once()
@@ -1330,7 +1385,7 @@ class TestOSBS(object):
             .should_receive('create_build_config')
             .with_args(json.dumps(build_json))
             .once()
-            .and_return(flexmock(json=lambda: {'spam': 'maps'})))
+            .and_return(flexmock(json=lambda: {'spam': 'maps', 'spec': {}})))
 
         (flexmock(osbs_obj.os)
             .should_receive('start_build')
@@ -1411,16 +1466,16 @@ class TestOSBS(object):
         # Cannot use spec keyword arg in flexmock constructor
         # because it appears to be used by flexmock itself
         build_request.spec = spec
-
-        get_existing_build_config_times = 1
-        if existing_bc and build_request.has_ist_trigger():
-            get_existing_build_config_times += 1
+        build_config_created = False
 
         def mock_get_existing_build_config(*args, **kwargs):
-            return build_config_json if existing_bc else None
+            if existing_bc or build_config_created:
+                return build_config_json
+            else:
+                return None
         (flexmock(osbs_obj)
             .should_receive('_get_existing_build_config')
-            .times(get_existing_build_config_times)
+            .once()
             .replace_with(mock_get_existing_build_config))
 
         def mock_get_image_stream(*args, **kwargs):
@@ -1462,12 +1517,14 @@ class TestOSBS(object):
                 .once()
                 .and_return(flexmock(json=lambda: {'items': []})))
             update_build_config_times += 1
-
         else:
             temp_build_json = copy.deepcopy(build_json)
             temp_build_json['spec'].pop('triggers', None)
+            global build_config_created
 
             def mock_create_build_config(encoded_build_json):
+                global build_config_created
+                build_config_created = True
                 assert json.loads(encoded_build_json) == temp_build_json
                 return flexmock(json=lambda: build_config_json)
             (flexmock(osbs_obj.os)
@@ -1475,14 +1532,13 @@ class TestOSBS(object):
                 .replace_with(mock_create_build_config)
                 .once())
 
-        if build_request.has_ist_trigger():
-            update_build_config_times += 1
-
         (flexmock(osbs_obj.os)
             .should_receive('update_build_config')
             .with_args('build', str)
             .times(update_build_config_times))
-
+        (flexmock(osbs_obj.os)
+            .should_receive('patch_build_config')
+            .with_args('build', str))
         if expect_auto:
             (flexmock(osbs_obj.os)
                 .should_receive('wait_for_new_build_config_instance')
@@ -1802,10 +1858,10 @@ class TestOSBS(object):
         ("plat", 'rel', None, True, False, 1, False),
         ("plat", 'rel', None, True, False, None, True),
         # orchestrator build
-        (None, None, 'platforms', False, True, 1, True),
+        (None, None, 'platforms', False, True, 1, False),
         (None, None, 'platforms', False, True, None, False),
         # prod build
-        (None, None, None, False, False, 1, True),
+        (None, None, None, False, False, 1, False),
         (None, None, None, False, False, None, False),
     ])
     def test_arrangement_version(self, osbs, platform, release, platforms,
@@ -1836,7 +1892,7 @@ class TestOSBS(object):
             'architecture': None,
             'yum_repourls': None,
         }
-        if worker:
+        if arrangement_version:
             expected_kwargs['arrangement_version'] = arrangement_version
 
         if not raises_exception:
@@ -1864,7 +1920,7 @@ class TestOSBS(object):
                     .and_raise(CustomTestException))
 
         if raises_exception:
-            with pytest.raises(ValueError):
+            with pytest.raises(OsbsException):
                 cmd_build(MockArgs(platform, release, platforms, arrangement_version,
                           worker, orchestrator), osbs)
         else:
@@ -1937,3 +1993,108 @@ class TestOSBS(object):
         assert config_map.get_data() == data
         config_map = osbs.delete_config_map(name)
         assert config_map is None
+
+    @pytest.mark.parametrize('platforms', [None, "x86"])
+    def test_create_build_config_clear_nodeselector(self, caplog, platforms):
+        with NamedTemporaryFile(mode='wt') as fp:
+            fp.write(dedent("""\
+                [general]
+                build_json_dir = inputs
+
+                [default]
+                low_priority_node_selector = "lowpri=yes, scratch=yes"
+                """))
+
+            fp.flush()
+            config = Configuration(fp.name)
+
+        osbs_obj = OSBS(config, config)
+
+        build_config_json = {
+            'apiVersion': 'v1',
+            'kind': 'BuildConfig',
+            'metadata': {
+                'name': 'build',
+                'labels': {
+                    'git-repo-name': 'reponame',
+                    'git-branch': 'branch',
+                },
+            },
+            'spec': {
+                'nodeSelector': {
+                   'nodeselector1': 'node1_val',
+                   'nodeselector2': 'node2_val',
+                }
+            },
+            'status': {'lastVersion': 'lastVersion'},
+        }
+        bc_nodeselector = build_config_json['spec']['nodeSelector']
+        bc_json_without_lp = copy.deepcopy(build_config_json)
+        bc_json_without_lp['spec'].pop('nodeSelector')
+
+        spec = BuildSpec()
+        # Params needed to avoid exceptions.
+        spec.set_params(
+            user='user',
+            base_image='fedora23/python',
+            name_label='name_label',
+            source_registry_uri='source_registry_uri',
+            git_uri='https://github.com/user/reponame.git',
+            registry_uris=['http://registry.example.com:5000/v2'],
+            platforms=platforms
+        )
+
+        build_request = flexmock(
+            render=lambda: build_config_json,
+            has_ist_trigger=lambda: False,
+            scratch=False)
+        # Cannot use spec keyword arg in flexmock constructor
+        # because it appears to be used by flexmock itself
+        build_request.spec = spec
+        build_request.low_priority_node_selector = config.get_low_priority_node_selector()
+
+        def mock_get_existing_build_config(*args, **kwargs):
+                return build_config_json
+        (flexmock(osbs_obj)
+            .should_receive('_get_existing_build_config')
+            .once()
+            .replace_with(mock_get_existing_build_config))
+
+        (flexmock(osbs_obj.os)
+            .should_receive('list_builds')
+            .with_args(build_config_id='build')
+            .once()
+            .and_return(flexmock(json=lambda: {'items': []})))
+
+        def mock_update_build_config(name, *args):
+                assert name == 'build'
+                bc_json = json.loads(args[0])
+                assert bc_json_without_lp == bc_json
+        (flexmock(osbs_obj.os)
+            .should_receive('update_build_config')
+            .once()
+            .replace_with(mock_update_build_config))
+
+        if platforms:
+            patch_nodeselector = {'spec': {
+                        'nodeSelector': config.get_low_priority_node_selector()}}
+            (flexmock(osbs_obj.os)
+                .should_receive('patch_build_config')
+                .with_args('build', json.dumps(patch_nodeselector))
+                .once())
+
+        (flexmock(osbs_obj.os)
+            .should_receive('start_build')
+            .with_args('build')
+            .once()
+            .and_return(flexmock(json=lambda: {'spam': 'maps'})))
+
+        build_response = osbs_obj._create_build_config_and_build(build_request)
+
+        assert "removing build config's nodeSelector %s" % \
+               bc_nodeselector in caplog.text()
+        if platforms:
+            assert "setting back build config's log priority nodeSelector %s" % \
+                   config.get_low_priority_node_selector() in caplog.text()
+
+        assert build_response.json == {'spam': 'maps'}
