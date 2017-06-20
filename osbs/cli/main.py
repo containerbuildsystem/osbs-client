@@ -489,8 +489,8 @@ def cmd_get_build_image_id(args, osbs):
 
 
 def cmd_backup(args, osbs):
-    dirname = time.strftime("osbs-backup-{0}-{1}-%Y-%m-%d-%H%M%S"
-                            .format(args.instance, args.namespace))
+    dirname = time.strftime("osbs-backup-{0}-%Y-%m-%d-%H%M%S"
+                            .format(args.instance))
     if args.filename == '-':
         outfile = sys.stdout.buffer if PY3 else sys.stdout
     elif args.filename:
