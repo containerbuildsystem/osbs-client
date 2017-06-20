@@ -498,12 +498,20 @@ def cmd_backup(args, osbs):
     else:
         outfile = dirname + ".tar.bz2"
 
-    with paused_builds(osbs, quota_name='pause-backup'):
+    with paused_builds(osbs, quota_name='pause-backup',
+                       ignore_quota_errors=args.ignore_quota_errors):
         with TarWriter(outfile, dirname) as t:
             for resource_type in BACKUP_RESOURCES:
-                logger.info("dumping %s", resource_type)
-                resources = osbs.dump_resource(resource_type)
-                t.write_file(resource_type + ".json", json.dumps(resources).encode('ascii'))
+                try:
+                    logger.info("dumping %s", resource_type)
+                    resources = osbs.dump_resource(resource_type)
+                    t.write_file(resource_type + ".json", json.dumps(resources).encode('ascii'))
+                except Exception as e:
+                    if args.continue_on_error:
+                        logger.warning(
+                            "Error during {} backup".format(resource_type), exc_info=True)
+                    else:
+                        raise e
 
     if not hasattr(outfile, "write"):
         logger.info("backup archive created: %s", outfile)
@@ -516,7 +524,8 @@ def cmd_restore(args, osbs):
         infile = args.BACKUP_ARCHIVE
     asciireader = codecs.getreader('ascii')
 
-    with paused_builds(osbs, quota_name='pause-backup'):
+    with paused_builds(osbs, quota_name='pause-backup',
+                       ignore_quota_errors=args.ignore_quota_errors):
         for f in TarReader(infile):
             resource_type = os.path.basename(f.filename).split('.')[0]
             if resource_type not in BACKUP_RESOURCES:
@@ -751,6 +760,10 @@ def cli():
                                            description='create backup of all OSBS data')
     backup_builder.add_argument("-f", "--filename",
                                 help="name of the resulting tar.bz2 file (use - for stdout)")
+    backup_builder.add_argument("--ignore-quota-errors", action='store_true',
+                                help="ignore resourcequota errors")
+    backup_builder.add_argument("--continue-on-error", action='store_true',
+                                help="don't stop when backing up a resource fails")
     backup_builder.set_defaults(func=cmd_backup)
 
     restore_builder = subparsers.add_parser(str_on_2_unicode_on_3('restore-builder'),
@@ -760,6 +773,8 @@ def cli():
                                  help="name of the tar.bz2 archive to restore (use - for stdin)")
     restore_builder.add_argument("--continue-on-error", action='store_true',
                                  help="don't stop when restoring a resource fails")
+    restore_builder.add_argument("--ignore-quota-errors", action='store_true',
+                                 help="ignore resourcequota errors")
     restore_builder.set_defaults(func=cmd_restore)
 
     token_url_builder = subparsers.add_parser(str_on_2_unicode_on_3('print-token-url'),

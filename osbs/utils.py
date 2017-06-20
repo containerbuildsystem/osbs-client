@@ -19,6 +19,7 @@ import subprocess
 import sys
 import tempfile
 import tarfile
+import requests
 from collections import namedtuple
 from datetime import datetime
 from io import BytesIO
@@ -36,7 +37,7 @@ except ImportError:
     from calendar import timegm
 
 from dockerfile_parse import DockerfileParser
-from osbs.exceptions import OsbsException
+from osbs.exceptions import OsbsException, OsbsResponseException
 
 logger = logging.getLogger(__name__)
 
@@ -201,14 +202,26 @@ def checkout_git_repo(git_uri, git_ref, git_branch=None):
 
 
 @contextlib.contextmanager
-def paused_builds(osbs, quota_name=None):
+def paused_builds(osbs, quota_name=None, ignore_quota_errors=False):
     try:
         logger.info("pausing builds")
-        osbs.pause_builds(quota_name=quota_name)
+        try:
+            osbs.pause_builds(quota_name=quota_name)
+        except OsbsResponseException as e:
+            if ignore_quota_errors and (e.status_code == requests.codes.FORBIDDEN):
+                logger.warning("Ignoring resourcequota error")
+            else:
+                raise
         yield osbs
     finally:
         logger.info("resuming builds")
-        osbs.resume_builds(quota_name=quota_name)
+        try:
+            osbs.resume_builds(quota_name=quota_name)
+        except OsbsResponseException as e:
+            if ignore_quota_errors and (e.status_code == requests.codes.FORBIDDEN):
+                logger.warning("Ignoring resourcequota error")
+            else:
+                raise
 
 
 def looks_like_git_hash(git_ref):
