@@ -431,6 +431,14 @@ class TestConfiguration(object):
          {'default': {'node_selector.meal': 'breakfast=eggs.com'}},
          {'node_selector.meal': 'breakfast=bacon.com', 'node_selector.expense': 'ride=taxi.com'},
          {'breakfast': 'bacon.com'}),
+        ('meal',
+         {'default': {}},
+         {'node_selector.expense': 'ride=taxi.com'},
+         None),
+        ('meal',
+         {'default': {'node_selector.meal': 'none'}},
+         {'node_selector.expense': 'ride=taxi.com'},
+         None),
     ])
     def test_get_node_selector_platform(self, platform, kwargs, config, expected):
         with self.config_file(config) as config_file:
