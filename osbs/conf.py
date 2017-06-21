@@ -545,7 +545,7 @@ class Configuration(object):
         :param platform: str, platform to search for, can be null
         """
         nodeselector = None
-        if platform:
+        if platform and platform != 'none':
             nodeselector_str = self._get_value("node_selector." + platform, self.conf_section,
                                                "node_selector." + platform)
             if nodeselector_str:
