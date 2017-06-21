@@ -509,7 +509,7 @@ class Configuration(object):
         nodeselector = {}
         nodeselector_str = self._get_value("low_priority_node_selector", self.conf_section,
                                            "low_priority_node_selector")
-        if nodeselector_str:
+        if nodeselector_str and nodeselector_str != 'none':
             constraints = nodeselector_str.split(',')
             raw_nodeselector = dict([constraint.split('=', 1) for constraint in constraints])
             nodeselector = dict([k.strip(), v.strip()] for (k, v) in raw_nodeselector.items())
