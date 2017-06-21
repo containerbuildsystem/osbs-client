@@ -43,7 +43,7 @@ from osbs import utils
 
 from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
                              TEST_GIT_URI, TEST_TARGET, TEST_USER, INPUTS_PATH,
-                             TEST_KOJI_TASK_ID, TEST_VERSION)
+                             TEST_KOJI_TASK_ID, TEST_FILESYSTEM_KOJI_TASK_ID, TEST_VERSION)
 from tests.build_.test_build_request import get_sample_prod_params
 from osbs.core import Openshift
 # These are used as fixtures
@@ -143,6 +143,7 @@ class TestOSBS(object):
             'architecture': TEST_ARCH,
             'yum_repourls': None,
             'koji_task_id': None,
+            'filesystem_koji_task_id': None,
             'scratch': False,
             # Stuff that should be ignored and not cause erros
             'labels': {'Release': 'bacon'},
@@ -221,6 +222,7 @@ class TestOSBS(object):
             'git_ref': TEST_GIT_REF,
             'git_branch': TEST_GIT_BRANCH,
             'user': TEST_USER,
+            'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID,
         }
         if platform is not None:
             kwargs['platform'] = platform
@@ -234,6 +236,7 @@ class TestOSBS(object):
             'git_ref': TEST_GIT_REF,
             'git_branch': TEST_GIT_BRANCH,
             'user': TEST_USER,
+            'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID,
             'platform': platform,
             'release': release,
             'inner_template': WORKER_INNER_TEMPLATE.format(arrangement_version=arrangement_version),
@@ -302,6 +305,7 @@ class TestOSBS(object):
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
             'user': TEST_USER,
+            'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID,
             'platform': 'spam',
             'release': 'bacon',
             'arrangement_version': arrangement_version,
@@ -314,6 +318,7 @@ class TestOSBS(object):
             'git_ref': TEST_GIT_REF,
             'git_branch': branch,
             'user': TEST_USER,
+            'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID,
             'platform': kwargs['platform'],
             'release': kwargs['release'],
             'inner_template': WORKER_INNER_TEMPLATE.format(

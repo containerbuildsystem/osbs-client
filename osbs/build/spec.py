@@ -147,6 +147,7 @@ class BuildSpec(object):
     kojihub = BuildParam("kojihub", allow_none=True)
     koji_certs_secret = BuildParam("koji_certs_secret", allow_none=True)
     koji_task_id = BuildParam("koji_task_id", allow_none=True)
+    filesystem_koji_task_id = BuildParam("filesystem_koji_task_id", allow_none=True)
     koji_use_kerberos = BuildParam("koji_use_kerberos", allow_none=True)
     koji_kerberos_principal = BuildParam("koji_kerberos_principal", allow_none=True)
     koji_kerberos_keytab = BuildParam("koji_kerberos_keytab", allow_none=True)
@@ -208,6 +209,7 @@ class BuildSpec(object):
                    koji_target=None, kojiroot=None, kojihub=None, koji_certs_secret=None,
                    koji_use_kerberos=None, koji_kerberos_keytab=None,
                    koji_kerberos_principal=None, koji_task_id=None,
+                   filesystem_koji_task_id=None,
                    source_secret=None,  # compatibility name for pulp_secret
                    pulp_secret=None, pulp_registry=None,
                    smtp_host=None, smtp_from=None, smtp_email_domain=None,
@@ -326,6 +328,7 @@ class BuildSpec(object):
         self.info_url_format.value = info_url_format
         self.artifacts_allowed_domains.value = artifacts_allowed_domains
         self.equal_labels.value = equal_labels
+        self.filesystem_koji_task_id.value = filesystem_koji_task_id
 
     def validate(self):
         logger.info("Validating params of %s", self.__class__.__name__)
