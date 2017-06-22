@@ -542,6 +542,8 @@ class OSBS(object):
         :param arrangement_version: int, numbered arrangement of plugins for orchestration workflow
         :return: BuildResponse instance
         """
+        warnings.warn("prod (all-in-one) builds are deprecated, "
+                      "please use create_orchestrator_build")
         return self._do_create_prod_build(*args, **kwargs)
 
     @osbsapi
