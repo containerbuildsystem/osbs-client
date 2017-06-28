@@ -12,7 +12,8 @@ import logging
 
 from osbs.utils import graceful_chain_get, get_time_from_rfc3339
 from osbs.constants import BUILD_FINISHED_STATES, BUILD_RUNNING_STATES, \
-    BUILD_SUCCEEDED_STATES, BUILD_FAILED_STATES, BUILD_PENDING_STATES
+    BUILD_SUCCEEDED_STATES, BUILD_FAILED_STATES, BUILD_PENDING_STATES, \
+    BUILD_CANCELLED_STATE
 
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,9 @@ class BuildResponse(object):
 
     def is_failed(self):
         return self.status in BUILD_FAILED_STATES
+
+    def is_cancelled(self):
+        return self.status == BUILD_CANCELLED_STATE
 
     def is_succeeded(self):
         return self.status in BUILD_SUCCEEDED_STATES

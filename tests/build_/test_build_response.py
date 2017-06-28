@@ -56,6 +56,59 @@ class TestBuildResponse(object):
         assert not build_response.cancelled
         assert 'cancelled' in build_response.json['status']
         assert not build_response.json['status'].get('cancelled')
+        assert not build_response.is_cancelled()
+
+    def test_state_checkers(self):
+        build_response = BuildResponse({
+            'status': {
+                'phase': 'Complete'
+            }
+        })
+
+        build_response.status = 'complete'
+        assert build_response.is_finished()
+        assert build_response.is_succeeded()
+        assert not build_response.is_failed()
+        assert not build_response.is_cancelled()
+        assert not build_response.is_running()
+        assert not build_response.is_pending()
+        assert not build_response.is_in_progress()
+
+        build_response.status = 'failed'
+        assert build_response.is_failed()
+        assert build_response.is_finished()
+        assert not build_response.is_succeeded()
+        assert not build_response.is_cancelled()
+        assert not build_response.is_running()
+        assert not build_response.is_pending()
+        assert not build_response.is_in_progress()
+
+        build_response.status = 'cancelled'
+        assert build_response.is_cancelled()
+        assert build_response.is_failed()
+        assert build_response.is_finished()
+        assert not build_response.is_succeeded()
+        assert not build_response.is_running()
+        assert not build_response.is_pending()
+        assert not build_response.is_in_progress()
+
+        build_response.status = 'running'
+        assert build_response.is_running()
+        assert build_response.is_in_progress()
+        assert not build_response.is_cancelled()
+        assert not build_response.is_failed()
+        assert not build_response.is_finished()
+        assert not build_response.is_succeeded()
+        assert not build_response.is_pending()
+
+        build_response.status = 'pending'
+        assert build_response.is_pending()
+        assert build_response.is_in_progress()
+        assert not build_response.is_running()
+        assert not build_response.is_cancelled()
+        assert not build_response.is_failed()
+        assert not build_response.is_finished()
+        assert not build_response.is_succeeded()
 
     @pytest.mark.parametrize(('plugin', 'message', 'expected_error_message'), [
         ('dockerbuild', None, 'Error in plugin dockerbuild'),
