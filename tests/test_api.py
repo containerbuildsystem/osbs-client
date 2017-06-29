@@ -1913,29 +1913,34 @@ class TestOSBS(object):
                                            customize_conf=customize_conf)
 
     # osbs is a fixture here
-    @pytest.mark.parametrize(('name', 'data'), [  # noqa
-        ('special-config',
-         {
-             "special.how": "very",
-             "special.type": "charm"
-         }),
-    ])
-    def test_config_map(self, osbs, name, data):
-        obj = {
-            'apiVersion': 'v1',
-            'kind': 'ConfigMap',
-            'metadata': {'name': name},
-            'data': data,
-        }
-        (flexmock(osbs.os)
-            .should_call('create_config_map')
-            .with_args(obj))
+    def test_config_map(self, osbs): # noqa
+        with open(os.path.join(INPUTS_PATH, "config_map.json")) as fp:
+            raw = fp.read()
+        mock = flexmock(sys.modules['__builtin__' if six.PY2 else 'builtins'])
+        mock.should_call('open')  # set the fall-through
+        (mock.should_receive('open')
+            .with_args('inputs/config_map.json')
+            .and_return(flexmock(read=lambda: raw)))
 
+        how_str = "special.how"
+        very_str = "very"
+        type_str = "special.type"
+        quark_dict = {"quark": "charm"}
+        data = {
+                how_str: very_str,
+                type_str: quark_dict
+        }
+        none_str = "special.none"
+        name = 'special-config'
         config_map = osbs.create_config_map(name, data)
         assert isinstance(config_map, ConfigMapResponse)
         assert config_map.get_data() == data
         config_map = osbs.get_config_map(name)
         assert isinstance(config_map, ConfigMapResponse)
         assert config_map.get_data() == data
+        assert config_map.get_data_by_key(how_str) == very_str
+        assert config_map.get_data_by_key(type_str) == quark_dict
+        assert not config_map.get_data_by_key(none_str)
+
         config_map = osbs.delete_config_map(name)
         assert config_map is None
