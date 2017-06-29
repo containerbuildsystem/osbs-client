@@ -985,7 +985,10 @@ class OSBS(object):
         config_data_file = os.path.join(self.os_conf.get_build_json_store(), 'config_map.json')
         config_data = json.load(open(config_data_file))
         config_data['metadata']['name'] = name
-        config_data['data'] = data
+        data_dict = {}
+        for key, value in data.items():
+            data_dict[key] = json.dumps(value)
+        config_data['data'] = data_dict
 
         response = self.os.create_config_map(config_data)
         config_map_response = ConfigMapResponse(response.json())

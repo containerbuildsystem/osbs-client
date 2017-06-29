@@ -8,6 +8,7 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import print_function, absolute_import, unicode_literals
 
 import logging
+import json
 
 from osbs.utils import graceful_chain_get
 
@@ -34,10 +35,27 @@ class ConfigMapResponse(object):
         """
         Find the data stored in the config_map
 
-        :return: dict, the json data that was passed into the ConfigMap on creation
+        :return: dict, the json of the data data that was passed into the ConfigMap on creation
         """
         data = graceful_chain_get(self.json, "data")
         if data is None:
             return {}
 
-        return data
+        data_dict = {}
+        for key in data:
+            data_dict[key] = json.loads(data[key])
+
+        return data_dict
+
+    def get_data_by_key(self, name):
+        """
+        Find the object stored by a JSON string at key 'name'
+
+        :return: str or dict, the json of the str or dict stored in the ConfigMap at that location
+        """
+        data = graceful_chain_get(self.json, "data")
+
+        if data is None or name not in data:
+            return {}
+
+        return json.loads(data[name])
