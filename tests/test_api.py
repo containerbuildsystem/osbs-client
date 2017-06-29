@@ -762,16 +762,17 @@ class TestOSBS(object):
                     .once()
                     .and_return("password"))
             if not username:
-                try:
-                    (flexmock(sys.modules['__builtin__'])
-                        .should_receive('raw_input')
-                        .once()
-                        .and_return('username'))
-                except:
-                    (flexmock(sys.modules['builtins'])
-                        .should_receive('input')
-                        .once()
-                        .and_return('username'))
+                if six.PY2:
+                    builtin = '__builtin__'
+                    input_str = 'raw_input'
+                else:
+                    builtin = 'builtins'
+                    input_str = 'input'
+
+                (flexmock(sys.modules[builtin])
+                    .should_receive(input_str)
+                    .once()
+                    .and_return('username'))
 
         if not_valid:
             (flexmock(osbs.os)
