@@ -512,13 +512,14 @@ class BuildRequest(object):
 
     def adjust_for_scratch(self):
         """
-        Remove koji Content Generator related plugins if no triggers set in
-        order to hadle the "scratch build" scenario
+        Remove certain plugins in order to handle the "scratch build"
+        scenario. Scratch builds must not affect subsequent builds,
+        and should not be imported into Koji.
         """
         if self.scratch:
             for when, which in [
-                    ("postbuild_plugins", "compress"),
                     ("postbuild_plugins", "tag_from_config"),
+                    ("postbuild_plugins", "compress"),  # only for Koji
                     ("exit_plugins", "koji_promote"),
                     ("exit_plugins", "koji_tag_build"),
             ]:
