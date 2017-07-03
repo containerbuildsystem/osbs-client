@@ -151,6 +151,52 @@ class TestBuildRequest(object):
                                  "postbuild_plugins", "import_image", "args",
                                  "insecure_registry")
 
+    def assert_koji_upload_plugin(self, plugins, use_auth, valid=True):
+        if not valid:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "postbuild_plugins", "koji_upload")
+        else:
+            assert get_plugin(plugins, "postbuild_plugins", "koji_upload")
+
+            if use_auth is not None:
+                assert plugin_value_get(plugins, "postbuild_plugins", "koji_upload", "args",
+                                        "use_auth") == use_auth
+            else:
+                with pytest.raises(KeyError):
+                    plugin_value_get(plugins, "postbuild_plugins", "koji_upload", "args",
+                                     "use_auth")
+
+    @pytest.mark.parametrize('kojihub', ("http://hub/", None))
+    @pytest.mark.parametrize('use_auth', (True, False, None))
+    def test_render_koji_upload(self, use_auth, kojihub):
+        enable = {
+            "plugin_type": "postbuild_plugins",
+            "plugin_name": "koji_upload",
+            "plugin_args": {},
+        }
+        build_request = BuildRequest(INPUTS_PATH)
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'registry_uris': [],
+            'openshift_uri': "http://openshift/",
+            'builder_openshift_url': "http://openshift/",
+            'build_image': None,
+            'base_image': 'fedora:latest',
+            'name_label': 'fedora/resultingimage',
+            'registry_api_versions': ['v1'],
+            'kojihub': kojihub,
+        }
+        if use_auth is not None:
+            kwargs['use_auth'] = use_auth
+        build_request.set_params(**kwargs)
+        build_request.customize_conf['enable_plugins'].append(enable)
+        build_json = build_request.render()
+        plugins = get_plugins_from_build_json(build_json)
+        self.assert_koji_upload_plugin(plugins, use_auth, kojihub)
+
     def test_build_request_has_ist_trigger(self):
         build_json = copy.deepcopy(TEST_BUILD_JSON)
         br = BuildRequest('something')
@@ -527,6 +573,8 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "postbuild_plugins", "koji_upload")
+        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "koji_promote")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "koji_tag_build")
@@ -895,6 +943,9 @@ class TestBuildRequest(object):
 
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, "postbuild_plugins", "tag_from_config")
+
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "postbuild_plugins", "koji_upload")
 
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, "exit_plugins", "koji_promote")
