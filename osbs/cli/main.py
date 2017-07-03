@@ -396,11 +396,34 @@ def cmd_build(args, osbs):
                 print(line)
         except Exception as ex:
             logger.error("Error during fetching logs for build %s: %s", build_id, repr(ex))
+
+        osbs.wait_for_build_to_finish(build_id)
+        _display_build_summary(osbs.get_build(build_id))
     else:
         if args.output == 'json':
             print_json_nicely(build.json)
         elif args.output == 'text':
             print(build_id)
+
+
+def _display_build_summary(build):
+    output = [
+        "",  # Empty line for cleaner display
+        "build {0} is {1}".format(build.get_build_name(), build.status),
+    ]
+
+    if build.is_succeeded():
+        all_repositories = build.get_repositories() or {}
+
+        for kind, repositories in all_repositories.items():
+            if not repositories:
+                continue
+            output.append('{} repositories:'.format(kind))
+            for repository in repositories:
+                output.append('\t{}'.format(repository))
+
+    for line in output:
+        print(line)
 
 
 def cmd_build_logs(args, osbs):
