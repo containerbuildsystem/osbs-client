@@ -1219,6 +1219,7 @@ class TestBuildRequest(object):
             'vendor': 'vendor',
             'equal_labels': [['label1', 'label2'], ['label3', 'label4']],
             'artifacts_allowed_domains': ['foo.domain.com/bar', 'bar.domain.com/foo'],
+            'yum_proxy': 'http://proxy:3128',
         },
         {}
     ))
@@ -1318,6 +1319,8 @@ class TestBuildRequest(object):
                     worker_config.get_equal_labels())
             assert (kwargs.get('artifacts_allowed_domains', []) ==
                     worker_config.get_artifacts_allowed_domains())
+            assert (kwargs.get('yum_proxy') ==
+                    worker_config.get_proxy())
             assert (parse_version(worker_openshift_req_version) ==
                     worker_config.get_openshift_required_version())
 
