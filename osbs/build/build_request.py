@@ -766,9 +766,6 @@ class BuildRequest(object):
         self.dj.dock_json_set_arg(phase, plugin, 'koji_hub', koji_hub)
         self.dj.dock_json_set_arg(phase, plugin, "koji_root", koji_root)
 
-        if self.spec.proxy.value:
-            self.dj.dock_json_set_arg(phase, plugin, 'koji_proxyuser', self.spec.proxy.value)
-
         if self.spec.artifacts_allowed_domains.value:
             self.dj.dock_json_set_arg(phase, plugin, 'allowed_domains',
                                       self.spec.artifacts_allowed_domains.value)
