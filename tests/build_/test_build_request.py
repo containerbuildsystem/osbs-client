@@ -1218,6 +1218,7 @@ class TestBuildRequest(object):
             'sources_command': 'sources_command',
             'vendor': 'vendor',
             'equal_labels': [['label1', 'label2'], ['label3', 'label4']],
+            'artifacts_allowed_domains': ['foo.domain.com/bar', 'bar.domain.com/foo'],
         },
         {}
     ))
@@ -1315,6 +1316,8 @@ class TestBuildRequest(object):
             assert kwargs.get('vendor') == worker_config.get_vendor()
             assert (kwargs.get('equal_labels', []) ==
                     worker_config.get_equal_labels())
+            assert (kwargs.get('artifacts_allowed_domains', []) ==
+                    worker_config.get_artifacts_allowed_domains())
             assert (parse_version(worker_openshift_req_version) ==
                     worker_config.get_openshift_required_version())
 
