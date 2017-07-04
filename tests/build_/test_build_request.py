@@ -1749,7 +1749,6 @@ class TestBuildRequest(object):
         add_filesystem_args = plugin_value_get(
             plugins, 'prebuild_plugins', 'add_filesystem', 'args')
         assert add_filesystem_args['koji_hub'] == kwargs['kojihub']
-        assert add_filesystem_args['koji_proxyuser'] == kwargs['proxy']
         assert add_filesystem_args['repos'] == kwargs['yum_repourls']
         assert add_filesystem_args['architectures'] == kwargs['platforms']
         assert add_filesystem_args['from_task_id'] == kwargs['filesystem_koji_task_id']
