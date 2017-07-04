@@ -562,9 +562,6 @@ class BuildRequest(object):
                     'Custom base image builds require kojihub to be defined')
             self.dj.dock_json_set_arg(phase, plugin, 'koji_hub',
                                       self.spec.kojihub.value)
-            if self.spec.proxy.value:
-                self.dj.dock_json_set_arg(phase, plugin, 'koji_proxyuser',
-                                          self.spec.proxy.value)
             if self.spec.yum_repourls.value:
                 self.dj.dock_json_set_arg(phase, plugin, 'repos',
                                           self.spec.yum_repourls.value)

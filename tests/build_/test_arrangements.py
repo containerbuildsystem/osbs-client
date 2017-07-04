@@ -150,7 +150,6 @@ class TestArrangementV1(ArrangementBase):
 
             allowed_args = set([
                 'koji_hub',
-                'koji_proxyuser',
                 'repos',
             ])
             assert set(args.keys()) <= allowed_args
@@ -202,7 +201,6 @@ class TestArrangementV2(TestArrangementV1):
                                     'add_filesystem', 'args')
             allowed_args = set([
                 'koji_hub',
-                'koji_proxyuser',
                 'repos',
                 'architectures',
             ])
@@ -236,7 +234,6 @@ class TestArrangementV2(TestArrangementV1):
                                     'add_filesystem', 'args')
             allowed_args = set([
                 'koji_hub',
-                'koji_proxyuser',
                 'repos',
                 'from_task_id',
             ])
