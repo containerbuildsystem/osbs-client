@@ -249,6 +249,8 @@ class BuildRequest(object):
             'sources_command': self.spec.sources_command.value,
             'vendor': self.spec.vendor.value,
             'equal_labels': equal_labels_string,
+            'artifacts_allowed_domains': ','.join(self.spec.artifacts_allowed_domains.value or [])
+                                         or None,
         }
 
         # Remove empty values, and always convert to string for better interaction
