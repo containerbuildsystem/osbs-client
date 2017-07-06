@@ -381,6 +381,9 @@ def cmd_build(args, osbs):
     if args.arrangement_version:
         build_kwargs['arrangement_version'] = args.arrangement_version
 
+    if args.koji_upload_dir:
+        build_kwargs['koji_upload_dir'] = args.koji_upload_dir
+
     build = create_func(**build_kwargs)
     build_id = build.get_build_name()
     # we need to wait for kubelet to schedule the build, otherwise it's 500
@@ -714,6 +717,8 @@ def cli():
                               help='release value to use')
     worker_group.add_argument('--arrangement-version', action='store', required=False,
                               help='version of inner template to use')
+    worker_group.add_argument('--koji-upload-dir', action='store', required=False,
+                              help='path for uploading to koji')
 
     orchestrator_group = build_parser.add_argument_group(title='arguments for --orchestrator',
                                                          description='Required arguments for '
