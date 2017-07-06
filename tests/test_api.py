@@ -1814,6 +1814,8 @@ class TestOSBS(object):
     def test_arrangement_version(self, osbs, platform, release, platforms,
                                  worker, orchestrator,
                                  arrangement_version, raises_exception):
+        koji_upload_dir = 'upload' if worker else None
+
         class MockArgs(object):
             def __init__(self, platform, release, platforms, arrangement_version,
                          worker, orchestrator):
@@ -1824,6 +1826,7 @@ class TestOSBS(object):
                 self.worker = worker
                 self.orchestrator = orchestrator
                 self.scratch = None
+                self.koji_upload_dir = koji_upload_dir
 
         expected_kwargs = {
             'platform': platform,
@@ -1840,7 +1843,10 @@ class TestOSBS(object):
             'yum_repourls': None,
         }
         if worker:
-            expected_kwargs['arrangement_version'] = arrangement_version
+            expected_kwargs.update({
+                'arrangement_version': arrangement_version,
+                'koji_upload_dir': koji_upload_dir,
+            })
 
         if not raises_exception:
             # and_raise is called to prevent cmd_build to continue
