@@ -47,6 +47,9 @@ class HttpSession(object):
     def put(self, url, **kwargs):
         return self.request(url, "put", **kwargs)
 
+    def patch(self, url, **kwargs):
+        return self.request(url, "patch", **kwargs)
+
     def delete(self, url, **kwargs):
         return self.request(url, "delete", **kwargs)
 
@@ -92,12 +95,12 @@ class HttpStream(object):
         headers = headers or {}
         method = method.lower()
 
-        if method not in ['post', 'get', 'put', 'delete']:
+        if method not in ['post', 'get', 'put', 'patch', 'delete']:
             raise RuntimeError("Unsupported method '%s' for curl call!" % method)
 
         args = {}
 
-        if method in ['post', 'put']:
+        if method in ['post', 'put', 'patch']:
             headers['Expect'] = ''
 
         if not verify_ssl:

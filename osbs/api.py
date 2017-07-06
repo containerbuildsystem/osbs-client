@@ -217,7 +217,7 @@ class OSBS(object):
         # this should never happen, but if it does, we want to know all the builds
         #  that were running at the time
         builds = ', '.join(['%s: %s' % (b.get_build_name(), b.status) for b in builds])
-        msg = 'Multiple builds for %s running, can\'t proceed: %s' % \
+        msg = "Multiple builds for %s running, can't proceed: %s" % \
             (build_config_name, builds)
         return msg
 
@@ -278,7 +278,7 @@ class OSBS(object):
         if rb_len > 0:
             if rb_len == 1:
                 rb = running_builds[0]
-                msg = 'Build %s for %s in state %s, can\'t proceed.' % \
+                msg = "Build %s for %s in state %s, can't proceed." % \
                     (rb.get_build_name(), build_config_name, rb.status)
             else:
                 msg = self._panic_msg_for_more_running_builds(build_config_name, running_builds)
@@ -351,6 +351,9 @@ class OSBS(object):
         build_config_name = build_json['metadata']['name']
         logger.debug('build config to be named "%s"', build_config_name)
         existing_bc = self._get_existing_build_config(build_json)
+        orchestrator_build = False
+        if build_request.spec.platforms.value:
+            orchestrator_build = True
 
         image_stream, image_stream_tag_name = \
             self._get_image_stream_info_for_build_request(build_request)
@@ -371,6 +374,11 @@ class OSBS(object):
                          build_config_name)
             self._verify_no_running_builds(build_config_name)
 
+            # Remove nodeSelector, will be set from build_json
+            # for worker build, if there is platform nodeselector
+            old_nodeselector = existing_bc['spec'].pop('nodeSelector', None)
+            logger.debug("removing build config's nodeSelector %s", old_nodeselector)
+
             utils.buildconfig_update(existing_bc, build_json)
             # Reset name change that may have occurred during
             # update above, since renaming is not supported.
@@ -379,12 +387,9 @@ class OSBS(object):
                          build_config_name)
 
             self.os.update_build_config(build_config_name, json.dumps(existing_bc))
-            if triggers:
-                # Retrieve updated version to pick up lastVersion
-                existing_bc = self._get_existing_build_config(existing_bc)
 
         else:
-            logger.debug('build config for %s doesn\'t exist, creating...',
+            logger.debug("build config for %s doesn't exist, creating...",
                          build_config_name)
             existing_bc = self.os.create_build_config(json.dumps(build_json)).json()
 
@@ -395,17 +400,29 @@ class OSBS(object):
             logger.debug('Changed parent ImageStreamTag? %s', changed_ist)
 
         if triggers:
-            existing_bc['spec']['triggers'] = triggers
-            self.os.update_build_config(build_config_name, json.dumps(existing_bc))
+            # openshift's patch is only adding items,
+            # so in order to completely replace 'triggers',
+            # we have to first empty it by setting it 'null'
+            # and after we can add triggers
+            patch_triggers = {'spec': {'triggers': None}}
+            self.os.patch_build_config(build_config_name, json.dumps(patch_triggers))
+            patch_triggers = {'spec': {'triggers': triggers}}
+            self.os.patch_build_config(build_config_name, json.dumps(patch_triggers))
 
         if image_stream and triggers:
-            prev_version = existing_bc['status']['lastVersion']
             build_id = self.os.wait_for_new_build_config_instance(
-                build_config_name, prev_version)
+                build_config_name, existing_bc['status']['lastVersion'])
             build = BuildResponse(self.os.get_build(build_id).json())
         else:
             response = self.os.start_build(build_config_name)
             build = BuildResponse(response.json())
+
+        if orchestrator_build:
+            patch_nodeselector = {'spec': {
+                                    'nodeSelector': build_request.low_priority_node_selector}}
+            self.os.patch_build_config(build_config_name, json.dumps(patch_nodeselector))
+            logger.debug("setting back build config's log priority nodeSelector %s",
+                         build_request.low_priority_node_selector)
 
         return build
 
@@ -602,10 +619,17 @@ class OSBS(object):
         for required in ('platform', 'release', 'arrangement_version'):
             if not kwargs.get(required):
                 missing.add(required)
-
         if missing:
             raise ValueError("Worker build missing required parameters: %s" %
                              missing)
+
+        extra = set()
+        for unwanted in ('platforms'):
+            if kwargs.get(unwanted):
+                extra.add(unwanted)
+        if extra:
+            raise ValueError("Worker build called with unwanted parameters: %s" %
+                             extra)
 
         arrangement_version = kwargs.pop('arrangement_version')
         kwargs.setdefault('inner_template', WORKER_INNER_TEMPLATE.format(
@@ -643,6 +667,14 @@ class OSBS(object):
         if not self.can_orchestrate():
             raise OsbsValidationException("can't create orchestrate build "
                                           "when can_orchestrate isn't enabled")
+
+        extra = set()
+        for unwanted in ('platform', 'release'):
+            if kwargs.get(unwanted):
+                extra.add(unwanted)
+        if extra:
+            raise ValueError("Orchestrator build called with unwanted parameters: %s" %
+                             extra)
 
         arrangement_version = kwargs.setdefault('arrangement_version',
                                                 self.build_conf.get_arrangement_version())

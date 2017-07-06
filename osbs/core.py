@@ -200,6 +200,10 @@ class Openshift(object):
         headers, kwargs = self._request_args(with_auth, **kwargs)
         return self._con.put(url, headers=headers, verify_ssl=self.verify_ssl, **kwargs)
 
+    def _patch(self, url, with_auth=True, **kwargs):
+        headers, kwargs = self._request_args(with_auth, **kwargs)
+        return self._con.patch(url, headers=headers, verify_ssl=self.verify_ssl, **kwargs)
+
     def _delete(self, url, with_auth=True, **kwargs):
         headers, kwargs = self._request_args(with_auth, **kwargs)
         return self._con.delete(url, headers=headers, verify_ssl=self.verify_ssl,
@@ -370,6 +374,13 @@ class Openshift(object):
         url = self._build_url("buildconfigs/%s" % build_config_id)
         response = self._put(url, data=build_config_json,
                              headers={"Content-Type": "application/json"})
+        check_response(response)
+        return response
+
+    def patch_build_config(self, build_config_id, build_config_json):
+        url = self._build_url("buildconfigs/%s" % build_config_id)
+        response = self._patch(url, data=build_config_json,
+                               headers={"Content-Type": "application/json"})
         check_response(response)
         return response
 
