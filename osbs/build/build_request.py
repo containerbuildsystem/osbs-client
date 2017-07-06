@@ -693,6 +693,8 @@ class BuildRequest(object):
                                       self.spec.builder_openshift_url.value)
             self.dj.dock_json_set_arg('postbuild_plugins', 'koji_upload',
                                       'build_json_dir', self.spec.builder_build_json_dir.value)
+            self.dj.dock_json_set_arg('postbuild_plugins', 'koji_upload',
+                                      'koji_upload_dir', self.spec.koji_upload_dir.value)
             if use_auth is not None:
                 self.dj.dock_json_set_arg('postbuild_plugins', 'koji_upload',
                                           'use_auth', use_auth)

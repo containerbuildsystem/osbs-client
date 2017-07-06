@@ -173,6 +173,7 @@ class BuildSpec(object):
     info_url_format = BuildParam("info_url_format", allow_none=True)
     artifacts_allowed_domains = BuildParam("artifacts_allowed_domains", allow_none=True)
     equal_labels = BuildParam("equal_labels", allow_none=True)
+    koji_upload_dir = BuildParam("koji_upload_dir", allow_none=True)
 
     def __init__(self):
         self.required_params = [
@@ -223,7 +224,7 @@ class BuildSpec(object):
                    reactor_config_secret=None, client_config_secret=None,
                    token_secrets=None, arrangement_version=None,
                    info_url_format=None, artifacts_allowed_domains=None,
-                   equal_labels=None, **kwargs):
+                   equal_labels=None, koji_upload_dir=None, **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
         self.user.value = user
@@ -329,6 +330,7 @@ class BuildSpec(object):
         self.artifacts_allowed_domains.value = artifacts_allowed_domains
         self.equal_labels.value = equal_labels
         self.filesystem_koji_task_id.value = filesystem_koji_task_id
+        self.koji_upload_dir.value = koji_upload_dir
 
     def validate(self):
         logger.info("Validating params of %s", self.__class__.__name__)

@@ -157,6 +157,8 @@ class TestBuildRequest(object):
                 get_plugin(plugins, "postbuild_plugins", "koji_upload")
         else:
             assert get_plugin(plugins, "postbuild_plugins", "koji_upload")
+            assert plugin_value_get(plugins, "postbuild_plugins", "koji_upload", "args",
+                                    "koji_upload_dir")
 
             if use_auth is not None:
                 assert plugin_value_get(plugins, "postbuild_plugins", "koji_upload", "args",
@@ -188,6 +190,7 @@ class TestBuildRequest(object):
             'name_label': 'fedora/resultingimage',
             'registry_api_versions': ['v1'],
             'kojihub': kojihub,
+            'koji_upload_dir': 'upload',
         }
         if use_auth is not None:
             kwargs['use_auth'] = use_auth

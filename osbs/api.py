@@ -425,6 +425,7 @@ class OSBS(object):
                               customize_conf=None,
                               arrangement_version=None,
                               filesystem_koji_task_id=None,
+                              koji_upload_dir=None,
                               **kwargs):
         df_parser = utils.get_df_parser(git_uri, git_ref, git_branch=git_branch)
         build_request = self.get_build_request(inner_template=inner_template,
@@ -510,7 +511,8 @@ class OSBS(object):
             low_priority_node_selector=self.build_conf.get_low_priority_node_selector(),
             equal_labels=self.build_conf.get_equal_labels(),
             platform_node_selector=self.build_conf.get_platform_node_selector(platform),
-            filesystem_koji_task_id=filesystem_koji_task_id
+            filesystem_koji_task_id=filesystem_koji_task_id,
+            koji_upload_dir=koji_upload_dir,
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         if build_request.scratch:
