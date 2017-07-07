@@ -49,6 +49,13 @@
       "name": "add_labels_in_dockerfile"
     },
     {
+      "name": "koji_parent",
+      "required": false,
+      "args": {
+        "koji_hub": "{{KOJI_HUB}}"
+      }
+    },
+    {
       "name": "change_from_in_dockerfile"
     },
     {
