@@ -523,6 +523,7 @@ class BuildRequest(object):
                     ("postbuild_plugins", "tag_from_config"),
                     ("postbuild_plugins", "compress"),  # only for Koji
                     ("postbuild_plugins", "koji_upload"),
+                    ("postbuild_plugins", "fetch_worker_metadata"),
                     ("exit_plugins", "koji_promote"),
                     ("exit_plugins", "koji_tag_build"),
             ]:
