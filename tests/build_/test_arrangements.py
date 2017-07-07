@@ -286,6 +286,7 @@ class TestArrangementV2(TestArrangementV1):
                 'pull_base_image',
                 'bump_release',
                 'add_labels_in_dockerfile',
+                'koji_parent',
                 'reactor_config',
             ],
 
@@ -428,3 +429,31 @@ class TestArrangementV2(TestArrangementV1):
             assert 'koji_hub' in args
             assert args['repos'] == params['yum_repourls']
             assert args['from_task_id'] == params['filesystem_koji_task_id']
+
+    @pytest.mark.parametrize(('scratch', 'base_image', 'expect_plugin'), [  # noqa:F811
+        (True, 'koji/image-build', False),
+        (True, 'foo', False),
+        (False, 'koji/image-build', False),
+        (False, 'foo', True),
+    ])
+    def test_koji_parent_in_orchestrator(self, osbs, base_image, scratch,
+                                         expect_plugin):
+        additional_params = {
+            'base_image': base_image,
+        }
+        if scratch:
+            additional_params['scratch'] = True
+        params, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        if not expect_plugin:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, 'prebuild_plugins', 'koji_parent')
+        else:
+            args = plugin_value_get(plugins, 'prebuild_plugins',
+                                    'koji_parent', 'args')
+            allowed_args = set([
+                'koji_hub',
+            ])
+            assert set(args.keys()) <= allowed_args
+            assert 'koji_hub' in args

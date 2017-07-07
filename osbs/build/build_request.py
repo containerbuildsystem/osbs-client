@@ -521,6 +521,7 @@ class BuildRequest(object):
         """
         if self.scratch:
             for when, which in [
+                    ("prebuild_plugins", "koji_parent"),
                     ("postbuild_plugins", "tag_from_config"),
                     ("postbuild_plugins", "compress"),  # only for Koji
                     ("postbuild_plugins", "koji_upload"),
@@ -545,6 +546,7 @@ class BuildRequest(object):
         if self.is_custom_base_image():
             # Plugins irrelevant to building base images.
             plugins.append(("prebuild_plugins", "pull_base_image"))
+            plugins.append(("prebuild_plugins", "koji_parent"))
             msg = "removing %s from custom image build request"
 
         else:
@@ -720,6 +722,19 @@ class BuildRequest(object):
 
         self.dj.dock_json_set_arg(phase, plugin, 'kojihub', self.spec.kojihub.value)
         self.dj.dock_json_set_arg(phase, plugin, 'target', self.spec.koji_target.value)
+
+    def render_koji_parent(self):
+        phase = 'prebuild_plugins'
+        plugin = 'koji_parent'
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return
+
+        if not self.spec.kojihub.value:
+            logger.info('Removing %s because no kojihub was specified', plugin)
+            self.dj.remove_plugin(phase, plugin)
+            return
+
+        self.dj.dock_json_set_arg(phase, plugin, 'koji_hub', self.spec.kojihub.value)
 
     def render_sendmail(self):
         """
@@ -1104,6 +1119,9 @@ class BuildRequest(object):
                           ('prebuild_plugins', 'koji', 'koji_ssl_certs_dir'):
                           self.spec.koji_certs_secret.value,
 
+                          ('prebuild_plugins', 'koji_parent', 'koji_ssl_certs_dir'):
+                          self.spec.koji_certs_secret.value,
+
                           ('prebuild_plugins', 'fetch_maven_artifacts', 'koji_ssl_certs_dir'):
                           self.spec.koji_certs_secret.value,
 
@@ -1150,6 +1168,7 @@ class BuildRequest(object):
         self.render_add_labels_in_dockerfile()
         self.render_koji()
         self.render_bump_release()
+        self.render_koji_parent()
         self.render_import_image(use_auth=use_auth)
         self.render_pulp_pull()
         self.render_pulp_push()

@@ -200,6 +200,56 @@ class TestBuildRequest(object):
         plugins = get_plugins_from_build_json(build_json)
         self.assert_koji_upload_plugin(plugins, use_auth, kojihub)
 
+    @pytest.mark.parametrize(('koji_hub', 'base_image', 'scratch', 'enabled'), (
+        ("http://hub/", 'fedora:latest', False, True),
+        (None, 'fedora:latest', False, False),
+        ("http://hub/", 'fedora:latest', True, False),
+        (None, 'fedora:latest', True, False),
+        ("http://hub/", 'koji/image-build', False, False),
+        ("http://hub/", 'koji/image-build', True, False),
+    ))
+    @pytest.mark.parametrize(('certs_dir', 'certs_dir_set'), (
+        ('/my/super/secret/dir', True),
+        (None, False),
+    ))
+    def test_render_koji_parent(self, koji_hub, base_image, scratch, enabled, certs_dir,
+                                certs_dir_set):
+        plugin_type = 'prebuild_plugins'
+        plugin_name = 'koji_parent'
+
+        build_request = BuildRequest(INPUTS_PATH)
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'user': "john-foo",
+            'openshift_uri': "http://openshift/",
+            'builder_openshift_url': "http://openshift/",
+            'base_image': base_image,
+            'name_label': 'fedora/resultingimage',
+            'registry_api_versions': ['v1', 'v2'],
+            'kojihub': koji_hub,
+            'koji_certs_secret': certs_dir,
+            'scratch': scratch,
+        }
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        if not enabled:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, plugin_type, plugin_name)
+            return
+
+        assert get_plugin(plugins, plugin_type, plugin_name)
+
+        actual_plugin_args = plugin_value_get(plugins, plugin_type, plugin_name, 'args')
+
+        expected_plugin_args = {'koji_hub': koji_hub}
+        if certs_dir_set:
+            expected_plugin_args['koji_ssl_certs_dir'] = certs_dir
+
+        assert actual_plugin_args == expected_plugin_args
+
     def test_build_request_has_ist_trigger(self):
         build_json = copy.deepcopy(TEST_BUILD_JSON)
         br = BuildRequest('something')
