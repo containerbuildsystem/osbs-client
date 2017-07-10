@@ -61,9 +61,9 @@ class PodResponse(object):
                  exitCode (if known): numeric exit code
         """
 
-        REASON_KEY = 'reason'
-        CID_KEY = 'containerID'
-        EXIT_KEY = 'exitCode'
+        reason_key = 'reason'
+        cid_key = 'containerID'
+        exit_key = 'exitCode'
 
         pod_status = self.json.get('status', {})
         statuses = pod_status.get('containerStatuses', [])
@@ -76,21 +76,21 @@ class PodResponse(object):
                 exit_code = terminated['exitCode']
                 if exit_code != 0:
                     reason_dict = {
-                        EXIT_KEY: exit_code,
+                        exit_key: exit_code,
                     }
 
                     if 'containerID' in terminated:
-                        reason_dict[CID_KEY] = terminated['containerID']
+                        reason_dict[cid_key] = terminated['containerID']
 
                     for key in ['message', 'reason']:
                         try:
-                            reason_dict[REASON_KEY] = terminated[key]
+                            reason_dict[reason_key] = terminated[key]
                             break
                         except KeyError:
                             continue
                     else:
                         # Both 'message' and 'reason' are missing
-                        reason_dict[REASON_KEY] = 'Exit code {code}'.format(
+                        reason_dict[reason_key] = 'Exit code {code}'.format(
                             code=exit_code
                         )
 
@@ -102,8 +102,8 @@ class PodResponse(object):
         # pod
         for key in ['message', 'reason']:
             try:
-                return {REASON_KEY: pod_status[key]}
+                return {reason_key: pod_status[key]}
             except KeyError:
                 continue
 
-        return {REASON_KEY: pod_status['phase']}
+        return {reason_key: pod_status['phase']}
