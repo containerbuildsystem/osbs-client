@@ -67,3 +67,7 @@ CLI_WATCH_BUILDS_DEFAULT_COLS = ["changetype", "status", "created", "name"]
 
 # number of digits used for unique image tags
 RAND_DIGITS = 5
+
+# Logging format used in Atomic Reactor
+ATOMIC_REACTOR_LOGGING_FMT = \
+    '%(asctime)s platform:%(arch)s - %(name)s - %(levelname)s - %(message)s'
