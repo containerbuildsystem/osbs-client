@@ -1,0 +1,61 @@
+{
+  "client_version": "{{VERSION}}",
+  "prebuild_plugins": [
+    {
+      "name": "add_filesystem",
+      "args": {
+        "koji_hub": "{{KOJI_HUB}}",
+        "repos": []
+      }
+    },
+    {
+      "name": "pull_base_image",
+      "args": {
+        "parent_registry": "{{REGISTRY_URI}}",
+        "parent_registry_insecure": true
+      }
+    },
+    {
+      "name": "bump_release",
+      "args": {
+        "hub": "{{KOJI_HUB}}"
+      }
+    },
+    {
+      "name": "add_labels_in_dockerfile",
+      "args": {
+        "labels": "{{IMPLICIT_LABELS}}"
+      }
+    },
+    {
+      "name": "reactor_config",
+      "args": {
+        "config_path": "{{CONFIG_PATH}}"
+      }
+    }
+  ],
+  "buildstep_plugins": [
+    {
+      "name": "orchestrate_build",
+      "args": {
+        "platforms": "{{PLATFORMS}}",
+        "build_kwargs": "{{BUILD_KWARGS}}",
+        "osbs_client_config": "{{OSBS_CLIENT_CONFIG}}"
+      }
+    }
+  ],
+  "postbuild_plugins": [],
+  "prepublish_plugins": [],
+  "exit_plugins": [
+    {
+      "name": "store_metadata_in_osv3",
+      "args": {
+        "url": "{{OPENSHIFT_URI}}",
+        "verify_ssl": false
+      }
+    },
+    {
+      "name": "remove_built_image"
+    }
+  ]
+}
