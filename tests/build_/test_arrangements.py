@@ -268,6 +268,7 @@ class TestArrangementV2(TestArrangementV1):
     Differences from arrangement version 1:
     - add_filesystem runs with different parameters
     - add_filesystem also runs in orchestrator build
+    - koji_parent runs in orchestrator build
     """
 
     ARRANGEMENT_VERSION = 2
