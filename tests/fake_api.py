@@ -22,6 +22,7 @@ from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD,
                              TEST_GIT_URI_HUMAN_NAME, TEST_KOJI_TASK_ID,
                              TEST_FILESYSTEM_KOJI_TASK_ID, TEST_IMAGESTREAM)
 from tempfile import NamedTemporaryFile
+from textwrap import dedent
 
 try:
     # py2
@@ -340,30 +341,52 @@ def openshift(request):
 
 
 @pytest.fixture
-def osbs(openshift):
+def osbs(openshift, kwargs=None, additional_config=None):
+    if kwargs is None:
+        kwargs = {}
+
+    kwargs.setdefault('build_json_dir', 'inputs')
+    kwargs.setdefault('registry_uri', 'registry.example.com')
+    kwargs.setdefault('additional_general', '')
     with NamedTemporaryFile(mode="wt") as fp:
-        fp.write("""
-[general]
-build_json_dir = {build_json_dir}
-[default]
-openshift_url = /
-registry_uri = registry.example.com
-sources_command = fedpkg sources
-vendor = Example, Inc.
-build_host = localhost
-authoritative_registry = registry.example.com
-distribution_scope = authoritative-source-only
-koji_root = http://koji.example.com/kojiroot
-koji_hub = http://koji.example.com/kojihub
-use_auth = false
-can_orchestrate = true
-""".format(build_json_dir="inputs"))
+        config = dedent("""\
+            [general]
+            build_json_dir = {build_json_dir}
+            {additional_general}
+            [default]
+            openshift_url = /
+            registry_uri = {registry_uri}
+            sources_command = fedpkg sources
+            vendor = Example, Inc.
+            build_host = localhost
+            authoritative_registry = registry.example.com
+            distribution_scope = authoritative-source-only
+            koji_root = http://koji.example.com/kojiroot
+            koji_hub = http://koji.example.com/kojihub
+            use_auth = false
+            can_orchestrate = true""")
+
+        if additional_config is not None:
+            config += '\n'
+            config += additional_config
+
+        fp.write(config.format(**kwargs))
         fp.flush()
         dummy_config = Configuration(fp.name)
         osbs = OSBS(dummy_config, dummy_config)
 
     osbs.os = openshift
     return osbs
+
+
+@pytest.fixture
+def osbs_with_pulp(openshift):
+    additional_config = dedent("""\
+        pulp_registry_name = pulp
+        pulp_secret = secret""")
+    kwargs = {'registry_uri': 'registry.example.com/v2'}
+    return osbs(openshift, kwargs=kwargs,
+                additional_config=additional_config)
 
 
 @pytest.fixture

@@ -18,7 +18,7 @@ from tests.constants import (TEST_GIT_URI,
                              TEST_COMPONENT,
                              TEST_VERSION,
                              TEST_FILESYSTEM_KOJI_TASK_ID)
-from tests.fake_api import openshift, osbs  # noqa:F401
+from tests.fake_api import openshift, osbs, osbs_with_pulp  # noqa:F401
 from tests.test_api import request_as_response
 from tests.build_.test_build_request import (get_plugins_from_build_json,
                                              get_plugin,
@@ -80,23 +80,29 @@ class ArrangementBase(object):
 
         assert actual == self.DEFAULT_PLUGINS[template]
 
-    def get_orchestrator_build_request(self, osbs,  # noqa:F811
-                                       additional_params=None):
+    def get_build_request(self, build_type, osbs,  # noqa:F811
+                          additional_params=None):
         self.mock_env(base_image=additional_params.get('base_image'))
         params = self.COMMON_PARAMS.copy()
-        params.update(self.ORCHESTRATOR_ADD_PARAMS)
+        assert build_type in ('orchestrator', 'worker')
+        if build_type == 'orchestrator':
+            params.update(self.ORCHESTRATOR_ADD_PARAMS)
+            fn = osbs.create_orchestrator_build
+        elif build_type == 'worker':
+            params.update(self.WORKER_ADD_PARAMS)
+            fn = osbs.create_worker_build
+
         params.update(additional_params or {})
         params['arrangement_version'] = self.ARRANGEMENT_VERSION
-        return params, osbs.create_orchestrator_build(**params).json
+        return params, fn(**params).json
+
+    def get_orchestrator_build_request(self, osbs,  # noqa:F811
+                                       additional_params=None):
+        return self.get_build_request('orchestrator', osbs, additional_params)
 
     def get_worker_build_request(self, osbs,  # noqa:F811
                                  additional_params=None):
-        self.mock_env(base_image=additional_params.get('base_image'))
-        params = self.COMMON_PARAMS.copy()
-        params.update(self.WORKER_ADD_PARAMS)
-        params.update(additional_params or {})
-        params['arrangement_version'] = self.ARRANGEMENT_VERSION
-        return params, osbs.create_worker_build(**params).json
+        return self.get_build_request('worker', osbs, additional_params)
 
     def assert_plugin_not_present(self, build_json, phase, name):
         plugins = get_plugins_from_build_json(build_json)
@@ -195,38 +201,72 @@ class TestArrangementV1(ArrangementBase):
             ],
 
             'exit_plugins': [
-                'delete_from_registry',
-                'koji_promote',
-                'store_metadata_in_osv3',
-                'koji_tag_build',
-                'sendmail',
-                'remove_built_image',
+                'delete_from_registry',  # not tested
+                'koji_promote',  # not tested
+                'store_metadata_in_osv3',  # not tested
+                'koji_tag_build',  # not tested
+                'sendmail',  # not tested
+                'remove_built_image',  # not tested
             ],
         },
     }
 
-    @pytest.mark.parametrize('base_image', [  # noqa:F811
-        'koji/image-build',
-        'foo',
+    @pytest.mark.parametrize('build_type', [  # noqa:F811
+        'orchestrator',
+        'worker',
     ])
     @pytest.mark.parametrize('scratch', [False, True])
-    def test_add_filesystem_in_orchestrator(self, osbs, scratch, base_image):
-        """
-        Orchestrator builds should not run add_filesystem
-        """
+    @pytest.mark.parametrize('base_image, expect_plugin', [
+        ('koji/image-build', False),
+        ('foo', True),
+    ])
+    def test_pull_base_image(self, osbs, build_type, scratch,
+                             base_image, expect_plugin):
+        phase = 'prebuild_plugins'
+        plugin = 'pull_base_image'
         additional_params = {
             'base_image': base_image,
-            'yum_repourls': ['https://example.com/my.repo'],
         }
         if scratch:
             additional_params['scratch'] = True
 
-        (_, build_json) = self.get_orchestrator_build_request(osbs,
-                                                              additional_params)
+        (params, build_json) = self.get_build_request(build_type,
+                                                      osbs,
+                                                      additional_params)
+        plugins = get_plugins_from_build_json(build_json)
 
-        self.assert_plugin_not_present(build_json,
-                                       'prebuild_plugins',
-                                       'add_filesystem')
+        if not expect_plugin:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, phase, plugin)
+        else:
+            args = plugin_value_get(plugins, phase, plugin, 'args')
+
+            allowed_args = set([
+                'parent_registry',
+                'parent_registry_insecure',
+            ])
+            assert set(args.keys()) <= allowed_args
+
+    @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
+    @pytest.mark.parametrize('base_image', ['koji/image-build', 'foo'])
+    def test_delete_from_registry(self, osbs_with_pulp, base_image, scratch):
+        phase = 'exit_plugins'
+        plugin = 'delete_from_registry'
+        additional_params = {
+            'base_image': base_image,
+        }
+        if scratch:
+            additional_params['scratch'] = True
+
+        (params, build_json) = self.get_build_request('worker',
+                                                      osbs_with_pulp,
+                                                      additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+        args = plugin_value_get(plugins, phase, plugin, 'args')
+        allowed_args = set([
+            'registries',
+        ])
+        assert set(args.keys()) <= allowed_args
 
     @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
     @pytest.mark.parametrize('base_image, expect_plugin', [
@@ -259,8 +299,6 @@ class TestArrangementV1(ArrangementBase):
             assert set(args.keys()) <= allowed_args
             assert 'koji_hub' in args
             assert args['repos'] == params['yum_repourls']
-
-    # ...
 
 
 class TestArrangementV2(TestArrangementV1):
