@@ -526,6 +526,7 @@ class BuildRequest(object):
                     ("postbuild_plugins", "compress"),  # only for Koji
                     ("postbuild_plugins", "koji_upload"),
                     ("exit_plugins", "koji_promote"),
+                    ("exit_plugins", "koji_import"),
                     ("exit_plugins", "koji_tag_build"),
             ]:
                 logger.info("removing %s from scratch build request",
@@ -703,6 +704,28 @@ class BuildRequest(object):
         else:
             logger.info("removing koji_upload from request as no kojihub specified")
             self.dj.remove_plugin("postbuild_plugins", "koji_upload")
+
+    def render_koji_import(self, use_auth=None):
+        if not self.dj.dock_json_has_plugin_conf('exit_plugins', 'koji_import'):
+            return
+
+        if self.spec.kojihub.value:
+            self.dj.dock_json_set_arg('exit_plugins', 'koji_import', 'url',
+                                      self.spec.builder_openshift_url.value)
+            self.dj.dock_json_set_arg('exit_plugins', 'koji_import',
+                                      'kojihub', self.spec.kojihub.value)
+            koji_target = self.spec.koji_target.value
+            if koji_target is not None:
+                self.dj.dock_json_set_arg('exit_plugins', 'koji_import',
+                                          'target', koji_target)
+
+            if use_auth is not None:
+                self.dj.dock_json_set_arg('exit_plugins', 'koji_import',
+                                          'use_auth', use_auth)
+
+        else:
+            logger.info("removing koji_import from request as no kojihub specified")
+            self.dj.remove_plugin("exit_plugins", "koji_import")
 
     def render_koji_tag_build(self):
         phase = 'exit_plugins'
@@ -1104,6 +1127,9 @@ class BuildRequest(object):
                           ('exit_plugins', 'koji_promote', 'koji_ssl_certs'):
                           self.spec.koji_certs_secret.value,
 
+                          ('exit_plugins', 'koji_import', 'koji_ssl_certs'):
+                          self.spec.koji_certs_secret.value,
+
                           ('postbuild_plugins', 'koji_upload', 'koji_ssl_certs_dir'):
                           self.spec.koji_certs_secret.value,
 
@@ -1142,6 +1168,7 @@ class BuildRequest(object):
             ('prebuild_plugins', 'fetch_maven_artifacts'),
             ('postbuild_plugins', 'koji_upload'),
             ('exit_plugins', 'koji_promote'),
+            ('exit_plugins', 'koji_import'),
             ('exit_plugins', 'koji_tag_build'),
             ('exit_plugins', 'sendmail')
         ])
@@ -1175,6 +1202,7 @@ class BuildRequest(object):
         self.render_pulp_sync()
         self.render_koji_promote(use_auth=use_auth)
         self.render_koji_upload(use_auth=use_auth)
+        self.render_koji_import(use_auth=use_auth)
         self.render_koji_tag_build()
         self.render_sendmail()
         self.render_fetch_maven_artifacts()

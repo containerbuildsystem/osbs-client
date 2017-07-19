@@ -391,16 +391,6 @@ class TestArrangementV2(TestArrangementV1):
         },
     }
 
-    def test_is_default(self):
-        """
-        Test this is the default arrangement
-        """
-
-        # Note! If this test fails it probably means you need to
-        # derive a new TestArrangementV[n] class from this class and
-        # move the method to the new class.
-        assert DEFAULT_ARRANGEMENT_VERSION == self.ARRANGEMENT_VERSION
-
     @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
     @pytest.mark.parametrize('base_image, expect_plugin', [
         ('koji/image-build', True),
@@ -496,3 +486,233 @@ class TestArrangementV2(TestArrangementV1):
             ])
             assert set(args.keys()) <= allowed_args
             assert 'koji_hub' in args
+
+
+class TestArrangementV3(TestArrangementV2):
+    """
+    Differences from arrangement version 2:
+    - fetch_worker_metadata, koji_import, koji_tag_build, sendmail, run in the orcestrator build
+    - koji_upload runs in the worker build
+    - koji_promote does not run
+    """
+
+    ARRANGEMENT_VERSION = 3
+
+    WORKER_ADD_PARAMS = {
+        'platform': 'x86_64',
+        'release': 1,
+        'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID,
+    }
+
+    DEFAULT_PLUGINS = {
+        # Changing this? Add test methods
+        ORCHESTRATOR_INNER_TEMPLATE: {
+            'prebuild_plugins': [
+                'add_filesystem',
+                'pull_base_image',
+                'bump_release',
+                'add_labels_in_dockerfile',
+                'koji_parent',
+                'reactor_config',
+            ],
+
+            'buildstep_plugins': [
+                'orchestrate_build',
+            ],
+
+            'postbuild_plugins': [
+                'fetch_worker_metadata',
+            ],
+
+            'prepublish_plugins': [
+            ],
+
+            'exit_plugins': [
+                'delete_from_registry',
+                'koji_import',
+                'koji_tag_build',
+                'store_metadata_in_osv3',
+                'sendmail',
+                'remove_built_image',
+            ],
+        },
+
+        # Changing this? Add test methods
+        WORKER_INNER_TEMPLATE: {
+            'prebuild_plugins': [
+                'add_filesystem',
+                'pull_base_image',
+                'add_labels_in_dockerfile',
+                'change_from_in_dockerfile',
+                'add_help',
+                'add_dockerfile',
+                'distgit_fetch_artefacts',
+                'fetch_maven_artifacts',
+                'koji',
+                'add_yum_repo_by_url',
+                'inject_yum_repo',
+                'distribution_scope',
+            ],
+
+            'buildstep_plugins': [
+            ],
+
+            'postbuild_plugins': [
+                'all_rpm_packages',
+                'tag_by_labels',
+                'tag_from_config',
+                'tag_and_push',
+                'pulp_push',
+                'pulp_sync',
+                'compress',
+                'koji_upload',
+                'pulp_pull',
+            ],
+
+            'prepublish_plugins': [
+                'squash',
+            ],
+
+            'exit_plugins': [
+                'delete_from_registry',
+                'store_metadata_in_osv3',
+                'remove_built_image',
+            ],
+        },
+    }
+
+    def test_is_default(self):
+        """
+        Test this is the default arrangement
+        """
+
+        # Note! If this test fails it probably means you need to
+        # derive a new TestArrangementV[n] class from this class and
+        # move the method to the new class.
+        assert DEFAULT_ARRANGEMENT_VERSION == self.ARRANGEMENT_VERSION
+
+    @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
+    def test_koji_upload(self, osbs, scratch):
+        additional_params = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'registry_uris': [],
+            'openshift_uri': "http://openshift/",
+            'builder_openshift_url': "http://openshift/",
+            'build_image': None,
+            'base_image': 'fedora:latest',
+            'name_label': 'fedora/resultingimage',
+            'registry_api_versions': ['v1'],
+            'kojihub': 'http://hub/',
+            'koji_upload_dir': 'upload',
+        }
+        if scratch:
+            additional_params['scratch'] = True
+        params, build_json = self.get_worker_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, 'exit_plugins', 'koji_promote')
+
+        if scratch:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, 'postbuild_plugins', 'koji_upload')
+            return
+
+        args = plugin_value_get(plugins, 'postbuild_plugins',
+                                         'koji_upload', 'args')
+
+        match_args = {
+            'blocksize': 10485760,
+            'build_json_dir': 'inputs',
+            'koji_keytab': False,
+            'koji_principal': False,
+            'koji_upload_dir': 'upload',
+            'kojihub': 'http://koji.example.com/kojihub',
+            'url': '/',
+            'use_auth': False,
+            'verify_ssl': False
+        }
+        assert set(args.keys()) == set(match_args.keys())
+        assert match_args == args
+
+    @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
+    def test_koji_import(self, osbs, scratch):
+        additional_params = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'registry_uris': [],
+            'openshift_uri': "http://openshift/",
+            'builder_openshift_url': "http://openshift/",
+            'build_image': None,
+            'base_image': 'fedora:latest',
+            'name_label': 'fedora/resultingimage',
+            'registry_api_versions': ['v1'],
+            'kojihub': 'http://hub/',
+            'koji_upload_dir': 'upload',
+        }
+        if scratch:
+            additional_params['scratch'] = True
+        params, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, 'exit_plugins', 'koji_promote')
+
+        if scratch:
+            try:
+                get_plugin(plugins, 'exit_plugins', 'koji_import')
+            except NoSuchPluginException:
+                return
+
+        args = plugin_value_get(plugins, 'exit_plugins',
+                                         'koji_import', 'args')
+
+        match_args = {
+            'koji_keytab': False,
+            'kojihub': 'http://koji.example.com/kojihub',
+            'url': '/',
+            'use_auth': False,
+            'verify_ssl': False
+        }
+        assert set(args.keys()) == set(match_args.keys())
+        assert match_args == args
+
+    @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
+    def test_fetch_worker_metadata(self, osbs, scratch):
+        additional_params = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'registry_uris': [],
+            'openshift_uri': "http://openshift/",
+            'builder_openshift_url': "http://openshift/",
+            'build_image': None,
+            'base_image': 'fedora:latest',
+            'name_label': 'fedora/resultingimage',
+            'registry_api_versions': ['v1'],
+            'kojihub': 'http://hub/',
+            'koji_upload_dir': 'upload',
+        }
+        if scratch:
+            additional_params['scratch'] = True
+        params, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        if scratch:
+            try:
+                get_plugin(plugins, 'postbuild_plugins', 'fetch_worker_metadata')
+            except NoSuchPluginException:
+                return
+
+        args = plugin_value_get(plugins, 'postbuild_plugins',
+                                         'fetch_worker_metadata', 'args')
+
+        match_args = {}
+        assert set(args.keys()) == set(match_args.keys())
+        assert match_args == args
