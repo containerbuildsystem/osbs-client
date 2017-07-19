@@ -16,7 +16,7 @@ import six
 from osbs.build.build_request import BuildRequest
 from osbs.constants import (DEFAULT_BUILD_IMAGE, DEFAULT_OUTER_TEMPLATE,
                             DEFAULT_INNER_TEMPLATE, SECRETS_PATH,
-                            ORCHESTRATOR_INNER_TEMPLATE,
+                            ORCHESTRATOR_INNER_TEMPLATE, WORKER_INNER_TEMPLATE,
                             DEFAULT_ARRANGEMENT_VERSION)
 from osbs.exceptions import OsbsValidationException
 from osbs import __version__ as expected_version
@@ -171,12 +171,10 @@ class TestBuildRequest(object):
     @pytest.mark.parametrize('kojihub', ("http://hub/", None))
     @pytest.mark.parametrize('use_auth', (True, False, None))
     def test_render_koji_upload(self, use_auth, kojihub):
-        enable = {
-            "plugin_type": "postbuild_plugins",
-            "plugin_name": "koji_upload",
-            "plugin_args": {},
-        }
-        build_request = BuildRequest(INPUTS_PATH)
+        inner_template = WORKER_INNER_TEMPLATE.format(
+            arrangement_version=DEFAULT_ARRANGEMENT_VERSION)
+        build_request = BuildRequest(INPUTS_PATH, inner_template=inner_template,
+                                     outer_template=None, customize_conf=None)
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -195,7 +193,6 @@ class TestBuildRequest(object):
         if use_auth is not None:
             kwargs['use_auth'] = use_auth
         build_request.set_params(**kwargs)
-        build_request.customize_conf['enable_plugins'].append(enable)
         build_json = build_request.render()
         plugins = get_plugins_from_build_json(build_json)
         self.assert_koji_upload_plugin(plugins, use_auth, kojihub)
@@ -247,6 +244,64 @@ class TestBuildRequest(object):
         expected_plugin_args = {'koji_hub': koji_hub}
         if certs_dir_set:
             expected_plugin_args['koji_ssl_certs_dir'] = certs_dir
+
+        assert actual_plugin_args == expected_plugin_args
+
+    @pytest.mark.parametrize(('koji_hub', 'base_image', 'scratch', 'enabled'), (
+        ("http://hub/", 'fedora:latest', False, True),
+        (None, 'fedora:latest', False, False),
+        ("http://hub/", 'fedora:latest', True, False),
+        (None, 'fedora:latest', True, False),
+        ("http://hub/", 'koji/image-build', False, False),
+        ("http://hub/", 'koji/image-build', True, False),
+    ))
+    @pytest.mark.parametrize(('certs_dir', 'certs_dir_set'), (
+        ('/my/super/secret/dir', True),
+        (None, False),
+    ))
+    def test_render_koji_import(self, koji_hub, base_image, scratch, enabled, certs_dir,
+                                certs_dir_set):
+        plugin_type = 'exit_plugins'
+        plugin_name = 'koji_import'
+
+        if enabled:
+            inner_template = ORCHESTRATOR_INNER_TEMPLATE.format(
+                arrangement_version=DEFAULT_ARRANGEMENT_VERSION)
+        else:
+            inner_template = None
+        build_request = BuildRequest(INPUTS_PATH, inner_template=inner_template)
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'user': "john-foo",
+            'openshift_uri': "http://openshift/",
+            'builder_openshift_url': "http://openshift/",
+            'base_image': base_image,
+            'name_label': 'fedora/resultingimage',
+            'registry_api_versions': ['v1', 'v2'],
+            'kojihub': koji_hub,
+            'koji_certs_secret': certs_dir,
+            'scratch': scratch,
+        }
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        if not enabled:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, plugin_type, plugin_name)
+            return
+
+        assert get_plugin(plugins, plugin_type, plugin_name)
+
+        actual_plugin_args = plugin_value_get(plugins, plugin_type, plugin_name, 'args')
+
+        expected_plugin_args = {'kojihub': koji_hub,
+                                'koji_keytab': False,
+                                'url': 'http://openshift/',
+                                'verify_ssl': False}
+        if certs_dir_set:
+            expected_plugin_args['koji_ssl_certs'] = certs_dir
 
         assert actual_plugin_args == expected_plugin_args
 
@@ -544,11 +599,13 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "pulp_pull")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
+
         assert get_plugin(plugins, "exit_plugins", "koji_promote")
         assert plugin_value_get(plugins, "exit_plugins", "koji_promote", "args",
                                 "target") == koji_target
+
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
         assert get_plugin(plugins, "exit_plugins", "koji_tag_build")
         assert plugin_value_get(plugins, "exit_plugins", "koji_tag_build", "args",
                                 "target") == koji_target
@@ -625,10 +682,6 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "pulp_pull")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "koji_upload")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "exit_plugins", "koji_promote")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "koji_tag_build")
         with pytest.raises(NoSuchPluginException):
@@ -996,9 +1049,6 @@ class TestBuildRequest(object):
 
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, "postbuild_plugins", "tag_from_config")
-
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, "postbuild_plugins", "koji_upload")
 
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, "exit_plugins", "koji_promote")
@@ -1519,13 +1569,14 @@ class TestBuildRequest(object):
 
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries", "registry.example.com") == {"insecure": True}
+
         assert get_plugin(plugins, "exit_plugins", "koji_promote")
         assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
                                 "args", "kojihub") == kwargs["kojihub"]
         assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
                                 "args", "url") == kwargs["openshift_uri"]
         with pytest.raises(KeyError):
-            plugin_value_get(plugins, 'exit_plugins', 'koji_promote',
+            plugin_value_get(plugins, 'exit_plugins', "koji_promote",
                              'args', 'metadata_only')  # v1 enabled by default
 
         assert get_plugin(plugins, "exit_plugins", "koji_tag_build")
@@ -1674,20 +1725,20 @@ class TestBuildRequest(object):
         assert build_json["metadata"]["labels"]["koji-task-id"] == str(koji_task_id)
 
         plugins = get_plugins_from_build_json(build_json)
+        assert get_plugin(plugins, "exit_plugins", "koji_tag_build")
+        assert plugin_value_get(plugins, "exit_plugins", "koji_tag_build",
+                                "args", "kojihub") == kwargs["kojihub"]
+
         assert get_plugin(plugins, "exit_plugins", "koji_promote")
         assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
                                 "args", "kojihub") == kwargs["kojihub"]
         assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
                                 "args", "url") == kwargs["openshift_uri"]
 
-        assert get_plugin(plugins, "exit_plugins", "koji_tag_build")
-        assert plugin_value_get(plugins, "exit_plugins", "koji_tag_build",
-                                "args", "kojihub") == kwargs["kojihub"]
-
         mount_path = get_secret_mountpath_by_name(build_json,
                                                   koji_certs_secret_name)
         assert get_plugin(plugins, 'exit_plugins',
-                          'koji_promote')['args']['koji_ssl_certs'] == mount_path
+                          "koji_promote")['args']['koji_ssl_certs'] == mount_path
         assert get_plugin(plugins, 'exit_plugins',
                           'koji_tag_build')['args']['koji_ssl_certs'] == mount_path
 
@@ -1734,11 +1785,6 @@ class TestBuildRequest(object):
                                 "args", "kojihub") == kwargs["kojihub"]
         assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
                                 "args", "url") == kwargs["openshift_uri"]
-
-        assert get_plugin(plugins, 'exit_plugins',
-                          'koji_promote')['args']['koji_principal'] == koji_kerberos_principal
-        assert get_plugin(plugins, 'exit_plugins',
-                          'koji_promote')['args']['koji_keytab'] == koji_kerberos_keytab
 
         assert get_plugin(plugins, "exit_plugins", "koji_tag_build")
         assert plugin_value_get(plugins, "exit_plugins", "koji_tag_build",

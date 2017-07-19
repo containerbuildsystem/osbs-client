@@ -117,19 +117,7 @@
       }
     },
     {
-      "name": "pulp_pull",
-      "args": {}
-    }
-  ],
-  "exit_plugins": [
-    {
-      "name": "delete_from_registry",
-      "args": {
-        "registries": {}
-      }
-    },
-    {
-      "name": "koji_promote",
+      "name": "koji_upload",
       "args": {
         "kojihub": "{{KOJI_HUB}}",
         "url": "{{OPENSHIFT_URI}}",
@@ -140,25 +128,22 @@
       }
     },
     {
+      "name": "pulp_pull",
+      "args": {}
+    }
+  ],
+  "exit_plugins": [
+    {
+      "name": "delete_from_registry",
+      "args": {
+        "registries": {}
+     }
+    },
+    {
       "name": "store_metadata_in_osv3",
       "args": {
         "url": "{{OPENSHIFT_URI}}",
         "verify_ssl": false
-      }
-    },
-    {
-      "name": "koji_tag_build",
-      "args": {
-        "kojihub": "{{KOJI_HUB}}",
-        "koji_keytab": false,
-        "koji_principal": false
-      }
-    },
-    {
-      "name": "sendmail",
-      "args": {
-          "smtp_host": "{{SMTP_HOST}}",
-          "from_address": "{{SMTP_FROM}}"
       }
     },
     {

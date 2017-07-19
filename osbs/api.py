@@ -616,7 +616,7 @@ class OSBS(object):
             return self._do_create_prod_build(**kwargs)
         except IOError as ex:
             if os.path.basename(ex.filename) == kwargs['inner_template']:
-                raise OsbsValidationException("invalid arrangement_version %s" %
+                raise OsbsValidationException("worker invalid arrangement_version %s" %
                                               arrangement_version)
 
             raise
@@ -655,7 +655,7 @@ class OSBS(object):
             return self._do_create_prod_build(**kwargs)
         except IOError as ex:
             if os.path.basename(ex.filename) == kwargs['inner_template']:
-                raise OsbsValidationException("invalid arrangement_version %s" %
+                raise OsbsValidationException("orchestrator invalid arrangement_version %s" %
                                               arrangement_version)
 
             raise
