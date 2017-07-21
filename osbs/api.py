@@ -16,6 +16,7 @@ import sys
 import warnings
 import getpass
 from functools import wraps
+from contextlib import contextmanager
 
 from osbs.build.build_request import BuildRequest
 from osbs.build.build_response import BuildResponse
@@ -1024,3 +1025,13 @@ class OSBS(object):
         """
         response = self.os.delete_config_map(name)
         return response
+
+    @contextmanager
+    def retries_disabled(self):
+        """
+        Context manager to disable retries on requests
+        :returns: OSBS object
+        """
+        self.os.retries_enabled = False
+        yield
+        self.os.retries_enabled = True

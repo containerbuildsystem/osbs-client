@@ -1958,3 +1958,20 @@ class TestOSBS(object):
 
         config_map = osbs.delete_config_map(name)
         assert config_map is None
+
+    def test_retries_disabled(self, osbs): # noqa
+        (flexmock(osbs.os._con)
+            .should_call('get')
+            .with_args("/oapi/v1/namespaces/default/builds/", headers={},
+                       verify_ssl=True, retries_enabled=False))
+        with osbs.retries_disabled():
+            response_list = osbs.list_builds()
+            assert response_list is not None
+
+        (flexmock(osbs.os._con)
+            .should_call('get')
+            .with_args("/api/v1/namespaces/default/configmaps/test", headers={},
+                       verify_ssl=True, retries_enabled=True))
+        # Verify that retries are re-enabled after contextmanager exits
+        with pytest.raises(OsbsException):
+            osbs.get_config_map('test')

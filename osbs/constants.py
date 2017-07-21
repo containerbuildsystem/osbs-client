@@ -73,3 +73,11 @@ ATOMIC_REACTOR_LOGGING_FMT = \
     '%(asctime)s platform:%(arch)s - %(name)s - %(levelname)s - %(message)s'
 
 REPO_CONFIG_FILE = '.osbs-repo-config'
+
+# number of retries for http requests
+HTTP_MAX_RETRIES = 3
+
+# how many seconds should request wait for in case non-critical error has occurred
+HTTP_BACKOFF_FACTOR = 2
+
+HTTP_RETRIES_STATUS_FORCELIST = [408, 500, 502, 503, 504]

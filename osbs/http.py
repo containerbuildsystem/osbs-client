@@ -23,8 +23,13 @@ except ImportError:
 
 
 from osbs.exceptions import OsbsException, OsbsNetworkException, OsbsResponseException
+from osbs.constants import (
+    HTTP_MAX_RETRIES, HTTP_BACKOFF_FACTOR, HTTP_RETRIES_STATUS_FORCELIST)
 
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util import Retry
+from requests.exceptions import HTTPError, RetryError
 from requests.utils import guess_json_utf
 try:
     from requests_kerberos import HTTPKerberosAuth
@@ -59,7 +64,10 @@ class HttpSession(object):
             with stream as s:
                 content = s.req.content
                 return HttpResponse(s.status_code, s.headers, content)
-        except requests.exceptions.HTTPError as ex:
+        except RetryError as ex:
+            raise OsbsNetworkException(url, str(ex), '',
+                                       cause=ex, traceback=sys.exc_info()[2])
+        except HTTPError as ex:
             raise OsbsNetworkException(url, str(ex), ex.response.status_code,
                                        cause=ex, traceback=sys.exc_info()[2])
         except Exception as ex:
@@ -81,12 +89,22 @@ class HttpStream(object):
     def __init__(self, url, method, data=None, kerberos_auth=False,
                  allow_redirects=True, verify_ssl=True, ca=None, use_json=False,
                  headers=None, stream=False, username=None, password=None,
-                 client_cert=None, client_key=None, verbose=False):
+                 client_cert=None, client_key=None, verbose=False, retries_enabled=True):
         self.finished = False  # have we read all data?
         self.closed = False    # have we destroyed curl resources?
 
         self.status_code = 0
         self.headers = None
+
+        retry = Retry(
+            total=HTTP_MAX_RETRIES,
+            backoff_factor=HTTP_BACKOFF_FACTOR,
+            status_forcelist=HTTP_RETRIES_STATUS_FORCELIST
+        )
+        self.session = requests.Session()
+        if retries_enabled:
+            self.session.mount('http://', HTTPAdapter(max_retries=retry))
+            self.session.mount('https://', HTTPAdapter(max_retries=retry))
 
         self.url = url
         headers = headers or {}
@@ -131,7 +149,8 @@ class HttpStream(object):
             args['stream'] = True
 
         args['headers'] = headers
-        self.req = requests.request(method, url, **args)
+
+        self.req = self.session.request(method, url, **args)
 
         self.headers = self.req.headers
         self.status_code = self.req.status_code
