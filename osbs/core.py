@@ -83,8 +83,7 @@ class Openshift(object):
                  verbose=False, username=None, password=None, use_kerberos=False,
                  kerberos_keytab=None, kerberos_principal=None, kerberos_ccache=None,
                  client_cert=None, client_key=None, verify_ssl=True, use_auth=None,
-                 token=None,
-                 namespace=DEFAULT_NAMESPACE):
+                 token=None, namespace=DEFAULT_NAMESPACE):
         self.os_api_url = openshift_api_url
         self.k8s_api_url = k8s_api_url
         self._os_api_version = openshift_api_version
@@ -93,6 +92,7 @@ class Openshift(object):
         self.verbose = verbose
         self.verify_ssl = verify_ssl
         self._con = HttpSession(verbose=self.verbose)
+        self.retries_enabled = True
 
         # auth stuff
         self.use_kerberos = use_kerberos
@@ -190,20 +190,27 @@ class Openshift(object):
 
     def _post(self, url, with_auth=True, **kwargs):
         headers, kwargs = self._request_args(with_auth, **kwargs)
-        return self._con.post(url, headers=headers, verify_ssl=self.verify_ssl, **kwargs)
+        return self._con.post(
+            url, headers=headers, verify_ssl=self.verify_ssl,
+            retries_enabled=self.retries_enabled, **kwargs)
 
     def _get(self, url, with_auth=True, **kwargs):
         headers, kwargs = self._request_args(with_auth, **kwargs)
-        return self._con.get(url, headers=headers, verify_ssl=self.verify_ssl, **kwargs)
+        return self._con.get(
+            url, headers=headers, verify_ssl=self.verify_ssl,
+            retries_enabled=self.retries_enabled, **kwargs)
 
     def _put(self, url, with_auth=True, **kwargs):
         headers, kwargs = self._request_args(with_auth, **kwargs)
-        return self._con.put(url, headers=headers, verify_ssl=self.verify_ssl, **kwargs)
+        return self._con.put(
+            url, headers=headers, verify_ssl=self.verify_ssl,
+            retries_enabled=self.retries_enabled, **kwargs)
 
     def _delete(self, url, with_auth=True, **kwargs):
         headers, kwargs = self._request_args(with_auth, **kwargs)
-        return self._con.delete(url, headers=headers, verify_ssl=self.verify_ssl,
-                                **kwargs)
+        return self._con.delete(
+            url, headers=headers, verify_ssl=self.verify_ssl,
+            retries_enabled=self.retries_enabled, **kwargs)
 
     def get_oauth_token(self):
         url = self.os_oauth_url + "?response_type=token&client_id=openshift-challenging-client"

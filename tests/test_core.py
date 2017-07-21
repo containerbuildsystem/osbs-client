@@ -153,7 +153,8 @@ class TestOpenshift(object):
         assert len([log for log in logs]) == 1
 
     def test_stream_logs_not_decoded(self, caplog):
-        server = Openshift('/oapi/v1/', 'v1', '/oauth/authorize', k8s_api_url='/api/v1/')
+        server = Openshift('http://oapi/v1/', 'v1', 'http://oauth/authorize',
+                           k8s_api_url='http://api/v1/')
 
         logs = (
             u'Lógs'.encode('utf-8'),

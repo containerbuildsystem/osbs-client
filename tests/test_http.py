@@ -19,8 +19,10 @@ except ImportError:
     # py3
     import http.client as httplib
 
+from requests.packages.urllib3.util import Retry
 from osbs.http import HttpSession, HttpStream
-from osbs.exceptions import OsbsNetworkException, OsbsException
+from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsResponseException
+from osbs.constants import HTTP_RETRIES_STATUS_FORCELIST
 
 logger = logging.getLogger(__file__)
 
@@ -47,6 +49,11 @@ def has_connection():
 @pytest.mark.skipif(not has_connection(),
                     reason="requires internet connection")
 class TestHttpSession(object):
+    if requests.__version__.startswith('2.6.'):
+        retry_method_name = 'is_forced_retry'
+    else:
+        retry_method_name = 'is_retry'
+
     def test_single_multi_secure_without_redirs(self, s):
         response_single = s.get("https://httpbin.org/get")
         logger.debug(response_single.headers)
@@ -163,3 +170,31 @@ class TestHttpSession(object):
             s.get('http://httpbin.org/get')
 
         assert isinstance(exc_info.value.cause, raise_exc)
+
+    @pytest.mark.parametrize('status_code', HTTP_RETRIES_STATUS_FORCELIST)
+    def test_fail_after_retries(self, s, status_code):
+        # latest python-requests throws OsbsResponseException, 2.6.x - OsbsNetworkException
+        with pytest.raises((OsbsNetworkException, OsbsResponseException)) as exc_info:
+            s.get('http://httpbin.org/status/%s' % status_code).json()
+        if isinstance(exc_info, OsbsResponseException):
+            assert exc_info.value.status_code == status_code
+
+    @pytest.mark.parametrize('status_code', HTTP_RETRIES_STATUS_FORCELIST)
+    def test_fail_on_first_retry(self, s, status_code):
+        (flexmock(Retry)
+            .should_receive(self.retry_method_name)
+            .and_return(True)
+            .and_return(False))
+        s.get('http://httpbin.org/status/%s' % status_code)
+
+    @pytest.mark.parametrize('status_code', (404, 409))
+    def test_fail_without_retries(self, s, status_code):
+        (flexmock(Retry)
+            .should_receive(self.retry_method_name)
+            .and_return(False))
+        (flexmock(Retry)
+            .should_receive('increment')
+            .never())
+        with pytest.raises(OsbsResponseException) as exc_info:
+            s.get('http://httpbin.org/drip?numbytes=5&code=%s' % status_code).json()
+        assert exc_info.value.status_code == status_code
