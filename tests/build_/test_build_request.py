@@ -17,10 +17,11 @@ from osbs.build.build_request import BuildRequest
 from osbs.constants import (DEFAULT_BUILD_IMAGE, DEFAULT_OUTER_TEMPLATE,
                             DEFAULT_INNER_TEMPLATE, SECRETS_PATH,
                             ORCHESTRATOR_INNER_TEMPLATE, WORKER_INNER_TEMPLATE,
-                            DEFAULT_ARRANGEMENT_VERSION)
+                            DEFAULT_ARRANGEMENT_VERSION, REPO_CONFIG_FILE)
 from osbs.exceptions import OsbsValidationException
 from osbs import __version__ as expected_version
 from osbs.conf import Configuration
+from osbs.repo_utils import RepoInfo, RepoConfiguration
 
 from flexmock import flexmock
 import pytest
@@ -1648,6 +1649,55 @@ class TestBuildRequest(object):
             openshift_uri=kwargs['openshift_uri'],
             use_auth=use_auth,
             insecure_registry=insecure_registry)
+
+    @pytest.mark.parametrize(('autorebuild_enabled', 'set_release', 'expected'), (
+        (True, False, True),
+        (True, True, RuntimeError),
+        (False, True, False),
+    ))
+    def test_render_prod_request_with_repo_info(self, tmpdir, autorebuild_enabled, set_release,
+                                                expected):
+        self.create_image_change_trigger_json(str(tmpdir))
+
+        class MockDfParser(object):
+            labels = {'release': '13'} if set_release else {}
+
+        (flexmock(RepoConfiguration)
+            .should_receive('is_autorebuild_enabled')
+            .and_return(autorebuild_enabled))
+
+        repo_info = RepoInfo(MockDfParser(), RepoConfiguration())
+
+        build_request_kwargs = get_sample_prod_params()
+        base_image = build_request_kwargs['base_image']
+        build_request = BuildRequest(str(tmpdir))
+        build_request.set_params(**build_request_kwargs)
+        build_request.set_repo_info(repo_info)
+        if isinstance(expected, type):
+            with pytest.raises(expected):
+                build_json = build_request.render()
+            return
+
+        build_json = build_request.render()
+
+        plugins = get_plugins_from_build_json(build_json)
+        autorebuild_plugins = (
+            ('prebuild_plugins', 'check_and_set_rebuild'),
+            ('prebuild_plugins', 'stop_autorebuild_if_disabled'),
+            ('postbuild_plugins', 'import_image'),
+        )
+
+        if expected:
+            assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == base_image
+
+            for phase, plugin in autorebuild_plugins:
+                assert get_plugin(plugins, phase, plugin)
+
+        else:
+            assert 'triggers' not in build_json['spec']
+            for phase, plugin in autorebuild_plugins:
+                with pytest.raises(NoSuchPluginException):
+                    get_plugin(plugins, phase, plugin)
 
     def test_render_prod_request_new_secrets(self, tmpdir):
         secret_name = 'mysecret'

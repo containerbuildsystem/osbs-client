@@ -427,7 +427,8 @@ class OSBS(object):
                               filesystem_koji_task_id=None,
                               koji_upload_dir=None,
                               **kwargs):
-        df_parser = utils.get_df_parser(git_uri, git_ref, git_branch=git_branch)
+        repo_info = utils.get_repo_info(git_uri, git_ref, git_branch=git_branch)
+        df_parser = repo_info.dockerfile_parser
         build_request = self.get_build_request(inner_template=inner_template,
                                                outer_template=outer_template,
                                                customize_conf=customize_conf)
@@ -515,6 +516,7 @@ class OSBS(object):
             koji_upload_dir=koji_upload_dir,
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
+        build_request.set_repo_info(repo_info)
         if build_request.scratch:
             response = self._create_scratch_build(build_request)
         else:

@@ -24,6 +24,7 @@ from collections import namedtuple
 from datetime import datetime
 from io import BytesIO
 from hashlib import sha256
+from osbs.repo_utils import RepoConfiguration, RepoInfo
 
 try:
     # py3
@@ -239,10 +240,11 @@ def looks_like_git_hash(git_ref):
     return all(ch in string.hexdigits for ch in git_ref) and len(git_ref) == 40
 
 
-def get_df_parser(git_uri, git_ref, git_branch=None):
+def get_repo_info(git_uri, git_ref, git_branch=None):
     with checkout_git_repo(git_uri, git_ref, git_branch) as code_dir:
         dfp = DockerfileParser(os.path.join(code_dir), cache_content=True)
-    return dfp
+        config = RepoConfiguration(dir_path=code_dir)
+    return RepoInfo(dfp, config)
 
 
 def git_repo_humanish_part_from_uri(git_uri):
