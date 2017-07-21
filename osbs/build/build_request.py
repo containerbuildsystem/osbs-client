@@ -57,6 +57,7 @@ class BuildRequest(object):
         self._dj = None
         self._resource_limits = None
         self._openshift_required_version = parse_version('1.0.6')
+        self._repo_info = None
         # For the koji "scratch" build type
         self.scratch = None
         self.base_image = None
@@ -122,6 +123,9 @@ class BuildRequest(object):
     def set_openshift_required_version(self, openshift_required_version):
         if openshift_required_version is not None:
             self._openshift_required_version = openshift_required_version
+
+    def set_repo_info(self, repo_info):
+        self._repo_info = repo_info
 
     @property
     def build_id(self):
@@ -558,6 +562,19 @@ class BuildRequest(object):
         for when, which in plugins:
             logger.info(msg, which)
             self.dj.remove_plugin(when, which)
+
+    def adjust_for_repo_info(self):
+        if not self._repo_info:
+            logger.warning('repo info not set')
+            return
+
+        if not self._repo_info.configuration.is_autorebuild_enabled():
+            logger.info('autorebuild is disabled in repo configuration, removing triggers')
+            self.template['spec'].pop('triggers', None)
+
+        elif 'release' in self._repo_info.dockerfile_parser.labels:
+            raise RuntimeError('when autorebuild is enabled in repo configuration, '
+                               '"release" label must not be set in Dockerfile')
 
     def render_add_filesystem(self):
         phase = 'prebuild_plugins'
@@ -1099,6 +1116,7 @@ class BuildRequest(object):
         self.render_distgit_fetch_artefacts()
         self.render_pull_base_image()
 
+        self.adjust_for_repo_info()
         self.adjust_for_triggers()
         self.adjust_for_scratch()
         self.adjust_for_custom_base_image()

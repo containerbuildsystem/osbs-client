@@ -71,3 +71,5 @@ RAND_DIGITS = 5
 # Logging format used in Atomic Reactor
 ATOMIC_REACTOR_LOGGING_FMT = \
     '%(asctime)s platform:%(arch)s - %(name)s - %(levelname)s - %(message)s'
+
+REPO_CONFIG_FILE = '.osbs-repo-config'

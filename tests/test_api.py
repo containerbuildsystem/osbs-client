@@ -40,6 +40,7 @@ from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             DEFAULT_ARRANGEMENT_VERSION,
                             ORCHESTRATOR_CUSTOMIZE_CONF)
 from osbs import utils
+from osbs.repo_utils import RepoInfo, RepoConfiguration
 
 from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
                              TEST_GIT_URI, TEST_TARGET, TEST_USER, INPUTS_PATH,
@@ -82,6 +83,12 @@ class MockDfParser(object):
 
 
 class TestOSBS(object):
+
+    def mock_repo_info(self, mock_df_parser=None):
+        mock_df_parser = mock_df_parser or MockDfParser()
+        return RepoInfo(mock_df_parser, RepoConfiguration())
+
+
     def test_osbsapi_wrapper(self):
         """
         Test that a .never() expectation works inside a .raises()
@@ -89,13 +96,13 @@ class TestOSBS(object):
         """
 
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .never())
 
         @osbsapi
         def dummy_api_function():
             """A function that calls something it's not supposed to"""
-            utils.get_df_parser(TEST_GIT_URI, TEST_GIT_REF)
+            utils.get_repo_info(TEST_GIT_URI, TEST_GIT_REF)
 
         # Check we get the correct exception
         with pytest.raises(MethodCallError):
@@ -129,9 +136,9 @@ class TestOSBS(object):
     # osbs is a fixture here
     def test_create_build_with_deprecated_params(self, osbs):  # noqa
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockDfParser()))
+            .and_return(self.mock_repo_info()))
 
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -164,9 +171,9 @@ class TestOSBS(object):
             }
             baseimage = 'fedora23/python'
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
+            .and_return(self.mock_repo_info()))
         response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
                                           TEST_GIT_BRANCH, TEST_USER,
                                           TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
@@ -182,9 +189,9 @@ class TestOSBS(object):
     def test_create_prod_build_build_request(self, osbs, inner_template,
                                              outer_template, customize_conf):
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockDfParser()))
+            .and_return(self.mock_repo_info()))
 
         (flexmock(osbs)
             .should_call('get_build_request')
@@ -212,9 +219,9 @@ class TestOSBS(object):
                                                arrangement_version,
                                                raises_exception):
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockDfParser()))
+            .and_return(self.mock_repo_info()))
 
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -294,9 +301,9 @@ class TestOSBS(object):
                                  exp_inner_template_if_different):
         branch = TEST_GIT_BRANCH
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=branch)
-            .and_return(MockDfParser()))
+            .and_return(self.mock_repo_info()))
 
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -351,9 +358,9 @@ class TestOSBS(object):
         arrangement_version value
         """
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockDfParser()))
+            .and_return(self.mock_repo_info()))
 
         invalid_version = DEFAULT_ARRANGEMENT_VERSION + 1
         with pytest.raises(OsbsValidationException) as ex:
@@ -371,7 +378,7 @@ class TestOSBS(object):
          i.e. OsbsException wraps it.
         """
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
             .and_raise(IOError))
 
@@ -412,9 +419,9 @@ class TestOSBS(object):
                                        platforms, raises_exception):
         branch = TEST_GIT_BRANCH
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=branch)
-            .and_return(MockDfParser()))
+            .and_return(self.mock_repo_info()))
 
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -466,9 +473,9 @@ class TestOSBS(object):
         isn't true
         """
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockDfParser()))
+            .and_return(self.mock_repo_info()))
 
         with pytest.raises(OsbsValidationException) as ex:
             osbs_cant_orchestrate.create_orchestrator_build(
@@ -488,9 +495,9 @@ class TestOSBS(object):
         arrangement_version value
         """
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockDfParser()))
+            .and_return(self.mock_repo_info()))
 
         invalid_version = DEFAULT_ARRANGEMENT_VERSION + 1
         with pytest.raises(OsbsValidationException) as ex:
@@ -507,9 +514,9 @@ class TestOSBS(object):
             labels = {}
             baseimage = 'fedora23/python'
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
+            .and_return(self.mock_repo_info(MockParser())))
         with pytest.raises(OsbsValidationException):
             osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
                                    TEST_GIT_BRANCH, TEST_USER,
@@ -527,9 +534,9 @@ class TestOSBS(object):
             labels = {label_name: 'something'}
             baseimage = 'fedora23/python'
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
+            .and_return(self.mock_repo_info(MockParser())))
         with pytest.raises(OsbsValidationException):
             osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
                                    TEST_GIT_BRANCH, TEST_USER,
@@ -551,9 +558,9 @@ class TestOSBS(object):
             }
             baseimage = 'fedora23/python'
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
+            .and_return(self.mock_repo_info()))
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
         req = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
                                      TEST_GIT_BRANCH, TEST_USER,
@@ -564,9 +571,9 @@ class TestOSBS(object):
     # osbs is a fixture here
     def test_missing_component_argument_doesnt_break_build(self, osbs):  # noqa
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockDfParser()))
+            .and_return(self.mock_repo_info()))
         response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
                                           TEST_GIT_BRANCH, TEST_USER)
         assert isinstance(response, BuildResponse)
@@ -574,9 +581,9 @@ class TestOSBS(object):
     # osbs is a fixture here
     def test_create_prod_build_set_required_version(self, osbs106):  # noqa
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockDfParser()))
+            .and_return(self.mock_repo_info()))
         (flexmock(BuildRequest)
             .should_receive('set_openshift_required_version')
             .with_args(parse_version('1.0.6'))
@@ -590,9 +597,9 @@ class TestOSBS(object):
     def test_create_prod_with_secret_build(self, osbs):  # noqa
         # TODO: test situation when a buildconfig already exists
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockDfParser()))
+            .and_return(self.mock_repo_info()))
         response = osbs.create_prod_with_secret_build(TEST_GIT_URI, TEST_GIT_REF,
                                                       TEST_GIT_BRANCH, TEST_USER,
                                                       TEST_COMPONENT, TEST_TARGET,
@@ -603,9 +610,9 @@ class TestOSBS(object):
     def test_create_prod_without_koji_build(self, osbs):  # noqa
         # TODO: test situation when a buildconfig already exists
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockDfParser()))
+            .and_return(self.mock_repo_info()))
         response = osbs.create_prod_without_koji_build(TEST_GIT_URI, TEST_GIT_REF,
                                                        TEST_GIT_BRANCH, TEST_USER,
                                                        TEST_COMPONENT, TEST_ARCH)
@@ -954,9 +961,9 @@ class TestOSBS(object):
         assert config.get_build_imagestream() == build_imagestream
 
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockDfParser()))
+            .and_return(self.mock_repo_info()))
 
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
 
@@ -1022,9 +1029,9 @@ class TestOSBS(object):
         }
 
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockDfParser()))
+            .and_return(self.mock_repo_info()))
 
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
 
@@ -1701,9 +1708,9 @@ class TestOSBS(object):
         }
 
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockDfParser()))
+            .and_return(self.mock_repo_info()))
 
         (flexmock(osbs_obj)
             .should_receive('_create_scratch_build')
@@ -1779,9 +1786,9 @@ class TestOSBS(object):
             osbs_obj = OSBS(config, config)
 
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockDfParser()))
+            .and_return(self.mock_repo_info()))
 
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
 
@@ -1889,9 +1896,9 @@ class TestOSBS(object):
     ])
     def test_do_create_prod_build_branch_required(self, osbs, branch_name):
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=branch_name)
-            .and_return(MockDfParser()))
+            .and_return(self.mock_repo_info()))
 
         inner_template = DEFAULT_INNER_TEMPLATE
         outer_template = DEFAULT_OUTER_TEMPLATE

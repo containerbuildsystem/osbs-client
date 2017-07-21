@@ -12,6 +12,7 @@ from osbs.constants import (DEFAULT_ARRANGEMENT_VERSION,
                             ORCHESTRATOR_INNER_TEMPLATE,
                             WORKER_INNER_TEMPLATE)
 from osbs import utils
+from osbs.repo_utils import RepoInfo, RepoConfiguration
 from tests.constants import (TEST_GIT_URI,
                              TEST_GIT_REF,
                              TEST_GIT_BRANCH,
@@ -43,9 +44,9 @@ class ArrangementBase(object):
             baseimage = base_image
 
         (flexmock(utils)
-            .should_receive('get_df_parser')
+            .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(MockParser()))
+            .and_return(RepoInfo(MockParser(), RepoConfiguration())))
 
         # Trick create_orchestrator_build into return the *request* JSON
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
