@@ -18,7 +18,7 @@
 %endif
 
 %if 0%{?fedora}
-# rhel/epel has no flexmock, pytest-capturelog
+# rhel/epel has no pytest-capturelog
 %global with_check 1
 %endif
 
