@@ -71,8 +71,8 @@ class ArrangementBase(object):
         inner = build_request.inner_template
         phases = ('prebuild_plugins',
                   'buildstep_plugins',
-                  'postbuild_plugins',
                   'prepublish_plugins',
+                  'postbuild_plugins',
                   'exit_plugins')
         actual = {}
         for phase in phases:
@@ -129,6 +129,7 @@ class TestArrangementV1(ArrangementBase):
         'git_branch': TEST_GIT_BRANCH,
         'user': 'john-foo',
         'component': TEST_COMPONENT,
+        'openshift_uri': 'http://openshift/',
     }
 
     ORCHESTRATOR_ADD_PARAMS = {
@@ -154,10 +155,10 @@ class TestArrangementV1(ArrangementBase):
                 'orchestrate_build',
             ],
 
-            'postbuild_plugins': [
+            'prepublish_plugins': [
             ],
 
-            'prepublish_plugins': [
+            'postbuild_plugins': [
             ],
 
             'exit_plugins': [
@@ -186,6 +187,10 @@ class TestArrangementV1(ArrangementBase):
             'buildstep_plugins': [
             ],
 
+            'prepublish_plugins': [
+                'squash',
+            ],
+
             'postbuild_plugins': [
                 'all_rpm_packages',
                 'tag_by_labels',
@@ -195,10 +200,6 @@ class TestArrangementV1(ArrangementBase):
                 'pulp_sync',
                 'compress',
                 'pulp_pull',
-            ],
-
-            'prepublish_plugins': [
-                'squash',
             ],
 
             'exit_plugins': [
@@ -334,10 +335,10 @@ class TestArrangementV2(TestArrangementV1):
                 'orchestrate_build',
             ],
 
-            'postbuild_plugins': [
+            'prepublish_plugins': [
             ],
 
-            'prepublish_plugins': [
+            'postbuild_plugins': [
             ],
 
             'exit_plugins': [
@@ -366,6 +367,10 @@ class TestArrangementV2(TestArrangementV1):
             'buildstep_plugins': [
             ],
 
+            'prepublish_plugins': [
+                'squash',
+            ],
+
             'postbuild_plugins': [
                 'all_rpm_packages',
                 'tag_by_labels',
@@ -375,10 +380,6 @@ class TestArrangementV2(TestArrangementV1):
                 'pulp_sync',
                 'compress',
                 'pulp_pull',
-            ],
-
-            'prepublish_plugins': [
-                'squash',
             ],
 
             'exit_plugins': [
@@ -492,18 +493,12 @@ class TestArrangementV2(TestArrangementV1):
 class TestArrangementV3(TestArrangementV2):
     """
     Differences from arrangement version 2:
-    - fetch_worker_metadata, koji_import, koji_tag_build, sendmail, run in the orcestrator build
+    - fetch_worker_metadata, koji_import, koji_tag_build, sendmail, run in the orchestrator build
     - koji_upload runs in the worker build
     - koji_promote does not run
     """
 
     ARRANGEMENT_VERSION = 3
-
-    WORKER_ADD_PARAMS = {
-        'platform': 'x86_64',
-        'release': 1,
-        'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID,
-    }
 
     DEFAULT_PLUGINS = {
         # Changing this? Add test methods
@@ -521,11 +516,11 @@ class TestArrangementV3(TestArrangementV2):
                 'orchestrate_build',
             ],
 
-            'postbuild_plugins': [
-                'fetch_worker_metadata',
+            'prepublish_plugins': [
             ],
 
-            'prepublish_plugins': [
+            'postbuild_plugins': [
+                'fetch_worker_metadata',
             ],
 
             'exit_plugins': [
@@ -558,6 +553,10 @@ class TestArrangementV3(TestArrangementV2):
             'buildstep_plugins': [
             ],
 
+            'prepublish_plugins': [
+                'squash',
+            ],
+
             'postbuild_plugins': [
                 'all_rpm_packages',
                 'tag_by_labels',
@@ -568,10 +567,6 @@ class TestArrangementV3(TestArrangementV2):
                 'compress',
                 'koji_upload',
                 'pulp_pull',
-            ],
-
-            'prepublish_plugins': [
-                'squash',
             ],
 
             'exit_plugins': [
@@ -595,27 +590,13 @@ class TestArrangementV3(TestArrangementV2):
     @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
     def test_koji_upload(self, osbs, scratch):
         additional_params = {
-            'git_uri': TEST_GIT_URI,
-            'git_ref': TEST_GIT_REF,
-            'user': "john-foo",
-            'component': TEST_COMPONENT,
-            'registry_uris': [],
-            'openshift_uri': "http://openshift/",
-            'builder_openshift_url': "http://openshift/",
-            'build_image': None,
             'base_image': 'fedora:latest',
-            'name_label': 'fedora/resultingimage',
-            'registry_api_versions': ['v1'],
-            'kojihub': 'http://hub/',
             'koji_upload_dir': 'upload',
         }
         if scratch:
             additional_params['scratch'] = True
         params, build_json = self.get_worker_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
-
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, 'exit_plugins', 'koji_promote')
 
         if scratch:
             with pytest.raises(NoSuchPluginException):
@@ -636,33 +617,18 @@ class TestArrangementV3(TestArrangementV2):
             'use_auth': False,
             'verify_ssl': False
         }
-        assert set(args.keys()) == set(match_args.keys())
         assert match_args == args
 
     @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
     def test_koji_import(self, osbs, scratch):
         additional_params = {
-            'git_uri': TEST_GIT_URI,
-            'git_ref': TEST_GIT_REF,
-            'user': "john-foo",
-            'component': TEST_COMPONENT,
-            'registry_uris': [],
-            'openshift_uri': "http://openshift/",
-            'builder_openshift_url': "http://openshift/",
-            'build_image': None,
             'base_image': 'fedora:latest',
-            'name_label': 'fedora/resultingimage',
-            'registry_api_versions': ['v1'],
-            'kojihub': 'http://hub/',
             'koji_upload_dir': 'upload',
         }
         if scratch:
             additional_params['scratch'] = True
         params, build_json = self.get_orchestrator_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
-
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, 'exit_plugins', 'koji_promote')
 
         if scratch:
             try:
@@ -680,25 +646,12 @@ class TestArrangementV3(TestArrangementV2):
             'use_auth': False,
             'verify_ssl': False
         }
-        assert set(args.keys()) == set(match_args.keys())
         assert match_args == args
 
     @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
     def test_fetch_worker_metadata(self, osbs, scratch):
         additional_params = {
-            'git_uri': TEST_GIT_URI,
-            'git_ref': TEST_GIT_REF,
-            'user': "john-foo",
-            'component': TEST_COMPONENT,
-            'registry_uris': [],
-            'openshift_uri': "http://openshift/",
-            'builder_openshift_url': "http://openshift/",
-            'build_image': None,
             'base_image': 'fedora:latest',
-            'name_label': 'fedora/resultingimage',
-            'registry_api_versions': ['v1'],
-            'kojihub': 'http://hub/',
-            'koji_upload_dir': 'upload',
         }
         if scratch:
             additional_params['scratch'] = True
@@ -715,5 +668,4 @@ class TestArrangementV3(TestArrangementV2):
                                          'fetch_worker_metadata', 'args')
 
         match_args = {}
-        assert set(args.keys()) == set(match_args.keys())
         assert match_args == args
