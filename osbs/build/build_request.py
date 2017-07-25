@@ -25,7 +25,7 @@ from osbs.build.spec import BuildSpec
 from osbs.constants import (SECRETS_PATH, DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE,
                             DEFAULT_CUSTOMIZE_CONF)
 from osbs.exceptions import OsbsException, OsbsValidationException
-from osbs.utils import git_repo_humanish_part_from_uri, sanitize_version
+from osbs.utils import git_repo_humanish_part_from_uri, sanitize_version, Labels
 from osbs import __version__ as client_version
 
 
@@ -572,9 +572,16 @@ class BuildRequest(object):
             logger.info('autorebuild is disabled in repo configuration, removing triggers')
             self.template['spec'].pop('triggers', None)
 
-        elif 'release' in self._repo_info.dockerfile_parser.labels:
-            raise RuntimeError('when autorebuild is enabled in repo configuration, '
-                               '"release" label must not be set in Dockerfile')
+        else:
+            labels = Labels(self._repo_info.dockerfile_parser.labels)
+            try:
+                labels.get_name_and_value(Labels.LABEL_TYPE_RELEASE)
+            except KeyError:
+                # As expected, release label not set in Dockerfile
+                pass
+            else:
+                raise RuntimeError('when autorebuild is enabled in repo configuration, '
+                                   '"release" label must not be set in Dockerfile')
 
     def render_add_filesystem(self):
         phase = 'prebuild_plugins'

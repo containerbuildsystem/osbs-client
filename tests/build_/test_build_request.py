@@ -1650,17 +1650,19 @@ class TestBuildRequest(object):
             use_auth=use_auth,
             insecure_registry=insecure_registry)
 
-    @pytest.mark.parametrize(('autorebuild_enabled', 'set_release', 'expected'), (
-        (True, False, True),
-        (True, True, RuntimeError),
-        (False, True, False),
+    @pytest.mark.parametrize(('autorebuild_enabled', 'release_label', 'expected'), (
+        (True, None, True),
+        (True, 'release', RuntimeError),
+        (True, 'Release', RuntimeError),
+        (False, 'release', False),
+        (False, 'Release', False),
     ))
-    def test_render_prod_request_with_repo_info(self, tmpdir, autorebuild_enabled, set_release,
+    def test_render_prod_request_with_repo_info(self, tmpdir, autorebuild_enabled, release_label,
                                                 expected):
         self.create_image_change_trigger_json(str(tmpdir))
 
         class MockDfParser(object):
-            labels = {'release': '13'} if set_release else {}
+            labels = {release_label: '13'} if release_label else {}
 
         (flexmock(RepoConfiguration)
             .should_receive('is_autorebuild_enabled')
