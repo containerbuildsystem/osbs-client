@@ -38,7 +38,8 @@ from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             DEFAULT_CUSTOMIZE_CONF, WORKER_CUSTOMIZE_CONF,
                             ORCHESTRATOR_OUTER_TEMPLATE, ORCHESTRATOR_INNER_TEMPLATE,
                             DEFAULT_ARRANGEMENT_VERSION,
-                            ORCHESTRATOR_CUSTOMIZE_CONF)
+                            ORCHESTRATOR_CUSTOMIZE_CONF,
+                            BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR)
 from osbs import utils
 from osbs.repo_utils import RepoInfo, RepoConfiguration
 
@@ -87,7 +88,6 @@ class TestOSBS(object):
     def mock_repo_info(self, mock_df_parser=None):
         mock_df_parser = mock_df_parser or MockDfParser()
         return RepoInfo(mock_df_parser, RepoConfiguration())
-
 
     def test_osbsapi_wrapper(self):
         """
@@ -242,6 +242,7 @@ class TestOSBS(object):
             'git_branch': TEST_GIT_BRANCH,
             'user': TEST_USER,
             'platform': platform,
+            'build_type': BUILD_TYPE_WORKER,
             'release': release,
             'inner_template': WORKER_INNER_TEMPLATE.format(arrangement_version=arrangement_version),
             'outer_template': WORKER_OUTER_TEMPLATE,
@@ -324,6 +325,7 @@ class TestOSBS(object):
             'user': TEST_USER,
             'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID,
             'platform': kwargs['platform'],
+            'build_type': BUILD_TYPE_WORKER,
             'release': kwargs['release'],
             'inner_template': WORKER_INNER_TEMPLATE.format(
                 arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
@@ -446,6 +448,7 @@ class TestOSBS(object):
             'git_branch': branch,
             'user': TEST_USER,
             'platforms': platforms,
+            'build_type': BUILD_TYPE_ORCHESTRATOR,
             'inner_template': ORCHESTRATOR_INNER_TEMPLATE.format(
                 arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
             'outer_template': ORCHESTRATOR_OUTER_TEMPLATE,
