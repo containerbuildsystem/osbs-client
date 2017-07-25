@@ -631,10 +631,9 @@ class TestArrangementV3(TestArrangementV2):
         plugins = get_plugins_from_build_json(build_json)
 
         if scratch:
-            try:
+            with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, 'exit_plugins', 'koji_import')
-            except NoSuchPluginException:
-                return
+            return
 
         args = plugin_value_get(plugins, 'exit_plugins',
                                          'koji_import', 'args')
@@ -659,10 +658,9 @@ class TestArrangementV3(TestArrangementV2):
         plugins = get_plugins_from_build_json(build_json)
 
         if scratch:
-            try:
+            with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, 'postbuild_plugins', 'fetch_worker_metadata')
-            except NoSuchPluginException:
-                return
+            return
 
         args = plugin_value_get(plugins, 'postbuild_plugins',
                                          'fetch_worker_metadata', 'args')
