@@ -25,7 +25,8 @@ from osbs.build.config_map_response import ConfigMapResponse
 from osbs.constants import (BUILD_RUNNING_STATES, WORKER_OUTER_TEMPLATE,
                             WORKER_INNER_TEMPLATE, WORKER_CUSTOMIZE_CONF,
                             ORCHESTRATOR_OUTER_TEMPLATE, ORCHESTRATOR_INNER_TEMPLATE,
-                            ORCHESTRATOR_CUSTOMIZE_CONF)
+                            ORCHESTRATOR_CUSTOMIZE_CONF, BUILD_TYPE_WORKER,
+                            BUILD_TYPE_ORCHESTRATOR)
 from osbs.core import Openshift
 from osbs.exceptions import OsbsException, OsbsValidationException, OsbsResponseException
 # import utils in this way, so that we can mock standalone functions with flexmock
@@ -420,6 +421,7 @@ class OSBS(object):
                               scratch=None,
                               platform=None,
                               platforms=None,
+                              build_type=None,
                               release=None,
                               inner_template=None,
                               outer_template=None,
@@ -483,6 +485,8 @@ class OSBS(object):
             koji_kerberos_principal=self.build_conf.get_koji_kerberos_principal(),
             architecture=architecture,
             platforms=platforms,
+            platform=platform,
+            build_type=build_type,
             release=release,
             vendor=self.build_conf.get_vendor(),
             build_host=self.build_conf.get_build_host(),
@@ -615,6 +619,7 @@ class OSBS(object):
             arrangement_version=arrangement_version))
         kwargs.setdefault('outer_template', WORKER_OUTER_TEMPLATE)
         kwargs.setdefault('customize_conf', WORKER_CUSTOMIZE_CONF)
+        kwargs['build_type'] = BUILD_TYPE_WORKER
         try:
             return self._do_create_prod_build(**kwargs)
         except IOError as ex:
@@ -654,6 +659,7 @@ class OSBS(object):
             arrangement_version=arrangement_version))
         kwargs.setdefault('outer_template', ORCHESTRATOR_OUTER_TEMPLATE)
         kwargs.setdefault('customize_conf', ORCHESTRATOR_CUSTOMIZE_CONF)
+        kwargs['build_type'] = BUILD_TYPE_ORCHESTRATOR
         try:
             return self._do_create_prod_build(**kwargs)
         except IOError as ex:
