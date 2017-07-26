@@ -117,7 +117,9 @@
     },
     {
       "name": "pulp_pull",
-      "args": {}
+      "args": {
+        "insecure": true
+      }
     }
   ],
   "exit_plugins": [
