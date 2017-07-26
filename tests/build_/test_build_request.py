@@ -17,7 +17,9 @@ from osbs.build.build_request import BuildRequest
 from osbs.constants import (DEFAULT_BUILD_IMAGE, DEFAULT_OUTER_TEMPLATE,
                             DEFAULT_INNER_TEMPLATE, SECRETS_PATH,
                             ORCHESTRATOR_INNER_TEMPLATE, WORKER_INNER_TEMPLATE,
-                            DEFAULT_ARRANGEMENT_VERSION, REPO_CONFIG_FILE)
+                            DEFAULT_ARRANGEMENT_VERSION, REPO_CONFIG_FILE,
+                            BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR,
+                            ADDITIONAL_TAGS_FILE)
 from osbs.exceptions import OsbsValidationException
 from osbs import __version__ as expected_version
 from osbs.conf import Configuration
@@ -1245,6 +1247,102 @@ class TestBuildRequest(object):
                 with pytest.raises(KeyError):
                     plugin_value_get(plugins, "prebuild_plugins", "fetch_maven_artifacts",
                                      "args", "allowed_domains")
+
+    @pytest.mark.parametrize(
+        ('has_platform_tag', 'scratch', 'has_primary', 'has_additional', 'build_type'), (
+
+            (True, False, False, False, BUILD_TYPE_WORKER),
+
+            (False, False, True, False, BUILD_TYPE_ORCHESTRATOR),
+            (False, False, True, True, BUILD_TYPE_ORCHESTRATOR),
+            (False, True, False, False, BUILD_TYPE_ORCHESTRATOR),
+
+            (False, True, False, False, None),
+            (False, False, False, False, None),
+        )
+    )
+    def test_render_tag_from_config(self, tmpdir, build_type, has_platform_tag, scratch,
+                                    has_primary, has_additional):
+        kwargs = get_sample_prod_params()
+        kwargs.pop('platforms', None)
+        kwargs.pop('platform', None)
+
+        if build_type == BUILD_TYPE_WORKER:
+            kwargs['platform'] = 'x86_64'
+        elif build_type == BUILD_TYPE_ORCHESTRATOR:
+            kwargs['platforms'] = ['x86_64', 'ppc64le']
+
+        if scratch:
+            kwargs['scratch'] = scratch
+
+        kwargs['build_type'] = build_type
+        kwargs['arrangement_version'] = 4
+
+        expected_primary = set()
+        if has_primary:
+            expected_primary.add('latest')
+            expected_primary.add('{version}')
+            expected_primary.add('{version}-{release}')
+
+        if has_additional:
+            additional_tags = ['spam', 'bacon', 'eggs']
+            self._mock_addional_tags_config(str(tmpdir), additional_tags)
+            expected_primary = expected_primary | set(additional_tags)
+
+        repo_info = RepoInfo(additional_tags=AdditionalTagsConfig(dir_path=str(tmpdir)))
+        build_json = self._render_tag_from_config_build_request(kwargs, repo_info)
+        plugins = get_plugins_from_build_json(build_json)
+
+        assert get_plugin(plugins, 'postbuild_plugins', 'tag_from_config')
+        tag_suffixes = plugin_value_get(plugins, 'postbuild_plugins', 'tag_from_config',
+                                        'args', 'tag_suffixes')
+        assert len(tag_suffixes['unique']) == 1
+        unique_tag_suffix = tag_suffixes['unique'][0]
+        assert unique_tag_suffix.endswith('-' + kwargs.get('platform', '')) == has_platform_tag
+        assert len(tag_suffixes['primary']) == len(expected_primary)
+        assert set(tag_suffixes['primary']) == expected_primary
+
+    def test_render_tag_from_config_unmodified(self):
+        kwargs = get_sample_prod_params()
+        kwargs.pop('platform', None)
+
+        kwargs['platforms'] = ['x86_64', 'ppc64le']
+        kwargs['build_type'] = BUILD_TYPE_ORCHESTRATOR
+        kwargs['arrangement_version'] = 3
+
+        expected_primary = set(['spam', 'bacon', 'eggs'])
+
+        tag_suffixes = {'primary': ['spam', 'bacon', 'eggs']}
+        build_json = self._render_tag_from_config_build_request(kwargs, tag_suffixes=tag_suffixes)
+        plugins = get_plugins_from_build_json(build_json)
+
+        assert get_plugin(plugins, 'postbuild_plugins', 'tag_from_config')
+        tag_suffixes = plugin_value_get(plugins, 'postbuild_plugins', 'tag_from_config',
+                                        'args', 'tag_suffixes')
+        assert len(tag_suffixes['primary']) == len(expected_primary)
+        assert set(tag_suffixes['primary']) == expected_primary
+
+    def _render_tag_from_config_build_request(self, kwargs, repo_info=None,
+                                              tag_suffixes='{{TAG_SUFFIXES}}'):
+        build_request = BuildRequest(INPUTS_PATH)
+        build_request.set_params(**kwargs)
+        repo_info = repo_info or RepoInfo()
+        build_request.set_repo_info(repo_info)
+        build_request.customize_conf['enable_plugins'].append(
+            {
+                "plugin_type": 'postbuild_plugins',
+                "plugin_name": 'tag_from_config',
+                "plugin_args": {
+                    'tag_suffixes': tag_suffixes,
+                },
+            }
+        )
+
+        return build_request.render()
+
+    def _mock_addional_tags_config(self, dir_path, tags):
+        with open(os.path.join(dir_path, ADDITIONAL_TAGS_FILE), 'w') as f:
+            f.write('\n'.join(tags))
 
     @staticmethod
     def create_no_plugins_json(outdir):
