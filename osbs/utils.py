@@ -24,7 +24,7 @@ from collections import namedtuple
 from datetime import datetime
 from io import BytesIO
 from hashlib import sha256
-from osbs.repo_utils import RepoConfiguration, RepoInfo
+from osbs.repo_utils import RepoConfiguration, RepoInfo, AdditionalTagsConfig
 
 try:
     # py3
@@ -244,7 +244,8 @@ def get_repo_info(git_uri, git_ref, git_branch=None):
     with checkout_git_repo(git_uri, git_ref, git_branch) as code_dir:
         dfp = DockerfileParser(os.path.join(code_dir), cache_content=True)
         config = RepoConfiguration(dir_path=code_dir)
-    return RepoInfo(dfp, config)
+        tags_config = AdditionalTagsConfig(dir_path=code_dir)
+    return RepoInfo(dfp, config, tags_config)
 
 
 def git_repo_humanish_part_from_uri(git_uri):
