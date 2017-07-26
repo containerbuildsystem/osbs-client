@@ -23,7 +23,7 @@ except ImportError:
 from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.spec import BuildSpec
 from osbs.constants import (SECRETS_PATH, DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE,
-                            DEFAULT_CUSTOMIZE_CONF)
+                            DEFAULT_CUSTOMIZE_CONF, BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR)
 from osbs.exceptions import OsbsException, OsbsValidationException
 from osbs.utils import git_repo_humanish_part_from_uri, sanitize_version, Labels
 from osbs import __version__ as client_version
@@ -183,6 +183,16 @@ class BuildRequest(object):
                     trigger['imageChange']['from']['kind'] == 'ImageStreamTag':
                 return True
         return False
+
+    def has_tag_suffixes_placeholder(self):
+        phase = 'postbuild_plugins'
+        plugin = 'tag_from_config'
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return False
+
+        placeholder = '{{TAG_SUFFIXES}}'
+        plugin_conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins', 'tag_from_config')
+        return plugin_conf.get('args', {}).get('tag_suffixes') == placeholder
 
     def set_label(self, name, value):
         if not value:
@@ -524,16 +534,20 @@ class BuildRequest(object):
         and should not be imported into Koji.
         """
         if self.scratch:
-            for when, which in [
-                    ("prebuild_plugins", "koji_parent"),
-                    ("postbuild_plugins", "tag_from_config"),
-                    ("postbuild_plugins", "compress"),  # only for Koji
-                    ("postbuild_plugins", "koji_upload"),
-                    ("postbuild_plugins", "fetch_worker_metadata"),
-                    ("exit_plugins", "koji_promote"),
-                    ("exit_plugins", "koji_import"),
-                    ("exit_plugins", "koji_tag_build"),
-            ]:
+            remove_plugins = [
+                ("prebuild_plugins", "koji_parent"),
+                ("postbuild_plugins", "compress"),  # only for Koji
+                ("postbuild_plugins", "koji_upload"),
+                ("postbuild_plugins", "fetch_worker_metadata"),
+                ("exit_plugins", "koji_promote"),
+                ("exit_plugins", "koji_import"),
+                ("exit_plugins", "koji_tag_build"),
+            ]
+
+            if not self.has_tag_suffixes_placeholder():
+                remove_plugins.append(("postbuild_plugins", "tag_from_config"))
+
+            for when, which in remove_plugins:
                 logger.info("removing %s from scratch build request",
                             which)
                 self.dj.remove_plugin(when, which)
@@ -853,6 +867,22 @@ class BuildRequest(object):
         if self.spec.artifacts_allowed_domains.value:
             self.dj.dock_json_set_arg(phase, plugin, 'allowed_domains',
                                       self.spec.artifacts_allowed_domains.value)
+
+    def render_tag_from_config(self):
+        """Configure tag_from_config plugin"""
+        phase = 'postbuild_plugins'
+        plugin = 'tag_from_config'
+        if not self.has_tag_suffixes_placeholder():
+            return
+
+        unique_tag = self.spec.image_tag.value.split(':')[-1]
+        tag_suffixes = {'unique': [unique_tag], 'primary': []}
+
+        if self.spec.build_type.value == BUILD_TYPE_ORCHESTRATOR and not self.scratch:
+            tag_suffixes['primary'].extend(['latest', '{version}', '{version}-{release}'])
+            tag_suffixes['primary'].extend(self._repo_info.additional_tags.tags)
+
+        self.dj.dock_json_set_arg(phase, plugin, 'tag_suffixes', tag_suffixes)
 
     def render_pulp_pull(self):
         """
@@ -1232,6 +1262,7 @@ class BuildRequest(object):
         self.render_koji_tag_build()
         self.render_sendmail()
         self.render_fetch_maven_artifacts()
+        self.render_tag_from_config()
         self.render_version()
 
         self.dj.write_dock_json()
