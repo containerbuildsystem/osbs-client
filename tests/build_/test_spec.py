@@ -80,15 +80,25 @@ class TestBuildSpec(object):
         assert registry.version == 'v2'
 
     @pytest.mark.parametrize('rand,timestr', [
-            ('12345', '20170501123456'),
-            ('67890', '20170731111111'),
-        ])
-    def test_image_tag(self, rand, timestr):
+        ('12345', '20170501123456'),
+        ('67890', '20170731111111'),
+    ])
+    @pytest.mark.parametrize(('platform', 'arrangement', 'has_platform_suffix'), (
+        ('x86_64', 4, True),
+        ('ppc64le', 4, True),
+        ('x86_64', 3, False),
+        (None, 3, False),
+        (None, 4, False),
+    ))
+    def test_image_tag(self, rand, timestr, platform, arrangement, has_platform_suffix):
         kwargs = self.get_minimal_kwargs()
         kwargs.update({
             'component': 'foo',
             'koji_target': 'tothepoint',
+            'arrangement_version': arrangement,
         })
+        if platform:
+            kwargs['platform'] = platform
 
         (flexmock(sys.modules['osbs.build.spec'])
             .should_receive('utcnow').once()
@@ -103,5 +113,7 @@ class TestBuildSpec(object):
         spec.set_params(**kwargs)
 
         img_tag = '{user}/{component}:{koji_target}-{random_number}-{time_string}'
+        if has_platform_suffix:
+            img_tag += '-{platform}'
         img_tag = img_tag.format(random_number=rand, time_string=timestr, **kwargs)
         assert spec.image_tag.value == img_tag

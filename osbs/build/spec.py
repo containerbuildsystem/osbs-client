@@ -309,20 +309,6 @@ class BuildSpec(object):
             self.imagestream_insecure_registry.value = insecure
             logger.debug("setting 'imagestream_insecure_registry' to %r", insecure)
 
-        timestamp = utcnow().strftime('%Y%m%d%H%M%S')
-        # RNG is seeded once its imported, so in cli calls scratch builds would get unique name.
-        # On brew builders we import osbs once - thus RNG is seeded once and `randrange`
-        # returns the same values throughout the life of the builder.
-        # Before each `randrange` call we should be calling `.seed` to prevent this
-        random.seed()
-        self.image_tag.value = "%s/%s:%s-%s-%s" % (
-            self.user.value,
-            self.component.value,
-            self.koji_target.value or 'none',
-            random.randrange(10**(RAND_DIGITS - 1), 10**RAND_DIGITS),
-            timestamp
-        )
-
         self.platforms.value = platforms
         self.platform.value = platform
         self.build_type.value = build_type
@@ -337,6 +323,29 @@ class BuildSpec(object):
         self.filesystem_koji_task_id.value = filesystem_koji_task_id
         self.koji_upload_dir.value = koji_upload_dir
         self.yum_proxy.value = yum_proxy
+
+        self._populate_image_tag()
+
+    def _populate_image_tag(self):
+        timestamp = utcnow().strftime('%Y%m%d%H%M%S')
+        # RNG is seeded once its imported, so in cli calls scratch builds would get unique name.
+        # On brew builders we import osbs once - thus RNG is seeded once and `randrange`
+        # returns the same values throughout the life of the builder.
+        # Before each `randrange` call we should be calling `.seed` to prevent this
+        random.seed()
+
+        tag_segments = [
+            self.koji_target.value or 'none',
+            str(random.randrange(10**(RAND_DIGITS - 1), 10**RAND_DIGITS)),
+            timestamp
+        ]
+
+        # Support for platform specific tags has only been added in arrangement 4.
+        if self.platform.value and (self.arrangement_version.value or 0) >= 4:
+            tag_segments.append(self.platform.value)
+
+        tag = '-'.join(tag_segments)
+        self.image_tag.value = '{0}/{1}:{2}'.format(self.user.value, self.component.value, tag)
 
     def validate(self):
         logger.info("Validating params of %s", self.__class__.__name__)
