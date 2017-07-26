@@ -867,6 +867,13 @@ class BuildRequest(object):
         if not pulp_registry:
             logger.info("removing %s from request, requires pulp_registry", pulp_registry)
             self.dj.remove_plugin(phase, plugin)
+            return
+
+        # Verify that we have a secret
+        if self.spec.pulp_secret.value is None:
+            raise OsbsValidationException("Pulp registry specified with no secret")
+
+        self.dj.dock_json_set_arg(phase, plugin, 'secret', self.spec.pulp_secret.value)
 
     def render_pulp_push(self):
         """
