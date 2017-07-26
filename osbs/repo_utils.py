@@ -20,7 +20,15 @@ import os
 logger = logging.getLogger(__name__)
 
 
-RepoInfo = namedtuple('RepoInfo', 'dockerfile_parser, configuration, additional_tags')
+class RepoInfo(object):
+    """
+    Aggregator for different aspects of the repository.
+    """
+
+    def __init__(self, dockerfile_parser=None, configuration=None, additional_tags=None):
+        self.dockerfile_parser = dockerfile_parser
+        self.configuration = configuration or RepoConfiguration()
+        self.additional_tags = additional_tags or AdditionalTagsConfig()
 
 
 class RepoConfiguration(object):
