@@ -897,8 +897,7 @@ class BuildRequest(object):
 
     def render_pulp_sync(self):
         """
-        If a pulp registry is specified, use the pulp plugin as well as the
-        delete_from_registry to delete the image after sync
+        If a pulp registry is specified, use the pulp plugin.
         """
         if not self.dj.dock_json_has_plugin_conf('postbuild_plugins',
                                                  'pulp_sync'):
@@ -939,6 +938,54 @@ class BuildRequest(object):
                 raise OsbsValidationException("Pulp registry specified "
                                               "but no auth config")
 
+        else:
+            # If no pulp registry is specified, don't run the pulp plugin
+            logger.info("removing pulp_sync from request, requires "
+                        "pulp_registry and a v2 registry")
+            self.dj.remove_plugin("postbuild_plugins", "pulp_sync")
+
+    def render_delete_from_registry(self):
+        """
+        If a pulp registry is specified, use the pulp plugin as well as the
+        delete_from_registry to delete the image after sync
+        """
+        if not self.dj.dock_json_has_plugin_conf('exit_plugins',
+                                                 'delete_from_registry'):
+            return
+
+        pulp_registry = self.spec.pulp_registry.value
+
+        # Find which registry to use
+        docker_registry = None
+        registry_secret = None
+        registries = zip_longest(self.spec.registry_uris.value,
+                                 self.spec.registry_secrets.value)
+        for registry, secret in registries:
+            if registry.version == 'v2':
+                if self.spec.arrangement_version.value < 3:
+                    # Before arrangement version 3, the delete_from_registry
+                    # plugin was running on the 'worker' node.  It needed
+                    # the pulp_sync plugin to work correctly.  If it was not
+                    # included or removed by the render_pulp_sync, then this
+                    # plugin needs to be dropped too.
+                    if not self.dj.dock_json_has_plugin_conf('postbuild_plugins',
+                                                             'pulp_sync'):
+                        break
+
+                # First specified v2 registry is the one we'll tell pulp
+                # to sync from. Keep the http prefix -- pulp wants it.
+                docker_registry = registry.uri
+                registry_secret = secret
+                logger.info("using docker v2 registry %s for pulp_sync",
+                            docker_registry)
+                break
+
+        if pulp_registry and docker_registry:
+            # Verify we have a pulp secret
+            if self.spec.pulp_secret.value is None:
+                raise OsbsValidationException("Pulp registry specified "
+                                              "but no auth config")
+
             source_registry = self.spec.source_registry_uri.value
             perform_delete = (source_registry is None or
                               source_registry.docker_uri != registry.docker_uri)
@@ -957,9 +1004,8 @@ class BuildRequest(object):
                 self.dj.remove_plugin("exit_plugins", "delete_from_registry")
         else:
             # If no pulp registry is specified, don't run the pulp plugin
-            logger.info("removing pulp_sync+delete_from_registry from request, "
+            logger.info("removing delete_from_registry from request, "
                         "requires pulp_registry and a v2 registry")
-            self.dj.remove_plugin("postbuild_plugins", "pulp_sync")
             self.dj.remove_plugin("exit_plugins", "delete_from_registry")
 
     def render_import_image(self, use_auth=None):
@@ -1187,6 +1233,13 @@ class BuildRequest(object):
                            None):
                           self.spec.registry_secrets.value,
 
+                          ('exit_plugins', 'delete_from_registry',
+                           # Only set the secrets for the build, don't
+                           # add the path to the plugin's
+                           # configuration. This is done elsewhere.
+                           None):
+                          self.spec.registry_secrets.value,
+
                           ('buildstep_plugins', 'orchestrate_build', 'osbs_client_config'):
                           self.spec.client_config_secret.value})
 
@@ -1226,6 +1279,7 @@ class BuildRequest(object):
         self.render_pulp_pull()
         self.render_pulp_push()
         self.render_pulp_sync()
+        self.render_delete_from_registry()
         self.render_koji_promote(use_auth=use_auth)
         self.render_koji_upload(use_auth=use_auth)
         self.render_koji_import(use_auth=use_auth)

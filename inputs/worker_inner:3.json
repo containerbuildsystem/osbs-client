@@ -136,12 +136,6 @@
   ],
   "exit_plugins": [
     {
-      "name": "delete_from_registry",
-      "args": {
-        "registries": {}
-     }
-    },
-    {
       "name": "store_metadata_in_osv3",
       "args": {
         "url": "{{OPENSHIFT_URI}}",
