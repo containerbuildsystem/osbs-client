@@ -41,7 +41,7 @@ from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             ORCHESTRATOR_CUSTOMIZE_CONF,
                             BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR)
 from osbs import utils
-from osbs.repo_utils import RepoInfo, RepoConfiguration
+from osbs.repo_utils import RepoInfo, RepoConfiguration, AdditionalTagsConfig
 
 from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
                              TEST_GIT_URI, TEST_TARGET, TEST_USER, INPUTS_PATH,
@@ -87,7 +87,7 @@ class TestOSBS(object):
 
     def mock_repo_info(self, mock_df_parser=None):
         mock_df_parser = mock_df_parser or MockDfParser()
-        return RepoInfo(mock_df_parser, RepoConfiguration())
+        return RepoInfo(mock_df_parser, RepoConfiguration(), AdditionalTagsConfig())
 
     def test_osbsapi_wrapper(self):
         """

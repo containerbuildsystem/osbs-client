@@ -21,7 +21,7 @@ from osbs.constants import (DEFAULT_BUILD_IMAGE, DEFAULT_OUTER_TEMPLATE,
 from osbs.exceptions import OsbsValidationException
 from osbs import __version__ as expected_version
 from osbs.conf import Configuration
-from osbs.repo_utils import RepoInfo, RepoConfiguration
+from osbs.repo_utils import RepoInfo, RepoConfiguration, AdditionalTagsConfig
 
 from flexmock import flexmock
 import pytest
@@ -1668,7 +1668,7 @@ class TestBuildRequest(object):
             .should_receive('is_autorebuild_enabled')
             .and_return(autorebuild_enabled))
 
-        repo_info = RepoInfo(MockDfParser(), RepoConfiguration())
+        repo_info = RepoInfo(MockDfParser(), RepoConfiguration(), AdditionalTagsConfig())
 
         build_request_kwargs = get_sample_prod_params()
         base_image = build_request_kwargs['base_image']

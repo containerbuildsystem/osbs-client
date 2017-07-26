@@ -73,6 +73,7 @@ ATOMIC_REACTOR_LOGGING_FMT = \
     '%(asctime)s platform:%(arch)s - %(name)s - %(levelname)s - %(message)s'
 
 REPO_CONFIG_FILE = '.osbs-repo-config'
+ADDITIONAL_TAGS_FILE = 'additional-tags'
 
 # number of retries for http requests
 HTTP_MAX_RETRIES = 3
