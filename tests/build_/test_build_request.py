@@ -1766,7 +1766,7 @@ class TestBuildRequest(object):
             .should_receive('is_autorebuild_enabled')
             .and_return(autorebuild_enabled))
 
-        repo_info = RepoInfo(MockDfParser(), RepoConfiguration(), AdditionalTagsConfig())
+        repo_info = RepoInfo(MockDfParser())
 
         build_request_kwargs = get_sample_prod_params()
         base_image = build_request_kwargs['base_image']

@@ -6,12 +6,32 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 
+from flexmock import flexmock
 from osbs.constants import REPO_CONFIG_FILE, ADDITIONAL_TAGS_FILE
-from osbs.repo_utils import RepoConfiguration, AdditionalTagsConfig
+from osbs.repo_utils import RepoInfo, RepoConfiguration, AdditionalTagsConfig
 from textwrap import dedent
 
 import os
 import pytest
+
+
+class TestRepoInfo(object):
+
+    def test_default_params(self):
+        repo_info = RepoInfo()
+        assert repo_info.dockerfile_parser is None
+        assert isinstance(repo_info.configuration, RepoConfiguration)
+        assert isinstance(repo_info.additional_tags, AdditionalTagsConfig)
+
+    def test_explicit_params(self):
+        df_parser = flexmock()
+        configuration = RepoConfiguration()
+        tags_config = AdditionalTagsConfig()
+
+        repo_info = RepoInfo(df_parser, configuration, tags_config)
+        assert repo_info.dockerfile_parser is df_parser
+        assert repo_info.configuration is configuration
+        assert repo_info.additional_tags is tags_config
 
 
 class TestRepoConfiguration(object):
