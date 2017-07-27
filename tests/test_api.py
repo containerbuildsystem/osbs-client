@@ -247,6 +247,7 @@ class TestOSBS(object):
             'inner_template': WORKER_INNER_TEMPLATE.format(arrangement_version=arrangement_version),
             'outer_template': WORKER_OUTER_TEMPLATE,
             'customize_conf': WORKER_CUSTOMIZE_CONF,
+            'arrangement_version': arrangement_version,
         }
 
         (flexmock(osbs)
@@ -331,6 +332,7 @@ class TestOSBS(object):
                 arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
             'outer_template': WORKER_OUTER_TEMPLATE,
             'customize_conf': WORKER_CUSTOMIZE_CONF,
+            'arrangement_version': arrangement_version,
         }
 
         if inner_template is not None:

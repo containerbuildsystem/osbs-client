@@ -614,7 +614,7 @@ class OSBS(object):
             raise ValueError("Worker build missing required parameters: %s" %
                              missing)
 
-        arrangement_version = kwargs.pop('arrangement_version')
+        arrangement_version = kwargs['arrangement_version']
         kwargs.setdefault('inner_template', WORKER_INNER_TEMPLATE.format(
             arrangement_version=arrangement_version))
         kwargs.setdefault('outer_template', WORKER_OUTER_TEMPLATE)
