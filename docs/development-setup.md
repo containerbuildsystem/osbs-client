@@ -203,3 +203,74 @@ container with credentials to push to the registry:
 ```
 $ osbs --config osbs.conf --instance local build -g https://github.com/TomasTomecek/hello-world-container -b master -u ${USER} -c hello-world
 ```
+
+## Configuring orchestration
+
+To test out orchestrated builds, you'll need another namespace to act as a
+test worker, and add the necessary permissions to it:
+
+```
+$ oc new-project worker01
+
+$ oc login -u system:admin
+$ oc policy -n worker01 add-role-to-user edit system:serviceaccount:myproject:builder
+$ oc policy -n worker01 add-role-to-user edit system:serviceaccount:worker01:builder
+$ oc policy -n worker01 add-role-to-group system:build-strategy-custom system:authenticated
+
+$ oc login -u developer
+$ oc project myproject
+```
+
+Then you'll need to create two configuration files. Create a file `reactor-conf/config.yaml`
+with the contents
+
+```
+version: 1
+clusters:
+  x86_64:
+  - name: worker01
+    max_concurrent_builds: 4
+    enabled: true
+```
+
+and a file `osbs-client-conf/osbs.conf` with the contents:
+
+```
+[general]
+verbose = true
+build_json_dir = <path to inputs in the build image>
+
+[worker01]
+openshift_url = https://<not-localhost-ip-address>:8443/
+builder_openshift_url = https://<not-localhost-ip-address>:8443/
+namespace = worker01
+use_kerberos = false
+verify_ssl = false
+use_auth = true
+registry_uri = <registry URL>
+```
+
+And create corresponding secrets:
+
+```
+$ oc secrets -n myproject new osbs-client-conf osbs-client-conf/osbs.conf
+$ oc secrets -n myproject new reactor-conf reactor-conf/config.yaml
+```
+
+Note that while the directory and secret names are arbitrary, the filenames
+(`osbs.conf`, `config.yaml`) must be exactly as listed above, since filename
+determines the key under which the content is stored within the secret.
+
+Finally, edit the main `osbs.conf` and add to the [local] section
+
+```
+can_orchestrate = true
+reactor_config_secret = reactor-conf
+client_config_secret = osbs-client-conf
+```
+
+You are now ready to perform an orchestrated build:
+
+```
+$ osbs --config osbs.conf --instance local build --orchestrate --platforms x86_64 -g https://github.com/TomasTomecek/hello-world-container -b master -u ${USER}
+```
