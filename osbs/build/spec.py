@@ -154,6 +154,12 @@ class BuildSpec(object):
         self.koji_use_kerberos = BuildParam("koji_use_kerberos", allow_none=True)
         self.koji_kerberos_principal = BuildParam("koji_kerberos_principal", allow_none=True)
         self.koji_kerberos_keytab = BuildParam("koji_kerberos_keytab", allow_none=True)
+        self.flatpak = BuildParam("flatpak", default=False)
+        self.module = BuildParam("module", allow_none=True)
+        self.module_compose_url = BuildParam("module_compose_url", allow_none=True)
+        self.flatpak_base_image = BuildParam("flatpak_base_image", allow_none=True)
+        self.pdc_url = BuildParam("pdc_url", allow_none=True)
+        self.pdc_insecure = BuildParam("pdc_insecure", allow_none=True)
         self.image_tag = BuildParam("image_tag")
         self.pulp_secret = BuildParam("pulp_secret", allow_none=True)
         self.pulp_registry = BuildParam("pulp_registry", allow_none=True)
@@ -218,6 +224,10 @@ class BuildSpec(object):
                    koji_target=None, kojiroot=None, kojihub=None, koji_certs_secret=None,
                    koji_use_kerberos=None, koji_kerberos_keytab=None,
                    koji_kerberos_principal=None, koji_task_id=None,
+                   flatpak=False,
+                   module=None, module_compose_url=None,
+                   flatpak_base_image=None,
+                   pdc_url=None, pdc_insecure=False,
                    filesystem_koji_task_id=None,
                    source_secret=None,  # compatibility name for pulp_secret
                    pulp_secret=None, pulp_registry=None,
@@ -277,6 +287,12 @@ class BuildSpec(object):
         self.koji_kerberos_principal.value = koji_kerberos_principal
         self.koji_kerberos_keytab.value = koji_kerberos_keytab
         self.koji_task_id.value = koji_task_id
+        self.flatpak.value = flatpak
+        self.module.value = module
+        self.module_compose_url.value = module_compose_url
+        self.flatpak_base_image.value = flatpak_base_image
+        self.pdc_url.value = pdc_url
+        self.pdc_insecure.value = pdc_insecure
         self.pulp_secret.value = pulp_secret or source_secret
         self.pulp_registry.value = pulp_registry
         self.smtp_host.value = smtp_host

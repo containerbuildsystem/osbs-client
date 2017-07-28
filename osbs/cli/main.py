@@ -344,6 +344,10 @@ def cmd_build(args, osbs):
     if args.koji_upload_dir:
         build_kwargs['koji_upload_dir'] = args.koji_upload_dir
 
+    if args.flatpak:
+        build_kwargs['flatpak'] = True
+        build_kwargs['module'] = osbs.build_conf.get_module()
+
     build = create_func(**build_kwargs)
     build_id = build.get_build_name()
     # we need to wait for kubelet to schedule the build, otherwise it's 500
@@ -676,6 +680,12 @@ def cli():
                               help="name of git branch (for incrementing Release)")
     build_parser.add_argument("-t", "--target", action='store',
                               help="koji target name")
+    build_parser.add_argument("--flatpak", action='store_true',
+                              help="build a flatpak OCI")
+    build_parser.add_argument("-m", "--module", action='store', metavar="NAME:STREAM[:VERSION]",
+                              help="module to build against")
+    build_parser.add_argument("--module-compose-url", action='store', metavar="COMPOSE_URL",
+                              help="URL to a compose of the module")
     build_parser.add_argument("-a", "--arch", action='store',
                               help="build architecture")
     build_parser.add_argument("-u", "--user", action='store', required=True,

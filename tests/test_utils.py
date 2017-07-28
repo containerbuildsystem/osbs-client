@@ -21,8 +21,8 @@ from osbs.utils import (buildconfig_update,
                         get_time_from_rfc3339, strip_registry_from_image,
                         TarWriter, TarReader, make_name_from_git, wrap_name_from_git,
                         get_instance_token_file_name, Labels, sanitize_version,
-                        has_triggers)
-from osbs.exceptions import OsbsException
+                        has_triggers, split_module_spec)
+from osbs.exceptions import OsbsException, OsbsValidationException
 import osbs.kerberos_ccache
 
 
@@ -471,3 +471,17 @@ def test_sanitize_version(version, valid):
             pass
         with pytest.raises(ValueError):
             sanitize_version(parse_version(version))
+
+
+@pytest.mark.parametrize(('module', 'should_raise', 'expected'), [
+    ('eog', True, None),
+    ('eog:f26', False, ('eog', 'f26', None)),
+    ('eog:f26:20170629213428', False, ('eog', 'f26', '20170629213428')),
+    ('a:b:c:d', True, None)
+])
+def test_split_module_spec(module, should_raise, expected):
+    if should_raise:
+        with pytest.raises(OsbsValidationException):
+            split_module_spec(module)
+    else:
+        assert split_module_spec(module) == expected

@@ -59,6 +59,12 @@ Some options are also mandatory.
 
 * `koji_kerberos_principal` (*optional*, `string`) - kerberos principal for the keytab provided in `koji_kerberos_keytab`
 
+* `flatpak_base_image` (*optional*, `string`) - Docker image to use when installing RPMs to create a Flatpak. This does not have to match the version of the RPMs being installed.
+
+* `pdc_url` (*optional*, `string`) - URL for API requests for the Product Definition Center. Needed for building Flatpaks
+
+* `pdc_insecure` (*optional*, `boolean`) - If set, valid SSL certificates will not be required for requests to `pdc_url`
+
 * `sources_command` (*optional*, `string`) — command to use to get dist-git artifacts from lookaside cache (e.g. `fedpkg sources`)
 
 * `username`, `password` (*optional*, `string`) — when OpenShift is hidden behind authentication proxy, you can specify username and password for basic authentication

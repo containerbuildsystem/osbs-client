@@ -427,6 +427,9 @@ def osbs(openshift, kwargs=None, additional_config=None, platform_descriptors=No
             distribution_scope = authoritative-source-only
             koji_root = http://koji.example.com/kojiroot
             koji_hub = http://koji.example.com/kojihub
+            flatpak_base_image = registry.fedoraproject.org/fedora:latest
+            module_compose_url = http://download.example.com/composes/{{name}}-{{stream}}-{{version}}/
+            pdc_url = https://pdc.example.com/rest_api/v1
             use_auth = false
             can_orchestrate = true
             """)

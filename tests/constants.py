@@ -34,6 +34,11 @@ TEST_LABEL_VALUE = "sample-value"
 TEST_KOJI_TASK_ID = 12345
 TEST_FILESYSTEM_KOJI_TASK_ID = 67890
 
+TEST_MODULE_NAME = "eog"
+TEST_MODULE_STREAM = "f26"
+TEST_MODULE_VERSION = "20170608120625"
+TEST_FLATPAK_BASE_IMAGE = 'registry.fedoraproject.org/fedora:latest'
+
 TEST_BUILD_JSON = {
     "metadata": {
         "name": "{{NAME}}"
