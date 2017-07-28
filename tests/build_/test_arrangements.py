@@ -56,7 +56,7 @@ class ArrangementBase(object):
         ORCHESTRATOR_INNER_TEMPLATE,
         WORKER_INNER_TEMPLATE,
     ])
-    def test_orchestrator_running_order(self, osbs, template):
+    def test_running_order(self, osbs, template):
         """
         Verify the plugin running order.
 
