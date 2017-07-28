@@ -68,6 +68,14 @@ In order to submit a build, you need to have a permission. If you started
 OpenShift with `oc cluster up`, there's a user `developer` set up with
 namespace `myproject` out of the box. This is where we'll build our images.
 
+You'll also need to enable the custom build type, for example with:
+
+```
+$ oc policy add-role-to-group system:build-strategy-custom system:authenticated
+```
+
+(This allows any authenticated user with access to myproject to run a custom build.)
+
 If you need to login as a different user, you can use command:
 
 ```
