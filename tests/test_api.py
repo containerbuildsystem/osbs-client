@@ -58,6 +58,11 @@ except ImportError:
     import http.client as httplib
 
 
+# Increment default arrangement version to allow for one
+# arrangement in development.
+INVALID_ARRANGEMENT_VERSION = DEFAULT_ARRANGEMENT_VERSION + 2
+
+
 def request_as_response(request):
     """
     Return the request as the response so we can check it
@@ -366,7 +371,7 @@ class TestOSBS(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
             .and_return(self.mock_repo_info()))
 
-        invalid_version = DEFAULT_ARRANGEMENT_VERSION + 1
+        invalid_version = INVALID_ARRANGEMENT_VERSION
         with pytest.raises(OsbsValidationException) as ex:
             osbs.create_worker_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
                                      git_branch=TEST_GIT_BRANCH, user=TEST_USER,
@@ -504,7 +509,7 @@ class TestOSBS(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
             .and_return(self.mock_repo_info()))
 
-        invalid_version = DEFAULT_ARRANGEMENT_VERSION + 1
+        invalid_version = INVALID_ARRANGEMENT_VERSION
         with pytest.raises(OsbsValidationException) as ex:
             osbs.create_orchestrator_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
                                            git_branch=TEST_GIT_BRANCH, user=TEST_USER,

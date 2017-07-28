@@ -341,9 +341,9 @@ def openshift(request):
 
 
 @pytest.fixture
-def osbs(openshift, kwargs=None, additional_config=None):
-    if kwargs is None:
-        kwargs = {}
+def osbs(openshift, kwargs=None, additional_config=None, platform_descriptors=None):
+    kwargs = kwargs or {}
+    platform_descriptors = platform_descriptors or {}
 
     kwargs.setdefault('build_json_dir', 'inputs')
     kwargs.setdefault('registry_uri', 'registry.example.com')
@@ -353,6 +353,7 @@ def osbs(openshift, kwargs=None, additional_config=None):
             [general]
             build_json_dir = {build_json_dir}
             {additional_general}
+
             [default]
             openshift_url = /
             registry_uri = {registry_uri}
@@ -364,11 +365,20 @@ def osbs(openshift, kwargs=None, additional_config=None):
             koji_root = http://koji.example.com/kojiroot
             koji_hub = http://koji.example.com/kojihub
             use_auth = false
-            can_orchestrate = true""")
+            can_orchestrate = true
+            """)
 
         if additional_config is not None:
-            config += '\n'
             config += additional_config
+            config += '\n'
+
+        for platform, platform_info in platform_descriptors.items():
+            if not platform_info:
+                continue
+
+            config += '[platform:{0}]\n'.format(platform)
+            for item, value in platform_info.items():
+                config += '{0} = {1}\n'.format(item, value)
 
         fp.write(config.format(**kwargs))
         fp.flush()
@@ -380,13 +390,14 @@ def osbs(openshift, kwargs=None, additional_config=None):
 
 
 @pytest.fixture
-def osbs_with_pulp(openshift):
+def osbs_with_pulp(openshift, platform_descriptors=None):
     additional_config = dedent("""\
         pulp_registry_name = pulp
         pulp_secret = secret""")
     kwargs = {'registry_uri': 'registry.example.com/v2'}
     return osbs(openshift, kwargs=kwargs,
-                additional_config=additional_config)
+                additional_config=additional_config,
+                platform_descriptors=platform_descriptors)
 
 
 @pytest.fixture
