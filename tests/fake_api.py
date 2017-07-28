@@ -18,8 +18,8 @@ from osbs.http import HttpResponse
 from osbs.conf import Configuration
 from osbs.api import OSBS
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD,
-                             TEST_GIT_BRANCH, TEST_BUILD_CONFIG,
-                             TEST_GIT_URI_HUMAN_NAME, TEST_KOJI_TASK_ID,
+                             TEST_GIT_BRANCH, TEST_BUILD_CONFIG, TEST_GIT_REF,
+                             TEST_GIT_URI_HUMAN_NAME, TEST_KOJI_TASK_ID, TEST_GIT_URI,
                              TEST_FILESYSTEM_KOJI_TASK_ID, TEST_IMAGESTREAM)
 from tempfile import NamedTemporaryFile
 from textwrap import dedent

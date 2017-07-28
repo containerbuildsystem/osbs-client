@@ -45,31 +45,6 @@ def print_json_nicely(decoded_json):
     print(json.dumps(decoded_json, indent=2))
 
 
-def check_provided_args(args, check, check_func, error_msg):
-    """Checks arguments against a check function
-
-    :param args: argparse.Namespace, all provided arguments
-    :param check: list<str>, each argument to check
-    :param check_func: filter function for items, where each item is a key-value tuple
-    :param error_msg: str, text for ValueError exception
-    :raises ValueError: when any of the required args are not provided
-    """
-    provided = dict((r, getattr(args, r)) for r in check)
-    checked = dict(filter(check_func, provided.items())).keys()
-    if checked:
-        raise ValueError(error_msg.format(', '.join(sorted(checked))))
-
-
-def check_unwanted_args(args, unwanted):
-    check_provided_args(args, unwanted, lambda item: item[-1],
-                        'Unwanted params: {0}')
-
-
-def check_required_args(args, required):
-    check_provided_args(args, required, lambda item: not item[-1],
-                        'Missing required params: {0}')
-
-
 def cmd_get_all_resource_quota(args, osbs):
     quota_name = args.QUOTA_NAME
     logger.debug("quota name = %s", quota_name)
@@ -347,22 +322,12 @@ def cmd_cancel_build(args, osbs):
 
 
 def cmd_build(args, osbs):
-    required_args = []
-    unwanted_args = []
     if args.worker:
-        required_args = ['platform', 'release', 'arrangement_version']
-        unwanted_args = ['platforms']
         create_func = osbs.create_worker_build
     elif args.orchestrator:
-        required_args = ['platforms']
-        unwanted_args = ['platform', 'release', 'arrangement_version']
         create_func = osbs.create_orchestrator_build
     else:
         create_func = osbs.create_prod_build
-        unwanted_args = ['platforms', 'platform', 'release', 'arrangement_version']
-
-    check_required_args(args, required_args)
-    check_unwanted_args(args, unwanted_args)
 
     build_kwargs = {
         'git_uri': osbs.build_conf.get_git_uri(),

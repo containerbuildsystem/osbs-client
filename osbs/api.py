@@ -219,7 +219,7 @@ class OSBS(object):
         # this should never happen, but if it does, we want to know all the builds
         #  that were running at the time
         builds = ', '.join(['%s: %s' % (b.get_build_name(), b.status) for b in builds])
-        msg = 'Multiple builds for %s running, can\'t proceed: %s' % \
+        msg = "Multiple builds for %s running, can't proceed: %s" % \
             (build_config_name, builds)
         return msg
 
@@ -280,7 +280,7 @@ class OSBS(object):
         if rb_len > 0:
             if rb_len == 1:
                 rb = running_builds[0]
-                msg = 'Build %s for %s in state %s, can\'t proceed.' % \
+                msg = "Build %s for %s in state %s, can't proceed." % \
                     (rb.get_build_name(), build_config_name, rb.status)
             else:
                 msg = self._panic_msg_for_more_running_builds(build_config_name, running_builds)
@@ -381,7 +381,7 @@ class OSBS(object):
                 existing_bc = self._get_existing_build_config(existing_bc)
 
         else:
-            logger.debug('build config for %s doesn\'t exist, creating...',
+            logger.debug("build config for %s doesn't exist, creating...",
                          build_config_name)
             existing_bc = self.os.create_build_config(json.dumps(build_json)).json()
 
@@ -614,6 +614,9 @@ class OSBS(object):
             raise ValueError("Worker build missing required parameters: %s" %
                              missing)
 
+        if kwargs.get('platforms'):
+            raise ValueError("Worker build called with unwanted platforms param")
+
         arrangement_version = kwargs['arrangement_version']
         kwargs.setdefault('inner_template', WORKER_INNER_TEMPLATE.format(
             arrangement_version=arrangement_version))
@@ -651,6 +654,10 @@ class OSBS(object):
         if not self.can_orchestrate():
             raise OsbsValidationException("can't create orchestrate build "
                                           "when can_orchestrate isn't enabled")
+        extra = [x for x in ('platform', 'release') if kwargs.get(x)]
+        if extra:
+            raise ValueError("Orchestrator build called with unwanted parameters: %s" %
+                             extra)
 
         arrangement_version = kwargs.setdefault('arrangement_version',
                                                 self.build_conf.get_arrangement_version())
