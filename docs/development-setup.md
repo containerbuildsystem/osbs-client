@@ -17,8 +17,11 @@ We'll use the `oc cluster up` method, since it's very easy to use:
     ```
     $ oc cluster up
     ```
-    (If you are running into some connection issues, please flush your iptables
-    rules bufore starting the cluster with `iptables -F`)
+    (If you are running into some connection issues, please see notes about firewalld
+    configuration in the [OpenShift documentation](https://github.com/openshift/origin/blob/master/docs/cluster_up_down.md).
+    It may be necessary to restart firewalld and docker after setting up the firewall
+    rules, or simply reboot. If all else fails, removing all firewall rules with
+    `iptables -F` may be useful, though this generally should not be needed.)
 
 
 ## Getting `osbs-client`
