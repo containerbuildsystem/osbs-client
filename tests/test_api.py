@@ -1817,13 +1817,13 @@ class TestOSBS(object):
         ("plat", 'rel', None, True, False, 1, False),
         ("plat", 'rel', None, True, False, None, True),
         # orchestrator build
-        (None, None, 'platforms', False, True, 1, True),
+        (None, None, 'platforms', False, True, 1, False),
         (None, None, 'platforms', False, True, None, False),
         # prod build
-        (None, None, None, False, False, 1, True),
+        (None, None, None, False, False, 1, False),
         (None, None, None, False, False, None, False),
     ])
-    def test_arrangement_version(self, osbs, platform, release, platforms,
+    def test_arrangement_version(self, caplog, osbs, platform, release, platforms,
                                  worker, orchestrator,
                                  arrangement_version, raises_exception):
         koji_upload_dir = 'upload' if worker else None
@@ -1839,6 +1839,9 @@ class TestOSBS(object):
                 self.orchestrator = orchestrator
                 self.scratch = None
                 self.koji_upload_dir = koji_upload_dir
+                self.git_uri = None
+                self.git_ref = None
+                self.git_branch = TEST_GIT_BRANCH
 
         expected_kwargs = {
             'platform': platform,
@@ -1847,18 +1850,23 @@ class TestOSBS(object):
             'release': release,
             'git_uri': None,
             'git_ref': None,
-            'git_branch': None,
+            'git_branch': TEST_GIT_BRANCH,
             'user': None,
             'tag': None,
             'target': None,
             'architecture': None,
             'yum_repourls': None,
         }
-        if worker:
+        if arrangement_version:
             expected_kwargs.update({
                 'arrangement_version': arrangement_version,
+            })
+        if koji_upload_dir:
+            expected_kwargs.update({
                 'koji_upload_dir': koji_upload_dir,
             })
+
+        flexmock(osbs.build_conf, get_git_branch=lambda: TEST_GIT_BRANCH)
 
         if not raises_exception:
             # and_raise is called to prevent cmd_build to continue
@@ -1885,9 +1893,11 @@ class TestOSBS(object):
                     .and_raise(CustomTestException))
 
         if raises_exception:
-            with pytest.raises(ValueError):
+            with pytest.raises(OsbsException) as exc_info:
                 cmd_build(MockArgs(platform, release, platforms, arrangement_version,
                           worker, orchestrator), osbs)
+            assert isinstance(exc_info.value.cause, ValueError)
+            assert "Worker build missing required parameters" in exc_info.value.message
         else:
             with pytest.raises(CustomTestException):
                 cmd_build(MockArgs(platform, release, platforms, arrangement_version,
