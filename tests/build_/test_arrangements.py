@@ -10,7 +10,8 @@ from __future__ import unicode_literals
 from osbs.api import OSBS
 from osbs.constants import (DEFAULT_ARRANGEMENT_VERSION,
                             ORCHESTRATOR_INNER_TEMPLATE,
-                            WORKER_INNER_TEMPLATE)
+                            WORKER_INNER_TEMPLATE,
+                            SECRETS_PATH)
 from osbs import utils
 from osbs.repo_utils import RepoInfo
 from tests.constants import (TEST_GIT_URI,
@@ -109,6 +110,13 @@ class ArrangementBase(object):
         plugins = get_plugins_from_build_json(build_json)
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, phase, name)
+
+    def get_pulp_sync_registry(self, conf):
+        """Return the docker registry used by pulp content sync."""
+        for registry_uri in conf.get_registry_uris():
+            registry = utils.RegistryURI(registry_uri)
+            if registry.version == 'v2':
+                return registry.docker_uri
 
 
 class TestArrangementV1(ArrangementBase):
@@ -667,3 +675,267 @@ class TestArrangementV3(TestArrangementV2):
 
         match_args = {}
         assert match_args == args
+
+
+class TestArrangementV4(TestArrangementV3):
+    """
+    Orchestrator build differences from arrangement version 3:
+    - tag_from_config enabled
+    - pulp_tag enabled
+    - pulp_sync enabled
+    - pulp_sync takes an additional "publish":false argument
+    - pulp_publish enabled
+    - pulp_pull enabled
+    - group_manifests enabled
+
+    Worker build differences from arrangement version 3:
+    - tag_from_config takes "tag_suffixes" argument
+    - tag_by_labels disabled
+    - pulp_push takes an additional "publish":false argument
+    - pulp_sync disabled
+    - pulp_pull disabled
+    - delete_from_registry disabled
+    """
+
+    ARRANGEMENT_VERSION = 4
+
+    DEFAULT_PLUGINS = {
+        # Changing this? Add test methods
+        ORCHESTRATOR_INNER_TEMPLATE: {
+            'prebuild_plugins': [
+                'reactor_config',
+                'add_filesystem',
+                'pull_base_image',
+                'bump_release',
+                'add_labels_in_dockerfile',
+                'koji_parent',
+            ],
+
+            'buildstep_plugins': [
+                'orchestrate_build',
+            ],
+
+            'prepublish_plugins': [
+            ],
+
+            'postbuild_plugins': [
+                'fetch_worker_metadata',
+                'tag_from_config',
+                'group_manifests',
+                'pulp_tag',
+                'pulp_sync',
+            ],
+
+            'exit_plugins': [
+                'pulp_publish',
+                'pulp_pull',
+                'delete_from_registry',
+                'koji_import',
+                'koji_tag_build',
+                'store_metadata_in_osv3',
+                'sendmail',
+                'remove_built_image',
+            ],
+        },
+
+        # Changing this? Add test methods
+        WORKER_INNER_TEMPLATE: {
+            'prebuild_plugins': [
+                'add_filesystem',
+                'pull_base_image',
+                'add_labels_in_dockerfile',
+                'change_from_in_dockerfile',
+                'add_help',
+                'add_dockerfile',
+                'distgit_fetch_artefacts',
+                'fetch_maven_artifacts',
+                'koji',
+                'add_yum_repo_by_url',
+                'inject_yum_repo',
+                'distribution_scope',
+            ],
+
+            'buildstep_plugins': [
+            ],
+
+            'prepublish_plugins': [
+                'squash',
+            ],
+
+            'postbuild_plugins': [
+                'all_rpm_packages',
+                'tag_from_config',
+                'tag_and_push',
+                'pulp_push',
+                'compress',
+                'koji_upload',
+            ],
+
+            'exit_plugins': [
+                'store_metadata_in_osv3',
+                'remove_built_image',
+            ],
+        },
+    }
+
+    # Arrangement 4 is not yet ready to be default. Once it is, this skip
+    # decorator should be deleted and test_is_default from previous arrangement
+    # test collection removed.
+    @pytest.mark.skip('Arrangement 4 is not ready to be default!')
+    def test_is_default(self):
+        """
+        Test this is the default arrangement
+        """
+
+        # Note! If this test fails it probably means you need to
+        # derive a new TestArrangementV[n] class from this class and
+        # move the method to the new class.
+        assert DEFAULT_ARRANGEMENT_VERSION == self.ARRANGEMENT_VERSION
+
+    @pytest.mark.parametrize(('params', 'build_type', 'has_plat_tag',  # noqa:F811
+                              'has_primary_tag'), (
+        ({}, 'orchestrator', False, True),
+        ({'scratch': True}, 'orchestrator', False, False),
+        ({'platform': 'x86_64'}, 'worker', True, False),
+        ({'platform': 'x86_64', 'scratch': True}, 'worker', True, False),
+    ))
+    def test_tag_from_config(self, osbs, params, build_type, has_plat_tag, has_primary_tag):
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        additional_params.update(params)
+        _, build_json = self.get_build_request(build_type, osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        args = plugin_value_get(plugins, 'postbuild_plugins', 'tag_from_config', 'args')
+
+        assert set(args.keys()) == set(['tag_suffixes'])
+        assert set(args['tag_suffixes'].keys()) == set(['unique', 'primary'])
+
+        unique_tags = args['tag_suffixes']['unique']
+        assert len(unique_tags) == 1
+        unique_tag_suffix = ''
+        if has_plat_tag:
+            unique_tag_suffix = '-' + additional_params.get('platform')
+        assert unique_tags[0].endswith(unique_tag_suffix)
+
+        primary_tags = args['tag_suffixes']['primary']
+        if has_primary_tag:
+            assert set(primary_tags) == set(['latest', '{version}', '{version}-{release}'])
+
+    def test_pulp_push(self, openshift):  # noqa:F811
+        platform_descriptors = {'x86_64': {'enable_v1': True}}
+        osbs_api = osbs_with_pulp(openshift, platform_descriptors=platform_descriptors)
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        _, build_json = self.get_worker_build_request(osbs_api, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        args = plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push', 'args')
+
+        build_conf = osbs_api.build_conf
+        # Use first docker registry and strip off /v2
+        pulp_registry_name = build_conf.get_pulp_registry()
+        pulp_secret_path = '/'.join([SECRETS_PATH, build_conf.get_pulp_secret()])
+
+        expected_args = {
+            'pulp_registry_name': pulp_registry_name,
+            'pulp_secret_path': pulp_secret_path,
+            'load_exported_image': True,
+            'dockpulp_loglevel': 'INFO',
+            'publish': False
+        }
+
+        assert args == expected_args
+
+    def test_pulp_tag(self, osbs_with_pulp):  # noqa:F811
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        _, build_json = self.get_orchestrator_build_request(osbs_with_pulp, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        args = plugin_value_get(plugins, 'postbuild_plugins', 'pulp_tag', 'args')
+
+        assert args == {}
+
+    def test_pulp_sync(self, osbs_with_pulp):  # noqa:F811
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        _, build_json = self.get_orchestrator_build_request(osbs_with_pulp, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        args = plugin_value_get(plugins, 'postbuild_plugins', 'pulp_sync', 'args')
+
+        build_conf = osbs_with_pulp.build_conf
+        docker_registry = self.get_pulp_sync_registry(build_conf)
+        pulp_registry_name = build_conf.get_pulp_registry()
+        pulp_secret_path = '/'.join([SECRETS_PATH, build_conf.get_pulp_secret()])
+        expected_args = {
+            'docker_registry': docker_registry,
+            'pulp_registry_name': pulp_registry_name,
+            'pulp_secret_path': pulp_secret_path,
+            'dockpulp_loglevel': 'INFO',
+            'publish': False
+        }
+
+        assert args == expected_args
+
+    def test_pulp_publish(self, osbs_with_pulp):  # noqa:F811
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        _, build_json = self.get_orchestrator_build_request(osbs_with_pulp, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        args = plugin_value_get(plugins, 'exit_plugins', 'pulp_publish', 'args')
+        expected_args = {}
+        assert args == expected_args
+
+    def test_pulp_pull(self, osbs_with_pulp):  # noqa:F811
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        _, build_json = self.get_orchestrator_build_request(osbs_with_pulp, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        args = plugin_value_get(plugins, 'exit_plugins', 'pulp_pull', 'args')
+        expected_args = {'insecure': True}
+        assert args == expected_args
+
+    @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
+    @pytest.mark.parametrize('base_image', ['koji/image-build', 'foo'])
+    def test_delete_from_registry(self, osbs_with_pulp, base_image, scratch):
+        phase = 'exit_plugins'
+        plugin = 'delete_from_registry'
+        additional_params = {
+            'base_image': base_image,
+        }
+        if scratch:
+            additional_params['scratch'] = True
+
+        _, build_json = self.get_orchestrator_build_request(osbs_with_pulp, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+        args = plugin_value_get(plugins, phase, plugin, 'args')
+
+        docker_registry = self.get_pulp_sync_registry(osbs_with_pulp.build_conf)
+        assert args == {'registries': {docker_registry: {}}}
+
+    def test_group_manifests(self, openshift):  # noqa:F811
+        platform_descriptors = {'x86_64': {'architecture': 'amd64'}}
+        osbs_api = osbs_with_pulp(openshift, platform_descriptors=platform_descriptors)
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        _, build_json = self.get_orchestrator_build_request(osbs_api, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        args = plugin_value_get(plugins, 'postbuild_plugins', 'group_manifests', 'args')
+        expected_args = {
+            'goarch': {'x86_64': 'amd64'},
+            'group': False,
+            'pulp_registry_name': osbs_api.build_conf.get_pulp_registry()
+        }
+        assert args == expected_args
