@@ -33,7 +33,9 @@ from tests.constants import (INPUTS_PATH, TEST_BUILD_CONFIG, TEST_BUILD_JSON,
                              TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
                              TEST_GIT_URI, TEST_GIT_URI_HUMAN_NAME,
                              TEST_FILESYSTEM_KOJI_TASK_ID, TEST_SCRATCH_BUILD_NAME,
-                             TEST_ISOLATED_BUILD_NAME)
+                             TEST_ISOLATED_BUILD_NAME,
+                             TEST_MODULE_NAME, TEST_MODULE_STREAM, TEST_MODULE_VERSION,
+                             TEST_FLATPAK_BASE_IMAGE)
 
 USE_DEFAULT_TRIGGERS = object()
 
@@ -620,6 +622,12 @@ class TestBuildRequest(object):
             with pytest.raises(KeyError):
                 plugin_value_get(plugins, "prebuild_plugins", "koji", "args", "proxy")
 
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
+        assert get_plugin(plugins, "prepublish_plugins", "squash")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
+
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries", "registry.example.com") == {"insecure": True}
         with pytest.raises(NoSuchPluginException):
@@ -1189,6 +1197,60 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
 
+    @pytest.mark.parametrize('pdc_insecure', [False, True, None])
+    def test_render_prod_flatpak(self, pdc_insecure):
+        build_request = BuildRequest(INPUTS_PATH)
+
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'flatpak': True,
+            'module': TEST_MODULE_NAME + ":" + TEST_MODULE_STREAM + ":" + TEST_MODULE_VERSION,
+            'module_compose_url':
+                "http://download.example.com/composes/{name}-{stream}-{version}/",
+            'flatpak_base_image': TEST_FLATPAK_BASE_IMAGE,
+            'pdc_url': "https://pdc.fedoraproject.org/rest_api/v1",
+            'user': "john-foo",
+            'base_image': TEST_FLATPAK_BASE_IMAGE,
+            'name_label': 'fedora/resultingimage',
+            'registry_uri': "registry.example.com",
+            'nfs_server_path': "server:path",
+            'openshift_uri': "http://openshift/",
+            'builder_openshift_url': "http://openshift/",
+            'koji_target': "koji-target",
+            'kojiroot': "http://root/",
+            'kojihub': "http://hub/",
+            'sources_command': "make",
+            'vendor': "Foo Vendor",
+            'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
+            'registry_api_versions': ['v2'],
+        }
+        if pdc_insecure is not None:
+            kwargs['pdc_insecure'] = pdc_insecure
+
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+
+        plugins = get_plugins_from_build_json(build_json)
+
+        plugin = get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
+        assert plugin
+
+        args = plugin['args']
+        assert args['module_name'] == TEST_MODULE_NAME
+        assert args['module_stream'] == TEST_MODULE_STREAM
+        assert args['module_version'] == TEST_MODULE_VERSION
+        assert args['base_image'] == TEST_FLATPAK_BASE_IMAGE
+        assert args['compose_url'] == kwargs['module_compose_url']
+        assert args['pdc_url'] == kwargs['pdc_url']
+        assert args['pdc_insecure'] == (False if pdc_insecure is None else pdc_insecure)
+
+        assert get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
+        with pytest.raises(NoSuchPluginException):
+            assert get_plugin(plugins, "prepublish_plugins", "squash")
+
     @pytest.mark.parametrize(('hub', 'disabled', 'release'), [
         ('http://hub/', False, None),
         ('http://hub/', False, '1.2.1'),
@@ -1483,6 +1545,15 @@ class TestBuildRequest(object):
             'artifacts_allowed_domains': ['foo.domain.com/bar', 'bar.domain.com/foo'],
             'yum_proxy': 'http://proxy:3128',
         },
+        {
+            'flatpak': True,
+            'module': TEST_MODULE_NAME + ":" + TEST_MODULE_STREAM + ":" + TEST_MODULE_VERSION,
+            'module_compose_url':
+                "http://download.example.com/composes/{name}-{stream}-{version}/",
+            'flatpak_base_image': "fedora:latest",
+            'pdc_url': "https://pdc.fedoraproject.org/rest_api/v1",
+            'pdc_insecure': True,
+        },
         {}
     ))
     @pytest.mark.parametrize('prefer_schema1_digest', [True, False, None])
@@ -1593,6 +1664,14 @@ class TestBuildRequest(object):
                     worker_config.get_openshift_required_version())
             assert (kwargs.get('prefer_schema1_digest') ==
                     worker_config.get_prefer_schema1_digest())
+
+            if kwargs.get('flatpak', False):
+                assert kwargs.get('flatpak') is True
+                assert kwargs.get('module') == build_kwargs.get('module')
+                assert kwargs.get('module_compose_url') == worker_config.get_module_compose_url()
+                assert kwargs.get('flatpak_base_image') == worker_config.get_flatpak_base_image()
+                assert kwargs.get('pdc_url') == worker_config.get_pdc_url()
+                assert kwargs.get('pdc_insecure') == worker_config.get_pdc_insecure()
 
     def test_render_prod_with_pulp_no_auth(self):
         """

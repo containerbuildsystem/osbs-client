@@ -22,7 +22,7 @@ from osbs.constants import (SECRETS_PATH, DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_
                             ISOLATED_RELEASE_FORMAT)
 from osbs.exceptions import OsbsException, OsbsValidationException
 from osbs.utils import (git_repo_humanish_part_from_uri, wrap_name_from_git, sanitize_version,
-                        Labels)
+                        split_module_spec, Labels)
 from osbs import __version__ as client_version
 
 
@@ -80,6 +80,9 @@ class BuildRequest(object):
         :param kojihub: str, URL of the koji hub
         :param koji_certs_secret: str, resource name of secret that holds the koji certificates
         :param koji_task_id: int, Koji Task that created this build config
+        :param flatpak: if we should build a Flatpak OCI Image
+        :param module: module to build a flatpak against
+        :param module_compose_url: URL to a yum repository for the given module
         :param filesystem_koji_task_id: int, Koji Task that created the base filesystem
         :param pulp_registry: str, name of pulp registry in dockpulp.conf
         :param nfs_server_path: str, NFS server and path
@@ -255,6 +258,10 @@ class BuildRequest(object):
             'isolated': self.isolated,
         }
 
+        if self.spec.flatpak.value:
+            build_kwargs['flatpak'] = True
+            build_kwargs['module'] = self.spec.module.value
+
         self.dj.dock_json_set_arg(phase, plugin, 'platforms', self.spec.platforms.value)
         self.dj.dock_json_set_arg(phase, plugin, 'build_kwargs', build_kwargs)
 
@@ -273,6 +280,10 @@ class BuildRequest(object):
             'koji_hub': self.spec.kojihub.value,
             'koji_root': self.spec.kojiroot.value,
             'openshift_required_version': sanitize_version(self._openshift_required_version),
+            'module_compose_url': self.spec.module_compose_url.value,
+            'flatpak_base_image': self.spec.flatpak_base_image.value,
+            'pdc_url': self.spec.pdc_url.value,
+            'pdc_insecure': self.spec.pdc_insecure.value,
             'pulp_registry_name': self.spec.pulp_registry.value,
             'prefer_schema1_digest': self.spec.prefer_schema1_digest.value,
             'registry_api_versions': ','.join(self.spec.registry_api_versions.value or []) or None,
@@ -645,6 +656,51 @@ class BuildRequest(object):
             else:
                 raise RuntimeError('when autorebuild is enabled in repo configuration, '
                                    '"release" label must not be set in Dockerfile')
+
+    def render_flatpak_create_dockerfile(self):
+        phase = 'prebuild_plugins'
+        plugin = 'flatpak_create_dockerfile'
+
+        if self.dj.dock_json_has_plugin_conf(phase, plugin):
+            if not self.spec.flatpak.value:
+                self.dj.remove_plugin(phase, plugin)
+                return
+
+            module_name, module_stream, module_version = split_module_spec(self.spec.module.value)
+
+            self.dj.dock_json_set_arg(phase, plugin, 'module_name',
+                                      module_name)
+            self.dj.dock_json_set_arg(phase, plugin, 'module_stream',
+                                      module_stream)
+            if module_version is not None:
+                self.dj.dock_json_set_arg(phase, plugin, 'module_version',
+                                          module_version)
+            self.dj.dock_json_set_arg(phase, plugin, 'base_image',
+                                      self.spec.flatpak_base_image.value)
+            self.dj.dock_json_set_arg(phase, plugin, 'compose_url',
+                                      self.spec.module_compose_url.value)
+            self.dj.dock_json_set_arg(phase, plugin, 'pdc_url',
+                                      self.spec.pdc_url.value)
+            self.dj.dock_json_set_arg(phase, plugin, 'pdc_insecure',
+                                      self.spec.pdc_insecure.value)
+
+    def render_squash(self):
+        phase = 'prepublish_plugins'
+        plugin = 'squash'
+
+        if self.spec.flatpak.value:
+            # We'll extract the filesystem anyways for a Flatpak instead of exporting
+            # the docker image directly, so squash just slows things down.
+            self.dj.remove_plugin(phase, plugin)
+            return
+
+    def render_flatpak_create_oci(self):
+        phase = 'prepublish_plugins'
+        plugin = 'flatpak_create_oci'
+
+        if not self.spec.flatpak.value:
+            self.dj.remove_plugin(phase, plugin)
+            return
 
     def render_add_filesystem(self):
         phase = 'prebuild_plugins'
@@ -1507,6 +1563,9 @@ class BuildRequest(object):
         use_auth = self.spec.use_auth.value
         self.render_reactor_config()
         self.render_orchestrate_build()
+        self.render_flatpak_create_dockerfile()
+        self.render_squash()
+        self.render_flatpak_create_oci()
         self.render_add_filesystem()
         self.render_add_labels_in_dockerfile()
         self.render_koji()

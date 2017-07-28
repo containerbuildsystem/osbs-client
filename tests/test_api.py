@@ -46,7 +46,8 @@ from osbs.repo_utils import RepoInfo
 from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
                              TEST_GIT_URI, TEST_TARGET, TEST_USER, INPUTS_PATH,
                              TEST_KOJI_TASK_ID, TEST_FILESYSTEM_KOJI_TASK_ID, TEST_VERSION,
-                             TEST_ORCHESTRATOR_BUILD)
+                             TEST_ORCHESTRATOR_BUILD,
+                             TEST_MODULE_NAME, TEST_MODULE_VERSION, TEST_MODULE_STREAM)
 from osbs.core import Openshift
 # These are used as fixtures
 from tests.fake_api import openshift, osbs, osbs106, osbs_cant_orchestrate  # noqa
@@ -427,10 +428,12 @@ class TestOSBS(object):
         (['spam'], False),
         (['spam', 'bacon'], False),
     ))
+    @pytest.mark.parametrize(('flatpak'), (True, False))
     def test_create_orchestrator_build(self, osbs, inner_template_fmt,
                                        outer_template, customize_conf,
                                        arrangement_version,
-                                       platforms, raises_exception):
+                                       platforms, raises_exception,
+                                       flatpak):
         branch = TEST_GIT_BRANCH
         (flexmock(utils)
             .should_receive('get_repo_info')
@@ -455,6 +458,11 @@ class TestOSBS(object):
         if customize_conf is not None:
             kwargs['customize_conf'] = customize_conf
 
+        if flatpak:
+            kwargs['flatpak'] = True
+            kwargs['module'] = \
+                TEST_MODULE_NAME + ':' + TEST_MODULE_STREAM + ':' + TEST_MODULE_VERSION,
+
         expected_kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -469,6 +477,11 @@ class TestOSBS(object):
             'arrangement_version': DEFAULT_ARRANGEMENT_VERSION,
             'release': '1'
         }
+
+        if flatpak:
+            expected_kwargs['flatpak'] = True
+            expected_kwargs['module'] = \
+                TEST_MODULE_NAME + ':' + TEST_MODULE_STREAM + ':' + TEST_MODULE_VERSION,
 
         (flexmock(osbs)
             .should_receive('_do_create_prod_build')
@@ -1570,6 +1583,30 @@ class TestOSBS(object):
         build_response = osbs_obj._create_build_config_and_build(build_request)
         assert build_response.json == {'spam': 'maps'}
 
+    # osbs is a fixture here
+    def test_create_build_flatpak(self, osbs):  # noqa
+        (flexmock(utils)
+            .should_receive('get_repo_info')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(self.mock_repo_info()))
+
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'flatpak': True,
+            'module': TEST_MODULE_NAME + ':' + TEST_MODULE_STREAM + ':' + TEST_MODULE_VERSION,
+            'user': TEST_USER,
+            'component': TEST_COMPONENT,
+            'architecture': TEST_ARCH,
+            'yum_repourls': None,
+            'koji_task_id': None,
+            'scratch': False,
+        }
+
+        response = osbs.create_build(**kwargs)
+        assert isinstance(response, BuildResponse)
+
     @pytest.mark.parametrize(('kind', 'expect_name'), [
         ('ImageStreamTag', 'registry:5000/buildroot:latest'),
         ('DockerImage', 'buildroot:latest'),
@@ -1839,6 +1876,7 @@ class TestOSBS(object):
                 self.git_ref = None
                 self.git_branch = TEST_GIT_BRANCH
                 self.koji_parent_build = None
+                self.flatpak = False
 
         expected_kwargs = {
             'platform': platform,

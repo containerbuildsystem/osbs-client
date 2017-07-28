@@ -38,7 +38,7 @@ except ImportError:
     from calendar import timegm
 
 from dockerfile_parse import DockerfileParser
-from osbs.exceptions import OsbsException, OsbsResponseException
+from osbs.exceptions import OsbsException, OsbsResponseException, OsbsValidationException
 
 logger = logging.getLogger(__name__)
 
@@ -452,6 +452,17 @@ def sanitize_version(version):
     major, minor, micro = parts[:3]
     cleaned_version = '{0}.{1}.{2}'.format(major, minor, micro)
     return cleaned_version
+
+
+def split_module_spec(module):
+    pieces = module.split(':')
+    if len(pieces) == 2:
+        return pieces[0], pieces[1], None
+    elif len(pieces) == 3:
+        return pieces[0], pieces[1], pieces[2]
+    else:
+        raise OsbsValidationException(
+            'Module specification should be NAME:STREAM or NAME:STREAM:VERSION')
 
 
 class Labels(object):

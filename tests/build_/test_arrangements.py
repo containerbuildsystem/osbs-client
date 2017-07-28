@@ -25,6 +25,10 @@ from tests.constants import (TEST_GIT_URI,
                              TEST_COMPONENT,
                              TEST_VERSION,
                              TEST_FILESYSTEM_KOJI_TASK_ID,
+                             TEST_MODULE_NAME,
+                             TEST_MODULE_STREAM,
+                             TEST_MODULE_VERSION,
+                             TEST_FLATPAK_BASE_IMAGE,
                              INPUTS_PATH)
 from tests.fake_api import openshift, osbs, osbs_with_pulp  # noqa:F401
 from tests.test_api import request_as_response
@@ -762,6 +766,7 @@ class TestArrangementV4(TestArrangementV3):
         ORCHESTRATOR_INNER_TEMPLATE: {
             'prebuild_plugins': [
                 'reactor_config',
+                'flatpak_create_dockerfile',
                 'add_filesystem',
                 'inject_parent_image',
                 'pull_base_image',
@@ -802,6 +807,7 @@ class TestArrangementV4(TestArrangementV3):
         # Changing this? Add test methods
         WORKER_INNER_TEMPLATE: {
             'prebuild_plugins': [
+                'flatpak_create_dockerfile',
                 'add_filesystem',
                 'inject_parent_image',
                 'pull_base_image',
@@ -822,6 +828,7 @@ class TestArrangementV4(TestArrangementV3):
 
             'prepublish_plugins': [
                 'squash',
+                'flatpak_create_oci',
             ],
 
             'postbuild_plugins': [
@@ -1086,3 +1093,44 @@ class TestArrangementV4(TestArrangementV3):
             'koji_hub': osbs.build_conf.get_kojihub()
         }
         assert args == expected_args
+
+    @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
+    def test_flatpak(self, osbs, scratch):
+        additional_params = {
+            'flatpak': True,
+            'module': TEST_MODULE_NAME + ":" + TEST_MODULE_STREAM + ":" + TEST_MODULE_VERSION
+        }
+        if scratch:
+            additional_params['scratch'] = True
+        params, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        args = plugin_value_get(plugins, 'prebuild_plugins',
+                                'flatpak_create_dockerfile', 'args')
+
+        compose_url = "http://download.example.com/composes/{name}-{stream}-{version}/"
+        pdc_url = "https://pdc.example.com/rest_api/v1"
+        pdc_insecure = False
+
+        match_args = {
+            'module_name': TEST_MODULE_NAME,
+            'module_stream': TEST_MODULE_STREAM,
+            'module_version': TEST_MODULE_VERSION,
+            "base_image": TEST_FLATPAK_BASE_IMAGE,
+            "compose_url": compose_url,
+            "pdc_url": pdc_url,
+            "pdc_insecure": pdc_insecure
+        }
+        assert match_args == args
+
+        args = plugin_value_get(plugins, 'buildstep_plugins',
+                                'orchestrate_build', 'args')
+        build_kwargs = args['build_kwargs']
+        assert build_kwargs['flatpak'] is True
+        assert build_kwargs['module'] == additional_params['module']
+
+        config_kwargs = args['config_kwargs']
+        assert config_kwargs['flatpak_base_image'] == TEST_FLATPAK_BASE_IMAGE
+        assert config_kwargs['module_compose_url'] == compose_url
+        assert config_kwargs['pdc_url'] == pdc_url
+        assert config_kwargs['pdc_insecure'] == str(pdc_insecure)

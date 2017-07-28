@@ -2,6 +2,17 @@
   "client_version": "{{VERSION}}",
   "prebuild_plugins": [
     {
+      "name": "flatpak_create_dockerfile",
+      "args": {
+        "module_name": "{{MODULE_NAME}}",
+        "module_stream": "{{MODULE_STREAM}}",
+        "base_image": "{{BASE_IMAGE}}",
+        "compose_url": "{{MODULE_COMPOSE_URL}}",
+        "pdc_url": "{{PDC_URL}}",
+        "pdc_insecure": "{{PDC_INSECURE}}"
+      }
+    },
+    {
       "name": "add_filesystem",
       "args": {
         "koji_hub": "{{KOJI_HUB}}",
@@ -75,6 +86,9 @@
   "prepublish_plugins": [
     {
       "name": "squash"
+    },
+    {
+      "name": "flatpak_create_oci"
     }
   ],
   "postbuild_plugins": [

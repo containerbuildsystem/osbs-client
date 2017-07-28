@@ -194,6 +194,26 @@ class Configuration(object):
         return self._get_value("namespace", self.conf_section, "namespace",
                                default=DEFAULT_NAMESPACE)
 
+    def get_flatpak(self):
+        return self._get_value("flatpak", self.conf_section, "flatpak",
+                               is_bool_val=True)
+
+    def get_module(self):
+        return self._get_value("module", self.conf_section, "module")
+
+    def get_module_compose_url(self):
+        return self._get_value("module_compose_url", self.conf_section, "module_compose_url")
+
+    def get_flatpak_base_image(self):
+        return self._get_value("flatpak_base_image", self.conf_section, "flatpak_base_image")
+
+    def get_pdc_url(self):
+        return self._get_value("pdc_url", self.conf_section, "pdc_url")
+
+    def get_pdc_insecure(self):
+        return self._get_value("pdc_insecure", self.conf_section, "pdc_insecure",
+                               default=False, is_bool_val=True)
+
     def get_kojiroot(self):
         return self._get_value("koji_root", self.conf_section, "koji_root")
 
