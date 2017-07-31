@@ -9,6 +9,7 @@ of the BSD license. See the LICENSE file for details.
 from contextlib import contextmanager
 from flexmock import flexmock
 import argparse
+from copy import deepcopy
 from osbs.conf import Configuration
 from osbs import utils
 from osbs.exceptions import OsbsValidationException
@@ -404,15 +405,15 @@ class TestConfiguration(object):
         ('',
          {},
          {},
-         None),
+         {}),
         ('',
          {'default': {'node_selector.expense': 'ride=taxi.com'}},
          {},
-         None),
+         {}),
         ('',
          {'default': {}},
          {'node_selector.expense': 'ride=taxi.com'},
-         None),
+         {}),
         ('meal',
          {'default': {'node_selector.meal': 'breakfast=eggs.com',
                       'node_selector.expense': 'ride=taxi.com'}},
@@ -434,11 +435,11 @@ class TestConfiguration(object):
         ('meal',
          {'default': {}},
          {'node_selector.expense': 'ride=taxi.com'},
-         None),
+         {}),
         ('meal',
          {'default': {'node_selector.meal': 'none'}},
          {'node_selector.expense': 'ride=taxi.com'},
-         None),
+         {}),
     ])
     def test_get_node_selector_platform(self, platform, kwargs, config, expected):
         with self.config_file(config) as config_file:
@@ -492,3 +493,28 @@ class TestConfiguration(object):
             else:
                 with pytest.raises(OsbsValidationException):
                     conf.get_registry_api_versions(platform)
+
+    @pytest.mark.parametrize('nodeselector_type', [
+        'scratch_build_node_selector',
+        'explicit_build_node_selector',
+        'auto_build_node_selector',
+    ])
+    @pytest.mark.parametrize(('config', 'expected'), [
+        ({},
+         {}),
+        ({'default': {}},
+         {}),
+        ({'default': {'node_selector': 'breakfast=eggs.com'}},
+         {'breakfast': 'eggs.com'}),
+        ({'default': {'node_selector': 'breakfast=eggs.com, lunch=ham.com'}},
+         {'breakfast': 'eggs.com', 'lunch': 'ham.com'}),
+    ])
+    def test_get_node_selector_types(self, nodeselector_type, config, expected):
+        myconfig = deepcopy(config)
+        if 'default' in myconfig:
+            if 'node_selector' in myconfig['default']:
+                myconfig['default'][nodeselector_type] = myconfig['default'].pop('node_selector')
+
+        with self.config_file(myconfig) as config_file:
+            conf = Configuration(conf_file=config_file)
+            assert getattr(conf, "get_" + nodeselector_type)() == expected

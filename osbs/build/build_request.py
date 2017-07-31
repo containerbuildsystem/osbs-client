@@ -61,7 +61,10 @@ class BuildRequest(object):
         # For the koji "scratch" build type
         self.scratch = None
         self.base_image = None
-        self.low_priority_node_selector = None
+        self.scratch_build_node_selector = None
+        self.explicit_build_node_selector = None
+        self.auto_build_node_selector = None
+        self.is_auto = None
         # forward reference
         self.platform_node_selector = None
         self.platform_descriptors = None
@@ -90,9 +93,12 @@ class BuildRequest(object):
         :param distribution_scope: str, distribution scope for this image
                                    (private, authoritative-source-only, restricted, public)
         :param use_auth: bool, use auth from atomic-reactor?
-        :param low_priority_node_selector: dict, a nodeselector for builds with lower priority
         :param platform_node_selector: dict, a nodeselector for a specific platform
         :param platform_descriptors: dict, platforms and their archiectures and enable_v1 settings
+        :param scratch_build_node_selector: dict, a nodeselector for scratch builds
+        :param explicit_build_node_selector: dict, a nodeselector for explicit builds
+        :param auto_build_node_selector: dict, a nodeselector for auto builds
+        :param is_auto: bool, indicates if build is auto build
         """
 
         # Here we cater to the koji "scratch" build type, this will disable
@@ -103,9 +109,12 @@ class BuildRequest(object):
             pass
 
         self.base_image = kwargs.get('base_image')
-        self.low_priority_node_selector = kwargs.get('low_priority_node_selector')
         self.platform_node_selector = kwargs.get('platform_node_selector', {})
         self.platform_descriptors = kwargs.get('platform_descriptors', {})
+        self.scratch_build_node_selector = kwargs.get('scratch_build_node_selector', {})
+        self.explicit_build_node_selector = kwargs.get('explicit_build_node_selector', {})
+        self.auto_build_node_selector = kwargs.get('auto_build_node_selector', {})
+        self.is_auto = kwargs.get('is_auto', False)
 
         logger.debug("setting params '%s' for %s", kwargs, self.spec)
         self.spec.set_params(**kwargs)
@@ -1158,6 +1167,24 @@ class BuildRequest(object):
         # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
         self.template['metadata']['name'] = name
 
+    def render_node_selectors(self):
+        # for worker builds set nodeselectors
+        if self.spec.platforms.value is None:
+
+            # auto or explicit build selector
+            if self.is_auto:
+                self.template['spec']['nodeSelector'] = self.auto_build_node_selector
+            # scratch build nodeselector
+            elif self.scratch:
+                self.template['spec']['nodeSelector'] = self.scratch_build_node_selector
+            # explicit build nodeselector
+            else:
+                self.template['spec']['nodeSelector'] = self.explicit_build_node_selector
+
+            # platform nodeselector
+            if self.platform_node_selector:
+                self.template['spec']['nodeSelector'].update(self.platform_node_selector)
+
     def render(self, validate=True):
         if validate:
             self.spec.validate()
@@ -1300,8 +1327,6 @@ class BuildRequest(object):
         if koji_task_id is not None:
             self.set_label('koji-task-id', str(koji_task_id))
 
-        self.template['spec']['nodeSelector'] = self.platform_node_selector
-
         use_auth = self.spec.use_auth.value
         self.render_reactor_config()
         self.render_orchestrate_build()
@@ -1323,6 +1348,7 @@ class BuildRequest(object):
         self.render_fetch_maven_artifacts()
         self.render_tag_from_config()
         self.render_version()
+        self.render_node_selectors()
 
         self.dj.write_dock_json()
         self.build_json = self.template

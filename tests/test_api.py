@@ -1565,8 +1565,8 @@ class TestOSBS(object):
         build_request = flexmock(
             render=lambda: build_json,
             has_ist_trigger=lambda: False,
-            scratch=True,
-            low_priority_node_selector=None)
+            scratch=True
+            )
 
         updated_build_json = copy.deepcopy(build_json)
         updated_build_json['kind'] = 'Build'
@@ -1595,92 +1595,6 @@ class TestOSBS(object):
 
         def verify_build_json(passed_build_json):
             assert passed_build_json == updated_build_json
-            return flexmock(json=lambda: {'spam': 'maps'})
-
-        (flexmock(osbs_obj.os)
-            .should_receive('create_build')
-            .replace_with(verify_build_json)
-            .once())
-
-        (flexmock(osbs_obj.os)
-            .should_receive('create_build_config')
-            .never())
-
-        (flexmock(osbs_obj.os)
-            .should_receive('update_build_config')
-            .never())
-
-        build_response = osbs_obj._create_scratch_build(build_request)
-        assert build_response.json == {'spam': 'maps'}
-
-    @pytest.mark.parametrize(('platform', 'platform_nodeselector', 'platform_nodeselector_dict',
-                              'lowpriority_nodeselector', 'lowpriority_nodeselector_dict'), [
-        (None, '', {}, None, {}),
-        (None, '', {}, 'foo=  bar', {'foo': 'bar'}),
-        (None, '', {}, 'foo=bar ,  baz=foo', {'foo': 'bar', 'baz': 'foo'}),
-        ('meal', 'breakfast=bacon.com, lunch=ham.com',
-         {'breakfast': 'bacon.com', 'lunch': 'ham.com'}, None, {}),
-        ('meal', 'breakfast=bacon.com, lunch=ham.com',
-         {'breakfast': 'bacon.com', 'lunch': 'ham.com'}, 'foo=  bar', {'foo': 'bar'}),
-        ('meal', 'breakfast=bacon.com, lunch=ham.com',
-         {'breakfast': 'bacon.com', 'lunch': 'ham.com'}, 'foo=bar ,  baz=foo',
-         {'foo': 'bar', 'baz': 'foo'}),
-    ])
-    def test_scratch_build_nodeselector(self, platform, platform_nodeselector,
-                                        platform_nodeselector_dict,
-                                        lowpriority_nodeselector, lowpriority_nodeselector_dict):
-        if platform or lowpriority_nodeselector:
-            with NamedTemporaryFile(mode='wt') as fp:
-                fp.write(dedent("""\
-                    [general]
-                    build_json_dir = {inputs}
-                    [default]
-                    """.format(inputs=INPUTS_PATH)))
-                if platform:
-                    fp.write(dedent("""\
-                        node_selector.{platform_str} = {platform_nodeselector_str}
-                    """.format(platform_str=platform,
-                               platform_nodeselector_str=platform_nodeselector)))
-                if lowpriority_nodeselector:
-                    fp.write(dedent("""\
-                        low_priority_node_selector = {lowpriority_nodeselector_str}
-                    """.format(lowpriority_nodeselector_str=lowpriority_nodeselector)))
-                fp.flush()
-                config = Configuration(fp.name)
-        else:
-            config = Configuration()
-        osbs_obj = OSBS(config, config)
-
-        build_request = BuildRequest(INPUTS_PATH)
-        kwargs = get_sample_prod_params()
-        kwargs['scratch'] = True
-        kwargs['low_priority_node_selector'] = config.get_low_priority_node_selector()
-        if platform:
-            kwargs['platform_node_selector'] = config.get_platform_node_selector(platform)
-        build_request.set_params(**kwargs)
-        build_request_copy = copy.deepcopy(build_request)
-        build_json = build_request_copy.render()
-
-        updated_build_json = copy.deepcopy(build_json)
-        updated_build_json['kind'] = 'Build'
-        updated_build_json['metadata']['labels']['scratch'] = 'true'
-        updated_build_json['spec']['serviceAccount'] = 'builder'
-        if lowpriority_nodeselector_dict:
-            updated_build_json['spec']['nodeSelector'].update(lowpriority_nodeselector_dict)
-        build_name = 'scratch-%s' % datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-        updated_build_json['metadata']['name'] = build_name
-
-        def verify_build_json(passed_build_json):
-            # Don't compare metadata.name directly as we can't control it
-            assert (isinstance(passed_build_json['metadata'].pop('name'),
-                               six.string_types))
-            del updated_build_json['metadata']['name']
-
-            assert passed_build_json == updated_build_json
-            if platform or lowpriority_nodeselector:
-                valid_dict = platform_nodeselector_dict
-                valid_dict.update(lowpriority_nodeselector_dict)
-                assert passed_build_json['spec']['nodeSelector'] == valid_dict
             return flexmock(json=lambda: {'spam': 'maps'})
 
         (flexmock(osbs_obj.os)

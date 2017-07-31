@@ -293,9 +293,6 @@ class OSBS(object):
         build_json['spec']['serviceAccount'] = 'builder'
         build_json['metadata']['labels']['scratch'] = 'true'
 
-        if build_request.low_priority_node_selector:
-            build_json['spec']['nodeSelector'].update(build_request.low_priority_node_selector)
-
         builder_img = build_json['spec']['strategy']['customStrategy']['from']
         kind = builder_img['kind']
         if kind == 'ImageStreamTag':
@@ -367,6 +364,10 @@ class OSBS(object):
                          build_config_name)
             self._verify_no_running_builds(build_config_name)
 
+            # Remove nodeSelector, will be set from build_json for worker build
+            old_nodeselector = existing_bc['spec'].pop('nodeSelector', None)
+            logger.debug("removing build config's nodeSelector %s", old_nodeselector)
+
             utils.buildconfig_update(existing_bc, build_json)
             # Reset name change that may have occurred during
             # update above, since renaming is not supported.
@@ -423,6 +424,7 @@ class OSBS(object):
                               arrangement_version=None,
                               filesystem_koji_task_id=None,
                               koji_upload_dir=None,
+                              is_auto=False,
                               **kwargs):
         repo_info = utils.get_repo_info(git_uri, git_ref, git_branch=git_branch)
         df_parser = repo_info.dockerfile_parser
@@ -508,9 +510,12 @@ class OSBS(object):
             arrangement_version=arrangement_version,
             info_url_format=self.build_conf.get_info_url_format(),
             artifacts_allowed_domains=self.build_conf.get_artifacts_allowed_domains(),
-            low_priority_node_selector=self.build_conf.get_low_priority_node_selector(),
             equal_labels=self.build_conf.get_equal_labels(),
             platform_node_selector=self.build_conf.get_platform_node_selector(platform),
+            scratch_build_node_selector=self.build_conf.get_scratch_build_node_selector(),
+            explicit_build_node_selector=self.build_conf.get_explicit_build_node_selector(),
+            auto_build_node_selector=self.build_conf.get_auto_build_node_selector(),
+            is_auto=is_auto,
             filesystem_koji_task_id=filesystem_koji_task_id,
             koji_upload_dir=koji_upload_dir,
             platform_descriptors=self.build_conf.get_platform_descriptors(),
