@@ -469,7 +469,7 @@ class OSBS(object):
             registry_uris=self.build_conf.get_registry_uris(),
             registry_secrets=self.build_conf.get_registry_secrets(),
             source_registry_uri=self.build_conf.get_source_registry_uri(),
-            registry_api_versions=self.build_conf.get_registry_api_versions(),
+            registry_api_versions=self.build_conf.get_registry_api_versions(platform),
             openshift_uri=self.os_conf.get_openshift_base_uri(),
             builder_openshift_url=self.os_conf.get_builder_openshift_url(),
             kojiroot=self.build_conf.get_kojiroot(),
@@ -515,6 +515,7 @@ class OSBS(object):
             platform_node_selector=self.build_conf.get_platform_node_selector(platform),
             filesystem_koji_task_id=filesystem_koji_task_id,
             koji_upload_dir=koji_upload_dir,
+            platform_descriptors=self.build_conf.get_platform_descriptors(),
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         build_request.set_repo_info(repo_info)

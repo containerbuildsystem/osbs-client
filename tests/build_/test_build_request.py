@@ -1402,8 +1402,8 @@ class TestBuildRequest(object):
             assert kwargs.get('kojihub') == worker_config.get_kojihub()
             assert kwargs.get('kojiroot') == worker_config.get_kojiroot()
             assert kwargs.get('pulp_registry') == worker_config.get_pulp_registry()
-            assert (kwargs.get('registry_api_versions') ==
-                    worker_config.get_registry_api_versions())
+            # get_registry_api_versions() is not a passthrough of kwargs['registry_api_versions']
+            assert ['v2'] == worker_config.get_registry_api_versions()
             assert (kwargs.get('smtp_additional_addresses', []) ==
                     worker_config.get_smtp_additional_addresses())
             assert kwargs.get('smtp_email_domain') == worker_config.get_smtp_email_domain()
@@ -2105,3 +2105,48 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, 'prebuild_plugins',
                                 'add_labels_in_dockerfile', 'args',
                                 'info_url_format') == info_url_format
+
+    @pytest.mark.parametrize(('platform_descriptors', 'goarch',
+                              'pulp_registry', 'pulp_secret'), [
+        ({}, {}, True, True),
+        ({}, {}, True, False),
+        ({}, {}, False, True),
+        ({}, {}, False, False),
+        ({'ham': {'architecture': 'ham'}}, {'ham': 'ham'}, True, True),
+        ({'ham': {'architecture': 'bacon'}, 'eggs': {'architecture': 'eggs'}},
+         {'ham': 'bacon', 'eggs': 'eggs'}, True, True),
+    ])
+    def test_render_group_manifest(self, platform_descriptors, goarch,
+                                   pulp_registry, pulp_secret):
+        plugin_type = "postbuild_plugins"
+        plugin_name = "group_manifests"
+
+        br = BuildRequest(INPUTS_PATH)
+        kwargs = get_sample_prod_params()
+        if pulp_registry:
+            kwargs['pulp_registry'] = "registry.example.com"
+        if pulp_secret:
+            kwargs['pulp_secret'] = "pulp_secret"
+        kwargs['platform_descriptors'] = platform_descriptors
+        br.set_params(**kwargs)
+
+        br.dj.dock_json_set_param(plugin_type, [])
+        br.dj.add_plugin(plugin_type, plugin_name, {})
+
+        if pulp_registry and not pulp_secret:
+            with pytest.raises(OsbsValidationException):
+                br.render()
+            return
+
+        build_json = br.render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        if pulp_registry:
+            assert get_plugin(plugins, plugin_type, plugin_name)
+            assert plugin_value_get(plugins, plugin_type, plugin_name, 'args',
+                                    'pulp_registry_name')
+            assert plugin_value_get(plugins, plugin_type, plugin_name, 'args',
+                                    'goarch') == goarch
+        else:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, plugin_type, plugin_name)
