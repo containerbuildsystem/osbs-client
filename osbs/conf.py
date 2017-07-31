@@ -515,17 +515,6 @@ class Configuration(object):
         else:
             return []
 
-    def get_low_priority_node_selector(self):
-        nodeselector = {}
-        nodeselector_str = self._get_value("low_priority_node_selector", self.conf_section,
-                                           "low_priority_node_selector")
-        if nodeselector_str and nodeselector_str != 'none':
-            constraints = nodeselector_str.split(',')
-            raw_nodeselector = dict([constraint.split('=', 1) for constraint in constraints])
-            nodeselector = dict([k.strip(), v.strip()] for (k, v) in raw_nodeselector.items())
-
-        return nodeselector
-
     def get_equal_labels(self):
         equal_labels = []
         equal_labels_str = self._get_value("equal_labels", self.conf_section,
@@ -547,23 +536,48 @@ class Configuration(object):
 
         return equal_labels
 
+    def generate_nodeselector_dict(self, nodeselector_str):
+        """
+        helper method for generating nodeselector dict
+        :param nodeselector_str:
+        :return: dict
+        """
+        nodeselector = {}
+        if nodeselector_str and nodeselector_str != 'none':
+            constraints = nodeselector_str.split(',')
+            raw_nodeselector = dict([constraint.split('=', 1) for constraint in constraints])
+            nodeselector = dict([k.strip(), v.strip()] for (k, v) in raw_nodeselector.items())
+
+        return nodeselector
+
     def get_platform_node_selector(self, platform):
         """
         search the configuration for entries of the form node_selector.platform
-        :return None or str
-
         :param platform: str, platform to search for, can be null
+        :return dict
         """
-        nodeselector = None
+        nodeselector = {}
         if platform:
             nodeselector_str = self._get_value("node_selector." + platform, self.conf_section,
                                                "node_selector." + platform)
-            if nodeselector_str and nodeselector_str != 'none':
-                constraints = nodeselector_str.split(',')
-                raw_nodeselector = dict([constraint.split('=', 1) for constraint in constraints])
-                nodeselector = dict([k.strip(), v.strip()] for (k, v) in raw_nodeselector.items())
+            nodeselector = self.generate_nodeselector_dict(nodeselector_str)
 
         return nodeselector
+
+    def get_scratch_build_node_selector(self):
+        nodeselector_str = self._get_value("scratch_build_node_selector", self.conf_section,
+                                           "scratch_build_node_selector")
+        return self.generate_nodeselector_dict(nodeselector_str)
+
+    def get_explicit_build_node_selector(self):
+        nodeselector_str = self._get_value("explicit_build_node_selector", self.conf_section,
+                                           "explicit_build_node_selector")
+        return self.generate_nodeselector_dict(nodeselector_str)
+
+    def get_auto_build_node_selector(self):
+        nodeselector_str = self._get_value("auto_build_node_selector", self.conf_section,
+                                           "auto_build_node_selector")
+        return self.generate_nodeselector_dict(nodeselector_str)
 
     def get_platform_descriptors(self):
         has_v1 = []

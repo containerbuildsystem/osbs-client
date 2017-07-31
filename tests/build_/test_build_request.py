@@ -2254,3 +2254,90 @@ class TestBuildRequest(object):
         else:
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, plugin_type, plugin_name)
+
+    @pytest.mark.parametrize(('platform', 'platforms', 'is_auto', 'scratch', 'expected'), [
+        (None, None, False, False, {'explicit1': 'yes',
+                                    'explicit2': 'yes'}),
+        (None, None, False, True, {'scratch1': 'yes',
+                                   'scratch2': 'yes'}),
+        (None, None, True, False, {'auto1': 'yes',
+                                   'auto2': 'yes'}),
+        (None, None, True, True, {'auto1': 'yes',
+                                  'auto2': 'yes'}),
+        (None, ["x86"], False, False, {}),
+        (None, ["ppc"], False, False, {}),
+        (None, ["x86"], True, False, {}),
+        (None, ["ppc"], False, True, {}),
+        ("x86", None, False, False, {'explicit1': 'yes',
+                                     'explicit2': 'yes',
+                                     'plx86a': 'yes',
+                                     'plx86b': 'yes'}),
+        ("x86", None, False, True, {'scratch1': 'yes',
+                                    'scratch2': 'yes',
+                                    'plx86a': 'yes',
+                                    'plx86b': 'yes'}),
+        ("x86", None, True, False, {'auto1': 'yes',
+                                    'auto2': 'yes',
+                                    'plx86a': 'yes',
+                                    'plx86b': 'yes'}),
+        ("ppc", None, False, False, {'explicit1': 'yes',
+                                     'explicit2': 'yes',
+                                     'plppc1': 'yes',
+                                     'plppc2': 'yes'}),
+        ("ppc", None, False, True, {'scratch1': 'yes',
+                                    'scratch2': 'yes',
+                                    'plppc1': 'yes',
+                                    'plppc2': 'yes'}),
+        ("ppc", None, True, False, {'auto1': 'yes',
+                                    'auto2': 'yes',
+                                    'plppc1': 'yes',
+                                    'plppc2': 'yes'}),
+    ])
+    def test_check_set_nodeselectors(self, platform, platforms, is_auto, scratch, expected):
+        platform_nodeselectors = {
+            'x86': {
+                'plx86a': 'yes',
+                'plx86b': 'yes'
+            },
+            'ppc': {
+                'plppc1': 'yes',
+                'plppc2': 'yes'
+            }
+        }
+        built_type_nodeselectors = {
+            'auto': {
+                'auto1': 'yes',
+                'auto2': 'yes'
+            },
+            'explicit': {
+                'explicit1': 'yes',
+                'explicit2': 'yes'
+            },
+            'scratch': {
+                'scratch1': 'yes',
+                'scratch2': 'yes'
+            }
+        }
+
+        br = BuildRequest(INPUTS_PATH)
+        kwargs = get_sample_prod_params()
+        if platforms:
+            kwargs['platforms'] = [platforms]
+        else:
+            kwargs['platforms'] = None
+
+        if platform:
+            kwargs['platform_node_selector'] = platform_nodeselectors[platform]
+
+        kwargs['is_auto'] = is_auto
+        kwargs['scratch'] = scratch
+        kwargs['scratch_build_node_selector'] = built_type_nodeselectors['scratch']
+        kwargs['explicit_build_node_selector'] = built_type_nodeselectors['explicit']
+        kwargs['auto_build_node_selector'] = built_type_nodeselectors['auto']
+        br.set_params(**kwargs)
+        build_json = br.render()
+
+        if expected:
+            assert build_json['spec']['nodeSelector'] == expected
+        else:
+            assert 'nodeSelector' not in build_json['spec']

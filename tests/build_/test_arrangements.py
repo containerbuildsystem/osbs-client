@@ -7,19 +7,25 @@ of the BSD license. See the LICENSE file for details.
 """
 
 from __future__ import unicode_literals
+import shutil
+import os
+import json
 from osbs.api import OSBS
 from osbs.constants import (DEFAULT_ARRANGEMENT_VERSION,
                             ORCHESTRATOR_INNER_TEMPLATE,
                             WORKER_INNER_TEMPLATE,
-                            SECRETS_PATH)
+                            SECRETS_PATH,
+                            ORCHESTRATOR_OUTER_TEMPLATE)
 from osbs import utils
 from osbs.repo_utils import RepoInfo
+from osbs.build.build_request import BuildRequest
 from tests.constants import (TEST_GIT_URI,
                              TEST_GIT_REF,
                              TEST_GIT_BRANCH,
                              TEST_COMPONENT,
                              TEST_VERSION,
-                             TEST_FILESYSTEM_KOJI_TASK_ID)
+                             TEST_FILESYSTEM_KOJI_TASK_ID,
+                             INPUTS_PATH)
 from tests.fake_api import openshift, osbs, osbs_with_pulp  # noqa:F401
 from tests.test_api import request_as_response
 from tests.build_.test_build_request import (get_plugins_from_build_json,
@@ -501,7 +507,8 @@ class TestArrangementV2(TestArrangementV1):
 class TestArrangementV3(TestArrangementV2):
     """
     Differences from arrangement version 2:
-    - fetch_worker_metadata, koji_import, koji_tag_build, sendmail, run in the orchestrator build
+    - fetch_worker_metadata, koji_import, koji_tag_build, sendmail,
+      check_and_set_rebuild, run in the orchestrator build
     - koji_upload runs in the worker build
     - koji_promote does not run
     """
@@ -518,6 +525,7 @@ class TestArrangementV3(TestArrangementV2):
                 'add_labels_in_dockerfile',
                 'koji_parent',
                 'reactor_config',
+                'check_and_set_rebuild',
             ],
 
             'buildstep_plugins': [
@@ -676,6 +684,64 @@ class TestArrangementV3(TestArrangementV2):
         match_args = {}
         assert match_args == args
 
+    @pytest.mark.parametrize('triggers', [False, True])  # noqa:F811
+    def test_check_and_set_rebuild(self, tmpdir, osbs, triggers):
+
+        imagechange = [
+            {
+                "type": "ImageChange",
+                "imageChange": {
+                    "from": {
+                        "kind": "ImageStreamTag",
+                        "name": "{{BASE_IMAGE_STREAM}}"
+                    }
+                }
+            }
+        ]
+
+        if triggers:
+            orch_outer_temp = ORCHESTRATOR_INNER_TEMPLATE.format(
+                arrangement_version=self.ARRANGEMENT_VERSION
+            )
+            for basename in [ORCHESTRATOR_OUTER_TEMPLATE, orch_outer_temp]:
+                shutil.copy(os.path.join(INPUTS_PATH, basename),
+                            os.path.join(str(tmpdir), basename))
+
+            with open(os.path.join(str(tmpdir), ORCHESTRATOR_OUTER_TEMPLATE), 'r+') as orch_json:
+                build_json = json.load(orch_json)
+                build_json['spec']['triggers'] = imagechange
+
+                orch_json.seek(0)
+                json.dump(build_json, orch_json)
+                orch_json.truncate()
+
+            flexmock(osbs.os_conf, get_build_json_store=lambda: str(tmpdir))
+            (flexmock(BuildRequest)
+                .should_receive('adjust_for_repo_info')
+                .and_return(True))
+
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        params, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        if not triggers:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, 'prebuild_plugins', 'check_and_set_rebuild')
+            return
+
+        args = plugin_value_get(plugins, 'prebuild_plugins',
+                                         'check_and_set_rebuild', 'args')
+
+        match_args = {
+            "label_key": "is_autorebuild",
+            "label_value": "true",
+            "url": "/",
+            "verify_ssl": False,
+            'use_auth': False,
+        }
+        assert match_args == args
 
 class TestArrangementV4(TestArrangementV3):
     """
@@ -709,6 +775,7 @@ class TestArrangementV4(TestArrangementV3):
                 'bump_release',
                 'add_labels_in_dockerfile',
                 'koji_parent',
+                'check_and_set_rebuild',
             ],
 
             'buildstep_plugins': [

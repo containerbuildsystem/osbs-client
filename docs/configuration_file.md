@@ -141,7 +141,11 @@ Some options are also mandatory.
 
 * `artifacts_allowed_domains` (*optional*, `string`) — list of domains allowed to be used when fetching artifacts via URL. When not specified, all domains are allowed.
 
-* `low_priority_node_selector` (*optional*, `string`) — a node selector to be applied to builds which are considered to have less priority than normal ones, or "none"
+* `scratch_build_node_selector` (*optional*, `string`) — a node selector to be applied to the scratch builds
+
+* `explicit_build_node_selector` (*optional*, `string`) — a node selector to be applied to explicit builds
+
+* `auto_build_node_selector` (*optional*, `string`) — a node selector to be applied to auto builds
 
 * `node_selector.`*platform* (*optional*, `string`) — a node selector to be used for worker builds for the specified platform, or "none"
 

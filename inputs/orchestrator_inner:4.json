@@ -39,7 +39,17 @@
       "args": {
         "koji_hub": "{{KOJI_HUB}}"
       }
-    }  ],
+    },
+    {
+      "name": "check_and_set_rebuild",
+      "args": {
+        "label_key": "is_autorebuild",
+        "label_value": "true",
+        "url": "{{OPENSHIFT_URI}}",
+        "verify_ssl": false
+      }
+    }
+  ],
   "buildstep_plugins": [
     {
       "name": "orchestrate_build",
