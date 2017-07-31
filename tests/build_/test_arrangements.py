@@ -570,7 +570,6 @@ class TestArrangementV3(TestArrangementV2):
             ],
 
             'exit_plugins': [
-                'delete_from_registry',
                 'store_metadata_in_osv3',
                 'remove_built_image',
             ],
@@ -667,3 +666,24 @@ class TestArrangementV3(TestArrangementV2):
 
         match_args = {}
         assert match_args == args
+
+    @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
+    @pytest.mark.parametrize('base_image', ['koji/image-build', 'foo'])
+    def test_delete_from_registry(self, osbs_with_pulp, base_image, scratch):
+        phase = 'exit_plugins'
+        plugin = 'delete_from_registry'
+        additional_params = {
+            'base_image': base_image,
+        }
+        if scratch:
+            additional_params['scratch'] = True
+
+        (params, build_json) = self.get_build_request('orchestrator',
+                                                      osbs_with_pulp,
+                                                      additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+        args = plugin_value_get(plugins, phase, plugin, 'args')
+        allowed_args = set([
+            'registries',
+        ])
+        assert set(args.keys()) <= allowed_args
