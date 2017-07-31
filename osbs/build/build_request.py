@@ -64,6 +64,7 @@ class BuildRequest(object):
         self.low_priority_node_selector = None
         # forward reference
         self.platform_node_selector = None
+        self.platform_descriptors = None
 
     def set_params(self, **kwargs):
         """
@@ -91,6 +92,7 @@ class BuildRequest(object):
         :param use_auth: bool, use auth from atomic-reactor?
         :param low_priority_node_selector: dict, a nodeselector for builds with lower priority
         :param platform_node_selector: dict, a nodeselector for a specific platform
+        :param platform_descriptors: dict, platforms and their archiectures and enable_v1 settings
         """
 
         # Here we cater to the koji "scratch" build type, this will disable
@@ -103,6 +105,7 @@ class BuildRequest(object):
         self.base_image = kwargs.get('base_image')
         self.low_priority_node_selector = kwargs.get('low_priority_node_selector')
         self.platform_node_selector = kwargs.get('platform_node_selector', {})
+        self.platform_descriptors = kwargs.get('platform_descriptors', {})
 
         logger.debug("setting params '%s' for %s", kwargs, self.spec)
         self.spec.set_params(**kwargs)
@@ -992,6 +995,42 @@ class BuildRequest(object):
             self.dj.remove_plugin("postbuild_plugins", "pulp_sync")
             self.dj.remove_plugin("exit_plugins", "delete_from_registry")
 
+    def render_group_manifests(self):
+        """
+        Configure the group_manifests plugin. Group is always set to false for now.
+        """
+        if not self.dj.dock_json_has_plugin_conf('postbuild_plugins',
+                                                 'group_manifests'):
+            return
+
+        pulp_registry = self.spec.pulp_registry.value
+        if pulp_registry:
+            self.dj.dock_json_set_arg('postbuild_plugins', 'group_manifests',
+                                      'pulp_registry_name', pulp_registry)
+
+            # Verify we have either a secret or username/password
+            if self.spec.pulp_secret.value is None:
+                conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins',
+                                                         'group_manifests')
+                args = conf.get('args', {})
+                if 'username' not in args:
+                    raise OsbsValidationException("Pulp registry specified "
+                                                  "but no auth config")
+
+            self.dj.dock_json_set_arg('postbuild_plugins', 'group_manifests',
+                                      'group', False)
+            goarch = {}
+            for platform in self.platform_descriptors:
+                goarch[platform] = self.platform_descriptors[platform]['architecture']
+            self.dj.dock_json_set_arg('postbuild_plugins', 'group_manifests',
+                                      'goarch', goarch)
+
+        else:
+            # If no pulp registry is specified, don't run the pulp plugin
+            logger.info("removing group_manifests from request, "
+                        "requires pulp_registry")
+            self.dj.remove_plugin("postbuild_plugins", "group_manifests")
+
     def render_import_image(self, use_auth=None):
         """
         Configure the import_image plugin
@@ -1256,6 +1295,7 @@ class BuildRequest(object):
         self.render_pulp_pull()
         self.render_pulp_push()
         self.render_pulp_sync()
+        self.render_group_manifests()
         self.render_koji_promote(use_auth=use_auth)
         self.render_koji_upload(use_auth=use_auth)
         self.render_koji_import(use_auth=use_auth)

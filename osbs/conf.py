@@ -266,12 +266,22 @@ class Configuration(object):
         else:
             return []
 
-    def get_registry_api_versions(self):
+    def get_registry_api_versions(self, platform=None):
         value = self._get_value("registry_api_versions",
                                 self.conf_section,
                                 "registry_api_versions",
                                 default='v1,v2')
-        return value.split(',')
+        versions = value.split(',')
+        section = 'platform:{0}'.format(platform)
+        enable_v1 = self._get_value("enable_v1", section, "enable_v1",
+                                    default=False, is_bool_val=True)
+        if enable_v1:
+            return versions
+        else:
+            if 'v2' in versions:
+                return ['v2']
+            else:
+                raise OsbsValidationException('v2 only platform in v1 only instance')
 
     def get_source_registry_uri(self):
         return self._get_value("source_registry_uri", self.conf_section, "source_registry_uri")
@@ -554,3 +564,26 @@ class Configuration(object):
                 nodeselector = dict([k.strip(), v.strip()] for (k, v) in raw_nodeselector.items())
 
         return nodeselector
+
+    def get_platform_descriptors(self):
+        has_v1 = []
+        platform_descriptors = {}
+        for section in self.scp.sections():
+            if "platform:" not in section:
+                continue
+            platform = section.split("platform:")[1]
+            platform_descriptor = {}
+            arch = self._get_value("architecture", section, "architecture") or platform
+            enable_v1 = self._get_value("enable_v1", section, "enable_v1",
+                                        default=False, is_bool_val=True)
+            if enable_v1:
+                has_v1.append(platform)
+            platform_descriptor["architecture"] = arch
+            platform_descriptor["enable_v1"] = enable_v1
+            platform_descriptors[platform] = platform_descriptor
+
+        if len(has_v1) > 1:
+            msg = "multiple platforms enable API v1: {0}".format(has_v1)
+            raise OsbsValidationException(msg)
+
+        return platform_descriptors

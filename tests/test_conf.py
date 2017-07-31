@@ -444,3 +444,51 @@ class TestConfiguration(object):
         with self.config_file(config) as config_file:
             conf = Configuration(conf_file=config_file, **kwargs)
             assert conf.get_platform_node_selector(platform) == expected
+
+    @pytest.mark.parametrize(('config', 'expected', 'valid'), [
+        ({}, {}, True),
+        ({'platform:ham': {}}, {'ham': {'architecture': 'ham', 'enable_v1': False}}, True),
+        ({'platform:ham': {}, 'platform:eggs': {}},
+         {'ham': {'architecture': 'ham', 'enable_v1': False},
+          'eggs': {'architecture': 'eggs', 'enable_v1': False}}, True),
+        ({'platform:ham': {}, 'platform:eggs': {}, 'fedora': {}},
+         {'ham': {'architecture': 'ham', 'enable_v1': False},
+          'eggs': {'architecture': 'eggs', 'enable_v1': False}}, True),
+        ({'platform:ham': {'architecture': 'bacon', 'enable_v1': 'true'}},
+         {'ham': {'architecture': 'bacon', 'enable_v1': True}}, True),
+        ({'platform:ham': {'architecture': 'bacon'},
+          'platform:eggs': {'enable_v1': 'true'}, 'fedora': {}},
+         {'ham': {'architecture': 'bacon', 'enable_v1': False},
+          'eggs': {'architecture': 'eggs', 'enable_v1': True}}, True),
+        ({'platform:ham': {'enable_v1': 'true'}, 'platform:eggs': {'enable_v1': 'true'}},
+         {}, False),
+    ])
+    def test_get_platform_descriptors(self, config, expected, valid):
+        with self.config_file(config) as config_file:
+            conf = Configuration(conf_file=config_file)
+            if valid:
+                assert conf.get_platform_descriptors() == expected
+            else:
+                with pytest.raises(OsbsValidationException):
+                    conf.get_platform_descriptors()
+
+    @pytest.mark.parametrize(('platform', 'config', 'expected', 'valid'), [
+        (None, {}, ['v2'], True),
+        (None, {'default': {'registry_api_versions': 'v1'}}, ['v1'], False),
+        (None, {'default': {'registry_api_versions': 'v2'}}, ['v2'], True),
+        (None, {'default': {'registry_api_versions': 'v1,v2'}}, ['v2'], True),
+        ('ham', {'default': {'registry_api_versions': 'v1,v2'}}, ['v2'], True),
+        (None, {'platform:ham': {}}, ['v2'], True),
+        ('ham', {'platform:ham': {}}, ['v2'], True),
+        ('ham', {'platform:ham': {'enable_v1': 'true'}}, ['v1', 'v2'], True),
+        ('ham', {'default': {'registry_api_versions': 'v1'},
+                 'platform:ham': {}}, ['v1', 'v2'], False),
+    ])
+    def test_get_registry_api_versions(self, platform, config, expected, valid):
+        with self.config_file(config) as config_file:
+            conf = Configuration(conf_file=config_file)
+            if valid:
+                assert conf.get_registry_api_versions(platform) == expected
+            else:
+                with pytest.raises(OsbsValidationException):
+                    conf.get_registry_api_versions(platform)
