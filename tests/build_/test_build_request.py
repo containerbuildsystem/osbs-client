@@ -1060,6 +1060,9 @@ class TestBuildRequest(object):
                 get_plugin(plugins, "postbuild_plugins", "tag_from_config")
 
             with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "postbuild_plugins", "pulp_pull")
+
+            with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, "exit_plugins", "koji_promote")
 
             with pytest.raises(NoSuchPluginException):
@@ -1068,12 +1071,13 @@ class TestBuildRequest(object):
         else:
             assert get_plugin(plugins, "postbuild_plugins", "compress")
             assert get_plugin(plugins, "postbuild_plugins", "tag_from_config")
+            assert get_plugin(plugins, "postbuild_plugins", "pulp_pull")
             assert get_plugin(plugins, "exit_plugins", "koji_promote")
             assert get_plugin(plugins, "exit_plugins", "koji_tag_build")
 
         assert (get_plugin(plugins, "postbuild_plugins", "tag_by_labels")
                 .get('args', {}).get('unique_tag_only', False) == scratch)
-        assert get_plugin(plugins, "postbuild_plugins", "pulp_pull")
+
 
     def test_render_with_yum_repourls(self):
         kwargs = {
@@ -1845,7 +1849,6 @@ class TestBuildRequest(object):
             plugins = get_plugins_from_build_json(build_json)
             assert plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push',
                                     'args', 'pulp_secret_path') == mount_path
-        assert get_plugin(plugins, "postbuild_plugins", "pulp_pull")
 
     def test_render_prod_request_with_koji_secret(self, tmpdir):
         self.create_image_change_trigger_json(str(tmpdir))

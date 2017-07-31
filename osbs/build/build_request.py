@@ -548,7 +548,8 @@ class BuildRequest(object):
         if self.scratch:
             remove_plugins = [
                 ("prebuild_plugins", "koji_parent"),
-                ("postbuild_plugins", "compress"),  # only for Koji
+                ("postbuild_plugins", "compress"),  # required only to make an archive for Koji
+                ("postbuild_plugins", "pulp_pull"),  # required only to make an archive for Koji
                 ("postbuild_plugins", "koji_upload"),
                 ("postbuild_plugins", "fetch_worker_metadata"),
                 ("exit_plugins", "koji_promote"),
@@ -909,6 +910,11 @@ class BuildRequest(object):
         if not pulp_registry:
             logger.info("removing %s from request, requires pulp_registry", pulp_registry)
             self.dj.remove_plugin(phase, plugin)
+
+        if not self.spec.kojihub.value:
+            logger.info('Removing %s because no kojihub was specified', plugin)
+            self.dj.remove_plugin(phase, plugin)
+            return
 
     def render_pulp_push(self):
         """
