@@ -76,10 +76,10 @@ REPO_CONFIG_FILE = '.osbs-repo-config'
 ADDITIONAL_TAGS_FILE = 'additional-tags'
 
 # number of retries for http requests
-HTTP_MAX_RETRIES = 3
+HTTP_MAX_RETRIES = 8
 
 # how many seconds should request wait for in case non-critical error has occurred
-HTTP_BACKOFF_FACTOR = 2
+HTTP_BACKOFF_FACTOR = 4
 
 HTTP_RETRIES_STATUS_FORCELIST = [408, 500, 502, 503, 504]
 
