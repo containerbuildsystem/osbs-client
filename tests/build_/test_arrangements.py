@@ -988,7 +988,7 @@ class TestArrangementV4(TestArrangementV3):
         args = plugin_value_get(plugins, phase, plugin, 'args')
 
         docker_registry = self.get_pulp_sync_registry(osbs_with_pulp.build_conf)
-        assert args == {'registries': {docker_registry: {}}}
+        assert args == {'registries': {docker_registry: {'insecure': True}}}
 
     def test_group_manifests(self, openshift):  # noqa:F811
         platform_descriptors = {'x86_64': {'architecture': 'amd64'}}

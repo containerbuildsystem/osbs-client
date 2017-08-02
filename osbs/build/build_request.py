@@ -985,11 +985,25 @@ class BuildRequest(object):
             perform_delete = (source_registry is None or
                               source_registry.docker_uri != registry.docker_uri)
             if perform_delete:
-                delete_registries = {docker_registry: {}}
+                push_conf = self.dj.dock_json_get_plugin_conf('exit_plugins',
+                                                              'delete_from_registry')
+                args = push_conf.setdefault('args', {})
+                delete_registries = args.setdefault('registries', {})
+                placeholder = '{{REGISTRY_URI}}'
+
+                # use passed in params like 'insecure' if available
+                if placeholder in delete_registries:
+                    regdict = delete_registries[placeholder].copy()
+                    del delete_registries[placeholder]
+                else:
+                    regdict = {}
+
                 if registry_secret:
-                    delete_registries[docker_registry]['secret'] = \
+                    regdict['secret'] = \
                         os.path.join(SECRETS_PATH, registry_secret)
                     # tag_and_push configured the registry secret, no neet to set it again
+
+                delete_registries[docker_registry] = regdict
 
                 self.dj.dock_json_set_arg('exit_plugins', 'delete_from_registry',
                                           'registries', delete_registries)

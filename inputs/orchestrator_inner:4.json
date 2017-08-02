@@ -108,7 +108,9 @@
     {
       "name": "delete_from_registry",
       "args": {
-        "registries": {}
+        "registries": {
+          "{{REGISTRY_URI}}": { "insecure": true }
+        }
       }
     },
     {
