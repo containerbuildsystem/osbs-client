@@ -8,7 +8,6 @@ of the BSD license. See the LICENSE file for details.
 """
 from flexmock import flexmock
 from textwrap import dedent
-import requests
 import six
 import time
 import json
@@ -151,30 +150,6 @@ class TestOpenshift(object):
 
         logs = openshift.stream_logs(TEST_BUILD)
         assert len([log for log in logs]) == 1
-
-    def test_stream_logs_not_decoded(self, caplog):
-        server = Openshift('http://oapi/v1/', 'v1', 'http://oauth/authorize',
-                           k8s_api_url='http://api/v1/')
-
-        logs = (
-            u'Lógs'.encode('utf-8'),
-            u'Lðgs'.encode('utf-8'),
-        )
-
-        fake_response = flexmock(status_code=httplib.OK, headers={})
-
-        (fake_response
-            .should_receive('iter_lines')
-            .and_yield(*logs)
-            .with_args(decode_unicode=False))
-
-        (flexmock(requests)
-            .should_receive('request')
-            .and_return(fake_response))
-
-        with caplog.atLevel(logging.ERROR):
-            for result in server.stream_logs('anything'):
-                assert isinstance(result, six.binary_type)
 
     def test_list_builds(self, openshift):  # noqa
         list_builds = openshift.list_builds()
