@@ -825,18 +825,29 @@ class TestOSBS(object):
             osbs.login("", "", "")
 
     # osbs is a fixture here
-    def test_build_logs_api(self, osbs):  # noqa
-        logs = osbs.get_build_logs(TEST_BUILD)
-        assert isinstance(logs, six.binary_type)
-        assert logs == u"líne 1".encode('utf-8')
+    @pytest.mark.parametrize('decode', [True, False])  # noqa
+    def test_build_logs_api(self, osbs, decode):
+        logs = osbs.get_build_logs(TEST_BUILD, decode=decode)
+        if decode:
+            assert isinstance(logs, six.string_types)
+            assert logs == u"líne 1"
+        else:
+            assert isinstance(logs, six.binary_type)
+            assert logs == u"líne 1".encode('utf-8')
 
     # osbs is a fixture here
-    def test_build_logs_api_follow(self, osbs):  # noqa
-        logs = osbs.get_build_logs(TEST_BUILD, follow=True)
+    @pytest.mark.parametrize('decode', [True, False])  # noqa
+    def test_build_logs_api_follow(self, osbs, decode):
+        # decode is actually ignored in the follow=True case
+        logs = osbs.get_build_logs(TEST_BUILD, follow=True, decode=decode)
         assert isinstance(logs, GeneratorType)
         content = next(logs)
-        assert isinstance(content, six.binary_type)
-        assert content == u"líne 1".encode('utf-8')
+        if decode:
+            assert isinstance(content, six.string_types)
+            assert content == u"líne 1"
+        else:
+            assert isinstance(content, six.binary_type)
+            assert content == u"líne 1".encode('utf-8')
         with pytest.raises(StopIteration):
             assert next(logs)
 
