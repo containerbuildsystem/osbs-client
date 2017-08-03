@@ -17,6 +17,7 @@ import warnings
 import getpass
 from functools import wraps
 from contextlib import contextmanager
+from types import GeneratorType
 
 from osbs.build.build_request import BuildRequest
 from osbs.build.build_response import BuildResponse
@@ -670,22 +671,39 @@ class OSBS(object):
 
             raise
 
+    def _decode_build_logs_generator(self, logs):
+        for line in logs:
+            line = line.decode("utf-8")
+            yield line
+
     @osbsapi
-    def get_build_logs(self, build_id, follow=False, build_json=None, wait_if_missing=False):
+    def get_build_logs(self, build_id, follow=False, build_json=None, wait_if_missing=False,
+                       decode=False):
         """
         provide logs from build
 
-        NOTE: since there is no way to determine the text encoding in use
-        the bytes are returned exactly as they came from the container.
+        NOTE: Since atomic-reactor 1.6.25, logs are always in UTF-8, so if
+        asked to decode, we assume that is the encoding in use. Otherwise, we
+        return the bytes exactly as they came from the container.
 
         :param build_id: str
         :param follow: bool, fetch logs as they come?
         :param build_json: dict, to save one get-build query
         :param wait_if_missing: bool, if build doesn't exist, wait
+        :param decode: bool, whether or not to decode logs as utf-8
         :return: None, bytes, or iterable of bytes
         """
-        return self.os.logs(build_id, follow=follow, build_json=build_json,
+        logs = self.os.logs(build_id, follow=follow, build_json=build_json,
                             wait_if_missing=wait_if_missing)
+
+        if decode and isinstance(logs, GeneratorType):
+            return self._decode_build_logs_generator(logs)
+
+        # str or None returned from self.os.logs()
+        if decode and logs is not None:
+            logs = logs.decode("utf-8")
+
+        return logs
 
     @osbsapi
     def get_docker_build_logs(self, build_id, decode_logs=True, build_json=None):
