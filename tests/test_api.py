@@ -1542,6 +1542,7 @@ class TestOSBS(object):
                     'git-repo-name': 'reponame',
                     'git-branch': 'branch',
                 },
+                'name': 'scratch-12345-20001010112233'
             },
 
             'spec': {
@@ -1574,8 +1575,6 @@ class TestOSBS(object):
         img = updated_build_json['spec']['strategy']['customStrategy']['from']
         img['kind'] = 'DockerImage'
         img['name'] = expect_name
-        updated_build_json['metadata']['name'] = 'scratch-%s' % (
-            build_json['spec']['output']['to']['name'][-20:])
 
         if kind == 'ImageStreamTag':
             (flexmock(osbs_obj.os)

@@ -1138,15 +1138,34 @@ class BuildRequest(object):
     def render_version(self):
         self.dj.dock_json_set_param('client_version', client_version)
 
+    def render_name(self):
+        """Sets the Build/BuildConfig object name"""
+        name = self.spec.name.value
+
+        if self.scratch:
+            name = self.spec.image_tag.value
+            platform = self.spec.platform.value
+            # Platform name may contain characters not allowed by OpenShift.
+            if platform:
+                platform_suffix = '-{0}'.format(platform)
+                if name.endswith(platform_suffix):
+                    name = name[:-len(platform_suffix)]
+
+            _, salt, timestamp = name.rsplit('-', 2)
+
+            name = 'scratch-{0}-{1}'.format(salt, timestamp)
+
+        # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
+        self.template['metadata']['name'] = name
+
     def render(self, validate=True):
         if validate:
             self.spec.validate()
 
         self.render_customizations()
-
-        # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
-        self.template['metadata']['name'] = self.spec.name.value
+        self.render_name()
         self.render_resource_limits()
+
         self.template['spec']['source']['git']['uri'] = self.spec.git_uri.value
         self.template['spec']['source']['git']['ref'] = self.spec.git_ref.value
 

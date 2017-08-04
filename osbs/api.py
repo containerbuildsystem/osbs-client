@@ -307,12 +307,6 @@ class OSBS(object):
             builder_img['kind'] = 'DockerImage'
             builder_img['name'] = ref
 
-        output_image_name = build_json['spec']['output']['to']['name']
-        # Reuse random string and timestamp values.
-        build_config_name = 'scratch-%s-%s' % tuple(
-            output_image_name.rsplit('-', 2)[-2:])
-        logger.debug('starting scratch build %s', build_config_name)
-        build_json['metadata']['name'] = build_config_name
         return BuildResponse(self.os.create_build(build_json).json())
 
     def _get_image_stream_info_for_build_request(self, build_request):
