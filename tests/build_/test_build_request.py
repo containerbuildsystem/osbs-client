@@ -31,7 +31,7 @@ import pytest
 from tests.constants import (INPUTS_PATH, TEST_BUILD_CONFIG, TEST_BUILD_JSON,
                              TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
                              TEST_GIT_URI, TEST_GIT_URI_HUMAN_NAME,
-                             TEST_FILESYSTEM_KOJI_TASK_ID)
+                             TEST_FILESYSTEM_KOJI_TASK_ID, TEST_SCRATCH_BUILD_NAME)
 
 USE_DEFAULT_TRIGGERS = object()
 
@@ -923,8 +923,11 @@ class TestBuildRequest(object):
         ['v1', 'v2'],
         ['v2'],
     ])
+    @pytest.mark.parametrize('platform', [None, 'x86_64'])
+    @pytest.mark.parametrize('arrangement_version', [3, 4])
     @pytest.mark.parametrize('scratch', [False, True])
-    def test_render_prod_request_v1_v2(self, registry_api_versions, scratch):
+    def test_render_prod_request_v1_v2(self, registry_api_versions, platform, arrangement_version,
+                                       scratch):
         build_request = BuildRequest(INPUTS_PATH)
         name_label = "fedora/resultingimage"
         pulp_env = 'v1pulp'
@@ -966,11 +969,14 @@ class TestBuildRequest(object):
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': registry_api_versions,
             'scratch': scratch,
+            'platform': platform,
+            'arrangement_version': arrangement_version,
         })
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
-        assert fnmatch.fnmatch(build_json["metadata"]["name"], TEST_BUILD_CONFIG)
+        expected_name = TEST_SCRATCH_BUILD_NAME if scratch else TEST_BUILD_CONFIG
+        assert fnmatch.fnmatch(build_json["metadata"]["name"], expected_name)
         assert "triggers" not in build_json["spec"]
         assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
         assert build_json["spec"]["source"]["git"]["ref"] == TEST_GIT_REF
