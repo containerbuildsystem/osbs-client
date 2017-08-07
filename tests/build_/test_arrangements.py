@@ -743,6 +743,7 @@ class TestArrangementV3(TestArrangementV2):
         }
         assert match_args == args
 
+
 class TestArrangementV4(TestArrangementV3):
     """
     Orchestrator build differences from arrangement version 3:
@@ -1002,10 +1003,12 @@ class TestArrangementV4(TestArrangementV3):
         plugins = get_plugins_from_build_json(build_json)
 
         args = plugin_value_get(plugins, 'postbuild_plugins', 'group_manifests', 'args')
+        docker_registry = self.get_pulp_sync_registry(osbs_api.build_conf)
+
         expected_args = {
             'goarch': {'x86_64': 'amd64'},
             'group': False,
-            'pulp_registry_name': osbs_api.build_conf.get_pulp_registry()
+            'registries': {docker_registry: {'insecure': True, 'version': 'v2'}}
         }
         assert args == expected_args
 

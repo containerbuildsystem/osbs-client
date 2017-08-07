@@ -1032,37 +1032,35 @@ class BuildRequest(object):
         """
         Configure the group_manifests plugin. Group is always set to false for now.
         """
-        if not self.dj.dock_json_has_plugin_conf('postbuild_plugins',
-                                                 'group_manifests'):
+        if not self.dj.dock_json_has_plugin_conf('postbuild_plugins', 'group_manifests'):
             return
 
-        pulp_registry = self.spec.pulp_registry.value
-        if pulp_registry:
-            self.dj.dock_json_set_arg('postbuild_plugins', 'group_manifests',
-                                      'pulp_registry_name', pulp_registry)
+        push_conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins',
+                                                      'group_manifests')
+        args = push_conf.setdefault('args', {})
+        # modify registries in place
+        registries = args.setdefault('registries', {})
+        placeholder = '{{REGISTRY_URI}}'
 
-            # Verify we have either a secret or username/password
-            if self.spec.pulp_secret.value is None:
-                conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins',
-                                                         'group_manifests')
-                args = conf.get('args', {})
-                if 'username' not in args:
-                    raise OsbsValidationException("Pulp registry specified "
-                                                  "but no auth config")
+        if placeholder in registries:
+            for registry, secret in zip_longest(self.spec.registry_uris.value,
+                                                self.spec.registry_secrets.value):
+                if not registry.uri:
+                    continue
+                regdict = registries[placeholder].copy()
+                regdict['version'] = registry.version
+                if secret:
+                    regdict['secret'] = os.path.join(SECRETS_PATH, secret)
+                registries[registry.docker_uri] = regdict
+            del registries[placeholder]
 
-            self.dj.dock_json_set_arg('postbuild_plugins', 'group_manifests',
-                                      'group', False)
-            goarch = {}
-            for platform in self.platform_descriptors:
-                goarch[platform] = self.platform_descriptors[platform]['architecture']
-            self.dj.dock_json_set_arg('postbuild_plugins', 'group_manifests',
-                                      'goarch', goarch)
-
-        else:
-            # If no pulp registry is specified, don't run the pulp plugin
-            logger.info("removing group_manifests from request, "
-                        "requires pulp_registry")
-            self.dj.remove_plugin("postbuild_plugins", "group_manifests")
+        self.dj.dock_json_set_arg('postbuild_plugins', 'group_manifests',
+                                  'group', False)
+        goarch = {}
+        for platform in self.platform_descriptors:
+            goarch[platform] = self.platform_descriptors[platform]['architecture']
+        self.dj.dock_json_set_arg('postbuild_plugins', 'group_manifests',
+                                  'goarch', goarch)
 
     def render_import_image(self, use_auth=None):
         """
