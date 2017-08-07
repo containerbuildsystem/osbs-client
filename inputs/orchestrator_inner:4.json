@@ -82,6 +82,9 @@
     {
       "name": "group_manifests",
       "args": {
+        "registries": {
+          "{{REGISTRY_URI}}": { "insecure": true }
+        }
       }
     },
     {
