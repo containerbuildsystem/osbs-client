@@ -1028,6 +1028,32 @@ class BuildRequest(object):
             self.dj.remove_plugin("postbuild_plugins", "pulp_sync")
             self.dj.remove_plugin("exit_plugins", "delete_from_registry")
 
+    def render_pulp_tag(self):
+        """
+        Configure the pulp_tag plugin.
+        """
+        if not self.dj.dock_json_has_plugin_conf('postbuild_plugins',
+                                                 'pulp_tag'):
+            return
+
+        pulp_registry = self.spec.pulp_registry.value
+        if pulp_registry:
+            self.dj.dock_json_set_arg('postbuild_plugins', 'pulp_tag',
+                                      'pulp_registry_name', pulp_registry)
+
+            # Verify we have either a secret or username/password
+            if self.spec.pulp_secret.value is None:
+                conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins',
+                                                         'pulp_tag')
+                args = conf.get('args', {})
+                if 'username' not in args:
+                    raise OsbsValidationException("Pulp registry specified "
+                                                  "but no auth config")
+        else:
+            # If no pulp registry is specified, don't run the pulp plugin
+            logger.info("removing pulp_tag from request, "
+                        "requires pulp_registry")
+            self.dj.remove_plugin("postbuild_plugins", "pulp_tag")
     def render_group_manifests(self):
         """
         Configure the group_manifests plugin. Group is always set to false for now.
@@ -1301,6 +1327,11 @@ class BuildRequest(object):
                            'pulp_secret_path'):
                           self.spec.pulp_secret.value,
 
+                          ('postbuild_plugins',
+                           'pulp_tag',
+                           'pulp_secret_path'):
+                          self.spec.pulp_secret.value,
+
                           # pulp_sync registry_secret_path set
                           # in render_pulp_sync
 
@@ -1378,6 +1409,7 @@ class BuildRequest(object):
         self.render_pulp_pull()
         self.render_pulp_push()
         self.render_pulp_sync()
+        self.render_pulp_tag()
         self.render_group_manifests()
         self.render_koji_promote(use_auth=use_auth)
         self.render_koji_upload(use_auth=use_auth)
