@@ -90,6 +90,8 @@
     {
       "name": "pulp_tag",
       "args": {
+        "pulp_registry_name": "{{PULP_REGISTRY_NAME}}",
+        "dockpulp_loglevel": "INFO"
       }
     },
     {
