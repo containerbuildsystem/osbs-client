@@ -657,7 +657,7 @@ class OSBS(object):
         if not self.can_orchestrate():
             raise OsbsValidationException("can't create orchestrate build "
                                           "when can_orchestrate isn't enabled")
-        extra = [x for x in ('platform', 'release') if kwargs.get(x)]
+        extra = [x for x in ('platform',) if kwargs.get(x)]
         if extra:
             raise ValueError("Orchestrator build called with unwanted parameters: %s" %
                              extra)
