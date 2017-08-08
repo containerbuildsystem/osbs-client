@@ -436,6 +436,7 @@ class TestOSBS(object):
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
             'user': TEST_USER,
+            'release': '1'
         }
         if branch:
             kwargs['git_branch'] = branch
@@ -461,6 +462,7 @@ class TestOSBS(object):
             'outer_template': ORCHESTRATOR_OUTER_TEMPLATE,
             'customize_conf': ORCHESTRATOR_CUSTOMIZE_CONF,
             'arrangement_version': DEFAULT_ARRANGEMENT_VERSION,
+            'release': '1'
         }
 
         (flexmock(osbs)
