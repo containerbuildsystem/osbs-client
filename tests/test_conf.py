@@ -474,12 +474,12 @@ class TestConfiguration(object):
                     conf.get_platform_descriptors()
 
     @pytest.mark.parametrize(('platform', 'config', 'expected', 'valid'), [
-        (None, {}, ['v2'], True),
-        (None, {'default': {'registry_api_versions': 'v1'}}, ['v1'], False),
+        (None, {}, ['v1', 'v2'], True),
+        (None, {'default': {'registry_api_versions': 'v1'}}, ['v1'], True),
         (None, {'default': {'registry_api_versions': 'v2'}}, ['v2'], True),
-        (None, {'default': {'registry_api_versions': 'v1,v2'}}, ['v2'], True),
+        (None, {'default': {'registry_api_versions': 'v1,v2'}}, ['v1', 'v2'], True),
         ('ham', {'default': {'registry_api_versions': 'v1,v2'}}, ['v2'], True),
-        (None, {'platform:ham': {}}, ['v2'], True),
+        (None, {'platform:ham': {}}, ['v1', 'v2'], True),
         ('ham', {'platform:ham': {}}, ['v2'], True),
         ('ham', {'platform:ham': {'enable_v1': 'true'}}, ['v1', 'v2'], True),
         ('ham', {'default': {'registry_api_versions': 'v1'},
