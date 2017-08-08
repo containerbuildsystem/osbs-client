@@ -272,6 +272,9 @@ class Configuration(object):
                                 "registry_api_versions",
                                 default='v1,v2')
         versions = value.split(',')
+        if platform is None:
+            return versions
+
         section = 'platform:{0}'.format(platform)
         enable_v1 = self._get_value("enable_v1", section, "enable_v1",
                                     default=False, is_bool_val=True)

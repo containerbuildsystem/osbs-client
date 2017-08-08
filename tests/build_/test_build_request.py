@@ -1506,8 +1506,7 @@ class TestBuildRequest(object):
             assert kwargs.get('kojihub') == worker_config.get_kojihub()
             assert kwargs.get('kojiroot') == worker_config.get_kojiroot()
             assert kwargs.get('pulp_registry') == worker_config.get_pulp_registry()
-            # get_registry_api_versions() is not a passthrough of kwargs['registry_api_versions']
-            assert ['v2'] == worker_config.get_registry_api_versions()
+            assert ['v1', 'v2'] == worker_config.get_registry_api_versions()
             assert (kwargs.get('smtp_additional_addresses', []) ==
                     worker_config.get_smtp_additional_addresses())
             assert kwargs.get('smtp_email_domain') == worker_config.get_smtp_email_domain()
