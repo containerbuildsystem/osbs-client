@@ -771,6 +771,7 @@ class TestArrangementV4(TestArrangementV3):
             'prebuild_plugins': [
                 'reactor_config',
                 'add_filesystem',
+                'inject_parent_image',
                 'pull_base_image',
                 'bump_release',
                 'add_labels_in_dockerfile',
@@ -809,6 +810,7 @@ class TestArrangementV4(TestArrangementV3):
         WORKER_INNER_TEMPLATE: {
             'prebuild_plugins': [
                 'add_filesystem',
+                'inject_parent_image',
                 'pull_base_image',
                 'add_labels_in_dockerfile',
                 'change_from_in_dockerfile',
@@ -1004,5 +1006,24 @@ class TestArrangementV4(TestArrangementV3):
             'goarch': {'x86_64': 'amd64'},
             'group': False,
             'pulp_registry_name': osbs_api.build_conf.get_pulp_registry()
+        }
+        assert args == expected_args
+
+    @pytest.mark.parametrize('build_type', (  # noqa:F811
+        'orchestrator',
+        'worker',
+    ))
+    def test_inject_parent_image(self, osbs, build_type):
+        additional_params = {
+            'base_image': 'foo',
+            'koji_parent_build': 'fedora-26-9',
+        }
+        _, build_json = self.get_build_request(build_type, osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        args = plugin_value_get(plugins, 'prebuild_plugins', 'inject_parent_image', 'args')
+        expected_args = {
+            'koji_parent_build': 'fedora-26-9',
+            'koji_hub': osbs.build_conf.get_kojihub()
         }
         assert args == expected_args

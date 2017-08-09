@@ -10,6 +10,13 @@
       }
     },
     {
+      "name": "inject_parent_image",
+      "args": {
+        "koji_parent_build": "{{KOJI_PARENT_BUILD}}",
+        "koji_hub": "{{KOJI_HUB}}"
+      }
+    },
+    {
       "name": "pull_base_image",
       "args": {
         "parent_registry": "{{REGISTRY_URI}}",

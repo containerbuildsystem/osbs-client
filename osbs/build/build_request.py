@@ -241,6 +241,7 @@ class BuildRequest(object):
             'user': self.spec.user.value,
             'yum_repourls': self.spec.yum_repourls.value,
             'arrangement_version': self.spec.arrangement_version.value,
+            'koji_parent_build': self.spec.koji_parent_build.value,
         }
 
         self.dj.dock_json_set_arg(phase, plugin, 'platforms', self.spec.platforms.value)
@@ -580,6 +581,7 @@ class BuildRequest(object):
             # Plugins irrelevant to building base images.
             plugins.append(("prebuild_plugins", "pull_base_image"))
             plugins.append(("prebuild_plugins", "koji_parent"))
+            plugins.append(("prebuild_plugins", "inject_parent_image"))
             msg = "removing %s from custom image build request"
 
         else:
@@ -1103,6 +1105,23 @@ class BuildRequest(object):
         self.dj.dock_json_set_arg(phase, plugin, 'parent_registry',
                                   source_registry.docker_uri if source_registry else None)
 
+    def render_inject_parent_image(self):
+        phase = 'prebuild_plugins'
+        plugin = 'inject_parent_image'
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return
+
+        koji_parent_build = self.spec.koji_parent_build.value
+        koji_hub = self.spec.kojihub.value
+
+        if not koji_parent_build or not koji_hub:
+            logger.info('removing %s, koji_parent_build and koji_hub must be provided', plugin)
+            self.dj.remove_plugin(phase, plugin)
+            return
+
+        self.dj.dock_json_set_arg(phase, plugin, 'koji_parent_build', koji_parent_build)
+        self.dj.dock_json_set_arg(phase, plugin, 'koji_hub', koji_hub)
+
     def render_customizations(self):
         """
         Customize prod_inner for site specific customizations
@@ -1353,6 +1372,7 @@ class BuildRequest(object):
         self.render_sendmail()
         self.render_fetch_maven_artifacts()
         self.render_tag_from_config()
+        self.render_inject_parent_image()
         self.render_version()
         self.render_node_selectors()
 
