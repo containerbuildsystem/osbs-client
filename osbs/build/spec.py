@@ -177,6 +177,7 @@ class BuildSpec(object):
     equal_labels = BuildParam("equal_labels", allow_none=True)
     koji_upload_dir = BuildParam("koji_upload_dir", allow_none=True)
     yum_proxy = BuildParam("yum_proxy", allow_none=True)
+    koji_parent_build = BuildParam("koji_parent_build", allow_none=True)
 
     def __init__(self):
         self.required_params = [
@@ -227,7 +228,9 @@ class BuildSpec(object):
                    reactor_config_secret=None, client_config_secret=None,
                    token_secrets=None, arrangement_version=None,
                    info_url_format=None, artifacts_allowed_domains=None,
-                   equal_labels=None, koji_upload_dir=None, yum_proxy=None, **kwargs):
+                   equal_labels=None, koji_upload_dir=None, yum_proxy=None,
+                   koji_parent_build=None,
+                   **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
         self.user.value = user
@@ -323,6 +326,7 @@ class BuildSpec(object):
         self.filesystem_koji_task_id.value = filesystem_koji_task_id
         self.koji_upload_dir.value = koji_upload_dir
         self.yum_proxy.value = yum_proxy
+        self.koji_parent_build.value = koji_parent_build
 
         self._populate_image_tag()
 

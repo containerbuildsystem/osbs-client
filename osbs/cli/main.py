@@ -342,6 +342,7 @@ def cmd_build(args, osbs):
         'platform': args.platform,
         'platforms': args.platforms,
         'release': args.release,
+        'koji_parent_build': args.koji_parent_build,
     }
     if args.arrangement_version:
         build_kwargs['arrangement_version'] = args.arrangement_version
@@ -704,6 +705,8 @@ def cli():
                               help="perform a scratch build")
     build_parser.add_argument("--yum-proxy", action='store', required=False,
                               help="set yum proxy to repos from koji/add-yum-repo params")
+    build_parser.add_argument('--koji-parent-build', action='store', required=False,
+                              help='overwrite parent image with image from koji build')
 
     worker_group = build_parser.add_argument_group(title='arguments for --worker',
                                                    description='Required arguments for creating a '

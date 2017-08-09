@@ -1760,6 +1760,7 @@ class TestOSBS(object):
                 self.git_uri = None
                 self.git_ref = None
                 self.git_branch = TEST_GIT_BRANCH
+                self.koji_parent_build = None
 
         expected_kwargs = {
             'platform': platform,
@@ -1774,6 +1775,7 @@ class TestOSBS(object):
             'target': None,
             'architecture': None,
             'yum_repourls': None,
+            'koji_parent_build': None,
         }
         if arrangement_version:
             expected_kwargs.update({

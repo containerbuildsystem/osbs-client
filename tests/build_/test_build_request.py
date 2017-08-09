@@ -6,6 +6,7 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 import copy
+import glob
 import json
 import os
 import fnmatch
@@ -1397,6 +1398,7 @@ class TestBuildRequest(object):
         # Only one version defined so far
         DEFAULT_ARRANGEMENT_VERSION,
     ])
+    @pytest.mark.parametrize('koji_parent_build', ['fedora-26-9', None])
     @pytest.mark.parametrize(('build_image', 'build_imagestream', 'worker_build_image', 'valid'), (
         ('fedora:latest', None, 'fedora:latest', True),
         (None, 'buildroot-stream:v1.0', KeyError, True),
@@ -1435,8 +1437,9 @@ class TestBuildRequest(object):
     def test_render_orchestrate_build(self, tmpdir, platforms, secret, disabled,
                                       arrangement_version, build_image,
                                       build_imagestream, worker_build_image,
-                                      additional_kwargs, openshift_req_version,
-                                      worker_openshift_req_version, valid):
+                                      additional_kwargs, koji_parent_build,
+                                      openshift_req_version, worker_openshift_req_version,
+                                      valid):
         phase = 'buildstep_plugins'
         plugin = 'orchestrate_build'
 
@@ -1461,6 +1464,8 @@ class TestBuildRequest(object):
             kwargs['build_image'] = build_image
         if build_imagestream:
             kwargs['build_imagestream'] = build_imagestream
+        if koji_parent_build:
+            kwargs['koji_parent_build'] = koji_parent_build
         kwargs.update(additional_kwargs)
 
         inner_template = ORCHESTRATOR_INNER_TEMPLATE.format(
@@ -1485,6 +1490,7 @@ class TestBuildRequest(object):
             assert plugin_value_get(plugins, phase, plugin, 'args', 'platforms') == platforms
             build_kwargs = plugin_value_get(plugins, phase, plugin, 'args', 'build_kwargs')
             assert build_kwargs['arrangement_version'] == arrangement_version
+            assert build_kwargs.get('koji_parent_build') == koji_parent_build
 
             worker_config_kwargs = plugin_value_get(plugins, phase, plugin, 'args',
                                                     'config_kwargs')
@@ -1593,9 +1599,10 @@ class TestBuildRequest(object):
             }
         ]
 
-        # Make temporary copies of the JSON files
-        for basename in [DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE]:
-            shutil.copy(os.path.join(INPUTS_PATH, basename),
+        # Make temporary copies of all the JSON files
+        for json_file_path in glob.glob(os.path.join(INPUTS_PATH, '*.json')):
+            basename = os.path.basename(json_file_path)
+            shutil.copy(json_file_path,
                         os.path.join(outdir, basename))
 
         # Create a build JSON description with an image change trigger
@@ -1710,11 +1717,24 @@ class TestBuildRequest(object):
         ("http://registry.example.com", True),
     ])
     @pytest.mark.parametrize('use_auth', (True, False, None))
+    @pytest.mark.parametrize('koji_parent_build', ('fedora-26-9', None))
     def test_render_custom_base_image_with_trigger(self, tmpdir, registry_uri,
-                                                   insecure_registry, use_auth):
+                                                   insecure_registry, use_auth,
+                                                   koji_parent_build):
         name_label = "fedora/resultingimage"
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequest(str(tmpdir))
+
+        build_request.customize_conf['enable_plugins'].append(
+            {
+                "plugin_type": "prebuild_plugins",
+                "plugin_name": "inject_parent_image",
+                "plugin_args": {
+                    "koji_parent_build": "{{KOJI_PARENT_BUILD}}",
+                    "koji_hub": "{{KOJI_HUB}}"
+                },
+            }
+        )
 
         kwargs = get_sample_prod_params()
         kwargs['base_image'] = 'koji/image-build'
@@ -1726,6 +1746,8 @@ class TestBuildRequest(object):
         kwargs['openshift_uri'] = 'http://openshift/'
         if use_auth is not None:
             kwargs['use_auth'] = use_auth
+        if koji_parent_build:
+            kwargs['koji_parent_build'] = koji_parent_build
 
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -1744,6 +1766,9 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins",
                        "stop_autorebuild_if_disabled")
+
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins", "inject_parent_image")
 
         self.assert_import_image_plugin(
             plugins=plugins,
@@ -2250,6 +2275,49 @@ class TestBuildRequest(object):
                                     'pulp_registry_name')
             assert plugin_value_get(plugins, plugin_type, plugin_name, 'args',
                                     'goarch') == goarch
+        else:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, plugin_type, plugin_name)
+
+    @pytest.mark.parametrize(('koji_parent_build', 'koji_hub', 'plugin_enabled'), (
+        ('fedora-26-9', 'http://hub/', True),
+        (None, 'http://hub/', False),
+        ('fedora-26-9', None, False),
+        (None, None, False),
+    ))
+    def test_render_inject_parent_image(self, koji_parent_build, koji_hub, plugin_enabled):
+        plugin_type = "prebuild_plugins"
+        plugin_name = "inject_parent_image"
+
+        build_request = BuildRequest(INPUTS_PATH)
+        build_request.customize_conf['enable_plugins'].append(
+            {
+                "plugin_type": plugin_type,
+                "plugin_name": plugin_name,
+                "plugin_args": {
+                    "koji_parent_build": "{{KOJI_PARENT_BUILD}}",
+                    "koji_hub": "{{KOJI_HUB}}"
+                },
+            }
+        )
+
+        kwargs = get_sample_prod_params()
+        kwargs.pop('kojihub', None)
+        if koji_hub:
+            kwargs['kojihub'] = koji_hub
+        if koji_parent_build:
+            kwargs['koji_parent_build'] = koji_parent_build
+        build_request.set_params(**kwargs)
+
+        build_json = build_request.render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        if plugin_enabled:
+            assert get_plugin(plugins, plugin_type, plugin_name)
+            assert plugin_value_get(plugins, plugin_type, plugin_name, 'args',
+                                    'koji_parent_build') == koji_parent_build
+            assert plugin_value_get(plugins, plugin_type, plugin_name, 'args',
+                                    'koji_hub') == kwargs['kojihub']
         else:
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, plugin_type, plugin_name)
