@@ -708,16 +708,16 @@ def cli():
                               help="set yum proxy to repos from koji/add-yum-repo params")
     build_parser.add_argument('--koji-parent-build', action='store', required=False,
                               help='overwrite parent image with image from koji build')
+    build_parser.add_argument('--release', action='store', required=False,
+                              help='release value to use')
+    build_parser.add_argument('--arrangement-version', action='store', required=False,
+                              help='version of inner template to use')
 
     worker_group = build_parser.add_argument_group(title='arguments for --worker',
                                                    description='Required arguments for creating a '
                                                    'worker build')
     worker_group.add_argument('--platform', action='store', required=False,
                               help='platform name to use')
-    worker_group.add_argument('--release', action='store', required=False,
-                              help='release value to use')
-    worker_group.add_argument('--arrangement-version', action='store', required=False,
-                              help='version of inner template to use')
     worker_group.add_argument('--koji-upload-dir', action='store', required=False,
                               help='path for uploading to koji')
 
