@@ -81,7 +81,11 @@ HTTP_MAX_RETRIES = 8
 # how many seconds should request wait for in case non-critical error has occurred
 HTTP_BACKOFF_FACTOR = 4
 
+# Statuses which should trigger automatic retry
 HTTP_RETRIES_STATUS_FORCELIST = [408, 500, 502, 503, 504]
+
+# HTTP methods that we should retry on
+HTTP_RETRIES_METHODS_WHITELIST = ['GET', 'PUT', 'POST', 'DELETE']
 
 BUILD_TYPE_ORCHESTRATOR = object()
 BUILD_TYPE_WORKER = object()
