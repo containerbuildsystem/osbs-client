@@ -51,12 +51,7 @@ from tests.build_.test_build_request import get_sample_prod_params
 from osbs.core import Openshift
 # These are used as fixtures
 from tests.fake_api import openshift, osbs, osbs106, osbs_cant_orchestrate  # noqa
-try:
-    # py2
-    import httplib
-except ImportError:
-    # py3
-    import http.client as httplib
+from six.moves import http_client
 
 
 # Increment default arrangement version to allow for one
@@ -778,7 +773,7 @@ class TestOSBS(object):
             .and_return(token_file_path))
 
         class TestResponse:
-            status_code = httplib.UNAUTHORIZED
+            status_code = http_client.UNAUTHORIZED
 
         if not token:
             (flexmock(Openshift)

@@ -23,14 +23,8 @@ from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_ORCHESTRATOR
 from tempfile import NamedTemporaryFile
 from textwrap import dedent
 
-try:
-    # py2
-    import httplib
-    import urlparse
-except ImportError:
-    # py3
-    import http.client as httplib
-    import urllib.parse as urlparse
+from six.moves import http_client
+from six.moves.urllib.parse import urlparse
 
 
 logger = logging.getLogger("osbs.tests")
@@ -209,7 +203,7 @@ class Connection(object):
              ): {
                  "get": {
                      "custom_callback":
-                         self.with_status_code(httplib.NOT_FOUND),
+                         self.with_status_code(http_client.NOT_FOUND),
                      # Empty file (no response content as the status is 404
                      "file": None,
                  }
@@ -260,7 +254,7 @@ class Connection(object):
             API_PREFIX + "namespaces/default/resourcequotas/": {
                 # Make the POST fail so we can test PUT
                 "post": {
-                    "custom_callback": self.with_status_code(httplib.CONFLICT),
+                    "custom_callback": self.with_status_code(http_client.CONFLICT),
 
                     # Reponse is not really empty but it isn't relevant to
                     # the testing
@@ -345,9 +339,9 @@ class Connection(object):
         return HttpResponse(status_code, headers or {}, content=content)
 
     def request(self, url, method, stream=None, *args, **kwargs):
-        parsed_url = urlparse.urlparse(url)
+        parsed_url = urlparse(url)
         # fragment = parsed_url.fragment
-        # parsed_fragment = urlparse.parse_qs(fragment)
+        # parsed_fragment = urllib.parse_qs(fragment)
         url_path = parsed_url.path
         if parsed_url.query:
             url_path += '?' + parsed_url.query

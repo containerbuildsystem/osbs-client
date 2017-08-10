@@ -12,15 +12,8 @@ from flexmock import flexmock
 import pytest
 import requests
 
-try:
-    # py2
-    import httplib
-except ImportError:
-    # py3
-    import http.client as httplib
-
 from requests.packages.urllib3.util import Retry
-from osbs.http import HttpSession, HttpStream
+from osbs.http import HttpSession, HttpStream, http_client
 from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsResponseException
 from osbs.constants import HTTP_RETRIES_STATUS_FORCELIST
 
@@ -146,7 +139,7 @@ class TestHttpSession(object):
     @pytest.mark.parametrize('raise_exc', (
         requests.exceptions.ChunkedEncodingError,
         requests.exceptions.ConnectionError,
-        httplib.IncompleteRead,
+        http_client.IncompleteRead,
     ))
     def test_osbs_exception_wrapping(self, s, raise_exc):
         (flexmock(HttpStream)

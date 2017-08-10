@@ -34,12 +34,7 @@ from osbs.exceptions import OsbsException, OsbsValidationException, OsbsResponse
 # import utils in this way, so that we can mock standalone functions with flexmock
 from osbs import utils
 
-try:
-    # py2
-    import httplib
-except ImportError:
-    # py3
-    import http.client as httplib
+from six.moves import http_client
 
 
 # Decorator for API methods.
@@ -875,7 +870,7 @@ class OSBS(object):
         try:
             self.os.get_user()
         except OsbsResponseException as ex:
-            if ex.status_code == httplib.UNAUTHORIZED:
+            if ex.status_code == http_client.UNAUTHORIZED:
                 raise OsbsValidationException("token is not valid")
             raise
 

@@ -21,9 +21,7 @@ from osbs.http import HttpSession, HttpStream
 from osbs.exceptions import OsbsNetworkException, OsbsResponseException
 from osbs.constants import HTTP_RETRIES_STATUS_FORCELIST, HTTP_RETRIES_METHODS_WHITELIST
 from osbs.core import Openshift
-
-from six.moves import httplib
-
+from osbs.http import http_client
 logger = logging.getLogger(__file__)
 
 
@@ -75,7 +73,7 @@ class TestHttpRetries(object):
             u'Lðgs'.encode('utf-8'),
         )
 
-        fake_response = flexmock(status_code=httplib.OK, headers={})
+        fake_response = flexmock(status_code=http_client.OK, headers={})
 
         (fake_response
             .should_receive('iter_lines')

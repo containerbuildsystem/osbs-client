@@ -13,12 +13,7 @@ import os
 import re
 from pkg_resources import parse_version
 
-try:
-    # py2
-    from itertools import izip_longest as zip_longest
-except ImportError:
-    # py3
-    from itertools import zip_longest
+from six.moves import zip_longest
 
 from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.spec import BuildSpec

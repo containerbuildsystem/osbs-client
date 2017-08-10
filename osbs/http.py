@@ -14,12 +14,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 import sys
 import json
 import logging
-try:
-    # py2
-    import httplib
-except ImportError:
-    # py3
-    import http.client as httplib
+from six.moves import http_client
 
 
 from osbs.exceptions import OsbsException, OsbsNetworkException, OsbsResponseException
@@ -183,7 +178,7 @@ class HttpStream(object):
                 yield line
         except (requests.exceptions.ChunkedEncodingError,
                 requests.exceptions.ConnectionError,
-                httplib.IncompleteRead):
+                http_client.IncompleteRead):
             raise StopIteration
 
     def close(self):
