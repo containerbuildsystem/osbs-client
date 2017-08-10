@@ -26,16 +26,8 @@ from osbs.utils import graceful_chain_get
 from requests.exceptions import ConnectionError
 from requests.utils import guess_json_utf
 
-try:
-    # py2
-    import httplib
-    import urlparse
-    from urllib import urlencode
-except ImportError:
-    # py3
-    import http.client as httplib
-    import urllib.parse as urlparse
-    from urllib.parse import urlencode
+from six.moves import http_client
+from six.moves.urllib.parse import urljoin, urlencode, urlparse, parse_qs
 
 from .http import HttpSession
 
@@ -44,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 def check_response(response, log_level=logging.ERROR):
-    if response.status_code not in (httplib.OK, httplib.CREATED):
+    if response.status_code not in (http_client.OK, http_client.CREATED):
         if hasattr(response, 'content'):
             content = response.content
         else:
@@ -66,7 +58,7 @@ def retry_on_conflict(func, sleep_seconds=0.5, max_attempts=10):
             try:
                 return func(*args, **kwargs)
             except OsbsResponseException as ex:
-                if ex.status_code != httplib.CONFLICT:
+                if ex.status_code != http_client.CONFLICT:
                     raise
 
                 last_exception = ex
@@ -151,14 +143,14 @@ class Openshift(object):
             url = "namespaces/%s/%s" % (self.namespace, url)
         if query:
             url += ("?" + urlencode(query))
-        return urlparse.urljoin(self.k8s_api_url, url)
+        return urljoin(self.k8s_api_url, url)
 
     def _build_url(self, url, _prepend_namespace=True, **query):
         if _prepend_namespace:
             url = "namespaces/%s/%s" % (self.namespace, url)
         if query:
             url += ("?" + urlencode(query))
-        return urlparse.urljoin(self.os_api_url, url)
+        return urljoin(self.os_api_url, url)
 
     def _request_args(self, with_auth=True, **kwargs):
         headers = kwargs.pop("headers", {})
@@ -243,10 +235,10 @@ class Openshift(object):
             logger.error("[%s] 'Location' header is missing in response, cannot retrieve token",
                          r.status_code)
             return ""
-        parsed_url = urlparse.urlparse(redir_url)
+        parsed_url = urlparse(redir_url)
         fragment = parsed_url.fragment
         logger.debug("fragment is '%s'", fragment)
-        parsed_fragment = urlparse.parse_qs(fragment)
+        parsed_fragment = parse_qs(fragment)
         self.token = parsed_fragment['access_token'][0]
         return self.token
 
@@ -416,7 +408,7 @@ class Openshift(object):
                 break
 
         raise OsbsResponseException("New BuildConfig instance not found",
-                                    httplib.NOT_FOUND)
+                                    http_client.NOT_FOUND)
 
     def stream_logs(self, build_id):
         """
@@ -568,7 +560,7 @@ class Openshift(object):
         url = self._build_k8s_url("resourcequotas/")
         response = self._post(url, data=json.dumps(quota_json),
                               headers={"Content-Type": "application/json"})
-        if response.status_code == httplib.CONFLICT:
+        if response.status_code == http_client.CONFLICT:
             url = self._build_k8s_url("resourcequotas/%s" % name)
             response = self._put(url, data=json.dumps(quota_json),
                                  headers={"Content-Type": "application/json"})
@@ -579,7 +571,7 @@ class Openshift(object):
     def delete_resource_quota(self, name):
         url = self._build_k8s_url("resourcequotas/%s" % name)
         response = self._delete(url)
-        if response.status_code != httplib.NOT_FOUND:
+        if response.status_code != http_client.NOT_FOUND:
             check_response(response)
 
         return response

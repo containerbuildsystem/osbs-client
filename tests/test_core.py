@@ -27,12 +27,7 @@ from tests.fake_api import openshift, OAPI_PREFIX, API_VER  # noqa
 from requests.exceptions import ConnectionError
 import pytest
 
-try:
-    # py2
-    import httplib
-except ImportError:
-    # py3
-    import http.client as httplib
+from six.moves import http_client
 
 
 class Response(object):
@@ -55,7 +50,7 @@ def make_json_response(obj):
 
 class TestCheckResponse(object):
     @pytest.mark.parametrize('content', [None, b'OK'])
-    @pytest.mark.parametrize('status_code', [httplib.OK, httplib.CREATED])
+    @pytest.mark.parametrize('status_code', [http_client.OK, http_client.CREATED])
     def test_check_response_ok(self, status_code, content):
         response = Response(status_code, content=content)
         check_response(response)
@@ -63,7 +58,7 @@ class TestCheckResponse(object):
     @pytest.mark.parametrize('log_errors', (True, False))
     def test_check_response_bad_stream(self, caplog, log_errors):
         iterable = [b'iter', b'lines']
-        status_code = httplib.CONFLICT
+        status_code = http_client.CONFLICT
         response = Response(status_code, iterable=iterable)
         if log_errors:
             log_type = logging.ERROR
@@ -84,7 +79,7 @@ class TestCheckResponse(object):
 
     @pytest.mark.parametrize('log_errors', (True, False))
     def test_check_response_bad_nostream(self, caplog, log_errors):
-        status_code = httplib.CONFLICT
+        status_code = http_client.CONFLICT
         content = b'content'
         response = Response(status_code, content=content)
         if log_errors:
@@ -111,10 +106,10 @@ class TestOpenshift(object):
         assert labels.json() is not None
 
     @pytest.mark.parametrize('exc', [  # noqa
-        ConnectionError('Connection aborted.', httplib.BadStatusLine("''",)),
+        ConnectionError('Connection aborted.', http_client.BadStatusLine("''",)),
     ])
     def test_stream_logs_bad_initial_connection(self, openshift, exc):
-        response = flexmock(status_code=httplib.OK)
+        response = flexmock(status_code=http_client.OK)
         (response
             .should_receive('iter_lines')
             .and_return([b"{'stream': 'foo\n'}"])
@@ -138,7 +133,7 @@ class TestOpenshift(object):
         assert len([log for log in logs]) == 1
 
     def test_stream_logs_utf8(self, openshift):  # noqa
-        response = flexmock(status_code=httplib.OK)
+        response = flexmock(status_code=http_client.OK)
         (response
             .should_receive('iter_lines')
             .and_return([u"{'stream': 'Uňícode íš hářd\n'}".encode('utf-8')])
@@ -265,12 +260,12 @@ class TestOpenshift(object):
         assert str(exc.value).startswith('More than one build config found')
 
     @pytest.mark.parametrize(('status_codes', 'should_raise'), [  # noqa
-        ([httplib.OK], False),
-        ([httplib.CONFLICT, httplib.CONFLICT, httplib.OK], False),
-        ([httplib.CONFLICT, httplib.OK], False),
-        ([httplib.CONFLICT, httplib.CONFLICT, httplib.UNAUTHORIZED], True),
-        ([httplib.UNAUTHORIZED], True),
-        ([httplib.CONFLICT for _ in range(10)], True),
+        ([http_client.OK], False),
+        ([http_client.CONFLICT, http_client.CONFLICT, http_client.OK], False),
+        ([http_client.CONFLICT, http_client.OK], False),
+        ([http_client.CONFLICT, http_client.CONFLICT, http_client.UNAUTHORIZED], True),
+        ([http_client.UNAUTHORIZED], True),
+        ([http_client.CONFLICT for _ in range(10)], True),
     ])
     @pytest.mark.parametrize('update_or_set', ['update', 'set'])
     @pytest.mark.parametrize('attr_type', ['labels', 'annotations'])

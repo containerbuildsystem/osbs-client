@@ -31,12 +31,7 @@ from osbs.exceptions import (OsbsNetworkException, OsbsException, OsbsAuthExcept
 from osbs.cli.capture import setup_json_capture
 from osbs.utils import (strip_registry_from_image, paused_builds, TarReader,
                         TarWriter, get_time_from_rfc3339, graceful_chain_get)
-try:
-    # py2
-    from urlparse import urljoin
-except ImportError:
-    # py3
-    from urllib.parse import urljoin
+from six.moves.urllib.parse import urljoin
 
 logger = logging.getLogger('osbs')
 

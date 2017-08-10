@@ -14,14 +14,8 @@ import re
 import warnings
 from pkg_resources import parse_version
 
-try:
-    # py2
-    import ConfigParser as configparser
-    from urlparse import urljoin
-except ImportError:
-    # py3
-    import configparser
-    from urllib.parse import urljoin
+from six.moves import configparser
+from six.moves.urllib.parse import urljoin
 
 from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
                             GENERAL_CONFIGURATION_SECTION, DEFAULT_NAMESPACE,
