@@ -499,7 +499,7 @@ class Openshift(object):
         return response.content
 
     def list_builds(self, build_config_id=None, koji_task_id=None,
-                    field_selector=None):
+                    field_selector=None, labels=None):
         """
         List builds matching criteria
 
@@ -512,6 +512,9 @@ class Openshift(object):
         selector = '{key}={value}'
 
         label = {}
+        if labels is not None:
+            label.update(labels)
+
         if build_config_id is not None:
             label['buildconfig'] = build_config_id
 

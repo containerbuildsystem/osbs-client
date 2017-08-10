@@ -19,7 +19,7 @@ from osbs.utils import (buildconfig_update,
                         get_imagestreamtag_from_image,
                         git_repo_humanish_part_from_uri,
                         get_time_from_rfc3339, strip_registry_from_image,
-                        TarWriter, TarReader, make_name_from_git,
+                        TarWriter, TarReader, make_name_from_git, wrap_name_from_git,
                         get_instance_token_file_name, Labels, sanitize_version,
                         has_triggers)
 from osbs.exceptions import OsbsException
@@ -178,6 +178,36 @@ def test_make_name_from_git(repo, branch, limit, separator, expected, hash_size=
                                  hash_size=hash_size)
 
     assert expected == bc_name[:-(hash_size + len(separator))]
+
+    # Is this a valid name for OpenShift to use?
+    valid = re.compile(BC_NAME_REGEX)
+    assert valid.match(bc_name)
+
+
+@pytest.mark.parametrize(('prefix', 'expected_prefix'), (
+    ('prefix', 'prefix'),
+    ('p.r.e.f.i.x', 'prefix'),
+    ('p-r-e-f-i-x', 'p-r-e-f-i-x'),
+))
+@pytest.mark.parametrize(('suffix', 'expected_suffix'), (
+    ('suffix', 'suffix'),
+    ('s.u.f.f.i.x', 'suffix'),
+    ('s-u-f-f-i-x', 's-u-f-f-i-x'),
+))
+def test_wrap_name_from_git(prefix, expected_prefix, suffix, expected_suffix):
+    repo = 'repo'
+    branch = 'branch'
+    hash_size = 5
+    # Amount of separators when joining all segments:
+    #    repo, branch, hash, prefix, suffix
+    num_separators = 4
+    limit = len(suffix) + len(prefix) + hash_size + num_separators
+    bc_name = wrap_name_from_git(prefix, suffix, repo, branch, limit=limit, hash_size=hash_size)
+
+    assert bc_name.startswith(expected_prefix + '-')
+    assert bc_name.endswith('-' + expected_suffix)
+
+    assert len(bc_name) <= limit
 
     # Is this a valid name for OpenShift to use?
     valid = re.compile(BC_NAME_REGEX)

@@ -7,6 +7,7 @@ of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, absolute_import, unicode_literals
 
+import re
 import sys
 
 PY3 = sys.version_info[0] >= 3
@@ -89,3 +90,5 @@ HTTP_RETRIES_METHODS_WHITELIST = ['GET', 'PUT', 'POST', 'DELETE']
 
 BUILD_TYPE_ORCHESTRATOR = object()
 BUILD_TYPE_WORKER = object()
+
+ISOLATED_RELEASE_FORMAT = re.compile(r'^\d+\.\d+(\..+)?$')

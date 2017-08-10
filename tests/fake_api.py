@@ -81,6 +81,36 @@ class Connection(object):
                 }
             },
 
+            (OAPI_PREFIX + "namespaces/default/builds?fieldSelector=status%21%3DFailed%2C"
+                           "status%21%3DComplete%2Cstatus%21%3DError%2Cstatus%21%3DCancelled",
+             OAPI_PREFIX + "namespaces/default/builds/?fieldSelector=status%21%3DFailed%2C"
+                           "status%21%3DComplete%2Cstatus%21%3DError%2Cstatus%21%3DCancelled"): {
+                "get": {
+                    # Contains a list of builds
+                    "file": "builds_list.json",
+                }
+            },
+
+            (OAPI_PREFIX + "namespaces/default/builds?fieldSelector=foo%3Doof%2C"
+                           "status%21%3DFailed%2Cstatus%21%3DComplete%2Cstatus%21%3DError%2C"
+                           "status%21%3DCancelled",
+             OAPI_PREFIX + "namespaces/default/builds/?fieldSelector=foo%3Doof%2C"
+                           "status%21%3DFailed%2Cstatus%21%3DComplete%2Cstatus%21%3DError%2C"
+                           "status%21%3DCancelled"): {
+                "get": {
+                    # Contains a list of builds
+                    "file": "builds_list.json",
+                }
+            },
+
+            (OAPI_PREFIX + "namespaces/default/builds?fieldSelector=foo%3Doof",
+             OAPI_PREFIX + "namespaces/default/builds/?fieldSelector=foo%3Doof"): {
+                "get": {
+                    # Contains a list of builds
+                    "file": "builds_list.json",
+                }
+            },
+
             OAPI_PREFIX + "namespaces/default/builds/"
                           "?labelSelector=koji-task-id%3D{task}".format(task=TEST_KOJI_TASK_ID): {
                 "get": {

@@ -336,6 +336,7 @@ def cmd_build(args, osbs):
         'platforms': args.platforms,
         'release': args.release,
         'koji_parent_build': args.koji_parent_build,
+        'isolated': args.isolated
     }
     if args.arrangement_version:
         build_kwargs['arrangement_version'] = args.arrangement_version
@@ -703,6 +704,8 @@ def cli():
                               help='overwrite parent image with image from koji build')
     build_parser.add_argument('--release', action='store', required=False,
                               help='release value to use')
+    build_parser.add_argument('--isolated', action='store_true', required=False,
+                              help='isolated build')
     build_parser.add_argument('--arrangement-version', action='store', required=False,
                               help='version of inner template to use')
 
