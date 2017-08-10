@@ -19,15 +19,10 @@ import six
 from requests.packages.urllib3.util import Retry
 from osbs.http import HttpSession, HttpStream
 from osbs.exceptions import OsbsNetworkException, OsbsResponseException
-from osbs.constants import HTTP_RETRIES_STATUS_FORCELIST
+from osbs.constants import HTTP_RETRIES_STATUS_FORCELIST, HTTP_RETRIES_METHODS_WHITELIST
 from osbs.core import Openshift
 
-try:
-    # py2
-    import httplib
-except ImportError:
-    # py3
-    import http.client as httplib
+from six.moves import httplib
 
 logger = logging.getLogger(__file__)
 
@@ -61,11 +56,12 @@ fake_retry = Retry(total=1,
                     reason="requires internet connection")
 class TestHttpRetries(object):
     @pytest.mark.parametrize('status_code', HTTP_RETRIES_STATUS_FORCELIST)
-    def test_fail_after_retries(self, s, status_code):
+    @pytest.mark.parametrize('method', HTTP_RETRIES_METHODS_WHITELIST)
+    def test_fail_after_retries(self, s, status_code, method):
         flexmock(Retry).new_instances(fake_retry)
         # latest python-requests throws OsbsResponseException, 2.6.x - OsbsNetworkException
         with pytest.raises((OsbsNetworkException, OsbsResponseException)) as exc_info:
-            s.get('http://httpbin.org/status/%s' % status_code).json()
+            s.request(method=method, url='http://httpbin.org/status/%s' % status_code).json()
         if isinstance(exc_info, OsbsResponseException):
             assert exc_info.value.status_code == status_code
 

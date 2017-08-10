@@ -24,7 +24,8 @@ except ImportError:
 
 from osbs.exceptions import OsbsException, OsbsNetworkException, OsbsResponseException
 from osbs.constants import (
-    HTTP_MAX_RETRIES, HTTP_BACKOFF_FACTOR, HTTP_RETRIES_STATUS_FORCELIST)
+    HTTP_MAX_RETRIES, HTTP_BACKOFF_FACTOR, HTTP_RETRIES_STATUS_FORCELIST,
+    HTTP_RETRIES_METHODS_WHITELIST)
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -102,7 +103,8 @@ class HttpStream(object):
         retry = Retry(
             total=HTTP_MAX_RETRIES,
             backoff_factor=HTTP_BACKOFF_FACTOR,
-            status_forcelist=HTTP_RETRIES_STATUS_FORCELIST
+            status_forcelist=HTTP_RETRIES_STATUS_FORCELIST,
+            method_whitelist=HTTP_RETRIES_METHODS_WHITELIST
         )
         self.session = requests.Session()
         if retries_enabled:
