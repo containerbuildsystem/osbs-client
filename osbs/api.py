@@ -295,11 +295,17 @@ class OSBS(object):
             raise OsbsException(msg)
 
     def _create_scratch_build(self, build_request):
+        return self._create_build_directly(build_request)
+
+    def _create_isolated_build(self, build_request):
+        return self._create_build_directly(build_request,
+                                           unique=('git-repo-name', 'git-branch', 'isolated'))
+
+    def _create_build_directly(self, build_request, unique=None):
         logger.debug(build_request)
         build_json = build_request.render()
         build_json['kind'] = 'Build'
         build_json['spec']['serviceAccount'] = 'builder'
-        build_json['metadata']['labels']['scratch'] = 'true'
 
         builder_img = build_json['spec']['strategy']['customStrategy']['from']
         kind = builder_img['kind']
@@ -311,6 +317,15 @@ class OSBS(object):
             ref = response.json()['image']['dockerImageReference']
             builder_img['kind'] = 'DockerImage'
             builder_img['name'] = ref
+
+        if unique:
+            unique_labels = {}
+            for u in unique:
+                unique_labels[u] = build_json['metadata']['labels'][u]
+            running_builds = self.list_builds(running=True, labels=unique_labels)
+            if running_builds:
+                raise RuntimeError('Matching build(s) already running: {0}'
+                                   .format(', '.join(x.get_build_name() for x in running_builds)))
 
         return BuildResponse(self.os.create_build(build_json).json())
 
@@ -434,6 +449,7 @@ class OSBS(object):
                               koji_upload_dir=None,
                               is_auto=False,
                               koji_parent_build=None,
+                              isolated=None,
                               **kwargs):
         repo_info = utils.get_repo_info(git_uri, git_ref, git_branch=git_branch)
         df_parser = repo_info.dockerfile_parser
@@ -530,11 +546,14 @@ class OSBS(object):
             platform_descriptors=self.build_conf.get_platform_descriptors(),
             koji_parent_build=koji_parent_build,
             group_manifests=self.os_conf.get_group_manifests(),
+            isolated=isolated,
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         build_request.set_repo_info(repo_info)
         if build_request.scratch:
             response = self._create_scratch_build(build_request)
+        elif build_request.isolated:
+            response = self._create_isolated_build(build_request)
         else:
             response = self._create_build_config_and_build(build_request)
         logger.debug(response.json)

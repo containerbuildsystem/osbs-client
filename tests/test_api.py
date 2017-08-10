@@ -117,12 +117,14 @@ class TestOSBS(object):
         with pytest.raises(MethodCallError):
             dummy_api_function()
 
-    @pytest.mark.parametrize('koji_task_id', [None, TEST_KOJI_TASK_ID])  # noqa
-    def test_list_builds_api(self, osbs, koji_task_id):
-        kwargs = {}
-        if koji_task_id:
-            kwargs['koji_task_id'] = koji_task_id
-
+    @pytest.mark.parametrize('kwargs', (  # noqa
+        {},
+        {'koji_task_id': TEST_KOJI_TASK_ID},
+        {'running': True},
+        {'field_selector': 'foo=oof'},
+        {'running': True, 'field_selector': 'foo=oof'},
+    ))
+    def test_list_builds_api(self, osbs, kwargs):
         response_list = osbs.list_builds(**kwargs)
         # We should get a response
         assert response_list is not None
@@ -1573,8 +1575,14 @@ class TestOSBS(object):
         ('ImageStreamTag', 'registry:5000/buildroot:latest'),
         ('DockerImage', 'buildroot:latest'),
     ])
-    def test_scratch_build_config(self, kind, expect_name):
-        config = Configuration()
+    @pytest.mark.parametrize(('build_variation', 'running_builds', 'check_running', 'fail'), (
+        ('scratch', False, False, False),
+        ('isolated', False, True, False),
+        ('isolated', True, True, True),
+    ))
+    def test_direct_build(self, kind, expect_name, build_variation, running_builds,
+                          check_running, fail):
+        config = Configuration(conf_name=None)
         osbs_obj = OSBS(config, config)
 
         build_json = {
@@ -1584,8 +1592,8 @@ class TestOSBS(object):
                 'labels': {
                     'git-repo-name': 'reponame',
                     'git-branch': 'branch',
+                    build_variation: 'true',
                 },
-                'name': 'scratch-12345-20001010112233'
             },
 
             'spec': {
@@ -1608,12 +1616,12 @@ class TestOSBS(object):
         build_request = flexmock(
             render=lambda: build_json,
             has_ist_trigger=lambda: False,
-            scratch=True
-            )
+            scratch=(build_variation == 'scratch'),
+            isolated=(build_variation == 'isolated'),
+        )
 
         updated_build_json = copy.deepcopy(build_json)
         updated_build_json['kind'] = 'Build'
-        updated_build_json['metadata']['labels']['scratch'] = 'true'
         updated_build_json['spec']['serviceAccount'] = 'builder'
         img = updated_build_json['spec']['strategy']['customStrategy']['from']
         img['kind'] = 'DockerImage'
@@ -1643,7 +1651,7 @@ class TestOSBS(object):
         (flexmock(osbs_obj.os)
             .should_receive('create_build')
             .replace_with(verify_build_json)
-            .once())
+            .times(0 if fail else 1))
 
         (flexmock(osbs_obj.os)
             .should_receive('create_build_config')
@@ -1653,11 +1661,38 @@ class TestOSBS(object):
             .should_receive('update_build_config')
             .never())
 
-        build_response = osbs_obj._create_scratch_build(build_request)
-        assert build_response.json == {'spam': 'maps'}
+        if check_running:
+            builds_list = []
+            if running_builds:
+                build = flexmock()
+                build.should_receive('get_build_name').and_return('build-1')
+                builds_list.append(build)
 
-    def test_scratch_param_to_create_build(self):
-        config = Configuration()
+            (flexmock(osbs_obj)
+                .should_receive('list_builds')
+                .with_args(running=True, labels=build_json['metadata']['labels'])
+                .once()
+                .and_return(builds_list))
+
+        if build_variation == 'scratch':
+            create_method = osbs_obj._create_scratch_build
+        else:
+            create_method = osbs_obj._create_isolated_build
+
+        if fail:
+            with pytest.raises(RuntimeError) as exc_info:
+                create_method(build_request)
+            assert 'already running' in str(exc_info.value)
+        else:
+            build_response = create_method(build_request)
+            assert build_response.json == {'spam': 'maps'}
+
+    @pytest.mark.parametrize(('variation', 'delegate_method'), (
+        ('isolated', '_create_isolated_build'),
+        ('scratch', '_create_scratch_build'),
+    ))
+    def test_create_direct_build(self, variation, delegate_method):
+        config = Configuration(conf_file=None)
         osbs_obj = OSBS(config, config)
 
         kwargs = {
@@ -1670,7 +1705,7 @@ class TestOSBS(object):
             'architecture': TEST_ARCH,
             'yum_repourls': None,
             'koji_task_id': None,
-            'scratch': True,
+            variation: True,
         }
 
         (flexmock(utils)
@@ -1679,7 +1714,7 @@ class TestOSBS(object):
             .and_return(self.mock_repo_info()))
 
         (flexmock(osbs_obj)
-            .should_receive('_create_scratch_build')
+            .should_receive(delegate_method)
             .once()
             .and_return(flexmock(json=lambda: {'spam': 'maps'})))
 
@@ -1799,6 +1834,7 @@ class TestOSBS(object):
                 self.worker = worker
                 self.orchestrator = orchestrator
                 self.scratch = None
+                self.isolated = None
                 self.koji_upload_dir = koji_upload_dir
                 self.git_uri = None
                 self.git_ref = None
@@ -1808,6 +1844,7 @@ class TestOSBS(object):
         expected_kwargs = {
             'platform': platform,
             'scratch': None,
+            'isolated': None,
             'platforms': platforms,
             'release': release,
             'git_uri': None,

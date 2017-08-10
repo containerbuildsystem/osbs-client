@@ -32,7 +32,8 @@ import pytest
 from tests.constants import (INPUTS_PATH, TEST_BUILD_CONFIG, TEST_BUILD_JSON,
                              TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
                              TEST_GIT_URI, TEST_GIT_URI_HUMAN_NAME,
-                             TEST_FILESYSTEM_KOJI_TASK_ID, TEST_SCRATCH_BUILD_NAME)
+                             TEST_FILESYSTEM_KOJI_TASK_ID, TEST_SCRATCH_BUILD_NAME,
+                             TEST_ISOLATED_BUILD_NAME)
 
 USE_DEFAULT_TRIGGERS = object()
 
@@ -336,6 +337,27 @@ class TestBuildRequest(object):
             'label-2': 'value-2',
             'label-3': 'value-3',
         }
+
+    @pytest.mark.parametrize(('extra_kwargs', 'valid'), (
+        ({'scratch': True}, True),
+        ({'is_auto': True}, True),
+        ({'isolated': True, 'release': '1.0'}, True),
+        ({'scratch': True, 'isolated': True, 'release': '1.0'}, False),
+        ({'scratch': True, 'is_auto': True}, False),
+        ({'is_auto': True, 'isolated': True, 'release': '1.0'}, False),
+    ))
+    def test_mutually_exclusive_build_variation(self, extra_kwargs, valid):
+        kwargs = get_sample_prod_params()
+        kwargs.update(extra_kwargs)
+        build_request = BuildRequest(INPUTS_PATH)
+
+        if valid:
+            build_request.set_params(**kwargs)
+            build_request.render()
+        else:
+            with pytest.raises(OsbsValidationException) as exc_info:
+                build_request.set_params(**kwargs)
+            assert 'mutually exclusive' in str(exc_info.value)
 
     @pytest.mark.parametrize('registry_uris', [
         [],
@@ -1079,6 +1101,21 @@ class TestBuildRequest(object):
         assert (get_plugin(plugins, "postbuild_plugins", "tag_by_labels")
                 .get('args', {}).get('unique_tag_only', False) == scratch)
 
+    @pytest.mark.parametrize(('extra_kwargs', 'expected_name'), (
+        ({'isolated': True, 'release': '1.1'}, TEST_ISOLATED_BUILD_NAME),
+        ({'scratch': True}, TEST_SCRATCH_BUILD_NAME),
+        ({}, TEST_BUILD_CONFIG),
+    ))
+    def test_render_build_name(self, tmpdir, extra_kwargs, expected_name):
+        build_request = BuildRequest(INPUTS_PATH)
+
+        kwargs = get_sample_prod_params()
+        kwargs.update(extra_kwargs)
+        build_request.set_params(**kwargs)
+
+        build_json = build_request.render()
+        assert fnmatch.fnmatch(build_json['metadata']['name'], expected_name)
+
     def test_render_with_yum_repourls(self):
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -1258,46 +1295,54 @@ class TestBuildRequest(object):
                     plugin_value_get(plugins, "prebuild_plugins", "fetch_maven_artifacts",
                                      "args", "allowed_domains")
 
-    @pytest.mark.parametrize(
-        ('has_platform_tag', 'scratch', 'has_primary', 'has_additional', 'build_type'), (
+    @pytest.mark.parametrize(('extra_kwargs', 'has_platform_tag', 'extra_tags', 'primary_tags'), (
+        # Worker build cases
+        ({'build_type': BUILD_TYPE_WORKER, 'platform': 'x86_64'},
+         True, (), ()),
 
-            (True, False, False, False, BUILD_TYPE_WORKER),
+        ({'build_type': BUILD_TYPE_WORKER, 'platform': 'x86_64'},
+         True, ('tag1', 'tag2'), ()),
 
-            (False, False, True, False, BUILD_TYPE_ORCHESTRATOR),
-            (False, False, True, True, BUILD_TYPE_ORCHESTRATOR),
-            (False, True, False, False, BUILD_TYPE_ORCHESTRATOR),
+        ({'build_type': BUILD_TYPE_WORKER, 'platform': 'x86_64', 'scratch': True},
+         True, (), ()),
 
-            (False, True, False, False, None),
-            (False, False, False, False, None),
-        )
-    )
-    def test_render_tag_from_config(self, tmpdir, build_type, has_platform_tag, scratch,
-                                    has_primary, has_additional):
+        ({'build_type': BUILD_TYPE_WORKER, 'platform': 'x86_64', 'isolated': True,
+          'release': '1.1'},
+         True, (), ()),
+
+
+        # Orchestrator build cases
+        ({'build_type': BUILD_TYPE_ORCHESTRATOR, 'platforms': ['x86_64']},
+         False, ('tag1', 'tag2'), ('latest', '{version}', '{version}-{release}', 'tag1', 'tag2')),
+
+        ({'build_type': BUILD_TYPE_ORCHESTRATOR, 'platforms': ['x86_64']},
+         False, (), ('latest', '{version}', '{version}-{release}')),
+
+        ({'build_type': BUILD_TYPE_ORCHESTRATOR, 'platforms': ['x86_64'], 'scratch': True},
+         False, ('tag1', 'tag2'), ()),
+
+        ({'build_type': BUILD_TYPE_ORCHESTRATOR, 'platforms': ['x86_64'], 'isolated': True,
+          'release': '1.1'},
+         False, ('tag1', 'tag2'), ('{version}-{release}',)),
+
+        # When build_type is not specified, no primary tags are set
+        ({}, False, (), ()),
+        ({}, False, ('tag1', 'tag2'), ()),
+        ({'scratch': True}, False, (), ()),
+        ({'isolated': True, 'release': '1.1'}, False, (), ()),
+    ))
+    def test_render_tag_from_config(self, tmpdir, extra_kwargs, has_platform_tag, extra_tags,
+                                    primary_tags):
         kwargs = get_sample_prod_params()
         kwargs.pop('platforms', None)
         kwargs.pop('platform', None)
-
-        if build_type == BUILD_TYPE_WORKER:
-            kwargs['platform'] = 'x86_64'
-        elif build_type == BUILD_TYPE_ORCHESTRATOR:
-            kwargs['platforms'] = ['x86_64', 'ppc64le']
-
-        if scratch:
-            kwargs['scratch'] = scratch
-
-        kwargs['build_type'] = build_type
+        kwargs.update(extra_kwargs)
         kwargs['arrangement_version'] = 4
 
-        expected_primary = set()
-        if has_primary:
-            expected_primary.add('latest')
-            expected_primary.add('{version}')
-            expected_primary.add('{version}-{release}')
+        expected_primary = set(primary_tags)
 
-        if has_additional:
-            additional_tags = ['spam', 'bacon', 'eggs']
-            self._mock_addional_tags_config(str(tmpdir), additional_tags)
-            expected_primary = expected_primary | set(additional_tags)
+        if extra_tags:
+            self._mock_addional_tags_config(str(tmpdir), extra_tags)
 
         repo_info = RepoInfo(additional_tags=AdditionalTagsConfig(dir_path=str(tmpdir)))
         build_json = self._render_tag_from_config_build_request(kwargs, repo_info)
@@ -1307,8 +1352,9 @@ class TestBuildRequest(object):
         tag_suffixes = plugin_value_get(plugins, 'postbuild_plugins', 'tag_from_config',
                                         'args', 'tag_suffixes')
         assert len(tag_suffixes['unique']) == 1
-        unique_tag_suffix = tag_suffixes['unique'][0]
-        assert unique_tag_suffix.endswith('-' + kwargs.get('platform', '')) == has_platform_tag
+        if has_platform_tag:
+            unique_tag_suffix = tag_suffixes['unique'][0]
+            assert unique_tag_suffix.endswith('-' + kwargs.get('platform', '')) == has_platform_tag
         assert len(tag_suffixes['primary']) == len(expected_primary)
         assert set(tag_suffixes['primary']) == expected_primary
 
@@ -1624,9 +1670,13 @@ class TestBuildRequest(object):
         ("http://registry.example.com", True),
     ])
     @pytest.mark.parametrize('use_auth', (True, False, None))
-    @pytest.mark.parametrize('scratch', (True, False))
+    @pytest.mark.parametrize(('scratch', 'isolated'), (
+        (True, False),
+        (False, True),
+        (False, False),
+    ))
     def test_render_prod_request_with_trigger(self, tmpdir, registry_uri,
-                                              insecure_registry, use_auth, scratch):
+                                              insecure_registry, use_auth, scratch, isolated):
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequest(str(tmpdir))
         name_label = "fedora/resultingimage"
@@ -1661,11 +1711,14 @@ class TestBuildRequest(object):
             kwargs['use_auth'] = use_auth
         if scratch:
             kwargs['scratch'] = scratch
+        if isolated:
+            kwargs['isolated'] = isolated
+            kwargs['release'] = '1.1'
 
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
-        if scratch:
+        if scratch or isolated:
             assert "triggers" not in build_json["spec"]
         else:
             assert "triggers" in build_json["spec"]
@@ -1674,7 +1727,7 @@ class TestBuildRequest(object):
 
         plugins = get_plugins_from_build_json(build_json)
 
-        if not scratch:
+        if not scratch and not isolated:
             assert get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
             assert get_plugin(plugins, "prebuild_plugins",
                               "stop_autorebuild_if_disabled")
@@ -1693,7 +1746,7 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries", "registry.example.com") == {"insecure": True}
 
-        if not scratch:
+        if not scratch and not isolated:
             assert get_plugin(plugins, "exit_plugins", "koji_promote")
             assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
                                     "args", "kojihub") == kwargs["kojihub"]
@@ -1790,6 +1843,30 @@ class TestBuildRequest(object):
             openshift_uri=kwargs['openshift_uri'],
             use_auth=use_auth,
             insecure_registry=insecure_registry)
+
+    @pytest.mark.parametrize(('extra_kwargs', 'expected_error'), (
+        ({'isolated': True}, 'release parameter is required'),
+        ({'isolated': True, 'release': '1'}, 'must be in the format'),
+        ({'isolated': True, 'release': '1.1'}, None),
+    ))
+    def test_adjust_for_isolated(self, tmpdir, extra_kwargs, expected_error):
+        self.create_image_change_trigger_json(str(tmpdir))
+        build_request = BuildRequest(str(tmpdir))
+
+        kwargs = get_sample_prod_params()
+        kwargs.update(extra_kwargs)
+        build_request.set_params(**kwargs)
+
+        if expected_error:
+            with pytest.raises(OsbsValidationException) as exc_info:
+                build_request.render()
+            assert expected_error in str(exc_info.value)
+
+        else:
+            build_json = build_request.render()
+
+            assert 'triggers' not in build_json['spec']
+            assert build_json['metadata']['labels']['isolated'] == 'true'
 
     @pytest.mark.parametrize(('autorebuild_enabled', 'release_label', 'expected'), (
         (True, None, True),
@@ -2328,8 +2405,6 @@ class TestBuildRequest(object):
                                    'scratch2': 'yes'}),
         (None, None, True, False, {'auto1': 'yes',
                                    'auto2': 'yes'}),
-        (None, None, True, True, {'auto1': 'yes',
-                                  'auto2': 'yes'}),
         (None, ["x86"], False, False, {}),
         (None, ["ppc"], False, False, {}),
         (None, ["x86"], True, False, {}),
