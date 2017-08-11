@@ -1625,8 +1625,9 @@ class TestBuildRequest(object):
         ("http://registry.example.com", True),
     ])
     @pytest.mark.parametrize('use_auth', (True, False, None))
+    @pytest.mark.parametrize('scratch', (True, False))
     def test_render_prod_request_with_trigger(self, tmpdir, registry_uri,
-                                              insecure_registry, use_auth):
+                                              insecure_registry, use_auth, scratch):
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequest(str(tmpdir))
         name_label = "fedora/resultingimage"
@@ -1659,44 +1660,53 @@ class TestBuildRequest(object):
         }
         if use_auth is not None:
             kwargs['use_auth'] = use_auth
+        if scratch:
+            kwargs['scratch'] = scratch
+
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
-        assert "triggers" in build_json["spec"]
-        assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == 'fedora:latest'
+        if scratch:
+            assert "triggers" not in build_json["spec"]
+        else:
+            assert "triggers" in build_json["spec"]
+            assert (build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] ==
+                    'fedora:latest')
 
         plugins = get_plugins_from_build_json(build_json)
 
-        assert get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
-        assert get_plugin(plugins, "prebuild_plugins",
-                          "stop_autorebuild_if_disabled")
-        assert plugin_value_get(plugins, "prebuild_plugins",
-                                "check_and_set_rebuild", "args",
-                                "url") == kwargs["openshift_uri"]
+        if not scratch:
+            assert get_plugin(plugins, "prebuild_plugins", "check_and_set_rebuild")
+            assert get_plugin(plugins, "prebuild_plugins",
+                              "stop_autorebuild_if_disabled")
+            assert plugin_value_get(plugins, "prebuild_plugins",
+                                    "check_and_set_rebuild", "args",
+                                    "url") == kwargs["openshift_uri"]
 
-        self.assert_import_image_plugin(
-            plugins=plugins,
-            name_label=name_label,
-            registry_uri=kwargs['registry_uri'],
-            openshift_uri=kwargs['openshift_uri'],
-            use_auth=use_auth,
-            insecure_registry=insecure_registry)
+            self.assert_import_image_plugin(
+                plugins=plugins,
+                name_label=name_label,
+                registry_uri=kwargs['registry_uri'],
+                openshift_uri=kwargs['openshift_uri'],
+                use_auth=use_auth,
+                insecure_registry=insecure_registry)
 
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries", "registry.example.com") == {"insecure": True}
 
-        assert get_plugin(plugins, "exit_plugins", "koji_promote")
-        assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
-                                "args", "kojihub") == kwargs["kojihub"]
-        assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
-                                "args", "url") == kwargs["openshift_uri"]
-        with pytest.raises(KeyError):
-            plugin_value_get(plugins, 'exit_plugins', "koji_promote",
-                             'args', 'metadata_only')  # v1 enabled by default
+        if not scratch:
+            assert get_plugin(plugins, "exit_plugins", "koji_promote")
+            assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
+                                    "args", "kojihub") == kwargs["kojihub"]
+            assert plugin_value_get(plugins, "exit_plugins", "koji_promote",
+                                    "args", "url") == kwargs["openshift_uri"]
+            with pytest.raises(KeyError):
+                plugin_value_get(plugins, 'exit_plugins', "koji_promote",
+                                 'args', 'metadata_only')  # v1 enabled by default
 
-        assert get_plugin(plugins, "exit_plugins", "koji_tag_build")
-        assert plugin_value_get(plugins, "exit_plugins", "koji_tag_build",
-                                "args", "kojihub") == kwargs["kojihub"]
+            assert get_plugin(plugins, "exit_plugins", "koji_tag_build")
+            assert plugin_value_get(plugins, "exit_plugins", "koji_tag_build",
+                                    "args", "kojihub") == kwargs["kojihub"]
 
         expected = {'args': {'additional_addresses': 'user2@example.com, user3@example.com',
                              'email_domain': 'example.com',

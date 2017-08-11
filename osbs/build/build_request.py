@@ -547,6 +547,8 @@ class BuildRequest(object):
         and should not be imported into Koji.
         """
         if self.scratch:
+            self.template['spec'].pop('triggers', None)
+
             remove_plugins = [
                 ("prebuild_plugins", "koji_parent"),
                 ("postbuild_plugins", "compress"),  # required only to make an archive for Koji
@@ -1279,8 +1281,8 @@ class BuildRequest(object):
         self.render_pull_base_image()
 
         self.adjust_for_repo_info()
-        self.adjust_for_triggers()
         self.adjust_for_scratch()
+        self.adjust_for_triggers()
         self.adjust_for_custom_base_image()
 
         # Enable/disable plugins as needed for target registry API versions
