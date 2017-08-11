@@ -1317,6 +1317,9 @@ class BuildRequest(object):
                           ('prebuild_plugins', 'fetch_maven_artifacts', 'koji_ssl_certs_dir'):
                           self.spec.koji_certs_secret.value,
 
+                          ('prebuild_plugins', 'inject_parent_image', 'koji_ssl_certs_dir'):
+                          self.spec.koji_certs_secret.value,
+
                           ('exit_plugins', 'sendmail', 'koji_ssl_certs_dir'):
                           self.spec.koji_certs_secret.value,
 
