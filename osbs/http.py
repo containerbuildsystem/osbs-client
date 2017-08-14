@@ -35,6 +35,9 @@ try:
     from requests_kerberos import HTTPKerberosAuth
 except ImportError:
     HTTPKerberosAuth = None
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 logger = logging.getLogger(__name__)
 
