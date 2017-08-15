@@ -82,7 +82,7 @@ class BuildRequest(object):
         :param koji_task_id: int, Koji Task that created this build config
         :param flatpak: if we should build a Flatpak OCI Image
         :param module: module to build a flatpak against
-        :param module_compose_url: URL to a yum repository for the given module
+        :param module_compose_id: ID of a compose of ``module`` in the ODCS
         :param filesystem_koji_task_id: int, Koji Task that created the base filesystem
         :param pulp_registry: str, name of pulp registry in dockpulp.conf
         :param nfs_server_path: str, NFS server and path
@@ -280,8 +280,9 @@ class BuildRequest(object):
             'koji_hub': self.spec.kojihub.value,
             'koji_root': self.spec.kojiroot.value,
             'openshift_required_version': sanitize_version(self._openshift_required_version),
-            'module_compose_url': self.spec.module_compose_url.value,
             'flatpak_base_image': self.spec.flatpak_base_image.value,
+            'odcs_url': self.spec.odcs_url.value,
+            'odcs_insecure': self.spec.odcs_insecure.value,
             'pdc_url': self.spec.pdc_url.value,
             'pdc_insecure': self.spec.pdc_insecure.value,
             'pulp_registry_name': self.spec.pulp_registry.value,
@@ -657,9 +658,9 @@ class BuildRequest(object):
                 raise RuntimeError('when autorebuild is enabled in repo configuration, '
                                    '"release" label must not be set in Dockerfile')
 
-    def render_flatpak_create_dockerfile(self):
+    def render_resolve_module_compose(self):
         phase = 'prebuild_plugins'
-        plugin = 'flatpak_create_dockerfile'
+        plugin = 'resolve_module_compose'
 
         if self.dj.dock_json_has_plugin_conf(phase, plugin):
             if not self.spec.flatpak.value:
@@ -675,14 +676,29 @@ class BuildRequest(object):
             if module_version is not None:
                 self.dj.dock_json_set_arg(phase, plugin, 'module_version',
                                           module_version)
-            self.dj.dock_json_set_arg(phase, plugin, 'base_image',
-                                      self.spec.flatpak_base_image.value)
-            self.dj.dock_json_set_arg(phase, plugin, 'compose_url',
-                                      self.spec.module_compose_url.value)
+            if self.spec.module_compose_id.value:
+                self.dj.dock_json_set_arg(phase, plugin, 'compose_id',
+                                          self.spec.module_compose_id.value)
+            self.dj.dock_json_set_arg(phase, plugin, 'odcs_url',
+                                      self.spec.odcs_url.value)
+            self.dj.dock_json_set_arg(phase, plugin, 'odcs_insecure',
+                                      self.spec.odcs_insecure.value)
             self.dj.dock_json_set_arg(phase, plugin, 'pdc_url',
                                       self.spec.pdc_url.value)
             self.dj.dock_json_set_arg(phase, plugin, 'pdc_insecure',
                                       self.spec.pdc_insecure.value)
+
+    def render_flatpak_create_dockerfile(self):
+        phase = 'prebuild_plugins'
+        plugin = 'flatpak_create_dockerfile'
+
+        if self.dj.dock_json_has_plugin_conf(phase, plugin):
+            if not self.spec.flatpak.value:
+                self.dj.remove_plugin(phase, plugin)
+                return
+
+            self.dj.dock_json_set_arg(phase, plugin, 'base_image',
+                                      self.spec.flatpak_base_image.value)
 
     def render_squash(self):
         phase = 'prepublish_plugins'
@@ -1488,6 +1504,11 @@ class BuildRequest(object):
                           # pulp_sync registry_secret_path set
                           # in render_pulp_sync
 
+                          ('prebuild_plugins',
+                           'resolve_module_compose',
+                           'odcs_openidc_secret_path'):
+                          self.spec.odcs_openidc_secret.value,
+
                           ('exit_plugins', 'koji_promote', 'koji_ssl_certs'):
                           self.spec.koji_certs_secret.value,
 
@@ -1563,6 +1584,7 @@ class BuildRequest(object):
         use_auth = self.spec.use_auth.value
         self.render_reactor_config()
         self.render_orchestrate_build()
+        self.render_resolve_module_compose()
         self.render_flatpak_create_dockerfile()
         self.render_squash()
         self.render_flatpak_create_oci()

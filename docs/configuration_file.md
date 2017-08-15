@@ -61,6 +61,12 @@ Some options are also mandatory.
 
 * `flatpak_base_image` (*optional*, `string`) - Docker image to use when installing RPMs to create a Flatpak. This does not have to match the version of the RPMs being installed.
 
+* `odcs_url` (*optional*, `string`) - URL for API requests for the On Demand Compose Service. Needed for building Flatpaks
+
+* `odcs_insecure` (*optional*, `boolean`) - If set, valid SSL certificates will not be required for requests to `odcs_url`
+
+* `odcs_openidc_secret` (*optional*, `string`) - name of [kubernetes secret](https://github.com/kubernetes/kubernetes/blob/master/docs/design/secrets.md) to use for authenticating to the ODCS. The secret must contain one key, called 'token'.
+
 * `pdc_url` (*optional*, `string`) - URL for API requests for the Product Definition Center. Needed for building Flatpaks
 
 * `pdc_insecure` (*optional*, `boolean`) - If set, valid SSL certificates will not be required for requests to `pdc_url`

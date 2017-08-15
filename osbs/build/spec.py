@@ -156,8 +156,11 @@ class BuildSpec(object):
         self.koji_kerberos_keytab = BuildParam("koji_kerberos_keytab", allow_none=True)
         self.flatpak = BuildParam("flatpak", default=False)
         self.module = BuildParam("module", allow_none=True)
-        self.module_compose_url = BuildParam("module_compose_url", allow_none=True)
+        self.module_compose_id = BuildParam("module_compose_id", allow_none=True)
         self.flatpak_base_image = BuildParam("flatpak_base_image", allow_none=True)
+        self.odcs_url = BuildParam("odcs_url", allow_none=True)
+        self.odcs_insecure = BuildParam("odcs_insecure", allow_none=True)
+        self.odcs_openidc_secret = BuildParam("odcs_openidc_secret", allow_none=True)
         self.pdc_url = BuildParam("pdc_url", allow_none=True)
         self.pdc_insecure = BuildParam("pdc_insecure", allow_none=True)
         self.image_tag = BuildParam("image_tag")
@@ -225,8 +228,9 @@ class BuildSpec(object):
                    koji_use_kerberos=None, koji_kerberos_keytab=None,
                    koji_kerberos_principal=None, koji_task_id=None,
                    flatpak=False,
-                   module=None, module_compose_url=None,
+                   module=None, module_compose_id=None,
                    flatpak_base_image=None,
+                   odcs_url=None, odcs_insecure=False, odcs_openidc_secret=None,
                    pdc_url=None, pdc_insecure=False,
                    filesystem_koji_task_id=None,
                    source_secret=None,  # compatibility name for pulp_secret
@@ -289,8 +293,11 @@ class BuildSpec(object):
         self.koji_task_id.value = koji_task_id
         self.flatpak.value = flatpak
         self.module.value = module
-        self.module_compose_url.value = module_compose_url
+        self.module_compose_id.value = module_compose_id
         self.flatpak_base_image.value = flatpak_base_image
+        self.odcs_url.value = odcs_url
+        self.odcs_insecure.value = odcs_insecure
+        self.odcs_openidc_secret.value = odcs_openidc_secret
         self.pdc_url.value = pdc_url
         self.pdc_insecure.value = pdc_insecure
         self.pulp_secret.value = pulp_secret or source_secret

@@ -1197,8 +1197,10 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
 
+    @pytest.mark.parametrize('odcs_insecure', [False, True, None])
     @pytest.mark.parametrize('pdc_insecure', [False, True, None])
-    def test_render_prod_flatpak(self, pdc_insecure):
+    @pytest.mark.parametrize('odcs_openidc_secret', [None, "odcs-openidc"])
+    def test_render_prod_flatpak(self, odcs_insecure, pdc_insecure, odcs_openidc_secret):
         build_request = BuildRequest(INPUTS_PATH)
 
         kwargs = {
@@ -1207,9 +1209,9 @@ class TestBuildRequest(object):
             'git_branch': TEST_GIT_BRANCH,
             'flatpak': True,
             'module': TEST_MODULE_NAME + ":" + TEST_MODULE_STREAM + ":" + TEST_MODULE_VERSION,
-            'module_compose_url':
-                "http://download.example.com/composes/{name}-{stream}-{version}/",
+            'module_compose_id': 42,
             'flatpak_base_image': TEST_FLATPAK_BASE_IMAGE,
+            'odcs_url': "https://odcs.fedoraproject.org/odcs/1",
             'pdc_url': "https://pdc.fedoraproject.org/rest_api/v1",
             'user': "john-foo",
             'base_image': TEST_FLATPAK_BASE_IMAGE,
@@ -1227,25 +1229,42 @@ class TestBuildRequest(object):
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v2'],
         }
+        if odcs_insecure is not None:
+            kwargs['odcs_insecure'] = odcs_insecure
         if pdc_insecure is not None:
             kwargs['pdc_insecure'] = pdc_insecure
+        if odcs_openidc_secret is not None:
+            kwargs['odcs_openidc_secret'] = odcs_openidc_secret
 
         build_request.set_params(**kwargs)
         build_json = build_request.render()
 
         plugins = get_plugins_from_build_json(build_json)
 
-        plugin = get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
+        plugin = get_plugin(plugins, "prebuild_plugins", "resolve_module_compose")
         assert plugin
 
         args = plugin['args']
         assert args['module_name'] == TEST_MODULE_NAME
         assert args['module_stream'] == TEST_MODULE_STREAM
         assert args['module_version'] == TEST_MODULE_VERSION
-        assert args['base_image'] == TEST_FLATPAK_BASE_IMAGE
-        assert args['compose_url'] == kwargs['module_compose_url']
+        assert args['compose_id'] == 42
+        assert args['odcs_url'] == kwargs['odcs_url']
+        assert args['odcs_insecure'] == (False if odcs_insecure is None else odcs_insecure)
         assert args['pdc_url'] == kwargs['pdc_url']
         assert args['pdc_insecure'] == (False if pdc_insecure is None else pdc_insecure)
+
+        if odcs_openidc_secret:
+            mount_path = get_secret_mountpath_by_name(build_json, odcs_openidc_secret)
+            assert args['odcs_openidc_secret_path'] == mount_path
+        else:
+            assert 'odcs_openid_secret_path' not in args
+
+        plugin = get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
+        assert plugin
+
+        args = plugin['args']
+        assert args['base_image'] == TEST_FLATPAK_BASE_IMAGE
 
         assert get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
         with pytest.raises(NoSuchPluginException):
@@ -1548,9 +1567,9 @@ class TestBuildRequest(object):
         {
             'flatpak': True,
             'module': TEST_MODULE_NAME + ":" + TEST_MODULE_STREAM + ":" + TEST_MODULE_VERSION,
-            'module_compose_url':
-                "http://download.example.com/composes/{name}-{stream}-{version}/",
             'flatpak_base_image': "fedora:latest",
+            'odcs_url': "https://odcs.fedoraproject.org/rest_api/v1",
+            'odcs_insecure': True,
             'pdc_url': "https://pdc.fedoraproject.org/rest_api/v1",
             'pdc_insecure': True,
         },
@@ -1668,8 +1687,9 @@ class TestBuildRequest(object):
             if kwargs.get('flatpak', False):
                 assert kwargs.get('flatpak') is True
                 assert kwargs.get('module') == build_kwargs.get('module')
-                assert kwargs.get('module_compose_url') == worker_config.get_module_compose_url()
                 assert kwargs.get('flatpak_base_image') == worker_config.get_flatpak_base_image()
+                assert kwargs.get('odcs_url') == worker_config.get_odcs_url()
+                assert kwargs.get('odcs_insecure') == worker_config.get_odcs_insecure()
                 assert kwargs.get('pdc_url') == worker_config.get_pdc_url()
                 assert kwargs.get('pdc_insecure') == worker_config.get_pdc_insecure()
 
