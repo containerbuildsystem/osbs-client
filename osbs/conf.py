@@ -201,11 +201,18 @@ class Configuration(object):
     def get_module(self):
         return self._get_value("module", self.conf_section, "module")
 
-    def get_module_compose_url(self):
-        return self._get_value("module_compose_url", self.conf_section, "module_compose_url")
-
     def get_flatpak_base_image(self):
         return self._get_value("flatpak_base_image", self.conf_section, "flatpak_base_image")
+
+    def get_odcs_url(self):
+        return self._get_value("odcs_url", self.conf_section, "odcs_url")
+
+    def get_odcs_insecure(self):
+        return self._get_value("odcs_insecure", self.conf_section, "odcs_insecure",
+                               default=False, is_bool_val=True)
+
+    def get_odcs_openidc_secret(self):
+        return self._get_value("odcs_openidc_secret", self.conf_section, "odcs_openidc_secret")
 
     def get_pdc_url(self):
         return self._get_value("pdc_url", self.conf_section, "pdc_url")

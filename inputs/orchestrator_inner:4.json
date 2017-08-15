@@ -8,14 +8,20 @@
       }
     },
     {
-      "name": "flatpak_create_dockerfile",
+      "name": "resolve_module_compose",
       "args": {
         "module_name": "{{MODULE_NAME}}",
         "module_stream": "{{MODULE_STREAM}}",
-        "base_image": "{{BASE_IMAGE}}",
-        "compose_url": "{{MODULE_COMPOSE_URL}}",
+        "odcs_url": "{{ODCS_URL}}",
+        "odcs_insecure": "{{ODCS_INSECURE}}",
         "pdc_url": "{{PDC_URL}}",
         "pdc_insecure": "{{PDC_INSECURE}}"
+      }
+    },
+    {
+      "name": "flatpak_create_dockerfile",
+      "args": {
+        "base_image": "{{BASE_IMAGE}}"
       }
     },
     {

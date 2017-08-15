@@ -486,6 +486,7 @@ class OSBS(object):
                               isolated=None,
                               flatpak=False,
                               module=None,
+                              module_compose_id=None,
                               **kwargs):
 
         repo_info = utils.get_repo_info(git_uri, git_ref, git_branch=git_branch)
@@ -539,8 +540,11 @@ class OSBS(object):
             koji_kerberos_principal=self.build_conf.get_koji_kerberos_principal(),
             flatpak=flatpak,
             module=module,
-            module_compose_url=self.build_conf.get_module_compose_url(),
+            module_compose_id=module_compose_id,
             flatpak_base_image=self.build_conf.get_flatpak_base_image(),
+            odcs_url=self.build_conf.get_odcs_url(),
+            odcs_insecure=self.build_conf.get_odcs_insecure(),
+            odcs_openidc_secret=self.build_conf.get_odcs_openidc_secret(),
             pdc_url=self.build_conf.get_pdc_url(),
             pdc_insecure=self.build_conf.get_pdc_insecure(),
             architecture=architecture,

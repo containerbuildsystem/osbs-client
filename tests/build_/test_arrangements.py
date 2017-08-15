@@ -766,6 +766,7 @@ class TestArrangementV4(TestArrangementV3):
         ORCHESTRATOR_INNER_TEMPLATE: {
             'prebuild_plugins': [
                 'reactor_config',
+                'resolve_module_compose',
                 'flatpak_create_dockerfile',
                 'add_filesystem',
                 'inject_parent_image',
@@ -807,6 +808,7 @@ class TestArrangementV4(TestArrangementV3):
         # Changing this? Add test methods
         WORKER_INNER_TEMPLATE: {
             'prebuild_plugins': [
+                'resolve_module_compose',
                 'flatpak_create_dockerfile',
                 'add_filesystem',
                 'inject_parent_image',
@@ -1106,9 +1108,10 @@ class TestArrangementV4(TestArrangementV3):
         plugins = get_plugins_from_build_json(build_json)
 
         args = plugin_value_get(plugins, 'prebuild_plugins',
-                                'flatpak_create_dockerfile', 'args')
+                                'resolve_module_compose', 'args')
 
-        compose_url = "http://download.example.com/composes/{name}-{stream}-{version}/"
+        odcs_url = "https://odcs.example.com/odcs/1"
+        odcs_insecure = False
         pdc_url = "https://pdc.example.com/rest_api/v1"
         pdc_insecure = False
 
@@ -1116,10 +1119,18 @@ class TestArrangementV4(TestArrangementV3):
             'module_name': TEST_MODULE_NAME,
             'module_stream': TEST_MODULE_STREAM,
             'module_version': TEST_MODULE_VERSION,
-            "base_image": TEST_FLATPAK_BASE_IMAGE,
-            "compose_url": compose_url,
+            "odcs_url": odcs_url,
+            "odcs_insecure": odcs_insecure,
             "pdc_url": pdc_url,
             "pdc_insecure": pdc_insecure
+        }
+        assert match_args == args
+
+        args = plugin_value_get(plugins, 'prebuild_plugins',
+                                'flatpak_create_dockerfile', 'args')
+
+        match_args = {
+            "base_image": TEST_FLATPAK_BASE_IMAGE,
         }
         assert match_args == args
 
@@ -1131,6 +1142,7 @@ class TestArrangementV4(TestArrangementV3):
 
         config_kwargs = args['config_kwargs']
         assert config_kwargs['flatpak_base_image'] == TEST_FLATPAK_BASE_IMAGE
-        assert config_kwargs['module_compose_url'] == compose_url
+        assert config_kwargs['odcs_url'] == odcs_url
+        assert config_kwargs['odcs_insecure'] == str(odcs_insecure)
         assert config_kwargs['pdc_url'] == pdc_url
         assert config_kwargs['pdc_insecure'] == str(pdc_insecure)
