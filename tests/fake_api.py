@@ -17,10 +17,9 @@ from osbs.core import Openshift
 from osbs.http import HttpResponse
 from osbs.conf import Configuration
 from osbs.api import OSBS
-from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD,
-                             TEST_GIT_BRANCH, TEST_BUILD_CONFIG, TEST_GIT_REF,
-                             TEST_GIT_URI_HUMAN_NAME, TEST_KOJI_TASK_ID, TEST_GIT_URI,
-                             TEST_FILESYSTEM_KOJI_TASK_ID, TEST_IMAGESTREAM)
+from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_ORCHESTRATOR_BUILD,
+                             TEST_GIT_BRANCH, TEST_BUILD_CONFIG, TEST_GIT_URI_HUMAN_NAME,
+                             TEST_KOJI_TASK_ID, TEST_IMAGESTREAM)
 from tempfile import NamedTemporaryFile
 from textwrap import dedent
 
@@ -109,6 +108,19 @@ class Connection(object):
                  }
             },
 
+            # Some 'builds' requests are with a trailing slash, some without:
+            (OAPI_PREFIX + "namespaces/default/builds/%s" % TEST_ORCHESTRATOR_BUILD,
+             OAPI_PREFIX + "namespaces/default/builds/%s/" % TEST_ORCHESTRATOR_BUILD): {
+                 "get": {
+                     # Contains a single build in Completed phase
+                     # named test-orchestrator-build-123
+                     "file": "build_test-orchestrator-build-123.json",
+                 },
+                 "put": {
+                     "file": "build_test-orchestrator-build-123.json",
+                 }
+            },
+
             # Simulate build cancellation
             (OAPI_PREFIX + "namespaces/default/builds/%s" % TEST_CANCELLED_BUILD,
              OAPI_PREFIX + "namespaces/default/builds/%s/" % TEST_CANCELLED_BUILD): {
@@ -132,6 +144,16 @@ class Connection(object):
                  },
             },
 
+            (OAPI_PREFIX + "namespaces/default/builds/%s/log/" % TEST_ORCHESTRATOR_BUILD,
+             OAPI_PREFIX + "namespaces/default/builds/%s/log/?follow=0" % TEST_ORCHESTRATOR_BUILD,
+             OAPI_PREFIX + "namespaces/default/builds/%s/log/?follow=1"
+             % TEST_ORCHESTRATOR_BUILD): {
+                 "get": {
+                     # Lines of text
+                     "file": "build_test-orchestrator-build-123_logs.txt",
+                 },
+            },
+
             ("/oauth/authorize",
              "/oauth/authorize?client_id=openshift-challenging-client&response_type=token",
              "/oauth/authorize?response_type=token&client_id=openshift-challenging-client"): {
@@ -152,6 +174,14 @@ class Connection(object):
                     # Single MODIFIED item, with a Build object in
                     # Completed phase named test-build-123
                     "file": "watch_build_test-build-123.json",
+                }
+            },
+
+            OAPI_PREFIX + "watch/namespaces/default/builds/%s/" % TEST_ORCHESTRATOR_BUILD: {
+                "get": {
+                    # Single MODIFIED item, with a Build object in
+                    # Completed phase named test-build-123
+                    "file": "watch_build_test-orchestrator-build-123.json",
                 }
             },
 
@@ -211,6 +241,15 @@ class Connection(object):
 
             API_PREFIX + "namespaces/default/pods/?labelSelector=openshift.io%%2Fbuild.name%%3D%s" %
             TEST_BUILD: {
+                "get": {
+                    # Contains a list of build pods, just needs not to
+                    # be empty
+                    "file": "pods.json",
+                },
+            },
+
+            API_PREFIX + "namespaces/default/pods/?labelSelector=openshift.io%%2Fbuild.name%%3D%s" %
+            TEST_ORCHESTRATOR_BUILD: {
                 "get": {
                     # Contains a list of build pods, just needs not to
                     # be empty

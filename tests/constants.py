@@ -13,6 +13,7 @@ HERE = os.path.dirname(__file__)
 INPUTS_PATH = os.path.join(HERE, '..', 'inputs')
 
 TEST_BUILD = "test-build-123"
+TEST_ORCHESTRATOR_BUILD = "test-orchestrator-build-123"
 TEST_CANCELLED_BUILD = "test-build-cancel-123"
 TEST_BUILD_CONFIG = "path-master-?????"
 TEST_SCRATCH_BUILD_NAME = "scratch-?????-??????????????"
