@@ -45,7 +45,8 @@ from osbs.repo_utils import RepoInfo
 
 from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
                              TEST_GIT_URI, TEST_TARGET, TEST_USER, INPUTS_PATH,
-                             TEST_KOJI_TASK_ID, TEST_FILESYSTEM_KOJI_TASK_ID, TEST_VERSION)
+                             TEST_KOJI_TASK_ID, TEST_FILESYSTEM_KOJI_TASK_ID, TEST_VERSION,
+                             TEST_ORCHESTRATOR_BUILD)
 from tests.build_.test_build_request import get_sample_prod_params
 from osbs.core import Openshift
 # These are used as fixtures
@@ -62,6 +63,11 @@ except ImportError:
 # arrangement in development.
 INVALID_ARRANGEMENT_VERSION = DEFAULT_ARRANGEMENT_VERSION + 2
 
+# Expected log return lines for test_orchestrator_build_logs_api
+ORCHESTRATOR_LOG = u"2017-06-23 17:18:41,791 platform:- - \
+atomic_reactor.foo - DEBUG - this is from the orchestrator build"
+WORKER_LOG = u"2017-06-23 17:18:41,400 atomic_reactor.foo -  DEBUG - this is from a worker build"
+BAD_LOG = u"2017-06-23 17:18:41,791 - I really like bacon"
 
 def request_as_response(request):
     """
@@ -840,7 +846,6 @@ class TestOSBS(object):
     # osbs is a fixture here
     @pytest.mark.parametrize('decode', [True, False])  # noqa
     def test_build_logs_api_follow(self, osbs, decode):
-        # decode is actually ignored in the follow=True case
         logs = osbs.get_build_logs(TEST_BUILD, follow=True, decode=decode)
         assert isinstance(logs, GeneratorType)
         content = next(logs)
@@ -852,6 +857,37 @@ class TestOSBS(object):
             assert content == u"líne 1".encode('utf-8')
         with pytest.raises(StopIteration):
             assert next(logs)
+
+    # osbs is a fixture here
+    @pytest.mark.parametrize('follow', [True, False])  # noqa
+    def test_orchestrator_build_logs_api(self, osbs, follow):
+        logs = osbs.get_orchestrator_build_logs(TEST_ORCHESTRATOR_BUILD, follow=follow)
+        assert isinstance(logs, GeneratorType)
+        (platform, content) = next(logs)
+        assert platform is None
+        assert isinstance(content, six.string_types)
+        assert content == ORCHESTRATOR_LOG
+        (platform, content) = next(logs)
+        assert isinstance(platform, six.string_types)
+        assert platform == u"x86_64"
+        assert isinstance(content, six.string_types)
+        assert content == WORKER_LOG
+        (platform, content) = next(logs)
+        assert platform is None
+        assert isinstance(content, six.string_types)
+        assert content == BAD_LOG
+        if follow:
+            with pytest.raises(StopIteration):
+                assert next(logs)
+
+    # osbs is a fixture here
+    def test_orchestrator_build_logs_api_badlog(self, osbs):  # noqa
+        logs = osbs.get_orchestrator_build_logs(TEST_BUILD)
+        assert isinstance(logs, GeneratorType)
+        (platform, content) = next(logs)
+        assert platform is None
+        assert isinstance(content, six.string_types)
+        assert content == u"líne 1"
 
     # osbs is a fixture here
     def test_pause_builds(self, osbs):  # noqa
