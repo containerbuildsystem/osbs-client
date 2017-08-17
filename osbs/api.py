@@ -7,6 +7,7 @@ of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, unicode_literals, absolute_import
 
+from collections import namedtuple
 import json
 import logging
 import os
@@ -71,6 +72,8 @@ def osbsapi(func):
 
 
 logger = logging.getLogger(__name__)
+
+LogEntry = namedtuple('LogEntry', ['platform', 'line'])
 
 
 class OSBS(object):
@@ -717,12 +720,12 @@ class OSBS(object):
     def _parse_build_log_entry(entry):
         items = entry.split()
         if len(items) < 4:
-            logger.warning("This is not a valid build log entry: %s", entry)
+            # This is not a valid build log entry
             return (None, entry)
 
         platform = items[2]
         if not platform.startswith("platform:"):
-            logger.warning("Line logged without using the appropriate LoggerAdapter")
+            # Line logged without using the appropriate LoggerAdapter
             return (None, entry)
 
         platform = platform.split(":", 1)[1]
@@ -737,7 +740,7 @@ class OSBS(object):
         line = entry[plen:]
         # if the 3rd field is "platform:-", we strip it out
         items = line.split()
-        if items[2] == "platform:-":
+        if len(items) > 2 and items[2] == "platform:-":
             plen = sum(len(items[i]) + 1  # include trailing space
                        for i in range(3))
             line = "%s %s %s" % (items[0], items[1], line[plen:])
@@ -751,7 +754,7 @@ class OSBS(object):
         :param build_id: str
         :param follow: bool, fetch logs as they come?
         :param wait_if_missing: bool, if build doesn't exist, wait
-        :return: tuple with fields 'platform' and 'line'
+        :return: generator yielding objects with attributes 'platform' and 'line'
         """
         logs = self.get_build_logs(build_id=build_id, follow=follow,
                                    wait_if_missing=wait_if_missing, decode=True)
@@ -759,10 +762,10 @@ class OSBS(object):
         if isinstance(logs, GeneratorType):
             for entries in logs:
                 for entry in entries.splitlines():
-                    yield self._parse_build_log_entry(entry)
+                    yield LogEntry(*self._parse_build_log_entry(entry))
         else:
             for entry in logs.splitlines():
-                yield self._parse_build_log_entry(entry)
+                yield LogEntry(*self._parse_build_log_entry(entry))
 
     @osbsapi
     def get_docker_build_logs(self, build_id, decode_logs=True, build_json=None):

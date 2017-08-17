@@ -64,10 +64,14 @@ except ImportError:
 INVALID_ARRANGEMENT_VERSION = DEFAULT_ARRANGEMENT_VERSION + 2
 
 # Expected log return lines for test_orchestrator_build_logs_api
-ORCHESTRATOR_LOG = u"2017-06-23 17:18:41,791 platform:- - \
-atomic_reactor.foo - DEBUG - this is from the orchestrator build"
-WORKER_LOG = u"2017-06-23 17:18:41,400 atomic_reactor.foo -  DEBUG - this is from a worker build"
-BAD_LOG = u"2017-06-23 17:18:41,791 - I really like bacon"
+ORCHESTRATOR_LOGS = [u'2017-06-23 17:18:41,791 platform:- - '
+                     u'atomic_reactor.foo - DEBUG - this is from the orchestrator build',
+
+                     u'2017-06-23 17:18:41,791 - I really like bacon']
+WORKER_LOGS = [u'2017-06-23 17:18:41,400 atomic_reactor.foo -  '
+               u'DEBUG - this is from a worker build',
+
+               u'"ContainersPaused": 0,']
 
 def request_as_response(request):
     """
@@ -863,22 +867,18 @@ class TestOSBS(object):
     def test_orchestrator_build_logs_api(self, osbs, follow):
         logs = osbs.get_orchestrator_build_logs(TEST_ORCHESTRATOR_BUILD, follow=follow)
         assert isinstance(logs, GeneratorType)
-        (platform, content) = next(logs)
-        assert platform is None
-        assert isinstance(content, six.string_types)
-        assert content == ORCHESTRATOR_LOG
-        (platform, content) = next(logs)
-        assert isinstance(platform, six.string_types)
-        assert platform == u"x86_64"
-        assert isinstance(content, six.string_types)
-        assert content == WORKER_LOG
-        (platform, content) = next(logs)
-        assert platform is None
-        assert isinstance(content, six.string_types)
-        assert content == BAD_LOG
-        if follow:
-            with pytest.raises(StopIteration):
-                assert next(logs)
+        orchestrator_logs = []
+        worker_logs = []
+        for entry in logs:
+            assert entry.platform is None or entry.platform == u'x86_64'
+            assert isinstance(entry.line, six.string_types)
+            if entry.platform is None:
+                orchestrator_logs.append(entry.line)
+            else:
+                worker_logs.append(entry.line)
+
+        assert orchestrator_logs == ORCHESTRATOR_LOGS
+        assert worker_logs == WORKER_LOGS
 
     # osbs is a fixture here
     def test_orchestrator_build_logs_api_badlog(self, osbs):  # noqa
