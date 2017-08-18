@@ -109,6 +109,8 @@
     {
       "name": "pulp_publish",
       "args": {
+        "pulp_registry_name": "{{PULP_REGISTRY_NAME}}",
+        "dockpulp_loglevel": "INFO"
       }
     },
     {
