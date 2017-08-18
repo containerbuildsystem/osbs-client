@@ -970,7 +970,16 @@ class TestArrangementV4(TestArrangementV3):
         plugins = get_plugins_from_build_json(build_json)
 
         args = plugin_value_get(plugins, 'exit_plugins', 'pulp_publish', 'args')
-        expected_args = {}
+        build_conf = osbs_with_pulp.build_conf
+        pulp_registry_name = build_conf.get_pulp_registry()
+        pulp_secret_path = '/'.join([SECRETS_PATH, build_conf.get_pulp_secret()])
+
+        expected_args = {
+            'pulp_registry_name': pulp_registry_name,
+            'pulp_secret_path': pulp_secret_path,
+            'dockpulp_loglevel': 'INFO',
+        }
+
         assert args == expected_args
 
     def test_pulp_pull(self, osbs_with_pulp):  # noqa:F811

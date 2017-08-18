@@ -1079,7 +1079,6 @@ class TestBuildRequest(object):
         assert (get_plugin(plugins, "postbuild_plugins", "tag_by_labels")
                 .get('args', {}).get('unique_tag_only', False) == scratch)
 
-
     def test_render_with_yum_repourls(self):
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -2418,6 +2417,41 @@ class TestBuildRequest(object):
     def test_render_pulp_tag(self, pulp_registry, pulp_secret):
         plugin_type = "postbuild_plugins"
         plugin_name = "pulp_tag"
+
+        br = BuildRequest(INPUTS_PATH)
+        kwargs = get_sample_prod_params()
+        if pulp_registry:
+            kwargs['pulp_registry'] = "registry.example.com"
+        if pulp_secret:
+            kwargs['pulp_secret'] = "pulp_secret"
+        br.set_params(**kwargs)
+
+        br.dj.dock_json_set_param(plugin_type, [])
+        br.dj.add_plugin(plugin_type, plugin_name, {})
+
+        if pulp_registry and not pulp_secret:
+            with pytest.raises(OsbsValidationException):
+                br.render()
+            return
+
+        build_json = br.render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        if pulp_registry:
+            assert get_plugin(plugins, plugin_type, plugin_name)
+        else:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, plugin_type, plugin_name)
+
+    @pytest.mark.parametrize(('pulp_registry', 'pulp_secret'), [
+        (True, True),
+        (True, False),
+        (False, True),
+        (False, False),
+    ])
+    def test_render_pulp_publish(self, pulp_registry, pulp_secret):
+        plugin_type = "exit_plugins"
+        plugin_name = "pulp_publish"
 
         br = BuildRequest(INPUTS_PATH)
         kwargs = get_sample_prod_params()
