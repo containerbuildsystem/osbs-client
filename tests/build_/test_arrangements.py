@@ -581,8 +581,8 @@ class TestArrangementV3(TestArrangementV2):
                 'pulp_push',
                 'pulp_sync',
                 'compress',
-                'koji_upload',
                 'pulp_pull',
+                'koji_upload',
             ],
 
             'exit_plugins': [
