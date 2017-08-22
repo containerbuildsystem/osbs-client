@@ -1266,6 +1266,12 @@ class TestBuildRequest(object):
         args = plugin['args']
         assert args['base_image'] == TEST_FLATPAK_BASE_IMAGE
 
+        plugin = get_plugin(plugins, "prebuild_plugins", "bump_release")
+        assert plugin
+
+        args = plugin['args']
+        assert args['append'] is True
+
         assert get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
         with pytest.raises(NoSuchPluginException):
             assert get_plugin(plugins, "prepublish_plugins", "squash")

@@ -820,6 +820,12 @@ class BuildRequest(object):
 
         self.dj.dock_json_set_arg(phase, plugin, 'hub', hub)
 
+        # For flatpak, we want a name-version-release of
+        # <name>-<stream>-<module_build_version>.<n>, where the .<n> makes
+        # sure that the build is unique in Koji
+        if self.spec.flatpak:
+            self.dj.dock_json_set_arg(phase, plugin, 'append', True)
+
     def render_koji_promote(self, use_auth=None):
         if not self.dj.dock_json_has_plugin_conf('exit_plugins',
                                                  'koji_promote'):
