@@ -101,9 +101,7 @@ def cmd_watch_builds(args, osbs):
 def cmd_list_builds(args, osbs):
     kwargs = {}
     if args.running:
-        field_selector = ",".join(["status!={status}".format(status=status.capitalize())
-                                   for status in BUILD_FINISHED_STATES])
-        kwargs['field_selector'] = field_selector
+        kwargs['running'] = args.running
 
     if args.from_json:
         with open(args.from_json) as fp:
