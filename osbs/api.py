@@ -497,8 +497,6 @@ class OSBS(object):
         if flatpak:
             if module is None:
                 raise ValueError("Flatpak build missing required parameter 'module'")
-            if target is not None:
-                raise ValueError("Flatpak build called with unwanted parameter 'target'.")
             if isolated:
                 # Flatpak builds from a particular stream autogenerate the release
                 # as <module_version>.<n>; it doesn't make sense to make a fix
