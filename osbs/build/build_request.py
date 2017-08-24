@@ -1104,7 +1104,7 @@ class BuildRequest(object):
             del registries[placeholder]
 
         self.dj.dock_json_set_arg('postbuild_plugins', 'group_manifests',
-                                  'group', False)
+                                  'group', self.spec.group_manifests.value)
         goarch = {}
         for platform in self.platform_descriptors:
             goarch[platform] = self.platform_descriptors[platform]['architecture']

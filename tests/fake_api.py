@@ -423,10 +423,16 @@ def osbs(openshift, kwargs=None, additional_config=None, platform_descriptors=No
 
 
 @pytest.fixture
-def osbs_with_pulp(openshift, platform_descriptors=None):
-    additional_config = dedent("""\
-        pulp_registry_name = pulp
-        pulp_secret = secret""")
+def osbs_with_pulp(openshift, platform_descriptors=None, group_manifests=False):
+    if group_manifests:
+        additional_config = dedent("""\
+            pulp_registry_name = pulp
+            pulp_secret = secret
+            group_manifests = true""")
+    else:
+        additional_config = dedent("""\
+            pulp_registry_name = pulp
+            pulp_secret = secret""")
     kwargs = {'registry_uri': 'registry.example.com/v2'}
     return osbs(openshift, kwargs=kwargs,
                 additional_config=additional_config,
