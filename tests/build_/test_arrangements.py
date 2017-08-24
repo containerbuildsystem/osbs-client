@@ -1011,9 +1011,14 @@ class TestArrangementV4(TestArrangementV3):
         docker_registry = self.get_pulp_sync_registry(osbs_with_pulp.build_conf)
         assert args == {'registries': {docker_registry: {'insecure': True}}}
 
-    def test_group_manifests(self, openshift):  # noqa:F811
+    @pytest.mark.parametrize('group', (  # noqa:F811
+        True,
+        False,
+    ))
+    def test_group_manifests(self, openshift, group):
         platform_descriptors = {'x86_64': {'architecture': 'amd64'}}
-        osbs_api = osbs_with_pulp(openshift, platform_descriptors=platform_descriptors)
+        osbs_api = osbs_with_pulp(openshift, platform_descriptors=platform_descriptors,
+                                  group_manifests=group)
         additional_params = {
             'base_image': 'fedora:latest',
         }
@@ -1025,7 +1030,7 @@ class TestArrangementV4(TestArrangementV3):
 
         expected_args = {
             'goarch': {'x86_64': 'amd64'},
-            'group': False,
+            'group': group,
             'registries': {docker_registry: {'insecure': True, 'version': 'v2'}}
         }
         assert args == expected_args

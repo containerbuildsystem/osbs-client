@@ -151,6 +151,9 @@ Some options are also mandatory.
 
 * `equal_labels` (*optional*, `string`) — list of equal-preference label groups; if any of each set is missing, aliases will be added to complete the set; label delimiter ':', group delimiter ',' (e.g. `name1:name2:name3, release1:release2, version1:version2`)
 
+* `group_manifests` (*optional*, `boolean`) — whether Atomic Reactor should create manifest lists, default is false
+
+
 ## Build JSON Templates
 
 In the `build_json_dir` there must be `prod.json` and `prod_inner.json` which
