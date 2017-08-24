@@ -837,10 +837,10 @@ class TestOSBS(object):
         logs = osbs.get_build_logs(TEST_BUILD, decode=decode)
         if decode:
             assert isinstance(logs, six.string_types)
-            assert logs == u"líne 1"
+            assert logs == u"   líne 1"
         else:
             assert isinstance(logs, six.binary_type)
-            assert logs == u"líne 1".encode('utf-8')
+            assert logs == u"   líne 1   \n".encode('utf-8')
 
     # osbs is a fixture here
     @pytest.mark.parametrize('decode', [True, False])  # noqa
@@ -850,10 +850,10 @@ class TestOSBS(object):
         content = next(logs)
         if decode:
             assert isinstance(content, six.string_types)
-            assert content == u"líne 1"
+            assert content == u"   líne 1"
         else:
             assert isinstance(content, six.binary_type)
-            assert content == u"líne 1".encode('utf-8')
+            assert content == u"   líne 1   \n".encode('utf-8')
         with pytest.raises(StopIteration):
             assert next(logs)
 
@@ -882,7 +882,7 @@ class TestOSBS(object):
         (platform, content) = next(logs)
         assert platform is None
         assert isinstance(content, six.string_types)
-        assert content == u"líne 1"
+        assert content == u"   líne 1"
 
     # osbs is a fixture here
     def test_pause_builds(self, osbs):  # noqa

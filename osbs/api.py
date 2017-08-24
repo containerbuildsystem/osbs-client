@@ -680,7 +680,7 @@ class OSBS(object):
 
     def _decode_build_logs_generator(self, logs):
         for line in logs:
-            line = line.decode("utf-8").strip()
+            line = line.decode("utf-8").rstrip()
             yield line
 
     @osbsapi
@@ -708,7 +708,7 @@ class OSBS(object):
 
         # str or None returned from self.os.logs()
         if decode and logs is not None:
-            logs = logs.decode("utf-8")
+            logs = logs.decode("utf-8").rstrip()
 
         return logs
 
