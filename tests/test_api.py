@@ -1108,7 +1108,7 @@ class TestOSBS(object):
         existing_build_config = copy.deepcopy(build_config)
         existing_build_config['_from'] = 'from-labels'
 
-        config = Configuration()
+        config = Configuration(conf_name=None)
         osbs_obj = OSBS(config, config)
 
         (flexmock(osbs_obj.os)
@@ -1138,7 +1138,7 @@ class TestOSBS(object):
         existing_build_config = copy.deepcopy(build_config)
         existing_build_config['_from'] = 'from-name'
 
-        config = Configuration()
+        config = Configuration(conf_name=None)
         osbs_obj = OSBS(config, config)
 
         (flexmock(osbs_obj.os)
@@ -1166,7 +1166,7 @@ class TestOSBS(object):
                 }
             },
         }
-        config = Configuration()
+        config = Configuration(conf_name=None)
         osbs_obj = OSBS(config, config)
 
         (flexmock(osbs_obj.os)
@@ -1183,7 +1183,7 @@ class TestOSBS(object):
         assert osbs_obj._get_existing_build_config(build_config) is None
 
     def test_verify_no_running_builds_zero(self):
-        config = Configuration()
+        config = Configuration(conf_name=None)
         osbs_obj = OSBS(config, config)
 
         (flexmock(osbs_obj)
@@ -1195,7 +1195,7 @@ class TestOSBS(object):
         osbs_obj._verify_no_running_builds('build_config_name')
 
     def test_verify_no_running_builds_one(self):
-        config = Configuration()
+        config = Configuration(conf_name=None)
         osbs_obj = OSBS(config, config)
 
         (flexmock(osbs_obj)
@@ -1211,7 +1211,7 @@ class TestOSBS(object):
         assert str(exc.value).startswith('Build build-1 for build_config_name')
 
     def test_verify_no_running_builds_many(self):
-        config = Configuration()
+        config = Configuration(conf_name=None)
         osbs_obj = OSBS(config, config)
 
         (flexmock(osbs_obj)
@@ -1228,7 +1228,7 @@ class TestOSBS(object):
         assert str(exc.value).startswith('Multiple builds for')
 
     def test_create_build_config_bad_version(self):
-        config = Configuration()
+        config = Configuration(conf_name=None)
         osbs_obj = OSBS(config, config)
         build_json = {'apiVersion': 'spam'}
         build_request = flexmock(
@@ -1240,7 +1240,7 @@ class TestOSBS(object):
             osbs_obj._create_build_config_and_build(build_request)
 
     def test_create_build_config_label_mismatch(self):
-        config = Configuration()
+        config = Configuration(conf_name=None)
         osbs_obj = OSBS(config, config)
 
         build_json = {
@@ -1276,7 +1276,7 @@ class TestOSBS(object):
         assert 'Git labels collide' in str(exc.value)
 
     def test_create_build_config_already_running(self):
-        config = Configuration()
+        config = Configuration(conf_name=None)
         osbs_obj = OSBS(config, config)
 
         build_json = {
@@ -1315,7 +1315,7 @@ class TestOSBS(object):
             osbs_obj._create_build_config_and_build(build_request)
 
     def test_create_build_config_update(self):
-        config = Configuration()
+        config = Configuration(conf_name=None)
         osbs_obj = OSBS(config, config)
 
         build_json = {
@@ -1364,7 +1364,7 @@ class TestOSBS(object):
         assert build_response.json == {'spam': 'maps'}
 
     def test_create_build_config_create(self):
-        config = Configuration()
+        config = Configuration(conf_name=None)
         osbs_obj = OSBS(config, config)
 
         build_json = {
@@ -1695,7 +1695,7 @@ class TestOSBS(object):
         assert build_response.json() == {'spam': 'maps'}
 
     def test_get_image_stream_tag(self):
-        config = Configuration()
+        config = Configuration(conf_name=None)
         osbs_obj = OSBS(config, config)
 
         name = 'buildroot:latest'
