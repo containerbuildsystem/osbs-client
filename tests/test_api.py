@@ -29,7 +29,8 @@ from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
 from osbs.build.config_map_response import ConfigMapResponse
 from osbs.build.spec import BuildSpec
-from osbs.exceptions import OsbsValidationException, OsbsException, OsbsResponseException
+from osbs.exceptions import (OsbsValidationException, OsbsException, OsbsResponseException,
+                             OsbsOrchestratorNotEnabled)
 from osbs.http import HttpResponse
 from osbs.cli.main import cmd_build
 from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
@@ -487,7 +488,7 @@ class TestOSBS(object):
     # osbs_cant_orchestrate is a fixture here
     def test_create_orchestrator_build_cant_orchestrate(self, osbs_cant_orchestrate):  # noqa
         """
-        Test we get OsbsValidationException when can_orchestrate
+        Test we get OsbsOrchestratorNotEnabled when can_orchestrate
         isn't true
         """
         (flexmock(utils)
@@ -495,7 +496,7 @@ class TestOSBS(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
             .and_return(self.mock_repo_info()))
 
-        with pytest.raises(OsbsValidationException) as ex:
+        with pytest.raises(OsbsOrchestratorNotEnabled) as ex:
             osbs_cant_orchestrate.create_orchestrator_build(
                 git_uri=TEST_GIT_URI,
                 git_ref=TEST_GIT_REF,

@@ -79,5 +79,11 @@ class OsbsValidationException(OsbsException):
     pass
 
 
+class OsbsOrchestratorNotEnabled(OsbsValidationException):
+    """Raised when an orchestrator build has been requested,
+    but orchestration is not enabled."""
+    pass
+
+
 class OsbsWatchBuildNotFound(OsbsException):
     """ watch stream ended and build was not found """
