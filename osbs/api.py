@@ -30,7 +30,8 @@ from osbs.constants import (BUILD_RUNNING_STATES, WORKER_OUTER_TEMPLATE,
                             ORCHESTRATOR_CUSTOMIZE_CONF, BUILD_TYPE_WORKER,
                             BUILD_TYPE_ORCHESTRATOR, BUILD_FINISHED_STATES)
 from osbs.core import Openshift
-from osbs.exceptions import OsbsException, OsbsValidationException, OsbsResponseException
+from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsResponseException,
+                             OsbsOrchestratorNotEnabled)
 # import utils in this way, so that we can mock standalone functions with flexmock
 from osbs import utils
 
@@ -682,8 +683,8 @@ class OSBS(object):
             raise ValueError('Orchestrator build requires platforms param')
 
         if not self.can_orchestrate():
-            raise OsbsValidationException("can't create orchestrate build "
-                                          "when can_orchestrate isn't enabled")
+            raise OsbsOrchestratorNotEnabled("can't create orchestrate build "
+                                             "when can_orchestrate isn't enabled")
         extra = [x for x in ('platform',) if kwargs.get(x)]
         if extra:
             raise ValueError("Orchestrator build called with unwanted parameters: %s" %
