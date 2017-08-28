@@ -900,20 +900,23 @@ class BuildRequest(object):
         """
         If a pulp registry is specified, use pulp_pull plugin
         """
-        phase = 'postbuild_plugins'
+        # pulp_pull is a multi-phase plugin
+        phases = ('postbuild_plugins', 'exit_plugins')
         plugin = 'pulp_pull'
-        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
-            return
+        for phase in phases:
+            if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+                continue
 
-        pulp_registry = self.spec.pulp_registry.value
-        if not pulp_registry:
-            logger.info("removing %s from request, requires pulp_registry", pulp_registry)
-            self.dj.remove_plugin(phase, plugin)
+            pulp_registry = self.spec.pulp_registry.value
+            if not pulp_registry:
+                logger.info("removing %s from request, requires pulp_registry", pulp_registry)
+                self.dj.remove_plugin(phase, plugin)
+                continue
 
-        if not self.spec.kojihub.value:
-            logger.info('Removing %s because no kojihub was specified', plugin)
-            self.dj.remove_plugin(phase, plugin)
-            return
+            if not self.spec.kojihub.value:
+                logger.info('Removing %s because no kojihub was specified', plugin)
+                self.dj.remove_plugin(phase, plugin)
+                continue
 
     def render_pulp_push(self):
         """

@@ -2477,3 +2477,41 @@ class TestBuildRequest(object):
         else:
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, plugin_type, plugin_name)
+
+    @pytest.mark.parametrize('plugin_type', ('exit_plugins', 'postbuild_plugins'))
+    @pytest.mark.parametrize(('kojihub', 'pulp_registry', 'pulp_secret', 'enabled'), [
+        (True, True, True, True),
+        (True, False, True, False),
+        (True, False, False, False),
+        (False, True, True, False),
+        (False, False, True, False),
+        (False, False, False, False),
+    ])
+    def test_render_pulp_pull(self, plugin_type, kojihub, pulp_registry, pulp_secret, enabled):
+        plugin_name = 'pulp_pull'
+
+        br = BuildRequest(INPUTS_PATH)
+        kwargs = get_sample_prod_params()
+        kwargs.pop('pulp_registry', None)
+        kwargs.pop('pulp_secret', None)
+        kwargs.pop('kojihub', None)
+
+        if pulp_registry:
+            kwargs['pulp_registry'] = 'registry.example.com'
+        if pulp_secret:
+            kwargs['pulp_secret'] = 'pulp_secret'
+        if kojihub:
+            kwargs['kojihub'] = 'http://hub/'
+        br.set_params(**kwargs)
+
+        br.dj.dock_json_set_param(plugin_type, [])
+        br.dj.add_plugin(plugin_type, plugin_name, {})
+
+        build_json = br.render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        if enabled:
+            assert get_plugin(plugins, plugin_type, plugin_name)
+        else:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, plugin_type, plugin_name)
