@@ -18,7 +18,6 @@ import shutil
 import six
 import stat
 import copy
-import datetime
 import getpass
 import sys
 from tempfile import NamedTemporaryFile
@@ -47,7 +46,6 @@ from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRA
                              TEST_GIT_URI, TEST_TARGET, TEST_USER, INPUTS_PATH,
                              TEST_KOJI_TASK_ID, TEST_FILESYSTEM_KOJI_TASK_ID, TEST_VERSION,
                              TEST_ORCHESTRATOR_BUILD)
-from tests.build_.test_build_request import get_sample_prod_params
 from osbs.core import Openshift
 # These are used as fixtures
 from tests.fake_api import openshift, osbs, osbs106, osbs_cant_orchestrate  # noqa
@@ -67,6 +65,7 @@ WORKER_LOGS = [u'2017-06-23 17:18:41,400 atomic_reactor.foo -  '
                u'DEBUG - this is from a worker build',
 
                u'"ContainersPaused": 0,']
+
 
 def request_as_response(request):
     """

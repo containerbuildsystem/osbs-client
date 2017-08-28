@@ -18,7 +18,7 @@ from six.moves import zip_longest
 from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.spec import BuildSpec
 from osbs.constants import (SECRETS_PATH, DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE,
-                            DEFAULT_CUSTOMIZE_CONF, BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR)
+                            DEFAULT_CUSTOMIZE_CONF, BUILD_TYPE_ORCHESTRATOR)
 from osbs.exceptions import OsbsException, OsbsValidationException
 from osbs.utils import git_repo_humanish_part_from_uri, sanitize_version, Labels
 from osbs import __version__ as client_version
