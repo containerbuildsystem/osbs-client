@@ -1403,6 +1403,13 @@ class BuildRequest(object):
                            None):
                           self.spec.registry_secrets.value,
 
+                          ('postbuild_plugins', 'group_manifests',
+                           # Only set the secrets for the build, don't
+                           # add the path to the plugin's
+                           # configuration. This is done elsewhere.
+                           None):
+                          self.spec.registry_secrets.value,
+
                           ('buildstep_plugins', 'orchestrate_build', 'osbs_client_config'):
                           self.spec.client_config_secret.value})
 
