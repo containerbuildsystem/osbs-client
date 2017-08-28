@@ -780,6 +780,7 @@ class TestArrangementV4(TestArrangementV3):
 
             'postbuild_plugins': [
                 'fetch_worker_metadata',
+                'compare_components',
                 'tag_from_config',
                 'group_manifests',
                 'pulp_tag',

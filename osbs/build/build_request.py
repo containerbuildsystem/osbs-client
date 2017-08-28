@@ -567,6 +567,7 @@ class BuildRequest(object):
                 ("postbuild_plugins", "pulp_pull"),  # required only to make an archive for Koji
                 ("postbuild_plugins", "koji_upload"),
                 ("postbuild_plugins", "fetch_worker_metadata"),
+                ("postbuild_plugins", "compare_components"),
                 ("exit_plugins", "koji_promote"),
                 ("exit_plugins", "koji_import"),
                 ("exit_plugins", "koji_tag_build"),
