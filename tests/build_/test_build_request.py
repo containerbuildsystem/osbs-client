@@ -18,7 +18,7 @@ from osbs.build.build_request import BuildRequest
 from osbs.constants import (DEFAULT_BUILD_IMAGE, DEFAULT_OUTER_TEMPLATE,
                             DEFAULT_INNER_TEMPLATE, SECRETS_PATH,
                             ORCHESTRATOR_INNER_TEMPLATE, WORKER_INNER_TEMPLATE,
-                            DEFAULT_ARRANGEMENT_VERSION, REPO_CONFIG_FILE,
+                            DEFAULT_ARRANGEMENT_VERSION,
                             BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR,
                             ADDITIONAL_TAGS_FILE)
 from osbs.exceptions import OsbsValidationException
