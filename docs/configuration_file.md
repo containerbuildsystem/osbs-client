@@ -153,6 +153,7 @@ Some options are also mandatory.
 
 * `group_manifests` (*optional*, `boolean`) — whether Atomic Reactor should create manifest lists, default is false
 
+* `prefer_schema1_digest` (*optional*, `boolean`) — used by Atomic Reactor's koji_upload plugin when deciding which digest should be used in the image output files for a Koji build
 
 ## Build JSON Templates
 

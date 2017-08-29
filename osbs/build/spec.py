@@ -179,6 +179,7 @@ class BuildSpec(object):
     yum_proxy = BuildParam("yum_proxy", allow_none=True)
     koji_parent_build = BuildParam("koji_parent_build", allow_none=True)
     group_manifests = BuildParam("group_manifests", allow_none=True)
+    prefer_schema1_digest = BuildParam("prefer_schema1_digest", allow_none=True)
 
     def __init__(self):
         self.required_params = [
@@ -230,7 +231,7 @@ class BuildSpec(object):
                    token_secrets=None, arrangement_version=None,
                    info_url_format=None, artifacts_allowed_domains=None,
                    equal_labels=None, koji_upload_dir=None, yum_proxy=None,
-                   koji_parent_build=None, group_manifests=None,
+                   koji_parent_build=None, group_manifests=None, prefer_schema1_digest=None,
                    **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
@@ -288,6 +289,7 @@ class BuildSpec(object):
         self.git_branch.value = git_branch
         self.name.value = make_name_from_git(self.git_uri.value, self.git_branch.value)
         self.group_manifests.value = group_manifests or False
+        self.prefer_schema1_digest.value = prefer_schema1_digest
         if not base_image:
             raise OsbsValidationException("base_image must be provided")
         self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)

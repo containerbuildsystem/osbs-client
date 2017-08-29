@@ -274,6 +274,7 @@ class BuildRequest(object):
             'koji_root': self.spec.kojiroot.value,
             'openshift_required_version': sanitize_version(self._openshift_required_version),
             'pulp_registry_name': self.spec.pulp_registry.value,
+            'prefer_schema1_digest': self.spec.prefer_schema1_digest.value,
             'registry_api_versions': ','.join(self.spec.registry_api_versions.value or []) or None,
             'smtp_additional_addresses': ','.join(self.spec.smtp_additional_addresses.value or [])
                                          or None,
@@ -771,24 +772,29 @@ class BuildRequest(object):
             self.dj.remove_plugin("exit_plugins", "koji_promote")
 
     def render_koji_upload(self, use_auth=None):
-        if not self.dj.dock_json_has_plugin_conf('postbuild_plugins', 'koji_upload'):
+        phase = 'postbuild_plugins'
+        name = 'koji_upload'
+        if not self.dj.dock_json_has_plugin_conf(phase, name):
             return
 
-        if self.spec.kojihub.value:
-            self.dj.dock_json_set_arg('postbuild_plugins', 'koji_upload',
-                                      'kojihub', self.spec.kojihub.value)
-            self.dj.dock_json_set_arg('postbuild_plugins', 'koji_upload', 'url',
-                                      self.spec.builder_openshift_url.value)
-            self.dj.dock_json_set_arg('postbuild_plugins', 'koji_upload',
-                                      'build_json_dir', self.spec.builder_build_json_dir.value)
-            self.dj.dock_json_set_arg('postbuild_plugins', 'koji_upload',
-                                      'koji_upload_dir', self.spec.koji_upload_dir.value)
-            if use_auth is not None:
-                self.dj.dock_json_set_arg('postbuild_plugins', 'koji_upload',
-                                          'use_auth', use_auth)
-        else:
-            logger.info("removing koji_upload from request as no kojihub specified")
-            self.dj.remove_plugin("postbuild_plugins", "koji_upload")
+        if not self.spec.kojihub.value:
+            logger.info('removing %s from request as no kojihub specified', name)
+            self.dj.remove_plugin(phase, name)
+            return
+
+        def set_arg(arg, value):
+            self.dj.dock_json_set_arg(phase, name, arg, value)
+
+        set_arg('kojihub', self.spec.kojihub.value)
+        set_arg('url', self.spec.builder_openshift_url.value)
+        set_arg('build_json_dir', self.spec.builder_build_json_dir.value)
+        set_arg('koji_upload_dir', self.spec.koji_upload_dir.value)
+
+        if use_auth is not None:
+            set_arg('use_auth', use_auth)
+
+        if self.spec.prefer_schema1_digest.value is not None:
+            set_arg('prefer_schema1_digest', self.spec.prefer_schema1_digest.value)
 
     def render_koji_import(self, use_auth=None):
         if not self.dj.dock_json_has_plugin_conf('exit_plugins', 'koji_import'):

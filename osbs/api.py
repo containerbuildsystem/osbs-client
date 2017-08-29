@@ -548,6 +548,7 @@ class OSBS(object):
             koji_parent_build=koji_parent_build,
             group_manifests=self.os_conf.get_group_manifests(),
             isolated=isolated,
+            prefer_schema1_digest=self.build_conf.get_prefer_schema1_digest(),
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         build_request.set_repo_info(repo_info)
