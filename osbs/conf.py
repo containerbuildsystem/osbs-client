@@ -286,6 +286,10 @@ class Configuration(object):
     def get_pulp_registry(self):
         return self._get_value("pulp_registry_name", self.conf_section, "pulp_registry_name")
 
+    def get_prefer_schema1_digest(self):
+        return self._get_value("prefer_schema1_digest", self.conf_section, "prefer_schema1_digest",
+                               is_bool_val=True)
+
     def get_group_manifests(self):
         return self._get_value("group_manifests", self.conf_section,
                                "group_manifests", is_bool_val=True)

@@ -156,26 +156,31 @@ class TestBuildRequest(object):
                                  "postbuild_plugins", "import_image", "args",
                                  "insecure_registry")
 
-    def assert_koji_upload_plugin(self, plugins, use_auth, valid=True):
+    def assert_koji_upload_plugin(self, plugins, use_auth, prefer_schema1_digest, valid=True):
+        phase = 'postbuild_plugins'
+        name = 'koji_upload'
         if not valid:
             with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, "postbuild_plugins", "koji_upload")
+                get_plugin(plugins, phase, name)
         else:
-            assert get_plugin(plugins, "postbuild_plugins", "koji_upload")
-            assert plugin_value_get(plugins, "postbuild_plugins", "koji_upload", "args",
-                                    "koji_upload_dir")
+            assert get_plugin(plugins, phase, name)
+            plugin_args = plugin_value_get(plugins, phase, name, 'args')
+            assert plugin_args.get('koji_upload_dir')
 
             if use_auth is not None:
-                assert plugin_value_get(plugins, "postbuild_plugins", "koji_upload", "args",
-                                        "use_auth") == use_auth
+                assert plugin_args['use_auth'] == use_auth
             else:
-                with pytest.raises(KeyError):
-                    plugin_value_get(plugins, "postbuild_plugins", "koji_upload", "args",
-                                     "use_auth")
+                assert 'use_auth' not in plugin_args
+
+            if prefer_schema1_digest is not None:
+                assert plugin_args['prefer_schema1_digest'] == prefer_schema1_digest
+            else:
+                assert 'prefer_schema1_digest' not in plugin_args
 
     @pytest.mark.parametrize('kojihub', ("http://hub/", None))
     @pytest.mark.parametrize('use_auth', (True, False, None))
-    def test_render_koji_upload(self, use_auth, kojihub):
+    @pytest.mark.parametrize('prefer_schema1_digest', (True, False, None))
+    def test_render_koji_upload(self, use_auth, kojihub, prefer_schema1_digest):
         inner_template = WORKER_INNER_TEMPLATE.format(
             arrangement_version=DEFAULT_ARRANGEMENT_VERSION)
         build_request = BuildRequest(INPUTS_PATH, inner_template=inner_template,
@@ -197,10 +202,12 @@ class TestBuildRequest(object):
         }
         if use_auth is not None:
             kwargs['use_auth'] = use_auth
+        if prefer_schema1_digest is not None:
+            kwargs['prefer_schema1_digest'] = prefer_schema1_digest
         build_request.set_params(**kwargs)
         build_json = build_request.render()
         plugins = get_plugins_from_build_json(build_json)
-        self.assert_koji_upload_plugin(plugins, use_auth, kojihub)
+        self.assert_koji_upload_plugin(plugins, use_auth, prefer_schema1_digest, kojihub)
 
     @pytest.mark.parametrize(('koji_hub', 'base_image', 'scratch', 'enabled'), (
         ("http://hub/", 'fedora:latest', False, True),
@@ -1479,6 +1486,7 @@ class TestBuildRequest(object):
         },
         {}
     ))
+    @pytest.mark.parametrize('prefer_schema1_digest', [True, False, None])
     @pytest.mark.parametrize(('openshift_req_version', 'worker_openshift_req_version'), (
         (None, '1.0.6'),
         ('1.3.4', '1.3.4'),
@@ -1488,7 +1496,7 @@ class TestBuildRequest(object):
                                       build_imagestream, worker_build_image,
                                       additional_kwargs, koji_parent_build,
                                       openshift_req_version, worker_openshift_req_version,
-                                      valid):
+                                      prefer_schema1_digest, valid):
         phase = 'buildstep_plugins'
         plugin = 'orchestrate_build'
 
@@ -1515,6 +1523,8 @@ class TestBuildRequest(object):
             kwargs['build_imagestream'] = build_imagestream
         if koji_parent_build:
             kwargs['koji_parent_build'] = koji_parent_build
+        if prefer_schema1_digest is not None:
+            kwargs['prefer_schema1_digest'] = prefer_schema1_digest
         kwargs.update(additional_kwargs)
 
         inner_template = ORCHESTRATOR_INNER_TEMPLATE.format(
@@ -1582,6 +1592,8 @@ class TestBuildRequest(object):
                     worker_config.get_proxy())
             assert (parse_version(worker_openshift_req_version) ==
                     worker_config.get_openshift_required_version())
+            assert (kwargs.get('prefer_schema1_digest') ==
+                    worker_config.get_prefer_schema1_digest())
 
     def test_render_prod_with_pulp_no_auth(self):
         """
