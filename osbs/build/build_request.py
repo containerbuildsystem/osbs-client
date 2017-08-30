@@ -963,6 +963,11 @@ class BuildRequest(object):
                 self.dj.remove_plugin(phase, plugin)
                 continue
 
+            if self.spec.prefer_schema1_digest.value is not None:
+                self.dj.dock_json_set_arg(phase, 'pulp_pull',
+                                          'expect_v2schema2',
+                                          not self.spec.prefer_schema1_digest.value)
+
     def render_pulp_push(self):
         """
         If a pulp registry is specified, use the pulp plugin

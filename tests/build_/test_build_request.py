@@ -2565,6 +2565,7 @@ class TestBuildRequest(object):
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, plugin_type, plugin_name)
 
+    @pytest.mark.parametrize('prefer_schema1_digest', (True, False, None))
     @pytest.mark.parametrize('plugin_type', ('exit_plugins', 'postbuild_plugins'))
     @pytest.mark.parametrize(('kojihub', 'pulp_registry', 'pulp_secret', 'enabled'), [
         (True, True, True, True),
@@ -2574,7 +2575,8 @@ class TestBuildRequest(object):
         (False, False, True, False),
         (False, False, False, False),
     ])
-    def test_render_pulp_pull(self, plugin_type, kojihub, pulp_registry, pulp_secret, enabled):
+    def test_render_pulp_pull(self, plugin_type, kojihub, pulp_registry, pulp_secret, enabled,
+                              prefer_schema1_digest):
         plugin_name = 'pulp_pull'
 
         br = BuildRequest(INPUTS_PATH)
@@ -2589,6 +2591,8 @@ class TestBuildRequest(object):
             kwargs['pulp_secret'] = 'pulp_secret'
         if kojihub:
             kwargs['kojihub'] = 'http://hub/'
+        if prefer_schema1_digest is not None:
+            kwargs['prefer_schema1_digest'] = prefer_schema1_digest
         br.set_params(**kwargs)
 
         br.dj.dock_json_set_param(plugin_type, [])
@@ -2599,6 +2603,11 @@ class TestBuildRequest(object):
 
         if enabled:
             assert get_plugin(plugins, plugin_type, plugin_name)
+            plugin_args = plugin_value_get(plugins, plugin_type, plugin_name, 'args')
+            if prefer_schema1_digest is not None:
+                assert plugin_args['expect_v2schema2'] is not prefer_schema1_digest
+            else:
+                assert 'expect_v2schema2' not in plugin_args
         else:
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, plugin_type, plugin_name)
