@@ -789,8 +789,7 @@ class BuildRequest(object):
         set_arg('url', self.spec.builder_openshift_url.value)
         set_arg('build_json_dir', self.spec.builder_build_json_dir.value)
         set_arg('koji_upload_dir', self.spec.koji_upload_dir.value)
-        set_arg('buildstep_logs',
-                "{0}-build.log".format(self.spec.platform.value))
+        set_arg('platform', self.spec.platform.value)
 
         if use_auth is not None:
             set_arg('use_auth', use_auth)
