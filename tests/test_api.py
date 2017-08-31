@@ -53,9 +53,7 @@ from tests.fake_api import openshift, osbs, osbs106, osbs_cant_orchestrate  # no
 from six.moves import http_client
 
 
-# Increment default arrangement version to allow for one
-# arrangement in development.
-INVALID_ARRANGEMENT_VERSION = DEFAULT_ARRANGEMENT_VERSION + 2
+INVALID_ARRANGEMENT_VERSION = DEFAULT_ARRANGEMENT_VERSION + 1
 
 # Expected log return lines for test_orchestrator_build_logs_api
 ORCHESTRATOR_LOGS = [u'2017-06-23 17:18:41,791 platform:- - '

@@ -593,16 +593,6 @@ class TestArrangementV3(TestArrangementV2):
         },
     }
 
-    def test_is_default(self):
-        """
-        Test this is the default arrangement
-        """
-
-        # Note! If this test fails it probably means you need to
-        # derive a new TestArrangementV[n] class from this class and
-        # move the method to the new class.
-        assert DEFAULT_ARRANGEMENT_VERSION == self.ARRANGEMENT_VERSION
-
     @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
     def test_koji_upload(self, osbs, scratch):
         additional_params = {
@@ -849,10 +839,6 @@ class TestArrangementV4(TestArrangementV3):
         },
     }
 
-    # Arrangement 4 is not yet ready to be default. Once it is, this skip
-    # decorator should be deleted and test_is_default from previous arrangement
-    # test collection removed.
-    @pytest.mark.skip('Arrangement 4 is not ready to be default!')
     def test_is_default(self):
         """
         Test this is the default arrangement

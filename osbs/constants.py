@@ -1,5 +1,5 @@
 """
-Copyright (c) 2015 Red Hat, Inc
+Copyright (c) 2015, 2016, 2017 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -23,7 +23,7 @@ ORCHESTRATOR_OUTER_TEMPLATE = "orchestrator.json"
 DEFAULT_INNER_TEMPLATE = "prod_inner.json"
 WORKER_INNER_TEMPLATE = "worker_inner:{arrangement_version}.json"
 ORCHESTRATOR_INNER_TEMPLATE = "orchestrator_inner:{arrangement_version}.json"
-DEFAULT_ARRANGEMENT_VERSION = 3  # this should be the highest-numbered version
+DEFAULT_ARRANGEMENT_VERSION = 4  # this should be the highest-numbered version
 DEFAULT_CUSTOMIZE_CONF = "prod_customize.json"
 WORKER_CUSTOMIZE_CONF = "worker_customize.json"
 ORCHESTRATOR_CUSTOMIZE_CONF = "orchestrator_customize.json"
