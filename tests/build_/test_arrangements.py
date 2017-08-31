@@ -632,7 +632,7 @@ class TestArrangementV3(TestArrangementV2):
             'url': '/',
             'use_auth': False,
             'verify_ssl': False,
-            'buildstep_logs': 'x86_64-build.log',
+            'platform': 'x86_64',
         }
         assert match_args == args
 
