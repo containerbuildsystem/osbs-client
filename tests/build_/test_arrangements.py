@@ -631,7 +631,8 @@ class TestArrangementV3(TestArrangementV2):
             'kojihub': 'http://koji.example.com/kojihub',
             'url': '/',
             'use_auth': False,
-            'verify_ssl': False
+            'verify_ssl': False,
+            'buildstep_logs': 'x86_64-build.log',
         }
         assert match_args == args
 
