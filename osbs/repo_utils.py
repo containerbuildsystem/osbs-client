@@ -14,6 +14,7 @@ from textwrap import dedent
 
 import logging
 import os
+import re
 
 
 logger = logging.getLogger(__name__)
@@ -60,7 +61,7 @@ class AdditionalTagsConfig(object):
     Read specified additional tags from repository.
     """
 
-    INVALID_CHARS = ('-', '{', '}')
+    VALID_TAG_REGEX = re.compile(r'^[\w]{0,127}$')
 
     def __init__(self, dir_path='', file_name=ADDITIONAL_TAGS_FILE):
         self._tags = set()
@@ -83,10 +84,10 @@ class AdditionalTagsConfig(object):
         if not tag:
             return False
 
-        for char in self.INVALID_CHARS:
-            if char in tag:
-                logger.warning('Invalid character, "%s", in additional tag "%s"', char, tag)
-                return False
+        if not self.VALID_TAG_REGEX.match(tag):
+            logger.warning('Invalid additional tag "%s", must match pattern %s',
+                           tag, self.VALID_TAG_REGEX.pattern)
+            return False
 
         return True
 

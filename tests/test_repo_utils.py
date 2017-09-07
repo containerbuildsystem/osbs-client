@@ -72,7 +72,7 @@ class TestAdditionalTagsConfig(object):
         assert set(conf.tags) == set(tags)
 
     @pytest.mark.parametrize('bad_tag', [
-        '{bad', 'bad}', '{bad}', 'ba-d', '-bad', 'bad-'
+        '{bad', 'bad}', '{bad}', 'ba-d', '-bad', 'bad-', 'b@d',
     ])
     def test_invalid_tags(self, tmpdir, bad_tag):
         tags = [bad_tag, 'good']
