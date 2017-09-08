@@ -65,7 +65,7 @@ class TestAdditionalTagsConfig(object):
         assert conf.tags == []
 
     def test_tags_parsed(self, tmpdir):
-        tags = ['spam', 'bacon', 'eggs']
+        tags = ['spam', 'bacon', 'eggs', 'saus.age']
         self.mock_additional_tags(str(tmpdir), tags)
         conf = AdditionalTagsConfig(dir_path=str(tmpdir))
         # Compare as a "set" because order is not guaranteed
