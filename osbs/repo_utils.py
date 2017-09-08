@@ -61,7 +61,7 @@ class AdditionalTagsConfig(object):
     Read specified additional tags from repository.
     """
 
-    VALID_TAG_REGEX = re.compile(r'^[\w]{0,127}$')
+    VALID_TAG_REGEX = re.compile(r'^[\w.]{0,127}$')
 
     def __init__(self, dir_path='', file_name=ADDITIONAL_TAGS_FILE):
         self._tags = set()
