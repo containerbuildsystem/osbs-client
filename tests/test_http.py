@@ -42,7 +42,8 @@ def has_connection():
 @pytest.mark.skipif(not has_connection(),
                     reason="requires internet connection")
 class TestHttpSession(object):
-    if requests.__version__.startswith('2.6.'):
+    major, minor, patch = requests.__version__.split('.')
+    if int(minor) < 11:
         retry_method_name = 'is_forced_retry'
     else:
         retry_method_name = 'is_retry'
