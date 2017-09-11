@@ -907,6 +907,51 @@ class TestArrangementV4(TestArrangementV3):
 
         assert args == expected_args
 
+    @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
+    @pytest.mark.parametrize('use_pulp', [False, True])
+    def test_koji_upload(self, osbs, osbs_with_pulp, scratch, use_pulp):
+        additional_params = {
+            'base_image': 'fedora:latest',
+            'koji_upload_dir': 'upload',
+        }
+        if scratch:
+            additional_params['scratch'] = True
+
+        if use_pulp:
+            client = osbs_with_pulp
+        else:
+            client = osbs
+
+        params, build_json = self.get_worker_build_request(client,
+                                                           additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        if scratch:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, 'postbuild_plugins', 'koji_upload')
+            return
+
+        args = plugin_value_get(plugins, 'postbuild_plugins',
+                                         'koji_upload', 'args')
+
+        match_args = {
+            'blocksize': 10485760,
+            'build_json_dir': 'inputs',
+            'koji_keytab': False,
+            'koji_principal': False,
+            'koji_upload_dir': 'upload',
+            'kojihub': 'http://koji.example.com/kojihub',
+            'url': '/',
+            'use_auth': False,
+            'verify_ssl': False,
+            'platform': 'x86_64',
+        }
+
+        if use_pulp:
+            match_args['report_multiple_digests'] = True
+
+        assert match_args == args
+
     def test_pulp_tag(self, osbs_with_pulp):  # noqa:F811
         additional_params = {
             'base_image': 'fedora:latest',

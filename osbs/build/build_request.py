@@ -795,7 +795,16 @@ class BuildRequest(object):
         if use_auth is not None:
             set_arg('use_auth', use_auth)
 
-        if self.spec.prefer_schema1_digest.value is not None:
+        # arrangement version 4 and later deals with pulp differently than
+        # earlier arrangement versions.
+        # < 4: set prefer_schema1_digest according to config
+        # >=4: set report_multiple_digests=True when pulp in use
+        arrangement = self.spec.arrangement_version.value
+        if (arrangement is not None and
+                arrangement >= 4 and
+                self.spec.pulp_registry.value):
+            set_arg('report_multiple_digests', True)
+        elif self.spec.prefer_schema1_digest.value is not None:
             set_arg('prefer_schema1_digest', self.spec.prefer_schema1_digest.value)
 
     def render_koji_import(self, use_auth=None):
