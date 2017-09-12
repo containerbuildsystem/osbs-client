@@ -2242,6 +2242,7 @@ class TestBuildRequest(object):
 
     def test_has_version(self):
         br = BuildRequest(INPUTS_PATH)
+        br.set_params(**get_sample_prod_params())
         br.render()
         assert 'client_version' in br.dj.dock_json
 
