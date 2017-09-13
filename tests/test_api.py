@@ -1941,6 +1941,80 @@ class TestOSBS(object):
                                    worker, orchestrator), osbs)
 
     # osbs is a fixture here
+    @pytest.mark.parametrize(('isolated', 'module'), [ # noqa
+        (False, 'module'),
+        (True, 'module'),
+        (False, None),
+    ])
+    def test_flatpak_args_from_cli(self, caplog, osbs, isolated, module):
+        class MockArgs(object):
+            def __init__(self, isolated, module):
+                self.platform = None
+                self.release = None
+                self.platforms = 'platforms'
+                self.arrangement_version = 4
+                self.worker = False
+                self.orchestrator = True
+                self.scratch = None
+                self.isolated = isolated
+                self.koji_upload_dir = None
+                self.git_uri = None
+                self.git_ref = None
+                self.git_branch = TEST_GIT_BRANCH
+                self.koji_parent_build = None
+                self.flatpak = True
+                self.module = module
+
+        expected_kwargs = {
+            'platform': None,
+            'scratch': None,
+            'isolated': False,
+            'platforms': 'platforms',
+            'release': None,
+            'flatpak': True,
+            'module': module,
+            'git_uri': None,
+            'git_ref': None,
+            'git_branch': TEST_GIT_BRANCH,
+            'arrangement_version': 4,
+            'user': None,
+            'tag': None,
+            'target': None,
+            'architecture': None,
+            'yum_repourls': None,
+            'koji_parent_build': None,
+        }
+
+        args = MockArgs(isolated, module)
+        # Some of the command line arguments are pulled through the config
+        # object, so add them there as well.
+        osbs.build_conf.args = args
+        flexmock(osbs.build_conf, get_git_branch=lambda: TEST_GIT_BRANCH)
+
+        if not isolated and module is not None:
+            # and_raise is called to prevent cmd_build to continue
+            # as we only want to check if arguments are correct
+            (flexmock(osbs)
+                .should_receive("create_orchestrator_build")
+                .once()
+                .with_args(**expected_kwargs)
+                .and_raise(CustomTestException))
+
+        if isolated:
+            with pytest.raises(OsbsException) as exc_info:
+                cmd_build(args, osbs)
+            assert isinstance(exc_info.value.cause, ValueError)
+            assert "Flatpak build cannot be isolated" in exc_info.value.message
+        elif module is None:
+            with pytest.raises(OsbsException) as exc_info:
+                cmd_build(args, osbs)
+            assert isinstance(exc_info.value.cause, ValueError)
+            assert "Flatpak build missing required parameter" in exc_info.value.message
+        else:
+            with pytest.raises(CustomTestException):
+                cmd_build(MockArgs(isolated, module), osbs)
+
+    # osbs is a fixture here
     @pytest.mark.parametrize('branch_name', [  # noqa
         TEST_GIT_BRANCH,
         '',

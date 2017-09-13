@@ -489,11 +489,6 @@ class OSBS(object):
                               module_compose_id=None,
                               **kwargs):
 
-        repo_info = utils.get_repo_info(git_uri, git_ref, git_branch=git_branch)
-        build_request = self.get_build_request(inner_template=inner_template,
-                                               outer_template=outer_template,
-                                               customize_conf=customize_conf)
-
         if flatpak:
             if module is None:
                 raise ValueError("Flatpak build missing required parameter 'module'")
@@ -504,6 +499,12 @@ class OSBS(object):
                 # fix for module requires will have to be determined from experience.
                 raise ValueError("Flatpak build cannot be isolated")
 
+        repo_info = utils.get_repo_info(git_uri, git_ref, git_branch=git_branch)
+        build_request = self.get_build_request(inner_template=inner_template,
+                                               outer_template=outer_template,
+                                               customize_conf=customize_conf)
+
+        if flatpak:
             req_labels, base_image = self._get_flatpak_labels(module)
         else:
             req_labels, base_image = self._check_labels(repo_info)
