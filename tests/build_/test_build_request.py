@@ -1276,6 +1276,44 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             assert get_plugin(plugins, "prepublish_plugins", "squash")
 
+    def test_render_prod_not_flatpak(self):
+        build_request = BuildRequest(INPUTS_PATH)
+
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'flatpak': False,
+            'user': "john-foo",
+            'base_image': 'fedora:latest',
+            'name_label': 'fedora/resultingimage',
+            'registry_uri': "registry.example.com",
+            'nfs_server_path': "server:path",
+            'openshift_uri': "http://openshift/",
+            'builder_openshift_url': "http://openshift/",
+            'koji_target': "koji-target",
+            'kojiroot': "http://root/",
+            'kojihub': "http://hub/",
+            'sources_command': "make",
+            'vendor': "Foo Vendor",
+            'authoritative_registry': "registry.example.com",
+            'distribution_scope': "authoritative-source-only",
+            'registry_api_versions': ['v2'],
+        }
+
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+
+        plugins = get_plugins_from_build_json(build_json)
+
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins", "resolve_module_compose")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
+        assert get_plugin(plugins, "prepublish_plugins", "squash")
+
     @pytest.mark.parametrize(('hub', 'disabled', 'release'), [
         ('http://hub/', False, None),
         ('http://hub/', False, '1.2.1'),
