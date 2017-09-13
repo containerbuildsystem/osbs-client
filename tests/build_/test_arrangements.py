@@ -1146,3 +1146,21 @@ class TestArrangementV4(TestArrangementV3):
         assert config_kwargs['odcs_insecure'] == str(odcs_insecure)
         assert config_kwargs['pdc_url'] == pdc_url
         assert config_kwargs['pdc_insecure'] == str(pdc_insecure)
+
+    @pytest.mark.parametrize('worker', [True, False])  # noqa:F811
+    def test_not_flatpak(self, osbs, worker):
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        if worker:
+            params, build_json = self.get_worker_build_request(osbs, additional_params)
+        else:
+            params, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins", "resolve_module_compose")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
