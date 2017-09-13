@@ -344,7 +344,7 @@ def cmd_build(args, osbs):
     if args.koji_upload_dir:
         build_kwargs['koji_upload_dir'] = args.koji_upload_dir
 
-    if args.flatpak:
+    if osbs.build_conf.get_flatpak():
         build_kwargs['flatpak'] = True
         build_kwargs['module'] = osbs.build_conf.get_module()
 
