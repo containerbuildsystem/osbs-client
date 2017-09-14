@@ -1314,13 +1314,14 @@ class TestBuildRequest(object):
             get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
         assert get_plugin(plugins, "prepublish_plugins", "squash")
 
-    @pytest.mark.parametrize(('hub', 'disabled', 'release'), [
+    @pytest.mark.parametrize(('hub', 'disabled', 'release'), (
         ('http://hub/', False, None),
-        ('http://hub/', False, '1.2.1'),
+        ('http://hub/', True, '1.2.1'),
         (None, True, None),
         (None, True, '1.2.1'),
-    ])
-    def test_render_bump_release(self, hub, disabled, release):
+    ))
+    @pytest.mark.parametrize('flatpak', (True, False))
+    def test_render_bump_release(self, hub, disabled, release, flatpak):
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -1343,6 +1344,10 @@ class TestBuildRequest(object):
         if release:
             kwargs['release'] = release
 
+        if flatpak:
+            kwargs['flatpak'] = flatpak
+            kwargs['module'] = 'name:stream'
+
         build_request = BuildRequest(INPUTS_PATH)
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -1350,26 +1355,17 @@ class TestBuildRequest(object):
 
         labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile",
                                   "args", "labels")
+        assert labels.get('release') == release
 
-        if not disabled and not release:
-            assert plugin_value_get(plugins, "prebuild_plugins", "bump_release",
-                                    "args", "hub") == hub
-            assert 'release' not in labels
-
-        elif not disabled and release:
+        if disabled:
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, "prebuild_plugins", "bump_release")
-            assert 'release' in labels
+            return
 
-        elif disabled and not release:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, "prebuild_plugins", "bump_release")
-            assert 'release' not in labels
+        plugin_args = plugin_value_get(plugins, "prebuild_plugins", "bump_release", "args")
+        assert plugin_args['hub'] == hub
 
-        elif disabled and release:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, "prebuild_plugins", "bump_release")
-            assert 'release' in labels
+        assert plugin_args.get('append', False) == flatpak
 
     @pytest.mark.parametrize(('hub', 'root', 'disabled'), [
         ('http://hub/', 'http://root/', False),
