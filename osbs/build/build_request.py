@@ -583,6 +583,7 @@ class BuildRequest(object):
                 ("exit_plugins", "koji_promote"),
                 ("exit_plugins", "koji_import"),
                 ("exit_plugins", "koji_tag_build"),
+                ("exit_plugins", "remove_worker_metadata"),
             ]
 
             if not self.has_tag_suffixes_placeholder():

@@ -180,6 +180,10 @@
     },
     {
       "name": "remove_built_image"
+    },
+    {
+      "name": "remove_worker_metadata",
+      "required": false
     }
   ]
 }

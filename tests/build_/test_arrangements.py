@@ -802,6 +802,7 @@ class TestArrangementV4(TestArrangementV3):
                 'store_metadata_in_osv3',
                 'sendmail',
                 'remove_built_image',
+                'remove_worker_metadata',
             ],
         },
 
