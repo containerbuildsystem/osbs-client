@@ -315,31 +315,33 @@ class BuildSpec(object):
         self.name.value = make_name_from_git(self.git_uri.value, self.git_branch.value)
         self.group_manifests.value = group_manifests or False
         self.prefer_schema1_digest.value = prefer_schema1_digest
-        if not base_image:
-            raise OsbsValidationException("base_image must be provided")
-        self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
-        self.builder_build_json_dir.value = builder_build_json_dir
-        if not name_label:
-            raise OsbsValidationException("name_label must be provided")
-        self.imagestream_name.value = name_label.replace('/', '-')
-        # The ImageStream should take tags from the source registry
-        # or, if no source registry is set, the first listed registry
-        imagestream_reg = self.source_registry_uri.value
-        if not imagestream_reg:
-            try:
-                imagestream_reg = self.registry_uris.value[0]
-            except IndexError:
-                logger.info("no registries specified, cannot determine imagestream url")
-                imagestream_reg = None
 
-        if imagestream_reg:
-            self.imagestream_url.value = os.path.join(imagestream_reg.docker_uri,
-                                                      name_label)
-            logger.debug("setting 'imagestream_url' to '%s'",
-                         self.imagestream_url.value)
-            insecure = imagestream_reg.uri.startswith('http://')
-            self.imagestream_insecure_registry.value = insecure
-            logger.debug("setting 'imagestream_insecure_registry' to %r", insecure)
+        if not flatpak:
+            if not base_image:
+                raise OsbsValidationException("base_image must be provided")
+            self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
+            self.builder_build_json_dir.value = builder_build_json_dir
+            if not name_label:
+                raise OsbsValidationException("name_label must be provided")
+            self.imagestream_name.value = name_label.replace('/', '-')
+            # The ImageStream should take tags from the source registry
+            # or, if no source registry is set, the first listed registry
+            imagestream_reg = self.source_registry_uri.value
+            if not imagestream_reg:
+                try:
+                    imagestream_reg = self.registry_uris.value[0]
+                except IndexError:
+                    logger.info("no registries specified, cannot determine imagestream url")
+                    imagestream_reg = None
+
+            if imagestream_reg:
+                self.imagestream_url.value = os.path.join(imagestream_reg.docker_uri,
+                                                          name_label)
+                logger.debug("setting 'imagestream_url' to '%s'",
+                             self.imagestream_url.value)
+                insecure = imagestream_reg.uri.startswith('http://')
+                self.imagestream_insecure_registry.value = insecure
+                logger.debug("setting 'imagestream_insecure_registry' to %r", insecure)
 
         self.platforms.value = platforms
         self.platform.value = platform
