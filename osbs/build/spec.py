@@ -315,12 +315,13 @@ class BuildSpec(object):
         self.name.value = make_name_from_git(self.git_uri.value, self.git_branch.value)
         self.group_manifests.value = group_manifests or False
         self.prefer_schema1_digest.value = prefer_schema1_digest
+        self.builder_build_json_dir.value = builder_build_json_dir
 
         if not flatpak:
             if not base_image:
                 raise OsbsValidationException("base_image must be provided")
             self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
-            self.builder_build_json_dir.value = builder_build_json_dir
+
             if not name_label:
                 raise OsbsValidationException("name_label must be provided")
             self.imagestream_name.value = name_label.replace('/', '-')
