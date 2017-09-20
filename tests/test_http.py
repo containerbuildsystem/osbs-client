@@ -15,7 +15,7 @@ import requests
 from requests.packages.urllib3.util import Retry
 from osbs.http import HttpSession, HttpStream, http_client
 from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsResponseException
-from osbs.constants import HTTP_RETRIES_STATUS_FORCELIST
+from osbs.constants import HTTP_RETRIES_STATUS_FORCELIST, HTTP_REQUEST_TIMEOUT
 
 logger = logging.getLogger(__file__)
 
@@ -139,7 +139,7 @@ class TestHttpSession(object):
     @pytest.mark.parametrize('raise_exc', (
         requests.exceptions.ChunkedEncodingError,
         requests.exceptions.ConnectionError,
-        http_client.IncompleteRead,
+        http_client.IncompleteRead
     ))
     def test_osbs_exception_wrapping(self, s, raise_exc):
         (flexmock(HttpStream)
@@ -149,6 +149,19 @@ class TestHttpSession(object):
             s.get('http://httpbin.org/get')
 
         assert not isinstance(exc_info.value, OsbsNetworkException)
+        assert isinstance(exc_info.value.cause, raise_exc)
+
+    @pytest.mark.parametrize('raise_exc', (
+        requests.exceptions.Timeout,
+        requests.exceptions.RetryError
+    ))
+    def test_osbs_exception_retry_timeout_wrapping(self, s, raise_exc):
+        (flexmock(HttpStream)
+            .should_receive('__init__')
+            .and_raise(raise_exc('')))
+        with pytest.raises(OsbsException) as exc_info:
+            s.get('http://httpbin.org/get')
+
         assert isinstance(exc_info.value.cause, raise_exc)
 
     @pytest.mark.parametrize('raise_exc', (
@@ -183,3 +196,21 @@ class TestHttpSession(object):
         with pytest.raises(OsbsResponseException) as exc_info:
             s.get('http://httpbin.org/drip?numbytes=5&code=%s' % status_code).json()
         assert exc_info.value.status_code == status_code
+
+    def test_set_timeout(self):
+        url = "http://httpbin.org/get"
+        method = "get"
+        kwargs = {
+           'allow_redirects': True,
+           'headers': {}
+        }
+
+        fake_response = flexmock(status_code=http_client.OK, headers={})
+
+        (flexmock(requests.Session)
+            .should_receive('request')
+            .with_args(method, url, timeout=HTTP_REQUEST_TIMEOUT, verify=False, **kwargs)
+            .and_return(fake_response)
+            .once())
+
+        HttpStream(url, method, verify_ssl=False, **kwargs)
