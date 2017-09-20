@@ -88,6 +88,9 @@ HTTP_RETRIES_STATUS_FORCELIST = [408, 500, 502, 503, 504]
 # HTTP methods that we should retry on
 HTTP_RETRIES_METHODS_WHITELIST = ['GET', 'PUT', 'POST', 'DELETE']
 
+# requests timeout in seconds
+HTTP_REQUEST_TIMEOUT = 600
+
 BUILD_TYPE_ORCHESTRATOR = object()
 BUILD_TYPE_WORKER = object()
 

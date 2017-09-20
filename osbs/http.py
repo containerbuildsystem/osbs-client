@@ -20,12 +20,12 @@ from six.moves import http_client
 from osbs.exceptions import OsbsException, OsbsNetworkException, OsbsResponseException
 from osbs.constants import (
     HTTP_MAX_RETRIES, HTTP_BACKOFF_FACTOR, HTTP_RETRIES_STATUS_FORCELIST,
-    HTTP_RETRIES_METHODS_WHITELIST)
+    HTTP_RETRIES_METHODS_WHITELIST, HTTP_REQUEST_TIMEOUT)
 
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util import Retry
-from requests.exceptions import HTTPError, RetryError
+from requests.exceptions import HTTPError, RetryError, Timeout
 from requests.utils import guess_json_utf
 try:
     from requests_kerberos import HTTPKerberosAuth
@@ -63,7 +63,8 @@ class HttpSession(object):
             with stream as s:
                 content = s.req.content
                 return HttpResponse(s.status_code, s.headers, content)
-        except RetryError as ex:
+        # Timeout will catch both ConnectTimout and ReadTimeout
+        except (RetryError, Timeout) as ex:
             raise OsbsNetworkException(url, str(ex), '',
                                        cause=ex, traceback=sys.exc_info()[2])
         except HTTPError as ex:
@@ -149,6 +150,7 @@ class HttpStream(object):
             args['stream'] = True
 
         args['headers'] = headers
+        args['timeout'] = HTTP_REQUEST_TIMEOUT
 
         self.req = self.session.request(method, url, **args)
 
