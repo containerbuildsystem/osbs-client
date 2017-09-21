@@ -535,7 +535,6 @@ class BuildRequest(object):
 
         If there are triggers defined, and this is a custom
         base image, some trigger-related plugins do not apply.
-        All but import_image are disabled in this case.
 
         Additionally, this method ensures that custom base
         images never have triggers since triggering a base
@@ -555,7 +554,6 @@ class BuildRequest(object):
             should_remove = True
 
         elif not triggers:
-            remove_plugins.append(("postbuild_plugins", "import_image"))
             msg = "removing %s from request because there are no triggers"
             should_remove = True
 
@@ -1262,35 +1260,30 @@ class BuildRequest(object):
         """
         Configure the import_image plugin
         """
+        phase = 'postbuild_plugins'
+        plugin = 'import_image'
         if self.spec.imagestream_name is None or self.spec.imagestream_url is None:
-            logger.info("removing import_image from request, "
-                        "registry or repo url is not defined")
-            self.dj.remove_plugin('postbuild_plugins', 'import_image')
+            logger.info("removing %s from request, "
+                        "registry or repo url is not defined", plugin)
+            self.dj.remove_plugin(phase, plugin)
             return
 
-        if self.dj.dock_json_has_plugin_conf('postbuild_plugins',
-                                             'import_image'):
-            self.dj.dock_json_set_arg('postbuild_plugins', 'import_image',
-                                      'imagestream',
+        if self.dj.dock_json_has_plugin_conf(phase, plugin):
+            self.dj.dock_json_set_arg(phase, plugin, 'imagestream',
                                       self.spec.imagestream_name.value)
-            self.dj.dock_json_set_arg('postbuild_plugins', 'import_image',
-                                      'docker_image_repo',
+            self.dj.dock_json_set_arg(phase, plugin, 'docker_image_repo',
                                       self.spec.imagestream_url.value)
-            self.dj.dock_json_set_arg('postbuild_plugins', 'import_image',
-                                      'url',
+            self.dj.dock_json_set_arg(phase, plugin, 'url',
                                       self.spec.builder_openshift_url.value)
-            self.dj.dock_json_set_arg('postbuild_plugins', 'import_image',
-                                      'build_json_dir',
+            self.dj.dock_json_set_arg(phase, plugin, 'build_json_dir',
                                       self.spec.builder_build_json_dir.value)
 
             use_auth = self.spec.use_auth.value
             if use_auth is not None:
-                self.dj.dock_json_set_arg('postbuild_plugins', 'import_image',
-                                          'use_auth', use_auth)
+                self.dj.dock_json_set_arg(phase, plugin, 'use_auth', use_auth)
 
             if self.spec.imagestream_insecure_registry.value:
-                self.dj.dock_json_set_arg('postbuild_plugins', 'import_image',
-                                          'insecure_registry', True)
+                self.dj.dock_json_set_arg(phase, plugin, 'insecure_registry', True)
 
     def render_distgit_fetch_artefacts(self):
         phase = 'prebuild_plugins'

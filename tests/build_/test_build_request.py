@@ -124,39 +124,22 @@ class TestBuildRequest(object):
 
     def assert_import_image_plugin(self, plugins, name_label, registry_uri,
                                    openshift_uri, use_auth, insecure_registry):
-        assert get_plugin(plugins, "postbuild_plugins", "import_image")
-        assert plugin_value_get(plugins,
-                                "postbuild_plugins", "import_image", "args",
-                                "imagestream") == name_label.replace('/', '-')
+        phase = 'postbuild_plugins'
+        plugin = 'import_image'
+
+        assert get_plugin(plugins, phase, plugin)
+        plugin_args = plugin_value_get(plugins, phase, plugin, 'args')
+
+        assert plugin_args['imagestream'] == name_label.replace('/', '-')
+
         expected_repo = os.path.join(registry_uri, name_label)
         expected_repo = expected_repo.replace('https://', '')
         expected_repo = expected_repo.replace('http://', '')
-        assert plugin_value_get(plugins,
-                                "postbuild_plugins", "import_image", "args",
-                                "docker_image_repo") == expected_repo
-        assert plugin_value_get(plugins,
-                                "postbuild_plugins", "import_image", "args",
-                                "url") == openshift_uri
+        assert plugin_args['docker_image_repo'] == expected_repo
 
-        if use_auth is not None:
-            assert plugin_value_get(plugins,
-                                    "postbuild_plugins", "import_image", "args",
-                                    "use_auth") == use_auth
-        else:
-            with pytest.raises(KeyError):
-                plugin_value_get(plugins,
-                                 "postbuild_plugins", "import_image", "args",
-                                 "use_auth")
-
-        if insecure_registry:
-            assert plugin_value_get(plugins,
-                                    "postbuild_plugins", "import_image", "args",
-                                    "insecure_registry")
-        else:
-            with pytest.raises(KeyError):
-                plugin_value_get(plugins,
-                                 "postbuild_plugins", "import_image", "args",
-                                 "insecure_registry")
+        assert plugin_args['url'] == openshift_uri
+        assert plugin_args.get('use_auth') == use_auth
+        assert plugin_args.get('insecure_registry', False) == insecure_registry
 
     def assert_koji_upload_plugin(self, plugins, use_auth, prefer_schema1_digest, valid=True):
         phase = 'postbuild_plugins'
@@ -516,10 +499,9 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_pull")
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "import_image")
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
 
+        assert get_plugin(plugins, "postbuild_plugins", "import_image")
         assert plugin_value_get(plugins, "prebuild_plugins", "add_yum_repo_by_url",
                                 "args", "repourls") == ["http://example.com/my.repo"]
         if proxy:
@@ -638,9 +620,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_pull")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "import_image")
 
+        assert get_plugin(plugins, "postbuild_plugins", "import_image")
         assert get_plugin(plugins, "exit_plugins", "koji_promote")
         assert plugin_value_get(plugins, "exit_plugins", "koji_promote", "args",
                                 "target") == koji_target
@@ -722,11 +703,11 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_pull")
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "import_image")
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "exit_plugins", "koji_tag_build")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
+
+        assert get_plugin(plugins, "postbuild_plugins", "import_image")
 
         labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile",
                                   "args", "labels")
@@ -790,9 +771,9 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "import_image")
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
+
+        assert get_plugin(plugins, "postbuild_plugins", "import_image")
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries") == {}
 
@@ -911,14 +892,13 @@ class TestBuildRequest(object):
                        "stop_autorebuild_if_disabled")
         assert get_plugin(plugins, "prebuild_plugins", "bump_release")
         assert get_plugin(plugins, "prebuild_plugins", "koji")
+        assert get_plugin(plugins, "postbuild_plugins", "import_image")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_pull")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "import_image")
 
     def test_render_prod_request_requires_newer(self):
         """
@@ -1194,8 +1174,8 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_pull")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "import_image")
+
+        assert get_plugin(plugins, "postbuild_plugins", "import_image")
 
     @pytest.mark.parametrize('odcs_insecure', [False, True, None])
     @pytest.mark.parametrize('pdc_insecure', [False, True, None])
@@ -2054,7 +2034,6 @@ class TestBuildRequest(object):
         autorebuild_plugins = (
             ('prebuild_plugins', 'check_and_set_rebuild'),
             ('prebuild_plugins', 'stop_autorebuild_if_disabled'),
-            ('postbuild_plugins', 'import_image'),
         )
 
         if expected:
@@ -2068,6 +2047,8 @@ class TestBuildRequest(object):
             for phase, plugin in autorebuild_plugins:
                 with pytest.raises(NoSuchPluginException):
                     get_plugin(plugins, phase, plugin)
+
+        assert get_plugin(plugins, 'postbuild_plugins', 'import_image')
 
     def test_render_prod_request_new_secrets(self, tmpdir):
         secret_name = 'mysecret'
