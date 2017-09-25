@@ -830,7 +830,7 @@ class Openshift(object):
         # Mark it as needing import
         imagestream_json['metadata'].setdefault('annotations', {})
         check_annotation = "openshift.io/image.dockerRepositoryCheck"
-        imagestream_json['metadata']['annotations'][check_annotation] = ''
+        imagestream_json['metadata']['annotations'].pop(check_annotation, None)
         response = self._put(url, data=json.dumps(imagestream_json),
                              use_json=True)
         check_response(response)

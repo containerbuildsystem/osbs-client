@@ -17,7 +17,7 @@ import os
 
 from osbs.http import HttpResponse
 from osbs.constants import (BUILD_FINISHED_STATES,
-                            BUILD_CANCELLED_STATE, WATCH_MODIFIED)
+                            BUILD_CANCELLED_STATE, WATCH_MODIFIED, WATCH_ERROR, WATCH_DELETED)
 from osbs.exceptions import (OsbsResponseException, OsbsException, OsbsNetworkException)
 from osbs.core import check_response, Openshift
 
@@ -478,8 +478,13 @@ class TestOpenshift(object):
             openshift_mock.never()
         Openshift(OAPI_PREFIX, API_VER, "/oauth/authorize", **kwargs)
 
-    @pytest.mark.parametrize('modify', [True, False])  # noqa
-    def test_import_image(self, openshift, modify):
+    @pytest.mark.parametrize('modify', (True, False))  # noqa
+    @pytest.mark.parametrize(('state', 'imported'), (
+        (WATCH_MODIFIED, True),
+        (WATCH_ERROR, False),
+        (WATCH_DELETED, False),
+    ))
+    def test_import_image(self, openshift, modify, state, imported):
         """
         tests that import_image return True
         regardless if tags were changed
@@ -494,8 +499,22 @@ class TestOpenshift(object):
         if modify:
             resource_json['status']['tags'] = [resource_json['status']['tags'][0]]
 
-        (flexmock(Openshift)
+        (flexmock(openshift)
             .should_receive('watch_resource')
-            .and_yield((WATCH_MODIFIED, resource_json)))
+            .and_yield((state, resource_json)))
 
-        assert openshift.import_image(TEST_IMAGESTREAM)
+        SERIALIZED = object()
+
+        def fake_json_dumps(imagestream_json):
+            check_annotation = 'openshift.io/image.dockerRepositoryCheck'
+            assert check_annotation not in imagestream_json['metadata']['annotations']
+            return SERIALIZED
+
+        flexmock(json).should_receive('dumps').replace_with(fake_json_dumps)
+
+        put_url = openshift._build_url("imagestreams/%s" % TEST_IMAGESTREAM)
+        (flexmock(openshift)
+            .should_call('_put')
+            .with_args(put_url, data=SERIALIZED, use_json=True))
+
+        assert openshift.import_image(TEST_IMAGESTREAM) is imported
