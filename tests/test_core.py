@@ -17,7 +17,8 @@ import os
 
 from osbs.http import HttpResponse
 from osbs.constants import (BUILD_FINISHED_STATES,
-                            BUILD_CANCELLED_STATE, WATCH_MODIFIED, WATCH_ERROR, WATCH_DELETED)
+                            BUILD_CANCELLED_STATE, WATCH_MODIFIED, WATCH_ERROR, WATCH_DELETED,
+                            OS_CONFLICT_MAX_RETRIES, OS_CONFLICT_WAIT)
 from osbs.exceptions import (OsbsResponseException, OsbsException, OsbsNetworkException)
 from osbs.core import check_response, Openshift
 
@@ -265,7 +266,7 @@ class TestOpenshift(object):
         ([http_client.CONFLICT, http_client.OK], False),
         ([http_client.CONFLICT, http_client.CONFLICT, http_client.UNAUTHORIZED], True),
         ([http_client.UNAUTHORIZED], True),
-        ([http_client.CONFLICT for _ in range(10)], True),
+        ([http_client.CONFLICT for _ in range(OS_CONFLICT_MAX_RETRIES + 1)], True),
     ])
     @pytest.mark.parametrize('update_or_set', ['update', 'set'])
     @pytest.mark.parametrize('attr_type', ['labels', 'annotations'])
@@ -300,7 +301,7 @@ class TestOpenshift(object):
 
         (flexmock(time)
             .should_receive('sleep')
-            .with_args(0.5))
+            .and_return(None))
 
         args = ('any-object-id', {'key': 'value'})
         if should_raise:

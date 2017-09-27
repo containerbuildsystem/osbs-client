@@ -6,7 +6,7 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, absolute_import, unicode_literals
-
+from functools import wraps
 import contextlib
 import copy
 import logging
@@ -19,12 +19,15 @@ import subprocess
 import sys
 import tempfile
 import tarfile
+import time
 import requests
 from collections import namedtuple
 from datetime import datetime
 from io import BytesIO
 from hashlib import sha256
 from osbs.repo_utils import RepoConfiguration, RepoInfo, AdditionalTagsConfig
+from osbs.constants import OS_CONFLICT_MAX_RETRIES, OS_CONFLICT_WAIT
+from six.moves import http_client
 
 try:
     # py3
@@ -554,3 +557,22 @@ class Labels(object):
             return self._label_values[label_type]
         else:
             return (label_type, self._df_labels[label_type])
+
+
+def retry_on_conflict(func,
+                      retry_times=OS_CONFLICT_MAX_RETRIES,
+                      retry_delay=OS_CONFLICT_WAIT):
+    @wraps(func)
+    def retry(*args, **kwargs):
+        for counter in range(retry_times + 1):
+            try:
+                return func(*args, **kwargs)
+            except OsbsResponseException as ex:
+                if ex.status_code == http_client.CONFLICT and counter != retry_times:
+                    logger.info("retrying on conflict %s", ex.message)
+                    logger.debug("attempt %d to call %s", counter + 1, func.__name__)
+                    time.sleep(retry_delay * (2 ** counter))
+                else:
+                    raise
+
+    return retry
