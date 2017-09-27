@@ -6,7 +6,6 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, unicode_literals, absolute_import
-from functools import wraps
 import json
 import os
 import numbers
@@ -22,7 +21,7 @@ from osbs.constants import (SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
                             SERVICEACCOUNT_CACRT)
 from osbs.exceptions import (OsbsResponseException, OsbsException,
                              OsbsWatchBuildNotFound, OsbsAuthException)
-from osbs.utils import graceful_chain_get
+from osbs.utils import graceful_chain_get, retry_on_conflict
 from requests.exceptions import ConnectionError
 from requests.utils import guess_json_utf
 
@@ -44,28 +43,6 @@ def check_response(response, log_level=logging.ERROR):
 
         logger.log(log_level, "[%d] %s", response.status_code, content)
         raise OsbsResponseException(message=content, status_code=response.status_code)
-
-
-def retry_on_conflict(func, sleep_seconds=0.5, max_attempts=10):
-    @wraps(func)
-    def retry(*args, **kwargs):
-        last_exception = None
-        for attempt in range(max_attempts):
-            if attempt != 0:
-                time.sleep(sleep_seconds)
-
-            logger.debug("attempt %d to call %s", attempt + 1, func.__name__)
-            try:
-                return func(*args, **kwargs)
-            except OsbsResponseException as ex:
-                if ex.status_code != http_client.CONFLICT:
-                    raise
-
-                last_exception = ex
-
-        raise last_exception or RuntimeError("operation not attempted")
-
-    return retry
 
 
 # TODO: error handling: create function which handles errors in response object

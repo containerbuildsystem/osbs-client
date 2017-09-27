@@ -91,6 +91,12 @@ HTTP_RETRIES_METHODS_WHITELIST = ['GET', 'PUT', 'POST', 'DELETE']
 # requests timeout in seconds
 HTTP_REQUEST_TIMEOUT = 600
 
+# number of retries on openshift conflict
+OS_CONFLICT_MAX_RETRIES = 8
+
+# number of seconds to wait, before retrying on openshift conflict
+OS_CONFLICT_WAIT = 5
+
 BUILD_TYPE_ORCHESTRATOR = object()
 BUILD_TYPE_WORKER = object()
 

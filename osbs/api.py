@@ -34,6 +34,7 @@ from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsRespons
                              OsbsOrchestratorNotEnabled)
 # import utils in this way, so that we can mock standalone functions with flexmock
 from osbs import utils
+from osbs.utils import retry_on_conflict
 
 from six.moves import http_client
 
@@ -358,6 +359,40 @@ class OSBS(object):
 
         return image_stream, image_stream_tag_name
 
+    @retry_on_conflict
+    def _update_build_config_when_exist(self, build_json):
+        existing_bc = self._get_existing_build_config(build_json)
+        self._verify_labels_match(build_json, existing_bc)
+        # Existing build config may have a different name if matched by
+        # git-repo-name and git-branch labels. Continue using existing
+        # build config name.
+        build_config_name = existing_bc['metadata']['name']
+        logger.debug('existing build config name to be used "%s"',
+                     build_config_name)
+        self._verify_no_running_builds(build_config_name)
+
+        # Remove nodeSelector, will be set from build_json for worker build
+        old_nodeselector = existing_bc['spec'].pop('nodeSelector', None)
+        logger.debug("removing build config's nodeSelector %s", old_nodeselector)
+
+        utils.buildconfig_update(existing_bc, build_json)
+        # Reset name change that may have occurred during
+        # update above, since renaming is not supported.
+        existing_bc['metadata']['name'] = build_config_name
+        logger.debug('build config for %s already exists, updating...',
+                     build_config_name)
+
+        self.os.update_build_config(build_config_name, json.dumps(existing_bc))
+        return existing_bc
+
+    @retry_on_conflict
+    def _update_build_config_with_triggers(self, build_json, triggers):
+        existing_bc = self._get_existing_build_config(build_json)
+        existing_bc['spec']['triggers'] = triggers
+        build_config_name = existing_bc['metadata']['name']
+        self.os.update_build_config(build_config_name, json.dumps(existing_bc))
+        return existing_bc
+
     def _create_build_config_and_build(self, build_request):
         build_json = build_request.render()
         api_version = build_json['apiVersion']
@@ -379,30 +414,8 @@ class OSBS(object):
         triggers = build_json['spec'].pop('triggers', None)
 
         if existing_bc:
-            self._verify_labels_match(build_json, existing_bc)
-            # Existing build config may have a different name if matched by
-            # git-repo-name and git-branch labels. Continue using existing
-            # build config name.
             build_config_name = existing_bc['metadata']['name']
-            logger.debug('existing build config name to be used "%s"',
-                         build_config_name)
-            self._verify_no_running_builds(build_config_name)
-
-            # Remove nodeSelector, will be set from build_json for worker build
-            old_nodeselector = existing_bc['spec'].pop('nodeSelector', None)
-            logger.debug("removing build config's nodeSelector %s", old_nodeselector)
-
-            utils.buildconfig_update(existing_bc, build_json)
-            # Reset name change that may have occurred during
-            # update above, since renaming is not supported.
-            existing_bc['metadata']['name'] = build_config_name
-            logger.debug('build config for %s already exists, updating...',
-                         build_config_name)
-
-            self.os.update_build_config(build_config_name, json.dumps(existing_bc))
-            if triggers:
-                # Retrieve updated version to pick up lastVersion
-                existing_bc = self._get_existing_build_config(existing_bc)
+            existing_bc = self._update_build_config_when_exist(build_json)
 
         else:
             logger.debug("build config for %s doesn't exist, creating...",
@@ -416,8 +429,7 @@ class OSBS(object):
             logger.debug('Changed parent ImageStreamTag? %s', changed_ist)
 
         if triggers:
-            existing_bc['spec']['triggers'] = triggers
-            self.os.update_build_config(build_config_name, json.dumps(existing_bc))
+            existing_bc = self._update_build_config_with_triggers(build_json, triggers)
 
         if image_stream and triggers:
             prev_version = existing_bc['status']['lastVersion']
