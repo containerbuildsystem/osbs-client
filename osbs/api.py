@@ -375,6 +375,13 @@ class OSBS(object):
         old_nodeselector = existing_bc['spec'].pop('nodeSelector', None)
         logger.debug("removing build config's nodeSelector %s", old_nodeselector)
 
+        # Remove koji_task_id
+        koji_task_id = utils.graceful_chain_get(existing_bc, 'metadata', 'labels',
+                                                'koji-task-id')
+        if koji_task_id is not None:
+            logger.debug("removing koji-task-id %r", koji_task_id)
+            utils.graceful_chain_del(existing_bc, 'metadata', 'labels', 'koji-task-id')
+
         utils.buildconfig_update(existing_bc, build_json)
         # Reset name change that may have occurred during
         # update above, since renaming is not supported.
