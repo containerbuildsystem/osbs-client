@@ -219,6 +219,79 @@ class TestOSBS(object):
                                           customize_conf=customize_conf)
         assert isinstance(response, BuildResponse)
 
+    @pytest.mark.parametrize('has_task_id', [True, False])
+    def test_create_prod_build_remove_koji_task_id(self, has_task_id):
+
+        build_config = {
+            'metadata': {
+                'name': 'name',
+                'labels': {
+                    'git-repo-name': 'reponame',
+                    'git-branch': 'branch',
+                }
+            },
+            'spec': {}
+        }
+
+        if has_task_id:
+            build_config['metadata']['labels']['koji-task-id'] = 123
+
+        def inspect_build_request(name, br):
+            assert 'koji-task-id' not in json.loads(br)['metadata']['labels']
+
+            class Response:
+                def __init__(self, br):
+                    self.br = br
+
+                def json(self):
+                    return self.br
+
+            return Response(br)
+
+        def mock_start_build(name):
+
+            class Response:
+                def json(self):
+                    return ''
+
+            return Response()
+
+        config = Configuration(conf_file=None,
+                               openshift_url="www.example.com", registry_uri="www.example2.com",
+                               build_json_dir="inputs")
+        osbs_obj = OSBS(config, config)
+
+        (flexmock(utils)
+            .should_receive('get_repo_info')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(self.mock_repo_info()))
+
+        (flexmock(osbs_obj.os)
+            .should_receive('get_build_config')
+            .and_return(build_config))
+
+        (flexmock(osbs_obj)
+            .should_receive('_verify_labels_match')
+            .and_return())
+
+        (flexmock(osbs_obj)
+            .should_receive('_verify_no_running_builds')
+            .and_return())
+
+        (flexmock(osbs_obj.os)
+            .should_receive('update_build_config')
+            .replace_with(inspect_build_request))
+
+        (flexmock(osbs_obj.os)
+            .should_receive('start_build')
+            .replace_with(mock_start_build))
+
+        osbs_obj.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                   TEST_GIT_BRANCH, TEST_USER,
+                                   inner_template=DEFAULT_INNER_TEMPLATE,
+                                   outer_template=DEFAULT_OUTER_TEMPLATE,
+                                   customize_conf=DEFAULT_CUSTOMIZE_CONF)
+
     # osbs is a fixture here
     @pytest.mark.parametrize(('platform', 'release', 'arrangement_version', 'raises_exception'), [  # noqa
         (None, None, None, True),
