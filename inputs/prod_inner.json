@@ -192,12 +192,6 @@
   ],
   "exit_plugins": [
     {
-      "name": "delete_from_registry",
-      "args": {
-        "registries": {}
-      }
-    },
-    {
       "name": "koji_promote",
       "args": {
         "kojihub": "{{KOJI_HUB}}",
@@ -206,6 +200,12 @@
         "blocksize": 10485760,
         "koji_keytab": false,
         "koji_principal": false
+      }
+    },
+    {
+      "name": "delete_from_registry",
+      "args": {
+        "registries": {}
       }
     },
     {
