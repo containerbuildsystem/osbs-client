@@ -415,12 +415,6 @@ class Configuration(object):
         return self._get_value("smtp_to_pkgowner", self.conf_section, "smtp_to_pkgowner",
                                is_bool_val=True)
 
-    def get_nfs_server_path(self):
-        return self._get_value("nfs_server_path", self.conf_section, "nfs_server_path")
-
-    def get_nfs_destination_dir(self):
-        return self._get_value("nfs_dest_dir", self.conf_section, "nfs_dest_dir")
-
     def get_cpu_limit(self):
         return self._get_value("cpu_limit", self.conf_section, "cpu_limit")
 

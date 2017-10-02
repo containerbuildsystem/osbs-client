@@ -567,8 +567,6 @@ class OSBS(object):
             smtp_to_pkgowner=self.build_conf.get_smtp_to_pkgowner(),
             use_auth=self.build_conf.get_builder_use_auth(),
             pulp_registry=self.os_conf.get_pulp_registry(),
-            nfs_server_path=self.os_conf.get_nfs_server_path(),
-            nfs_dest_dir=self.build_conf.get_nfs_destination_dir(),
             builder_build_json_dir=self.build_conf.get_builder_build_json_store(),
             scratch=self.build_conf.get_scratch(scratch),
             reactor_config_secret=self.build_conf.get_reactor_config_secret(),

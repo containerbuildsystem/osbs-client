@@ -85,8 +85,6 @@ class BuildRequest(object):
         :param module_compose_id: ID of a compose of ``module`` in the ODCS
         :param filesystem_koji_task_id: int, Koji Task that created the base filesystem
         :param pulp_registry: str, name of pulp registry in dockpulp.conf
-        :param nfs_server_path: str, NFS server and path
-        :param nfs_dest_dir: str, directory to create on NFS server
         :param sources_command: str, command used to fetch dist-git sources
         :param architecture: str, architecture we are building for
         :param vendor: str, vendor name

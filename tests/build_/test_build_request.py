@@ -491,8 +491,6 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "koji")
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_push")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
@@ -613,8 +611,6 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries", "registry.example.com") == {"insecure": True}
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_push")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
@@ -695,8 +691,6 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "koji")
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_push")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
@@ -731,7 +725,6 @@ class TestBuildRequest(object):
             'name_label': 'fedora/resultingimage',
             'registry_uri': "",
             'pulp_registry': "registry.example.com",
-            'nfs_server_path': "server:path",
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
             'koji_target': "koji-target",
@@ -768,8 +761,6 @@ class TestBuildRequest(object):
         assert get_plugin(plugins, "prebuild_plugins", "koji")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, 'exit_plugins', 'delete_from_registry')
 
@@ -861,7 +852,6 @@ class TestBuildRequest(object):
             'base_image': 'fedora:latest',
             'name_label': 'fedora/resultingimage',
             'registry_uri': "registry.example.com",
-            'nfs_server_path': "server:path",
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
             'koji_target': "koji-target",
@@ -897,8 +887,6 @@ class TestBuildRequest(object):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_pull")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
 
     def test_render_prod_request_requires_newer(self):
         """
@@ -918,7 +906,6 @@ class TestBuildRequest(object):
             'name_label': name_label,
             'registry_uris': ["registry1.example.com/v1",  # first is primary
                               "registry2.example.com/v2"],
-            'nfs_server_path': "server:path",
             'source_registry_uri': "registry.example.com",
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
@@ -974,7 +961,6 @@ class TestBuildRequest(object):
                 "",
                 registry_secret,
             ],
-            'nfs_server_path': "server:path",
             'source_registry_uri': "registry.example.com",
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
@@ -1037,9 +1023,6 @@ class TestBuildRequest(object):
                 mount_path = get_secret_mountpath_by_name(build_json,
                                                           registry_secret)
                 assert mount_path == path
-
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
 
         if 'v1' in registry_api_versions:
             assert get_plugin(plugins, "postbuild_plugins",
@@ -1167,8 +1150,6 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "koji")
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "cp_built_image_to_nfs")
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_push")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
@@ -1197,7 +1178,6 @@ class TestBuildRequest(object):
             'base_image': TEST_FLATPAK_BASE_IMAGE,
             'name_label': 'fedora/resultingimage',
             'registry_uri': "registry.example.com",
-            'nfs_server_path': "server:path",
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
             'koji_target': "koji-target",
@@ -1268,7 +1248,6 @@ class TestBuildRequest(object):
             'base_image': 'fedora:latest',
             'name_label': 'fedora/resultingimage',
             'registry_uri': "registry.example.com",
-            'nfs_server_path': "server:path",
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
             'koji_target': "koji-target",
