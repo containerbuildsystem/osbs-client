@@ -173,8 +173,6 @@ class BuildSpec(object):
         self.smtp_email_domain = BuildParam("smtp_email_domain", allow_none=True)
         self.smtp_to_submitter = BuildParam("smtp_to_submitter", allow_none=True)
         self.smtp_to_pkgowner = BuildParam("smtp_to_pkgowner", allow_none=True)
-        self.nfs_server_path = BuildParam("nfs_server_path", allow_none=True)
-        self.nfs_dest_dir = BuildParam("nfs_dest_dir", allow_none=True)
         self.builder_build_json_dir = BuildParam("builder_build_json_dir", allow_none=True)
         self.platforms = BuildParam("platforms", allow_none=True)
         self.platform = BuildParam("platform", allow_none=True)
@@ -212,7 +210,6 @@ class BuildSpec(object):
             self.pulp_registry,
             self.smtp_host,
             self.smtp_from,
-            self.nfs_server_path,
         ]
 
     def set_params(self, git_uri=None, git_ref=None,
@@ -238,7 +235,6 @@ class BuildSpec(object):
                    smtp_host=None, smtp_from=None, smtp_email_domain=None,
                    smtp_additional_addresses=None, smtp_error_addresses=None,
                    smtp_to_submitter=None, smtp_to_pkgowner=None,
-                   nfs_server_path=None, nfs_dest_dir=None,
                    git_branch=None, base_image=None,
                    name_label=None,
                    builder_build_json_dir=None, registry_api_versions=None,
@@ -309,8 +305,6 @@ class BuildSpec(object):
         self.smtp_email_domain.value = smtp_email_domain
         self.smtp_to_submitter.value = smtp_to_submitter
         self.smtp_to_pkgowner.value = smtp_to_pkgowner
-        self.nfs_server_path.value = nfs_server_path
-        self.nfs_dest_dir.value = nfs_dest_dir
         self.git_branch.value = git_branch
         self.name.value = make_name_from_git(self.git_uri.value, self.git_branch.value)
         self.group_manifests.value = group_manifests or False
