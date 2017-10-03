@@ -1229,6 +1229,12 @@ class BuildRequest(object):
         if not self.dj.dock_json_has_plugin_conf('postbuild_plugins', 'group_manifests'):
             return
 
+        if self.spec.flatpak.value:
+            logger.info("removing group_manifests from request "
+                        "because this is a Flatpak built from a module")
+            self.dj.remove_plugin('postbuild_plugins', 'group_manifests')
+            return
+
         push_conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins',
                                                       'group_manifests')
         args = push_conf.setdefault('args', {})
