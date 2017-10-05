@@ -2509,43 +2509,56 @@ class TestBuildRequest(object):
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, plugin_type, plugin_name)
 
-    @pytest.mark.parametrize(('platform', 'platforms', 'is_auto', 'scratch', 'expected'), [
-        (None, None, False, False, {'explicit1': 'yes',
-                                    'explicit2': 'yes'}),
-        (None, None, False, True, {'scratch1': 'yes',
-                                   'scratch2': 'yes'}),
-        (None, None, True, False, {'auto1': 'yes',
-                                   'auto2': 'yes'}),
-        (None, ["x86"], False, False, {}),
-        (None, ["ppc"], False, False, {}),
-        (None, ["x86"], True, False, {}),
-        (None, ["ppc"], False, True, {}),
-        ("x86", None, False, False, {'explicit1': 'yes',
-                                     'explicit2': 'yes',
-                                     'plx86a': 'yes',
-                                     'plx86b': 'yes'}),
-        ("x86", None, False, True, {'scratch1': 'yes',
-                                    'scratch2': 'yes',
-                                    'plx86a': 'yes',
-                                    'plx86b': 'yes'}),
-        ("x86", None, True, False, {'auto1': 'yes',
-                                    'auto2': 'yes',
-                                    'plx86a': 'yes',
-                                    'plx86b': 'yes'}),
-        ("ppc", None, False, False, {'explicit1': 'yes',
-                                     'explicit2': 'yes',
-                                     'plppc1': 'yes',
-                                     'plppc2': 'yes'}),
-        ("ppc", None, False, True, {'scratch1': 'yes',
-                                    'scratch2': 'yes',
-                                    'plppc1': 'yes',
-                                    'plppc2': 'yes'}),
-        ("ppc", None, True, False, {'auto1': 'yes',
-                                    'auto2': 'yes',
-                                    'plppc1': 'yes',
-                                    'plppc2': 'yes'}),
+    @pytest.mark.parametrize(('platform', 'platforms', 'is_auto', 'scratch',
+                              'isolated', 'expected'), [
+        (None, None, False, False, False, {'explicit1': 'yes',
+                                           'explicit2': 'yes'}),
+        (None, None, False, True, False, {'scratch1': 'yes',
+                                          'scratch2': 'yes'}),
+        (None, None, True, False, False, {'auto1': 'yes',
+                                          'auto2': 'yes'}),
+        (None, None, False, False, True, {'isolated1': 'yes',
+                                          'isolated2': 'yes'}),
+        (None, ["x86"], False, False, False, {}),
+        (None, ["ppc"], False, False, False, {}),
+        (None, ["x86"], True, False, False, {}),
+        (None, ["ppc"], False, True, False, {}),
+        (None, ["ppc"], False, False, True, {}),
+        ("x86", None, False, False, False, {'explicit1': 'yes',
+                                            'explicit2': 'yes',
+                                            'plx86a': 'yes',
+                                            'plx86b': 'yes'}),
+        ("x86", None, False, True, False, {'scratch1': 'yes',
+                                           'scratch2': 'yes',
+                                           'plx86a': 'yes',
+                                           'plx86b': 'yes'}),
+        ("x86", None, True, False, False, {'auto1': 'yes',
+                                           'auto2': 'yes',
+                                           'plx86a': 'yes',
+                                           'plx86b': 'yes'}),
+        ("x86", None, False, False, True, {'isolated1': 'yes',
+                                           'isolated2': 'yes',
+                                           'plx86a': 'yes',
+                                           'plx86b': 'yes'}),
+        ("ppc", None, False, False, False, {'explicit1': 'yes',
+                                            'explicit2': 'yes',
+                                            'plppc1': 'yes',
+                                            'plppc2': 'yes'}),
+        ("ppc", None, False, True, False, {'scratch1': 'yes',
+                                           'scratch2': 'yes',
+                                           'plppc1': 'yes',
+                                           'plppc2': 'yes'}),
+        ("ppc", None, True, False, False, {'auto1': 'yes',
+                                           'auto2': 'yes',
+                                           'plppc1': 'yes',
+                                           'plppc2': 'yes'}),
+        ("ppc", None, False, False, True, {'isolated1': 'yes',
+                                           'isolated2': 'yes',
+                                           'plppc1': 'yes',
+                                           'plppc2': 'yes'}),
     ])
-    def test_check_set_nodeselectors(self, platform, platforms, is_auto, scratch, expected):
+    def test_check_set_nodeselectors(self, platform, platforms, is_auto, scratch,
+                                     isolated, expected):
         platform_nodeselectors = {
             'x86': {
                 'plx86a': 'yes',
@@ -2568,6 +2581,10 @@ class TestBuildRequest(object):
             'scratch': {
                 'scratch1': 'yes',
                 'scratch2': 'yes'
+            },
+            'isolated': {
+                'isolated1': 'yes',
+                'isolated2': 'yes'
             }
         }
 
@@ -2583,9 +2600,13 @@ class TestBuildRequest(object):
 
         kwargs['is_auto'] = is_auto
         kwargs['scratch'] = scratch
+        kwargs['isolated'] = isolated
+        if isolated:
+            kwargs['release'] = '1.0'
         kwargs['scratch_build_node_selector'] = built_type_nodeselectors['scratch']
         kwargs['explicit_build_node_selector'] = built_type_nodeselectors['explicit']
         kwargs['auto_build_node_selector'] = built_type_nodeselectors['auto']
+        kwargs['isolated_build_node_selector'] = built_type_nodeselectors['isolated']
         br.set_params(**kwargs)
         build_json = br.render()
 

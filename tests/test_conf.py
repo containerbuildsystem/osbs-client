@@ -498,6 +498,7 @@ class TestConfiguration(object):
         'scratch_build_node_selector',
         'explicit_build_node_selector',
         'auto_build_node_selector',
+        'isolated_build_node_selector',
     ])
     @pytest.mark.parametrize(('config', 'expected'), [
         ({},
