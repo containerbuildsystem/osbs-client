@@ -605,6 +605,11 @@ class Configuration(object):
                                            "auto_build_node_selector")
         return self.generate_nodeselector_dict(nodeselector_str)
 
+    def get_isolated_build_node_selector(self):
+        nodeselector_str = self._get_value("isolated_build_node_selector", self.conf_section,
+                                           "isolated_build_node_selector")
+        return self.generate_nodeselector_dict(nodeselector_str)
+
     def get_platform_descriptors(self):
         has_v1 = []
         platform_descriptors = {}

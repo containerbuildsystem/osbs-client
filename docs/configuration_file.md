@@ -155,6 +155,8 @@ Some options are also mandatory.
 
 * `auto_build_node_selector` (*optional*, `string`) — a node selector to be applied to auto builds
 
+* `isolated_build_node_selector` (*optional*, `string`) — a node selector to be applied to isolated builds
+
 * `node_selector.`*platform* (*optional*, `string`) — a node selector to be used for worker builds for the specified platform, or "none"
 
 * `equal_labels` (*optional*, `string`) — list of equal-preference label groups; if any of each set is missing, aliases will be added to complete the set; label delimiter ':', group delimiter ',' (e.g. `name1:name2:name3, release1:release2, version1:version2`)

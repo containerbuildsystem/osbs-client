@@ -63,6 +63,7 @@ class BuildRequest(object):
         self.scratch_build_node_selector = None
         self.explicit_build_node_selector = None
         self.auto_build_node_selector = None
+        self.isolated_build_node_selector = None
         self.is_auto = None
         # forward reference
         self.platform_node_selector = None
@@ -98,6 +99,7 @@ class BuildRequest(object):
         :param scratch_build_node_selector: dict, a nodeselector for scratch builds
         :param explicit_build_node_selector: dict, a nodeselector for explicit builds
         :param auto_build_node_selector: dict, a nodeselector for auto builds
+        :param isolated_build_node_selector: dict, a nodeselector for isolated builds
         :param is_auto: bool, indicates if build is auto build
         """
 
@@ -119,6 +121,7 @@ class BuildRequest(object):
         self.scratch_build_node_selector = kwargs.get('scratch_build_node_selector', {})
         self.explicit_build_node_selector = kwargs.get('explicit_build_node_selector', {})
         self.auto_build_node_selector = kwargs.get('auto_build_node_selector', {})
+        self.isolated_build_node_selector = kwargs.get('isolated_build_node_selector', {})
 
         logger.debug("setting params '%s' for %s", kwargs, self.spec)
         self.spec.set_params(**kwargs)
@@ -1407,6 +1410,9 @@ class BuildRequest(object):
             # scratch build nodeselector
             elif self.scratch:
                 self.template['spec']['nodeSelector'] = self.scratch_build_node_selector
+            # isolated build nodeselector
+            elif self.isolated:
+                self.template['spec']['nodeSelector'] = self.isolated_build_node_selector
             # explicit build nodeselector
             else:
                 self.template['spec']['nodeSelector'] = self.explicit_build_node_selector
