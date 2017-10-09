@@ -276,14 +276,14 @@ class Configuration(object):
                                 self.conf_section,
                                 "registry_uri")
         if value:
-            return value.split(',')
+            return [x.strip() for x in value.split(',')]
         else:
             return []
 
     def get_registry_secrets(self):
         value = self._get_value("registry_secret", self.conf_section, "registry_secret")
         if value:
-            return value.split(',')
+            return [x.strip() for x in value.split(',')]
         else:
             return []
 
@@ -292,7 +292,7 @@ class Configuration(object):
                                 self.conf_section,
                                 "registry_api_versions",
                                 default='v1,v2')
-        versions = value.split(',')
+        versions = [x.strip() for x in value.split(',')]
         if platform is None:
             return versions
 
@@ -553,7 +553,7 @@ class Configuration(object):
             # there has to be at least 2 labels in equal labels in group
             if re.match(r'^[^:,\s]+(:[^:,\s]+)+\s*(,\s*[^:,\s]+(:[^:,\s]+\s*)+)*$',
                         equal_labels_str):
-                label_groups = equal_labels_str.split(',')
+                label_groups = [x.strip() for x in equal_labels_str.split(',')]
 
                 for label_group in label_groups:
                     equal_labels.append([label.strip() for label in label_group.split(':')])
@@ -570,7 +570,7 @@ class Configuration(object):
         """
         nodeselector = {}
         if nodeselector_str and nodeselector_str != 'none':
-            constraints = nodeselector_str.split(',')
+            constraints = [x.strip() for x in nodeselector_str.split(',')]
             raw_nodeselector = dict([constraint.split('=', 1) for constraint in constraints])
             nodeselector = dict([k.strip(), v.strip()] for (k, v) in raw_nodeselector.items())
 

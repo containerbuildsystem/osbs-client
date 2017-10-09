@@ -478,6 +478,7 @@ class TestConfiguration(object):
         (None, {'default': {'registry_api_versions': 'v1'}}, ['v1'], True),
         (None, {'default': {'registry_api_versions': 'v2'}}, ['v2'], True),
         (None, {'default': {'registry_api_versions': 'v1,v2'}}, ['v1', 'v2'], True),
+        (None, {'default': {'registry_api_versions': '  v1,   v2  '}}, ['v1', 'v2'], True),
         ('ham', {'default': {'registry_api_versions': 'v1,v2'}}, ['v2'], True),
         (None, {'platform:ham': {}}, ['v1', 'v2'], True),
         ('ham', {'platform:ham': {}}, ['v2'], True),
