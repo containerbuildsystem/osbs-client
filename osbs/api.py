@@ -591,6 +591,7 @@ class OSBS(object):
             platform_node_selector=self.build_conf.get_platform_node_selector(platform),
             scratch_build_node_selector=self.build_conf.get_scratch_build_node_selector(),
             explicit_build_node_selector=self.build_conf.get_explicit_build_node_selector(),
+            isolated_build_node_selector=self.build_conf.get_isolated_build_node_selector(),
             auto_build_node_selector=self.build_conf.get_auto_build_node_selector(),
             is_auto=is_auto,
             filesystem_koji_task_id=filesystem_koji_task_id,
