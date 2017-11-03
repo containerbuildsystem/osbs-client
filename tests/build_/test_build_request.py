@@ -1061,6 +1061,9 @@ class TestBuildRequest(object):
                 get_plugin(plugins, "postbuild_plugins", "tag_from_config")
 
             with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "postbuild_plugins", "import_image")
+
+            with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, "postbuild_plugins", "pulp_pull")
 
             with pytest.raises(NoSuchPluginException):
