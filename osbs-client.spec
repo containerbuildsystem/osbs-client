@@ -22,7 +22,7 @@
 %global with_check 1
 %endif
 
-%global commit 67fd975e527aebd6cbec83865becc642c95af93f
+%global commit b62f138e4210215f89697a5f25568b9159d235e9
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 
 # set to 0 to create a normal release
