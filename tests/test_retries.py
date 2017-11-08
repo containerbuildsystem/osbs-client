@@ -38,9 +38,9 @@ def has_connection():
         return False
 
     try:
-        HttpStream("https://httpbin.org/get", "get")
+        HttpStream("https://httpbin.org/get", "get", retries_enabled=False)
         return True
-    except OsbsNetworkException:
+    except (OsbsNetworkException, requests.exceptions.ConnectionError):
         return False
 
 
