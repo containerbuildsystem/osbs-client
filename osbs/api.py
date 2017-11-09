@@ -506,6 +506,8 @@ class OSBS(object):
                               flatpak=False,
                               module=None,
                               module_compose_id=None,
+                              signing_intent=None,
+                              compose_ids=None,
                               **kwargs):
 
         if flatpak:
@@ -608,6 +610,8 @@ class OSBS(object):
             group_manifests=self.os_conf.get_group_manifests(),
             isolated=isolated,
             prefer_schema1_digest=self.build_conf.get_prefer_schema1_digest(),
+            signing_intent=signing_intent,
+            compose_ids=compose_ids
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         build_request.set_repo_info(repo_info)
@@ -642,6 +646,8 @@ class OSBS(object):
         :param outer_template: str, name of outer template for BuildRequest
         :param customize_conf: str, name of customization config for BuildRequest
         :param arrangement_version: int, numbered arrangement of plugins for orchestration workflow
+        :param signing_intent: str, signing intent of the ODCS composes
+        :param compose_ids: list<int>, ODCS composes used
         :return: BuildResponse instance
         """
         warnings.warn("prod (all-in-one) builds are deprecated, "

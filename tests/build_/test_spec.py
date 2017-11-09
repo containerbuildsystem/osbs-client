@@ -117,3 +117,57 @@ class TestBuildSpec(object):
             img_tag += '-{platform}'
         img_tag = img_tag.format(random_number=rand, time_string=timestr, **kwargs)
         assert spec.image_tag.value == img_tag
+
+    @pytest.mark.parametrize(('odcs_enabled', 'signing_intent', 'compose_ids',
+                              'yum_repourls', 'exc'), (
+        (False, 'release', [1, 2], ['http://example.com/my.repo'], OsbsValidationException),
+        (False, 'release', [1, 2], None, OsbsValidationException),
+        (False, None, [1, 2], ['http://example.com/my.repo'], OsbsValidationException),
+        (False, 'release', None, ['http://example.com/my.repo'], OsbsValidationException),
+        (False, 'release', None, None, OsbsValidationException),
+        (False, None, [1, 2], None, OsbsValidationException),
+        (False, None, None, ['http://example.com/my.repo'], None),
+        (False, None, None, None, None),
+        (True, 'release', [1, 2], ['http://example.com/my.repo'], OsbsValidationException),
+        (True, 'release', [1, 2], None, OsbsValidationException),
+        (True, None, [1, 2], ['http://example.com/my.repo'], OsbsValidationException),
+        (True, 'release', None, ['http://example.com/my.repo'], None),
+        (True, 'release', None, None, None),
+        (True, None, [1, 2], None, None),
+        (True, None, 1, None, OsbsValidationException),
+        (True, None, None, ['http://example.com/my.repo'], None),
+        (True, None, None, None, None),
+    ))
+    def test_compose_ids_and_signing_intent(self, odcs_enabled, signing_intent, compose_ids,
+                                            yum_repourls, exc):
+        kwargs = self.get_minimal_kwargs()
+        if odcs_enabled:
+            kwargs.update({
+                'odcs_url': "http://odcs.com",
+            })
+        if signing_intent:
+            kwargs['signing_intent'] = signing_intent
+        if compose_ids:
+            kwargs['compose_ids'] = compose_ids
+        if yum_repourls:
+            kwargs['yum_repourls'] = yum_repourls
+
+        kwargs.update({
+            'git_uri': 'https://github.com/user/reponame.git',
+            'git_branch': 'master',
+        })
+
+        spec = BuildSpec()
+
+        if exc:
+            with pytest.raises(exc):
+                spec.set_params(**kwargs)
+        else:
+            spec.set_params(**kwargs)
+
+            if yum_repourls:
+                assert spec.yum_repourls.value == yum_repourls
+            if signing_intent:
+                assert spec.signing_intent.value == signing_intent
+            if compose_ids:
+                assert spec.compose_ids.value == compose_ids

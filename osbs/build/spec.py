@@ -190,6 +190,8 @@ class BuildSpec(object):
         self.koji_parent_build = BuildParam("koji_parent_build", allow_none=True)
         self.group_manifests = BuildParam("group_manifests", allow_none=True)
         self.prefer_schema1_digest = BuildParam("prefer_schema1_digest", allow_none=True)
+        self.signing_intent = BuildParam("signing_intent", allow_none=True)
+        self.compose_ids = BuildParam("compose_ids", allow_none=True)
 
         self.required_params = [
             self.git_uri,
@@ -244,6 +246,7 @@ class BuildSpec(object):
                    info_url_format=None, artifacts_allowed_domains=None,
                    equal_labels=None, koji_upload_dir=None, yum_proxy=None,
                    koji_parent_build=None, group_manifests=None, prefer_schema1_digest=None,
+                   signing_intent=None, compose_ids=None,
                    **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
@@ -354,7 +357,29 @@ class BuildSpec(object):
         self.yum_proxy.value = yum_proxy
         self.koji_parent_build.value = koji_parent_build
 
+        if (signing_intent or compose_ids) and not self.odcs_enabled():
+            raise OsbsValidationException(
+                'signing_intent and compose_ids are allowed only when ODCS is enabled')
+
+        if signing_intent and compose_ids:
+            raise OsbsValidationException(
+                'Please only define signing_intent -OR- compose_ids, not both')
+
+        if compose_ids and yum_repourls:
+            raise OsbsValidationException(
+                'Please only define yum_repourls -OR- compose_ids, not both')
+
+        try:
+            compose_ids and iter(compose_ids)
+        except TypeError:
+            raise OsbsValidationException("compose_ids must be a list")
+
+        self.signing_intent.value = signing_intent
+        self.compose_ids.value = compose_ids or []
         self._populate_image_tag()
+
+    def odcs_enabled(self):
+        return self.odcs_url.value
 
     def _populate_image_tag(self):
         timestamp = utcnow().strftime('%Y%m%d%H%M%S')
