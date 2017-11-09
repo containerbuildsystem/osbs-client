@@ -1960,6 +1960,8 @@ class TestOSBS(object):
                 self.git_branch = TEST_GIT_BRANCH
                 self.koji_parent_build = None
                 self.flatpak = False
+                self.signing_intent = 'release'
+                self.compose_ids = [1, 2]
 
         expected_kwargs = {
             'platform': platform,
@@ -1976,6 +1978,8 @@ class TestOSBS(object):
             'architecture': None,
             'yum_repourls': None,
             'koji_parent_build': None,
+            'signing_intent': 'release',
+            'compose_ids': [1, 2],
         }
         if arrangement_version:
             expected_kwargs.update({
@@ -2047,6 +2051,8 @@ class TestOSBS(object):
                 self.koji_parent_build = None
                 self.flatpak = True
                 self.module = module
+                self.signing_intent = 'release'
+                self.compose_ids = [1, 2]
 
         expected_kwargs = {
             'platform': None,
@@ -2066,6 +2072,8 @@ class TestOSBS(object):
             'architecture': None,
             'yum_repourls': None,
             'koji_parent_build': None,
+            'signing_intent': 'release',
+            'compose_ids': [1, 2],
         }
 
         args = MockArgs(isolated, module)

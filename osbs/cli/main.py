@@ -336,7 +336,9 @@ def cmd_build(args, osbs):
         'platforms': args.platforms,
         'release': args.release,
         'koji_parent_build': args.koji_parent_build,
-        'isolated': args.isolated
+        'isolated': args.isolated,
+        'signing_intent': args.signing_intent,
+        'compose_ids': args.compose_ids,
     }
     if args.arrangement_version:
         build_kwargs['arrangement_version'] = args.arrangement_version
@@ -718,6 +720,11 @@ def cli():
                               help='isolated build')
     build_parser.add_argument('--arrangement-version', action='store', required=False,
                               help='version of inner template to use')
+    build_parser.add_argument('--signing-intent', action='store', required=False,
+                              help='override signing intent of ODCS composes')
+    build_parser.add_argument("--compose-id", action='append', required=False,
+                              dest="compose_ids", help="ODCS compose"
+                              "used, may be used multiple times")
 
     worker_group = build_parser.add_argument_group(title='arguments for --worker',
                                                    description='Required arguments for creating a '
