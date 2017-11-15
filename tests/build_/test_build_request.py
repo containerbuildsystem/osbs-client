@@ -2734,3 +2734,72 @@ class TestBuildRequest(object):
         else:
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, plugin_type, plugin_name)
+
+    @pytest.mark.parametrize('odcs_insecure', (True, False, None))
+    @pytest.mark.parametrize('additional_params', (
+        {'signing_intent': 'release'},
+        {'compose_ids': [1, ]},
+        {'compose_ids': [1, 2]},
+    ))
+    def test_render_resolve_composes(self, odcs_insecure, additional_params):
+        plugin_type = 'prebuild_plugins'
+        plugin_name = 'resolve_composes'
+
+        odcs_url = 'https://odcs.example.com/odcs/1'
+
+        br = BuildRequest(INPUTS_PATH)
+
+        kwargs = get_sample_prod_params()
+        kwargs.pop('odcs_url', None)
+        kwargs['odcs_url'] = odcs_url
+        if odcs_insecure is not None:
+            kwargs['odcs_insecure'] = odcs_insecure
+        kwargs.update(additional_params)
+
+        expected_plugin_args = {
+            'odcs_url': odcs_url,
+            'odcs_insecure': bool(odcs_insecure),
+            'koji_hub': kwargs['kojihub'],
+            'koji_target': kwargs['koji_target'],
+        }
+        expected_plugin_args.update(additional_params)
+
+        br.set_params(**kwargs)
+
+        br.dj.dock_json_set_param(plugin_type, [])
+        br.dj.add_plugin(plugin_type, plugin_name, {})
+
+        build_json = br.render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        assert get_plugin(plugins, plugin_type, plugin_name)
+        plugin_args = plugin_value_get(plugins, plugin_type, plugin_name, 'args')
+        assert plugin_args == expected_plugin_args
+
+    @pytest.mark.parametrize('enabled', (True, False))
+    def test_remove_resolve_composes(self, enabled):
+        plugin_type = 'prebuild_plugins'
+        plugin_name = 'resolve_composes'
+
+        odcs_url = 'https://odcs.example.com/odcs/1'
+
+        br = BuildRequest(INPUTS_PATH)
+
+        kwargs = get_sample_prod_params()
+        kwargs.pop('odcs_url', None)
+        if enabled:
+            kwargs['odcs_url'] = odcs_url
+
+        br.set_params(**kwargs)
+
+        br.dj.dock_json_set_param(plugin_type, [])
+        br.dj.add_plugin(plugin_type, plugin_name, {})
+
+        build_json = br.render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        if enabled:
+            assert get_plugin(plugins, plugin_type, plugin_name)
+        else:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, plugin_type, plugin_name)

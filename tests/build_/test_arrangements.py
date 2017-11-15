@@ -850,16 +850,6 @@ class TestArrangementV4(TestArrangementV3):
         },
     }
 
-    def test_is_default(self):
-        """
-        Test this is the default arrangement
-        """
-
-        # Note! If this test fails it probably means you need to
-        # derive a new TestArrangementV[n] class from this class and
-        # move the method to the new class.
-        assert DEFAULT_ARRANGEMENT_VERSION == self.ARRANGEMENT_VERSION
-
     @pytest.mark.parametrize(('params', 'build_type', 'has_plat_tag',  # noqa:F811
                               'has_primary_tag'), (
         ({}, 'orchestrator', False, True),
@@ -1165,3 +1155,137 @@ class TestArrangementV4(TestArrangementV3):
             get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
+
+
+class TestArrangementV5(TestArrangementV4):
+    """
+    Orchestrator build differences from arrangement version 4:
+    - resolve_composes enabled
+
+    No worker build differences from arrangement version 4
+    """
+
+    ARRANGEMENT_VERSION = 5
+
+    DEFAULT_PLUGINS = {
+        # Changing this? Add test methods
+        ORCHESTRATOR_INNER_TEMPLATE: {
+            'prebuild_plugins': [
+                'reactor_config',
+                'resolve_module_compose',
+                'flatpak_create_dockerfile',
+                'add_filesystem',
+                'inject_parent_image',
+                'pull_base_image',
+                'bump_release',
+                'add_labels_in_dockerfile',
+                'koji_parent',
+                'check_and_set_rebuild',
+                'resolve_composes',
+            ],
+
+            'buildstep_plugins': [
+                'orchestrate_build',
+            ],
+
+            'prepublish_plugins': [
+            ],
+
+            'postbuild_plugins': [
+                'fetch_worker_metadata',
+                'compare_components',
+                'tag_from_config',
+                'group_manifests',
+                'pulp_tag',
+                'pulp_sync',
+            ],
+
+            'exit_plugins': [
+                'pulp_publish',
+                'pulp_pull',
+                'delete_from_registry',
+                'koji_import',
+                'koji_tag_build',
+                'store_metadata_in_osv3',
+                'sendmail',
+                'remove_built_image',
+                'remove_worker_metadata',
+            ],
+        },
+
+        # Changing this? Add test methods
+        WORKER_INNER_TEMPLATE: {
+            'prebuild_plugins': [
+                'resolve_module_compose',
+                'flatpak_create_dockerfile',
+                'add_filesystem',
+                'inject_parent_image',
+                'pull_base_image',
+                'add_labels_in_dockerfile',
+                'change_from_in_dockerfile',
+                'add_help',
+                'add_dockerfile',
+                'distgit_fetch_artefacts',
+                'fetch_maven_artifacts',
+                'koji',
+                'add_yum_repo_by_url',
+                'inject_yum_repo',
+                'distribution_scope',
+            ],
+
+            'buildstep_plugins': [
+            ],
+
+            'prepublish_plugins': [
+                'squash',
+                'flatpak_create_oci',
+            ],
+
+            'postbuild_plugins': [
+                'all_rpm_packages',
+                'tag_from_config',
+                'tag_and_push',
+                'pulp_push',
+                'compress',
+                'koji_upload',
+            ],
+
+            'exit_plugins': [
+                'store_metadata_in_osv3',
+                'remove_built_image',
+            ],
+        },
+    }
+
+    def test_is_default(self):
+        """
+        Test this is the default arrangement
+        """
+
+        # Note! If this test fails it probably means you need to
+        # derive a new TestArrangementV[n] class from this class and
+        # move the method to the new class.
+        assert DEFAULT_ARRANGEMENT_VERSION == self.ARRANGEMENT_VERSION
+
+    def test_resolve_composes(self, osbs):  # noqa:F811
+        koji_target = 'koji-target'
+
+        # These are hard coded by osbs fixture
+        koji_hub = 'http://koji.example.com/kojihub'
+        odcs_url = 'https://odcs.example.com/odcs/1'
+
+        additional_params = {
+            'base_image': 'fedora:latest',
+            'target': koji_target,
+        }
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        args = plugin_value_get(plugins, 'prebuild_plugins', 'resolve_composes', 'args')
+
+        assert args == {
+            'koji_hub': koji_hub,
+            'koji_target': koji_target,
+            'odcs_url': odcs_url,
+            'odcs_insecure': False,
+        }
