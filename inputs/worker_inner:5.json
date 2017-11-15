@@ -1,0 +1,162 @@
+{
+  "client_version": "{{VERSION}}",
+  "prebuild_plugins": [
+    {
+      "name": "resolve_module_compose",
+      "args": {
+        "module_name": "{{MODULE_NAME}}",
+        "module_stream": "{{MODULE_STREAM}}",
+        "compose_id": "{{COMPOSE_ID}}",
+        "odcs_url": "{{ODCS_URL}}",
+        "odcs_insecure": "{{ODCS_INSECURE}}",
+        "pdc_url": "{{PDC_URL}}",
+        "pdc_insecure": "{{PDC_INSECURE}}"
+      }
+    },
+    {
+      "name": "flatpak_create_dockerfile",
+      "args": {
+        "base_image": "{{BASE_IMAGE}}"
+      }
+    },
+    {
+      "name": "add_filesystem",
+      "args": {
+        "koji_hub": "{{KOJI_HUB}}",
+        "repos": [],
+        "from_task_id": "{{FROM_TASK_ID}}"
+      }
+    },
+    {
+      "name": "inject_parent_image",
+      "args": {
+        "koji_parent_build": "{{KOJI_PARENT_BUILD}}",
+        "koji_hub": "{{KOJI_HUB}}"
+      }
+    },
+    {
+      "name": "pull_base_image",
+      "args": {
+        "parent_registry": "{{REGISTRY_URI}}",
+        "parent_registry_insecure": true
+      }
+    },
+    {
+      "name": "add_labels_in_dockerfile",
+      "args": {
+        "labels": "{{IMPLICIT_LABELS}}"
+      }
+    },
+    {
+      "name": "change_from_in_dockerfile"
+    },
+    {
+      "name": "add_help"
+    },
+    {
+      "name": "add_dockerfile"
+    },
+    {
+      "name": "distgit_fetch_artefacts",
+      "args": {
+        "command": "{{SOURCES_COMMAND}}"
+      }
+    },
+    {
+      "name": "fetch_maven_artifacts",
+      "args": {
+        "koji_root": "{{KOJI_ROOT}}",
+        "koji_hub": "{{KOJI_HUB}}"
+      }
+    },
+    {
+      "name": "koji",
+      "args": {
+        "root": "{{KOJI_ROOT}}",
+        "target": "{{KOJI_TARGET}}",
+        "hub": "{{KOJI_HUB}}"
+      }
+    },
+    {
+      "name": "add_yum_repo_by_url",
+      "args": {
+        "repourls": []
+      }
+    },
+    {
+      "name": "inject_yum_repo"
+    },
+    {
+      "name": "distribution_scope"
+    }
+  ],
+  "prepublish_plugins": [
+    {
+      "name": "squash"
+    },
+    {
+      "name": "flatpak_create_oci"
+    }
+  ],
+  "postbuild_plugins": [
+    {
+      "name": "all_rpm_packages",
+      "args": {
+        "image_id": "BUILT_IMAGE_ID"
+      }
+    },
+    {
+      "name": "tag_from_config",
+      "args": {
+        "tag_suffixes": "{{TAG_SUFFIXES}}"
+      }
+    },
+    {
+      "name": "tag_and_push",
+      "args": {
+        "registries": {
+          "{{REGISTRY_URI}}": { "insecure": true }
+        }
+      }
+    },
+    {
+      "name": "pulp_push",
+      "args": {
+        "pulp_registry_name": "{{PULP_REGISTRY_NAME}}",
+        "load_exported_image": true,
+        "dockpulp_loglevel": "INFO",
+        "publish": false
+      }
+    },
+    {
+      "name": "compress",
+      "args": {
+        "load_exported_image": true,
+        "method": "gzip"
+      }
+    },
+    {
+      "name": "koji_upload",
+      "args": {
+        "kojihub": "{{KOJI_HUB}}",
+        "url": "{{OPENSHIFT_URI}}",
+        "verify_ssl": false,
+        "blocksize": 10485760,
+        "koji_keytab": false,
+        "koji_principal": false
+      }
+    }
+  ],
+  "exit_plugins": [
+    {
+      "name": "store_metadata_in_osv3",
+      "args": {
+        "url": "{{OPENSHIFT_URI}}",
+        "verify_ssl": false
+      }
+    },
+    {
+      "name": "remove_built_image"
+    }
+  ]
+}

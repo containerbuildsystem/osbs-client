@@ -689,6 +689,32 @@ class BuildRequest(object):
             self.dj.dock_json_set_arg(phase, plugin, 'pdc_insecure',
                                       self.spec.pdc_insecure.value)
 
+    def render_resolve_composes(self):
+        phase = 'prebuild_plugins'
+        plugin = 'resolve_composes'
+
+        if not self.dj.dock_json_has_plugin_conf(phase, plugin):
+            return
+
+        odcs_url = self.spec.odcs_url.value
+        if not odcs_url:
+            self.dj.remove_plugin(phase, plugin)
+            return
+
+        self.dj.dock_json_set_arg(phase, plugin, 'odcs_url', self.spec.odcs_url.value)
+        self.dj.dock_json_set_arg(phase, plugin, 'odcs_insecure', self.spec.odcs_insecure.value)
+
+        self.dj.dock_json_set_arg(phase, plugin, 'koji_hub', self.spec.kojihub.value)
+        self.dj.dock_json_set_arg(phase, plugin, 'koji_target', self.spec.koji_target.value)
+
+        compose_ids = self.spec.compose_ids.value
+        if compose_ids:
+            self.dj.dock_json_set_arg(phase, plugin, 'compose_ids', compose_ids)
+
+        signing_intent = self.spec.signing_intent.value
+        if signing_intent:
+            self.dj.dock_json_set_arg(phase, plugin, 'signing_intent', signing_intent)
+
     def render_flatpak_create_dockerfile(self):
         phase = 'prebuild_plugins'
         plugin = 'flatpak_create_dockerfile'
@@ -1536,6 +1562,9 @@ class BuildRequest(object):
                           ('prebuild_plugins', 'bump_release', 'koji_ssl_certs_dir'):
                           self.spec.koji_certs_secret.value,
 
+                          ('prebuild_plugins', 'resolve_composes', 'koji_ssl_certs_dir'):
+                          self.spec.koji_certs_secret.value,
+
                           ('prebuild_plugins', 'koji', 'koji_ssl_certs_dir'):
                           self.spec.koji_certs_secret.value,
 
@@ -1594,6 +1623,7 @@ class BuildRequest(object):
         self.render_reactor_config()
         self.render_orchestrate_build()
         self.render_resolve_module_compose()
+        self.render_resolve_composes()
         self.render_flatpak_create_dockerfile()
         self.render_squash()
         self.render_flatpak_create_oci()

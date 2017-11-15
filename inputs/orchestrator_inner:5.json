@@ -1,0 +1,196 @@
+{
+  "client_version": "{{VERSION}}",
+  "prebuild_plugins": [
+    {
+      "name": "reactor_config",
+      "args": {
+        "config_path": "{{CONFIG_PATH}}"
+      }
+    },
+    {
+      "name": "resolve_module_compose",
+      "args": {
+        "module_name": "{{MODULE_NAME}}",
+        "module_stream": "{{MODULE_STREAM}}",
+        "odcs_url": "{{ODCS_URL}}",
+        "odcs_insecure": "{{ODCS_INSECURE}}",
+        "pdc_url": "{{PDC_URL}}",
+        "pdc_insecure": "{{PDC_INSECURE}}"
+      }
+    },
+    {
+      "name": "flatpak_create_dockerfile",
+      "args": {
+        "base_image": "{{BASE_IMAGE}}"
+      }
+    },
+    {
+      "name": "add_filesystem",
+      "args": {
+        "koji_hub": "{{KOJI_HUB}}",
+        "repos": []
+      }
+    },
+    {
+      "name": "inject_parent_image",
+      "args": {
+        "koji_parent_build": "{{KOJI_PARENT_BUILD}}",
+        "koji_hub": "{{KOJI_HUB}}"
+      }
+    },
+    {
+      "name": "pull_base_image",
+      "args": {
+        "parent_registry": "{{REGISTRY_URI}}",
+        "parent_registry_insecure": true
+      }
+    },
+    {
+      "name": "bump_release",
+      "args": {
+        "hub": "{{KOJI_HUB}}"
+      }
+    },
+    {
+      "name": "add_labels_in_dockerfile",
+      "args": {
+        "labels": "{{IMPLICIT_LABELS}}"
+      }
+    },
+    {
+      "name": "koji_parent",
+      "required": false,
+      "args": {
+        "koji_hub": "{{KOJI_HUB}}"
+      }
+    },
+    {
+      "name": "check_and_set_rebuild",
+      "args": {
+        "label_key": "is_autorebuild",
+        "label_value": "true",
+        "url": "{{OPENSHIFT_URI}}",
+        "verify_ssl": false
+      }
+    },
+    {
+      "name": "resolve_composes",
+      "required": false,
+      "args": {
+        "odcs_url": "{{ODCS_URL}}"
+      }
+    }
+  ],
+  "buildstep_plugins": [
+    {
+      "name": "orchestrate_build",
+      "args": {
+        "platforms": "{{PLATFORMS}}",
+        "build_kwargs": "{{BUILD_KWARGS}}",
+        "osbs_client_config": "{{OSBS_CLIENT_CONFIG}}"
+      }
+    }
+  ],
+  "postbuild_plugins": [
+    {
+      "name": "fetch_worker_metadata",
+      "args": {
+      }
+    },
+    {
+      "name": "compare_components"
+    },
+    {
+      "name": "tag_from_config",
+      "args": {
+        "tag_suffixes": "{{TAG_SUFFIXES}}"
+      }
+    },
+    {
+      "name": "group_manifests",
+      "args": {
+        "registries": {
+          "{{REGISTRY_URI}}": { "insecure": true }
+        }
+      }
+    },
+    {
+      "name": "pulp_tag",
+      "args": {
+        "pulp_registry_name": "{{PULP_REGISTRY_NAME}}",
+        "dockpulp_loglevel": "INFO"
+      }
+    },
+    {
+      "name": "pulp_sync",
+      "args": {
+        "pulp_registry_name": "{{PULP_REGISTRY_NAME}}",
+        "docker_registry": "{{DOCKER_REGISTRY}}",
+        "dockpulp_loglevel": "INFO",
+        "publish": false
+      }
+    }
+  ],
+  "prepublish_plugins": [],
+  "exit_plugins": [
+    {
+      "name": "pulp_publish",
+      "args": {
+        "pulp_registry_name": "{{PULP_REGISTRY_NAME}}",
+        "dockpulp_loglevel": "INFO"
+      }
+    },
+    {
+      "name": "pulp_pull",
+      "args": {
+        "insecure": true
+      }
+    },
+    {
+      "name": "delete_from_registry",
+      "args": {
+        "registries": {
+          "{{REGISTRY_URI}}": { "insecure": true }
+        }
+      }
+    },
+    {
+      "name": "koji_import",
+      "args": {
+        "kojihub": "{{KOJI_HUB}}",
+        "url": "{{OPENSHIFT_URI}}",
+        "verify_ssl": false,
+        "koji_keytab": false
+      }
+    },
+    {
+      "name": "koji_tag_build",
+      "args": {
+        "kojihub": "{{KOJI_HUB}}",
+        "koji_keytab": false,
+        "koji_principal": false
+      }
+    },
+    {
+      "name": "store_metadata_in_osv3",
+      "args": {
+        "url": "{{OPENSHIFT_URI}}",
+        "verify_ssl": false
+      }
+    },
+    {
+      "name": "sendmail",
+      "args": {
+          "smtp_host": "{{SMTP_HOST}}",
+          "from_address": "{{SMTP_FROM}}"
+      }
+    },
+    {
+      "name": "remove_built_image"
+    },
+    {
+      "name": "remove_worker_metadata",
+      "required": false
+    }
+  ]
+}
