@@ -214,6 +214,9 @@ class Configuration(object):
     def get_odcs_openidc_secret(self):
         return self._get_value("odcs_openidc_secret", self.conf_section, "odcs_openidc_secret")
 
+    def get_odcs_ssl_secret(self):
+        return self._get_value("odcs_ssl_secret", self.conf_section, "odcs_ssl_secret")
+
     def get_pdc_url(self):
         return self._get_value("pdc_url", self.conf_section, "pdc_url")
 

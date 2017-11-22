@@ -161,6 +161,7 @@ class BuildSpec(object):
         self.odcs_url = BuildParam("odcs_url", allow_none=True)
         self.odcs_insecure = BuildParam("odcs_insecure", allow_none=True)
         self.odcs_openidc_secret = BuildParam("odcs_openidc_secret", allow_none=True)
+        self.odcs_ssl_secret = BuildParam("odcs_ssl_secret", allow_none=True)
         self.pdc_url = BuildParam("pdc_url", allow_none=True)
         self.pdc_insecure = BuildParam("pdc_insecure", allow_none=True)
         self.image_tag = BuildParam("image_tag")
@@ -230,6 +231,7 @@ class BuildSpec(object):
                    module=None, module_compose_id=None,
                    flatpak_base_image=None,
                    odcs_url=None, odcs_insecure=False, odcs_openidc_secret=None,
+                   odcs_ssl_secret=None,
                    pdc_url=None, pdc_insecure=False,
                    filesystem_koji_task_id=None,
                    source_secret=None,  # compatibility name for pulp_secret
@@ -297,6 +299,7 @@ class BuildSpec(object):
         self.odcs_url.value = odcs_url
         self.odcs_insecure.value = odcs_insecure
         self.odcs_openidc_secret.value = odcs_openidc_secret
+        self.odcs_ssl_secret.value = odcs_ssl_secret
         self.pdc_url.value = pdc_url
         self.pdc_insecure.value = pdc_insecure
         self.pulp_secret.value = pulp_secret or source_secret

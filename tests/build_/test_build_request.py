@@ -2741,7 +2741,10 @@ class TestBuildRequest(object):
         {'compose_ids': [1, ]},
         {'compose_ids': [1, 2]},
     ))
-    def test_render_resolve_composes(self, odcs_insecure, additional_params):
+    @pytest.mark.parametrize('odcs_openidc_secret', (None, 'odcs-openidc'))
+    @pytest.mark.parametrize('odcs_ssl_secret', (None, 'odcs-ssl'))
+    def test_render_resolve_composes(self, odcs_insecure, additional_params, odcs_openidc_secret,
+                                     odcs_ssl_secret):
         plugin_type = 'prebuild_plugins'
         plugin_name = 'resolve_composes'
 
@@ -2754,6 +2757,10 @@ class TestBuildRequest(object):
         kwargs['odcs_url'] = odcs_url
         if odcs_insecure is not None:
             kwargs['odcs_insecure'] = odcs_insecure
+        if odcs_openidc_secret is not None:
+            kwargs['odcs_openidc_secret'] = odcs_openidc_secret
+        if odcs_ssl_secret is not None:
+            kwargs['odcs_ssl_secret'] = odcs_ssl_secret
         kwargs.update(additional_params)
 
         expected_plugin_args = {
@@ -2772,9 +2779,18 @@ class TestBuildRequest(object):
         build_json = br.render()
         plugins = get_plugins_from_build_json(build_json)
 
+        if odcs_openidc_secret:
+            openidc_mount_path = get_secret_mountpath_by_name(build_json, odcs_openidc_secret)
+            expected_plugin_args['odcs_openidc_secret_path'] = openidc_mount_path
+
+        if odcs_ssl_secret:
+            ssl_mount_path = get_secret_mountpath_by_name(build_json, odcs_ssl_secret)
+            expected_plugin_args['odcs_ssl_secret_path'] = ssl_mount_path
+
         assert get_plugin(plugins, plugin_type, plugin_name)
         plugin_args = plugin_value_get(plugins, plugin_type, plugin_name, 'args')
         assert plugin_args == expected_plugin_args
+
 
     @pytest.mark.parametrize('enabled', (True, False))
     def test_remove_resolve_composes(self, enabled):
