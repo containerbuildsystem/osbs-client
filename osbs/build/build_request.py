@@ -1544,6 +1544,16 @@ class BuildRequest(object):
                            'odcs_openidc_secret_path'):
                           self.spec.odcs_openidc_secret.value,
 
+                          ('prebuild_plugins',
+                           'resolve_composes',
+                           'odcs_openidc_secret_path'):
+                          self.spec.odcs_openidc_secret.value,
+
+                          ('prebuild_plugins',
+                           'resolve_composes',
+                           'odcs_ssl_secret_path'):
+                          self.spec.odcs_ssl_secret.value,
+
                           ('exit_plugins', 'koji_promote', 'koji_ssl_certs'):
                           self.spec.koji_certs_secret.value,
 
