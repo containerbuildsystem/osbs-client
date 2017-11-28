@@ -723,7 +723,7 @@ def cli():
     build_parser.add_argument('--signing-intent', action='store', required=False,
                               help='override signing intent of ODCS composes')
     build_parser.add_argument("--compose-id", action='append', required=False,
-                              dest="compose_ids", help="ODCS compose"
+                              dest="compose_ids", type=int, help="ODCS compose"
                               "used, may be used multiple times")
 
     worker_group = build_parser.add_argument_group(title='arguments for --worker',
