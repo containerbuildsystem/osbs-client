@@ -122,6 +122,14 @@
         "dockpulp_loglevel": "INFO",
         "publish": false
       }
+    },
+    {
+      "name": "import_image",
+      "args": {
+        "verify_ssl": false,
+        "use_auth": true,
+        "insecure_registry": true
+      }
     }
   ],
   "prepublish_plugins": [],

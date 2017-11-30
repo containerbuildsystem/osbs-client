@@ -7,6 +7,17 @@
       "is_autorebuild": "false"
     }
   },
+  "triggers": [
+    {
+      "type": "ImageChange",
+      "imageChange": {
+        "from": {
+          "kind": "ImageStreamTag",
+          "name": "{{BASE_IMAGE_STREAM}}"
+        }
+      }
+    }
+  ],
   "spec": {
     "source": {
       "type": "Git",
