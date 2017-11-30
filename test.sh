@@ -57,6 +57,4 @@ $RUN $PIP install -r tests/requirements.txt
 if [[ $PYTHON_VERSION -gt 2 ]]; then $RUN $PIP install -r requirements-py3.txt; fi
 
 # Run tests
-$RUN $PIP install pytest-cov
-if [[ $OS != "fedora" ]]; then $RUN $PIP install -U pytest-cov; fi
 $RUN $PYTEST -vv tests --cov osbs "$@"
