@@ -1421,8 +1421,7 @@ class BuildRequest(object):
             if self.scratch:
                 name = 'scratch-{0}-{1}'.format(salt, timestamp)
             elif self.isolated:
-                name = wrap_name_from_git('isolated', timestamp, self.spec.git_uri.value,
-                                          self.spec.git_branch.value)
+                name = 'isolated-{0}-{1}'.format(salt, timestamp)
 
         # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
         self.template['metadata']['name'] = name
