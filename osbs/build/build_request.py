@@ -698,6 +698,11 @@ class BuildRequest(object):
 
         odcs_url = self.spec.odcs_url.value
         if not odcs_url:
+            logger.info('removing %s from request as odcs_url is not specified', plugin)
+            self.dj.remove_plugin(phase, plugin)
+            return
+        elif self.spec.yum_repourls.value:
+            logger.info('removing %s from request as yum_repourls is specified', plugin)
             self.dj.remove_plugin(phase, plugin)
             return
 

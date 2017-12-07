@@ -2791,20 +2791,26 @@ class TestBuildRequest(object):
         plugin_args = plugin_value_get(plugins, plugin_type, plugin_name, 'args')
         assert plugin_args == expected_plugin_args
 
-
-    @pytest.mark.parametrize('enabled', (True, False))
-    def test_remove_resolve_composes(self, enabled):
+    @pytest.mark.parametrize(('odcs_url', 'yum_repos', 'raised'), [
+        ('https://odcs.example.com/odcs/1', None, False),
+        ('https://odcs.example.com/odcs/1', [], False),
+        ('https://odcs.example.com/odcs/1', ["http://example.com/my.repo"], True),
+        (None, ["http://example.com/my.repo"], True),
+        (None, [], True),
+        (None, None, True),
+    ])
+    def test_remove_resolve_composes(self, odcs_url, yum_repos, raised):
         plugin_type = 'prebuild_plugins'
         plugin_name = 'resolve_composes'
-
-        odcs_url = 'https://odcs.example.com/odcs/1'
 
         br = BuildRequest(INPUTS_PATH)
 
         kwargs = get_sample_prod_params()
         kwargs.pop('odcs_url', None)
-        if enabled:
+        if odcs_url:
             kwargs['odcs_url'] = odcs_url
+        if yum_repos:
+            kwargs['yum_repourls'] = yum_repos
 
         br.set_params(**kwargs)
 
@@ -2814,8 +2820,8 @@ class TestBuildRequest(object):
         build_json = br.render()
         plugins = get_plugins_from_build_json(build_json)
 
-        if enabled:
-            assert get_plugin(plugins, plugin_type, plugin_name)
-        else:
+        if raised:
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, plugin_type, plugin_name)
+        else:
+            assert get_plugin(plugins, plugin_type, plugin_name)
