@@ -1731,6 +1731,8 @@ class TestOSBS(object):
                 }
             },
         }
+        if build_variation == 'isolated':
+            build_json['metadata']['labels']['isolated-release'] = "1.1"
 
         build_request = flexmock(
             render=lambda: build_json,

@@ -301,7 +301,8 @@ class OSBS(object):
 
     def _create_isolated_build(self, build_request):
         return self._create_build_directly(build_request,
-                                           unique=('git-repo-name', 'git-branch', 'isolated'))
+                                           unique=('git-repo-name', 'git-branch',
+                                                   'isolated', 'isolated-release'))
 
     def _create_build_directly(self, build_request, unique=None):
         logger.debug(build_request)

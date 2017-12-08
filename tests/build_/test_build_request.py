@@ -1979,6 +1979,7 @@ class TestBuildRequest(object):
 
             assert 'triggers' not in build_json['spec']
             assert build_json['metadata']['labels']['isolated'] == 'true'
+            assert build_json['metadata']['labels']['isolated-release'] == extra_kwargs['release']
 
     @pytest.mark.parametrize(('autorebuild_enabled', 'release_label', 'expected'), (
         (True, None, True),
