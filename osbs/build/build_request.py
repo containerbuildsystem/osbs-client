@@ -616,6 +616,7 @@ class BuildRequest(object):
                 .format(ISOLATED_RELEASE_FORMAT.pattern))
 
         self.set_label('isolated', 'true')
+        self.set_label('isolated-release', self.spec.release.value)
 
     def adjust_for_custom_base_image(self):
         """
