@@ -129,6 +129,16 @@
         "dockpulp_loglevel": "INFO",
         "publish": false
       }
+    },
+    {
+      "name": "import_image",
+      "args": {
+        "imagestream": "{{IMAGESTREAM}}",
+        "docker_image_repo": "{{DOCKER_IMAGE_REPO}}",
+        "url": "{{OPENSHIFT_URI}}",
+        "verify_ssl": false,
+        "build_json_dir": "{{PATH}}"
+      }
     }
   ],
   "prepublish_plugins": [],

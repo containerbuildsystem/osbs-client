@@ -1198,6 +1198,7 @@ class TestArrangementV5(TestArrangementV4):
                 'group_manifests',
                 'pulp_tag',
                 'pulp_sync',
+                'import_image',
             ],
 
             'exit_plugins': [
@@ -1289,3 +1290,23 @@ class TestArrangementV5(TestArrangementV4):
             'odcs_url': odcs_url,
             'odcs_insecure': False,
         }
+
+    def test_import_image_renders(self, osbs): # noqa:F811
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        params, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        args = plugin_value_get(plugins, 'postbuild_plugins',
+                                'import_image', 'args')
+
+        match_args = {
+            "imagestream": "fedora23-something",
+            "docker_image_repo": "registry.example.com/fedora23/something",
+            "url": "/",
+            "verify_ssl": False,
+            "build_json_dir": "inputs",
+            "use_auth": False
+        }
+        assert match_args == args
