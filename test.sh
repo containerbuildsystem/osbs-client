@@ -15,7 +15,7 @@ fi
 CONTAINER_NAME="osbs-client-$OS-$OS_VERSION-py$PYTHON_VERSION"
 RUN="docker exec -ti $CONTAINER_NAME"
 if [[ $OS == "fedora" ]]; then
-  if [[ $OS_VERSION == 25 && $PYTHON_VERSION == 2 ]]; then PIP_PKG="python-pip"; else PIP_PKG="python$PYTHON_VERSION-pip"; fi
+  PIP_PKG="python$PYTHON_VERSION-pip"
   PIP="pip$PYTHON_VERSION"
   PKG="dnf"
   PKG_EXTRA="dnf-plugins-core"
@@ -44,7 +44,7 @@ fi
 
 # Install package
 $RUN $PKG install -y $PIP_PKG
-if [[ $PYTHON_VERSION == 3 && $OS_VERSION == rawhide ]]; then
+if [[ $PYTHON_VERSION == 3 ]]; then
   # https://fedoraproject.org/wiki/Changes/Making_sudo_pip_safe
   $RUN mkdir -p /usr/local/lib/python3.6/site-packages/
 fi
