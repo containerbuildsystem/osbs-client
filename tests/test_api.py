@@ -699,31 +699,6 @@ class TestOSBS(object):
                                   TEST_ARCH)
 
     # osbs is a fixture here
-    def test_create_prod_with_secret_build(self, osbs):  # noqa
-        # TODO: test situation when a buildconfig already exists
-        (flexmock(utils)
-            .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(self.mock_repo_info()))
-        response = osbs.create_prod_with_secret_build(TEST_GIT_URI, TEST_GIT_REF,
-                                                      TEST_GIT_BRANCH, TEST_USER,
-                                                      TEST_COMPONENT, TEST_TARGET,
-                                                      TEST_ARCH)
-        assert isinstance(response, BuildResponse)
-
-    # osbs is a fixture here
-    def test_create_prod_without_koji_build(self, osbs):  # noqa
-        # TODO: test situation when a buildconfig already exists
-        (flexmock(utils)
-            .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(self.mock_repo_info()))
-        response = osbs.create_prod_without_koji_build(TEST_GIT_URI, TEST_GIT_REF,
-                                                       TEST_GIT_BRANCH, TEST_USER,
-                                                       TEST_COMPONENT, TEST_ARCH)
-        assert isinstance(response, BuildResponse)
-
-    # osbs is a fixture here
     def test_wait_for_build_to_finish(self, osbs):  # noqa
         build_response = osbs.wait_for_build_to_finish(TEST_BUILD)
         assert isinstance(build_response, BuildResponse)
