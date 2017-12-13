@@ -657,27 +657,6 @@ class OSBS(object):
         return self._do_create_prod_build(*args, **kwargs)
 
     @osbsapi
-    def create_prod_with_secret_build(self, git_uri, git_ref, git_branch, user, component=None,
-                                      target=None, architecture=None, yum_repourls=None, **kwargs):
-        warnings.warn("create_prod_with_secret_build is deprecated, please use create_build")
-        return self._do_create_prod_build(git_uri, git_ref, git_branch, user,
-                                          component, target, architecture,
-                                          yum_repourls=yum_repourls, **kwargs)
-
-    @osbsapi
-    def create_prod_without_koji_build(self, git_uri, git_ref, git_branch, user, component=None,
-                                       architecture=None, yum_repourls=None, **kwargs):
-        warnings.warn("create_prod_without_koji_build is deprecated, please use create_build")
-        return self._do_create_prod_build(git_uri, git_ref, git_branch, user,
-                                          component, None, architecture,
-                                          yum_repourls=yum_repourls, **kwargs)
-
-    @osbsapi
-    def create_simple_build(self, **kwargs):
-        warnings.warn("simple builds are deprecated, please use the create_build method")
-        return self._do_create_prod_build(**kwargs)
-
-    @osbsapi
     def create_build(self, **kwargs):
         """
         take input args, create build request and submit the build
