@@ -947,6 +947,12 @@ class TestOSBS(object):
         assert isinstance(content, six.string_types)
         assert content == u"   líne 1"
 
+    def test_orchestrator_build_logs_no_logs(self, osbs):  # noqa:F811
+        flexmock(osbs).should_receive('get_build_logs').and_return(None)
+        logs = osbs.get_orchestrator_build_logs(TEST_BUILD)
+        assert isinstance(logs, GeneratorType)
+        assert list(logs) == []
+
     # osbs is a fixture here
     def test_pause_builds(self, osbs):  # noqa
         osbs.pause_builds()
