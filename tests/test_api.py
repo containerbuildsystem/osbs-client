@@ -648,6 +648,50 @@ class TestOSBS(object):
                                    TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
 
     # osbs is a fixture here
+    @pytest.mark.parametrize('name,should_succeed', [  # noqa:F811
+        ('fedora-25.1/something', False),
+        ('fedora-25-1/something', True),
+    ])
+    def test_reject_invalid_name(self, osbs, name, should_succeed):
+        """
+        tests invalid name label is rejected
+        """
+
+        class MockParser(object):
+            labels = {
+                'name': name,
+                'com.redhat.component': TEST_COMPONENT,
+                'version': TEST_VERSION,
+            }
+            baseimage = 'fedora:25'
+        (flexmock(utils)
+            .should_receive('get_repo_info')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(self.mock_repo_info(MockParser())))
+        create_build_args = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': TEST_USER,
+            'component': TEST_COMPONENT,
+            'target': TEST_TARGET,
+            'architecture': TEST_ARCH,
+        }
+        if should_succeed:
+            osbs.create_prod_build(**create_build_args)
+        else:
+            with pytest.raises(OsbsValidationException):
+                osbs.create_prod_build(**create_build_args)
+
+        del create_build_args['architecture']
+        create_build_args['platforms'] = [TEST_ARCH]
+        if should_succeed:
+            osbs.create_orchestrator_build(**create_build_args)
+        else:
+            with pytest.raises(OsbsValidationException):
+                osbs.create_orchestrator_build(**create_build_args)
+
+    # osbs is a fixture here
     @pytest.mark.parametrize('component_label_name', ['com.redhat.component', 'BZComponent'])  # noqa
     def test_component_is_changed_from_label(self, osbs, component_label_name):
         """

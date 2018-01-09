@@ -472,6 +472,27 @@ class OSBS(object):
         if required_missing:
             raise OsbsValidationException("required label missing from Dockerfile")
 
+        # Verify the name label meets requirements.
+        # It is made up of slash-separated name components.
+        #
+        # When pulling an image, the first component of the name
+        # pulled is interpreted as a registry name if it contains a
+        # '.' character, and otherwise the configured registries are
+        # queried in turn.
+        #
+        # Due to this, a name with '.' in its initial component will
+        # be awkward to pull from a registry because the registry name
+        # will have to be explicitly supplied, e.g. "docker pull
+        # foo.bar/baz" will fail because the "foo.bar" registry cannot
+        # be contacted.
+        #
+        # Avoid this awkwardness by forbidding '.' in the initial
+        # component of the image name.
+        name_components = req_labels[utils.Labels.LABEL_TYPE_NAME].split('/', 1)
+        if '.' in name_components[0]:
+            raise OsbsValidationException("initial image name component "
+                                          "must not contain '.'")
+
         return req_labels, df_parser.baseimage
 
     def _get_flatpak_labels(self, module):
