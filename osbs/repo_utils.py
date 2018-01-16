@@ -7,7 +7,7 @@ of the BSD license. See the LICENSE file for details.
 """
 
 
-from osbs.constants import REPO_CONFIG_FILE, ADDITIONAL_TAGS_FILE
+from osbs.constants import REPO_CONFIG_FILE, ADDITIONAL_TAGS_FILE, REPO_CONTAINER_CONFIG
 from six import StringIO
 from six.moves.configparser import ConfigParser
 from textwrap import dedent
@@ -15,6 +15,7 @@ from textwrap import dedent
 import logging
 import os
 import re
+import yaml
 
 
 logger = logging.getLogger(__name__)
@@ -44,6 +45,7 @@ class RepoConfiguration(object):
     def __init__(self, dir_path='', file_name=REPO_CONFIG_FILE):
 
         self._config_parser = ConfigParser()
+        self.compose_data = {}
 
         # Set default options
         self._config_parser.readfp(StringIO(self.DEFAULT_CONFIG))
@@ -51,6 +53,11 @@ class RepoConfiguration(object):
         config_path = os.path.join(dir_path, file_name)
         if os.path.exists(config_path):
             self._config_parser.read(config_path)
+
+        file_path = os.path.join(dir_path, REPO_CONTAINER_CONFIG)
+        if os.path.exists(file_path):
+            with open(file_path) as f:
+                self.compose_data = (yaml.load(f) or {}).get('compose')
 
     def is_autorebuild_enabled(self):
         return self._config_parser.getboolean('autorebuild', 'enabled')
