@@ -2,3 +2,4 @@ dockerfile-parse
 requests
 requests-kerberos
 six
+PyYAML

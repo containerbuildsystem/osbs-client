@@ -25,9 +25,6 @@ from tests.constants import (TEST_GIT_URI,
                              TEST_COMPONENT,
                              TEST_VERSION,
                              TEST_FILESYSTEM_KOJI_TASK_ID,
-                             TEST_MODULE_NAME,
-                             TEST_MODULE_STREAM,
-                             TEST_MODULE_VERSION,
                              TEST_FLATPAK_BASE_IMAGE,
                              INPUTS_PATH)
 from tests.fake_api import openshift, osbs, osbs_with_pulp  # noqa:F401
@@ -54,10 +51,18 @@ class ArrangementBase(object):
             }
             baseimage = base_image
 
+        class MockConfiguration(object):
+            compose_data = {
+                'modules': ['mod_name:mod_stream:mod_version']
+            }
+
+            def is_autorebuild_enabled(self):
+                return False
+
         (flexmock(utils)
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(RepoInfo(MockParser())))
+            .and_return(RepoInfo(MockParser(), MockConfiguration())))
 
         # Trick create_orchestrator_build into return the *request* JSON
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
@@ -1091,7 +1096,6 @@ class TestArrangementV4(TestArrangementV3):
     def test_flatpak(self, osbs, scratch):
         additional_params = {
             'flatpak': True,
-            'module': TEST_MODULE_NAME + ":" + TEST_MODULE_STREAM + ":" + TEST_MODULE_VERSION
         }
         if scratch:
             additional_params['scratch'] = True
@@ -1107,14 +1111,13 @@ class TestArrangementV4(TestArrangementV3):
         pdc_insecure = False
 
         match_args = {
-            'module_name': TEST_MODULE_NAME,
-            'module_stream': TEST_MODULE_STREAM,
-            'module_version': TEST_MODULE_VERSION,
             "odcs_url": odcs_url,
             "odcs_insecure": odcs_insecure,
             "pdc_url": pdc_url,
             "pdc_insecure": pdc_insecure
         }
+        args.pop('module_stream', None)
+        args.pop('module_name', None)
         assert match_args == args
 
         args = plugin_value_get(plugins, 'prebuild_plugins',
@@ -1129,7 +1132,6 @@ class TestArrangementV4(TestArrangementV3):
                                 'orchestrate_build', 'args')
         build_kwargs = args['build_kwargs']
         assert build_kwargs['flatpak'] is True
-        assert build_kwargs['module'] == additional_params['module']
 
         config_kwargs = args['config_kwargs']
         assert config_kwargs['flatpak_base_image'] == TEST_FLATPAK_BASE_IMAGE

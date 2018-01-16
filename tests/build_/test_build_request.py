@@ -33,9 +33,7 @@ from tests.constants import (INPUTS_PATH, TEST_BUILD_CONFIG, TEST_BUILD_JSON,
                              TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
                              TEST_GIT_URI, TEST_GIT_URI_HUMAN_NAME,
                              TEST_FILESYSTEM_KOJI_TASK_ID, TEST_SCRATCH_BUILD_NAME,
-                             TEST_ISOLATED_BUILD_NAME,
-                             TEST_MODULE_NAME, TEST_MODULE_STREAM, TEST_MODULE_VERSION,
-                             TEST_FLATPAK_BASE_IMAGE)
+                             TEST_ISOLATED_BUILD_NAME, TEST_FLATPAK_BASE_IMAGE)
 
 USE_DEFAULT_TRIGGERS = object()
 
@@ -1171,7 +1169,9 @@ class TestBuildRequest(object):
     @pytest.mark.parametrize('odcs_insecure', [False, True, None])
     @pytest.mark.parametrize('pdc_insecure', [False, True, None])
     @pytest.mark.parametrize('odcs_openidc_secret', [None, "odcs-openidc"])
-    def test_render_prod_flatpak(self, odcs_insecure, pdc_insecure, odcs_openidc_secret):
+    @pytest.mark.parametrize('compose_ids', (None, [], [42], [42, 2]))
+    def test_render_prod_flatpak(self, odcs_insecure, pdc_insecure,
+                                 odcs_openidc_secret, compose_ids):
         build_request = BuildRequest(INPUTS_PATH)
 
         kwargs = {
@@ -1179,8 +1179,7 @@ class TestBuildRequest(object):
             'git_ref': TEST_GIT_REF,
             'git_branch': TEST_GIT_BRANCH,
             'flatpak': True,
-            'module': TEST_MODULE_NAME + ":" + TEST_MODULE_STREAM + ":" + TEST_MODULE_VERSION,
-            'module_compose_id': 42,
+            'compose_ids': compose_ids,
             'flatpak_base_image': TEST_FLATPAK_BASE_IMAGE,
             'odcs_url': "https://odcs.fedoraproject.org/odcs/1",
             'pdc_url': "https://pdc.fedoraproject.org/rest_api/v1",
@@ -1216,10 +1215,10 @@ class TestBuildRequest(object):
         assert plugin
 
         args = plugin['args']
-        assert args['module_name'] == TEST_MODULE_NAME
-        assert args['module_stream'] == TEST_MODULE_STREAM
-        assert args['module_version'] == TEST_MODULE_VERSION
-        assert args['compose_id'] == 42
+        if compose_ids:
+            assert args['compose_ids'] == compose_ids
+        else:
+            assert 'compose_ids' not in args
         assert args['odcs_url'] == kwargs['odcs_url']
         assert args['odcs_insecure'] == (False if odcs_insecure is None else odcs_insecure)
         assert args['pdc_url'] == kwargs['pdc_url']
@@ -1318,7 +1317,6 @@ class TestBuildRequest(object):
 
         if flatpak:
             kwargs['flatpak'] = flatpak
-            kwargs['module'] = 'name:stream'
 
         build_request = BuildRequest(INPUTS_PATH)
         build_request.set_params(**kwargs)
@@ -1587,7 +1585,6 @@ class TestBuildRequest(object):
         },
         {
             'flatpak': True,
-            'module': TEST_MODULE_NAME + ":" + TEST_MODULE_STREAM + ":" + TEST_MODULE_VERSION,
             'flatpak_base_image': "fedora:latest",
             'odcs_url': "https://odcs.fedoraproject.org/rest_api/v1",
             'odcs_insecure': True,
@@ -1709,7 +1706,6 @@ class TestBuildRequest(object):
 
             if kwargs.get('flatpak', False):
                 assert kwargs.get('flatpak') is True
-                assert kwargs.get('module') == build_kwargs.get('module')
                 assert kwargs.get('flatpak_base_image') == worker_config.get_flatpak_base_image()
                 assert kwargs.get('odcs_url') == worker_config.get_odcs_url()
                 assert kwargs.get('odcs_insecure') == worker_config.get_odcs_insecure()

@@ -156,8 +156,6 @@ class BuildSpec(object):
         self.koji_kerberos_principal = BuildParam("koji_kerberos_principal", allow_none=True)
         self.koji_kerberos_keytab = BuildParam("koji_kerberos_keytab", allow_none=True)
         self.flatpak = BuildParam("flatpak", default=False)
-        self.module = BuildParam("module", allow_none=True)
-        self.module_compose_id = BuildParam("module_compose_id", allow_none=True)
         self.flatpak_base_image = BuildParam("flatpak_base_image", allow_none=True)
         self.odcs_url = BuildParam("odcs_url", allow_none=True)
         self.odcs_insecure = BuildParam("odcs_insecure", allow_none=True)
@@ -230,7 +228,6 @@ class BuildSpec(object):
                    koji_use_kerberos=None, koji_kerberos_keytab=None,
                    koji_kerberos_principal=None, koji_task_id=None,
                    flatpak=False,
-                   module=None, module_compose_id=None,
                    flatpak_base_image=None,
                    odcs_url=None, odcs_insecure=False, odcs_openidc_secret=None,
                    odcs_ssl_secret=None,
@@ -310,8 +307,6 @@ class BuildSpec(object):
         self.koji_kerberos_keytab.value = koji_kerberos_keytab
         self.koji_task_id.value = koji_task_id
         self.flatpak.value = flatpak
-        self.module.value = module
-        self.module_compose_id.value = module_compose_id
         self.flatpak_base_image.value = flatpak_base_image
         self.odcs_url.value = odcs_url
         self.odcs_insecure.value = odcs_insecure

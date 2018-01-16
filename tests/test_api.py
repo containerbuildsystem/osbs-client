@@ -48,8 +48,7 @@ from osbs.repo_utils import RepoInfo
 from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
                              TEST_GIT_URI, TEST_TARGET, TEST_USER, INPUTS_PATH,
                              TEST_KOJI_TASK_ID, TEST_FILESYSTEM_KOJI_TASK_ID, TEST_VERSION,
-                             TEST_ORCHESTRATOR_BUILD,
-                             TEST_MODULE_NAME, TEST_MODULE_VERSION, TEST_MODULE_STREAM)
+                             TEST_ORCHESTRATOR_BUILD)
 from osbs.core import Openshift
 # These are used as fixtures
 from tests.fake_api import openshift, osbs, osbs106, osbs_cant_orchestrate  # noqa
@@ -96,9 +95,9 @@ class MockDfParser(object):
 
 class TestOSBS(object):
 
-    def mock_repo_info(self, mock_df_parser=None):
+    def mock_repo_info(self, mock_df_parser=None, mock_config=None):
         mock_df_parser = mock_df_parser or MockDfParser()
-        return RepoInfo(mock_df_parser)
+        return RepoInfo(mock_df_parser, mock_config)
 
     def test_osbsapi_wrapper(self):
         """
@@ -535,8 +534,6 @@ class TestOSBS(object):
 
         if flatpak:
             kwargs['flatpak'] = True
-            kwargs['module'] = \
-                TEST_MODULE_NAME + ':' + TEST_MODULE_STREAM + ':' + TEST_MODULE_VERSION,
 
         expected_kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -555,8 +552,6 @@ class TestOSBS(object):
 
         if flatpak:
             expected_kwargs['flatpak'] = True
-            expected_kwargs['module'] = \
-                TEST_MODULE_NAME + ':' + TEST_MODULE_STREAM + ':' + TEST_MODULE_VERSION,
 
         (flexmock(osbs)
             .should_receive('_do_create_prod_build')
@@ -1686,18 +1681,31 @@ class TestOSBS(object):
         assert build_response.json == {'spam': 'maps'}
 
     # osbs is a fixture here
-    def test_create_build_flatpak(self, osbs):  # noqa
+    @pytest.mark.parametrize('modules', (  # noqa
+        None,
+        [],
+        ['mod_name:mod_stream:mod_version'],
+        ['mod_name:mod_stream:mod_version', 'mod_name2:mod_stream2:mod_version2'],
+    ))
+    def test_create_build_flatpak(self, osbs, modules):
+        class MockConfiguration(object):
+            compose_data = {
+                'modules': modules
+            }
+
+            def is_autorebuild_enabled(self):
+                return False
+
         (flexmock(utils)
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(self.mock_repo_info()))
+            .and_return(self.mock_repo_info(mock_config=MockConfiguration())))
 
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
             'git_branch': TEST_GIT_BRANCH,
             'flatpak': True,
-            'module': TEST_MODULE_NAME + ':' + TEST_MODULE_STREAM + ':' + TEST_MODULE_VERSION,
             'user': TEST_USER,
             'component': TEST_COMPONENT,
             'architecture': TEST_ARCH,
@@ -1706,8 +1714,15 @@ class TestOSBS(object):
             'scratch': False,
         }
 
-        response = osbs.create_build(**kwargs)
-        assert isinstance(response, BuildResponse)
+        if modules:
+            response = osbs.create_build(**kwargs)
+            assert isinstance(response, BuildResponse)
+        else:
+            with pytest.raises(OsbsValidationException) as exc_info:
+                osbs.create_build(**kwargs)
+
+            assert '"compose" config is missing "modules", required for Flatpak' in \
+                   exc_info.value.message
 
     @pytest.mark.parametrize(('kind', 'expect_name'), [
         ('ImageStreamTag', 'registry:5000/buildroot:latest'),
@@ -2050,14 +2065,10 @@ class TestOSBS(object):
                                    worker, orchestrator), osbs)
 
     # osbs is a fixture here
-    @pytest.mark.parametrize(('isolated', 'module'), [ # noqa
-        (False, 'module'),
-        (True, 'module'),
-        (False, None),
-    ])
-    def test_flatpak_args_from_cli(self, caplog, osbs, isolated, module):
+    @pytest.mark.parametrize('isolated', [True, False]) # noqa
+    def test_flatpak_args_from_cli(self, caplog, osbs, isolated):
         class MockArgs(object):
-            def __init__(self, isolated, module):
+            def __init__(self, isolated):
                 self.platform = None
                 self.release = None
                 self.platforms = 'platforms'
@@ -2072,7 +2083,6 @@ class TestOSBS(object):
                 self.git_branch = TEST_GIT_BRANCH
                 self.koji_parent_build = None
                 self.flatpak = True
-                self.module = module
                 self.signing_intent = 'release'
                 self.compose_ids = [1, 2]
 
@@ -2083,7 +2093,6 @@ class TestOSBS(object):
             'platforms': 'platforms',
             'release': None,
             'flatpak': True,
-            'module': module,
             'git_uri': None,
             'git_ref': None,
             'git_branch': TEST_GIT_BRANCH,
@@ -2098,13 +2107,26 @@ class TestOSBS(object):
             'compose_ids': [1, 2],
         }
 
-        args = MockArgs(isolated, module)
+        class MockConfiguration(object):
+            compose_data = {
+                'modules': ['mod_name:mod_stream:mod_version']
+            }
+
+            def is_autorebuild_enabled(self):
+                return False
+
+        (flexmock(utils)
+            .should_receive('get_repo_info')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(self.mock_repo_info(mock_config=MockConfiguration())))
+
+        args = MockArgs(isolated)
         # Some of the command line arguments are pulled through the config
         # object, so add them there as well.
         osbs.build_conf.args = args
         flexmock(osbs.build_conf, get_git_branch=lambda: TEST_GIT_BRANCH)
 
-        if not isolated and module is not None:
+        if not isolated:
             # and_raise is called to prevent cmd_build to continue
             # as we only want to check if arguments are correct
             (flexmock(osbs)
@@ -2112,20 +2134,13 @@ class TestOSBS(object):
                 .once()
                 .with_args(**expected_kwargs)
                 .and_raise(CustomTestException))
-
-        if isolated:
+            with pytest.raises(CustomTestException):
+                cmd_build(args, osbs)
+        else:
             with pytest.raises(OsbsException) as exc_info:
                 cmd_build(args, osbs)
             assert isinstance(exc_info.value.cause, ValueError)
             assert "Flatpak build cannot be isolated" in exc_info.value.message
-        elif module is None:
-            with pytest.raises(OsbsException) as exc_info:
-                cmd_build(args, osbs)
-            assert isinstance(exc_info.value.cause, ValueError)
-            assert "Flatpak build missing required parameter" in exc_info.value.message
-        else:
-            with pytest.raises(CustomTestException):
-                cmd_build(MockArgs(isolated, module), osbs)
 
     # osbs is a fixture here
     @pytest.mark.parametrize('branch_name', [  # noqa

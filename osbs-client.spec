@@ -106,6 +106,7 @@ Requires:       python-requests-kerberos
 Requires:       python-setuptools
 Requires:       python-six
 Requires:       krb5-workstation
+Requires:       PyYAML
 %if 0%{?rhel} && 0%{?rhel} <= 6
 Requires:       python-argparse
 %endif
@@ -131,6 +132,7 @@ Requires:       python3-dateutil
 Requires:       python3-setuptools
 Requires:       python3-six
 Requires:       krb5-workstation
+Requires:       python3-PyYAML
 
 Provides:       python3-osbs = %{version}-%{release}
 Obsoletes:      python3-osbs < %{osbs_obsolete_vr}

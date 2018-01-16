@@ -7,7 +7,7 @@ of the BSD license. See the LICENSE file for details.
 """
 
 from flexmock import flexmock
-from osbs.constants import REPO_CONFIG_FILE, ADDITIONAL_TAGS_FILE
+from osbs.constants import REPO_CONFIG_FILE, ADDITIONAL_TAGS_FILE, REPO_CONTAINER_CONFIG
 from osbs.repo_utils import RepoInfo, RepoConfiguration, AdditionalTagsConfig
 from textwrap import dedent
 
@@ -53,6 +53,13 @@ class TestRepoConfiguration(object):
                     [autorebuild]
                     enabled={0}
                     """.format(config_value)))
+
+        with open(os.path.join(str(tmpdir), REPO_CONTAINER_CONFIG), 'w') as f:
+            f.write(dedent("""\
+                compose:
+                    modules:
+                    - mod_name-mod_stream-mod_version
+                """))
 
         conf = RepoConfiguration(dir_path=str(tmpdir))
         assert conf.is_autorebuild_enabled() is expected_value

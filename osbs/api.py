@@ -495,8 +495,15 @@ class OSBS(object):
 
         return req_labels, df_parser.baseimage
 
-    def _get_flatpak_labels(self, module):
-        module_name, module_stream, _ = utils.split_module_spec(module)
+    def _get_flatpak_labels(self, repo_info):
+        modules = repo_info.configuration.compose_data.get('modules', [])
+
+        if modules:
+            source_spec = modules[0]
+        else:
+            raise OsbsValidationException('"compose" config is missing "modules",'
+                                          ' required for Flatpak')
+        module_name, module_stream, _ = utils.split_module_spec(source_spec)
 
         return {
             utils.Labels.LABEL_TYPE_NAME: module_name,
@@ -526,15 +533,11 @@ class OSBS(object):
                               koji_parent_build=None,
                               isolated=None,
                               flatpak=False,
-                              module=None,
-                              module_compose_id=None,
                               signing_intent=None,
                               compose_ids=None,
                               **kwargs):
 
         if flatpak:
-            if module is None:
-                raise ValueError("Flatpak build missing required parameter 'module'")
             if isolated:
                 # Flatpak builds from a particular stream autogenerate the release
                 # as <module_version>.<n>; it doesn't make sense to make a fix
@@ -548,7 +551,7 @@ class OSBS(object):
                                                customize_conf=customize_conf)
 
         if flatpak:
-            req_labels, base_image = self._get_flatpak_labels(module)
+            req_labels, base_image = self._get_flatpak_labels(repo_info)
         else:
             req_labels, base_image = self._check_labels(repo_info)
 
@@ -582,8 +585,6 @@ class OSBS(object):
             koji_kerberos_keytab=self.build_conf.get_koji_kerberos_keytab(),
             koji_kerberos_principal=self.build_conf.get_koji_kerberos_principal(),
             flatpak=flatpak,
-            module=module,
-            module_compose_id=module_compose_id,
             flatpak_base_image=self.build_conf.get_flatpak_base_image(),
             odcs_url=self.build_conf.get_odcs_url(),
             odcs_insecure=self.build_conf.get_odcs_insecure(),

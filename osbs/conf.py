@@ -198,9 +198,6 @@ class Configuration(object):
         return self._get_value("flatpak", self.conf_section, "flatpak",
                                is_bool_val=True)
 
-    def get_module(self):
-        return self._get_value("module", self.conf_section, "module")
-
     def get_flatpak_base_image(self):
         return self._get_value("flatpak_base_image", self.conf_section, "flatpak_base_image")
 

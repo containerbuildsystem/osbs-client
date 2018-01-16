@@ -21,8 +21,8 @@ from osbs.constants import (SECRETS_PATH, DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_
                             DEFAULT_CUSTOMIZE_CONF, BUILD_TYPE_ORCHESTRATOR,
                             ISOLATED_RELEASE_FORMAT)
 from osbs.exceptions import OsbsException, OsbsValidationException
-from osbs.utils import (git_repo_humanish_part_from_uri, wrap_name_from_git, sanitize_version,
-                        split_module_spec, Labels)
+from osbs.utils import (git_repo_humanish_part_from_uri, sanitize_version,
+                        Labels)
 from osbs import __version__ as client_version
 
 
@@ -82,8 +82,6 @@ class BuildRequest(object):
         :param koji_certs_secret: str, resource name of secret that holds the koji certificates
         :param koji_task_id: int, Koji Task that created this build config
         :param flatpak: if we should build a Flatpak OCI Image
-        :param module: module to build a flatpak against
-        :param module_compose_id: ID of a compose of ``module`` in the ODCS
         :param filesystem_koji_task_id: int, Koji Task that created the base filesystem
         :param pulp_registry: str, name of pulp registry in dockpulp.conf
         :param sources_command: str, command used to fetch dist-git sources
@@ -261,7 +259,6 @@ class BuildRequest(object):
 
         if self.spec.flatpak.value:
             build_kwargs['flatpak'] = True
-            build_kwargs['module'] = self.spec.module.value
 
         self.dj.dock_json_set_arg(phase, plugin, 'platforms', self.spec.platforms.value)
         self.dj.dock_json_set_arg(phase, plugin, 'build_kwargs', build_kwargs)
@@ -685,18 +682,9 @@ class BuildRequest(object):
                 self.dj.remove_plugin(phase, plugin)
                 return
 
-            module_name, module_stream, module_version = split_module_spec(self.spec.module.value)
-
-            self.dj.dock_json_set_arg(phase, plugin, 'module_name',
-                                      module_name)
-            self.dj.dock_json_set_arg(phase, plugin, 'module_stream',
-                                      module_stream)
-            if module_version is not None:
-                self.dj.dock_json_set_arg(phase, plugin, 'module_version',
-                                          module_version)
-            if self.spec.module_compose_id.value:
-                self.dj.dock_json_set_arg(phase, plugin, 'compose_id',
-                                          self.spec.module_compose_id.value)
+            compose_ids = self.spec.compose_ids.value
+            if compose_ids:
+                self.dj.dock_json_set_arg(phase, plugin, 'compose_ids', compose_ids)
             self.dj.dock_json_set_arg(phase, plugin, 'odcs_url',
                                       self.spec.odcs_url.value)
             self.dj.dock_json_set_arg(phase, plugin, 'odcs_insecure',
