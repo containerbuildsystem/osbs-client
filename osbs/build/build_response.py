@@ -99,42 +99,8 @@ class BuildResponse(object):
             r = self.get_labels()
         return r
 
-    def get_rpm_packages(self):
-        return graceful_chain_get(self.get_annotations_or_labels(), "rpm-packages")
-
     def get_dockerfile(self):
         return graceful_chain_get(self.get_annotations_or_labels(), "dockerfile")
-
-    def get_logs(self, decode_logs=True):
-        """
-        :param decode_logs: bool, docker by default output logs in simple json structure:
-            { "stream": "line" }
-            if this arg is set to True, it decodes logs to human readable form
-        :return: str
-        """
-        logs = graceful_chain_get(self.get_annotations_or_labels(), "logs")
-        if not logs:
-            logger.debug("no logs found in annotations")
-            return ""
-        if decode_logs:
-            output = []
-            for line in logs.split("\n"):
-                try:
-                    decoded_line = json.loads(line)
-                except ValueError:
-                    continue
-                output += [decoded_line.get("stream", "").strip()]
-                error = decoded_line.get("error", "").strip()
-                if error:
-                    output += [error]
-                error_detail = decoded_line.get("errorDetail", {})
-                error_msg = error_detail.get("message", "").strip()
-                if error_msg:
-                    output += [error_msg]
-            output += "\n"
-            return "\n".join(output)
-        else:
-            return logs
 
     def get_error_message(self):
         """

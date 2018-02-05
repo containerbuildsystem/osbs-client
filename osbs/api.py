@@ -864,29 +864,6 @@ class OSBS(object):
                 yield LogEntry(*self._parse_build_log_entry(entry))
 
     @osbsapi
-    def get_docker_build_logs(self, build_id, decode_logs=True, build_json=None):
-        """
-        get logs provided by "docker build"
-
-        :param build_id: str
-        :param decode_logs: bool, docker by default output logs in simple json structure:
-            { "stream": "line" }
-            if this arg is set to True, it decodes logs to human readable form
-        :param build_json: dict, to save one get-build query
-        :return: str
-        """
-        if not build_json:
-            build = self.os.get_build(build_id)
-            build_response = BuildResponse(build.json())
-        else:
-            build_response = BuildResponse(build_json)
-
-        if build_response.is_finished():
-            logs = build_response.get_logs(decode_logs=decode_logs)
-            return logs
-        logger.warning("build haven't finished yet")
-
-    @osbsapi
     def wait_for_build_to_finish(self, build_id):
         response = self.os.wait_for_build_to_finish(build_id)
         build_response = BuildResponse(response)

@@ -227,21 +227,7 @@ def cmd_get_build(args, osbs):
         digests_str = make_digests_str(build.get_digests())
 
         logs_str = ''
-        build_logs = build.get_logs()
-        if build_logs:
-            logs_str = dedent("""\
-                BUILD LOGS
-
-                {logs}""").format(logs=build_logs)
-
         packages_str = ''
-        packages_list = build.get_rpm_packages()
-        if packages_list:
-            packages_str = dedent("""\
-                PACKAGES
-
-                {packages}
-                """).format(packages=packages_list)
 
         template = dedent("""\
             BUILD ID: {build_id}
@@ -399,21 +385,14 @@ def cmd_build_logs(args, osbs):
     build_id = args.BUILD_ID[0]
     follow = args.follow
 
-    if follow and args.from_docker_build:
-        print("Can't use --follow and --from-docker-build. "
-              "Logs from docker build are part of metadata of a already built image.")
-        return
+    logs = osbs.get_build_logs(build_id, follow=follow,
+                               wait_if_missing=args.wait_if_missing,
+                               decode=True)
 
-    if args.from_docker_build:
-        logs = osbs.get_docker_build_logs(build_id)
-    else:
-        logs = osbs.get_build_logs(build_id, follow=follow,
-                                   wait_if_missing=args.wait_if_missing,
-                                   decode=True)
-        if follow:
-            for line in logs:
-                print(line)
-            return
+    if follow:
+        for line in logs:
+            print(line)
+        return
     print(logs, end="")
 
 
@@ -658,9 +637,6 @@ def cli():
     build_logs_parser.add_argument("-f", "--follow", help="follow logs as they come",
                                    action="store_true", default=False)
     build_logs_parser.add_argument("--wait-if-missing", help="if build is not created yet, wait",
-                                   action="store_true", default=False)
-    build_logs_parser.add_argument("--from-docker-build",
-                                   help="return logs from `docker build` instead",
                                    action="store_true", default=False)
     build_logs_parser.set_defaults(func=cmd_build_logs)
 

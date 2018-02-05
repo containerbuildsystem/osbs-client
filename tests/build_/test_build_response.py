@@ -11,25 +11,6 @@ from osbs.build.build_response import BuildResponse
 
 
 class TestBuildResponse(object):
-    def test_get_logs(self):
-        msg = "This is an error message"
-        error = json.dumps({
-            'errorDetail': {
-                'code': 1,
-                'message': msg,
-                'error': msg,
-            },
-        })
-        build_response = BuildResponse({
-            'metadata': {
-                'annotations': {
-                    'logs': error,
-                },
-            },
-        })
-
-        assert msg in build_response.get_logs()
-
     def test_get_koji_build_id(self):
         koji_build_id = '123'
         build_response = BuildResponse({
