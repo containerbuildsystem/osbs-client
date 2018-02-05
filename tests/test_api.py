@@ -1006,13 +1006,6 @@ class TestOSBS(object):
         osbs.resume_builds()
 
     # osbs is a fixture here
-    @pytest.mark.parametrize('decode_docker_logs', [True, False])  # noqa
-    def test_build_logs_api_from_docker(self, osbs, decode_docker_logs):
-        logs = osbs.get_docker_build_logs(TEST_BUILD, decode_logs=decode_docker_logs)
-        assert isinstance(logs, tuple(list(six.string_types) + [bytes]))
-        assert logs.split('\n')[0].find("Step ") != -1
-
-    # osbs is a fixture here
     def test_backup(self, osbs):  # noqa
         osbs.dump_resource("builds")
 
