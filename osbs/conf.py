@@ -433,6 +433,9 @@ class Configuration(object):
     def get_build_imagestream(self):
         return self._get_value("build_imagestream", self.conf_section, "build_imagestream")
 
+    def get_build_from(self):
+        return self._get_value("build_from", self.conf_section, "build_from")
+
     def get_proxy(self):
         return self._get_value("yum_proxy", self.conf_section, "yum_proxy")
 

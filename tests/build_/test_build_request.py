@@ -15,7 +15,7 @@ import shutil
 import six
 
 from osbs.build.build_request import BuildRequest
-from osbs.constants import (DEFAULT_BUILD_IMAGE, DEFAULT_OUTER_TEMPLATE,
+from osbs.constants import (DEFAULT_OUTER_TEMPLATE,
                             DEFAULT_INNER_TEMPLATE, SECRETS_PATH,
                             ORCHESTRATOR_INNER_TEMPLATE, WORKER_INNER_TEMPLATE,
                             DEFAULT_ARRANGEMENT_VERSION,
@@ -69,7 +69,8 @@ def get_sample_prod_params():
         'smtp_from': 'user@example.com',
         'proxy': 'http://proxy.example.com',
         'platforms': ['x86_64'],
-        'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID
+        'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID,
+        'build_from': 'image:buildroot:latest',
     }
 
 
@@ -178,12 +179,12 @@ class TestBuildRequest(object):
             'registry_uris': [],
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
-            'build_image': None,
             'base_image': 'fedora:latest',
             'name_label': 'fedora/resultingimage',
             'registry_api_versions': ['v1'],
             'kojihub': kojihub,
             'koji_upload_dir': 'upload',
+            'build_from': 'image:buildroot:latest',
         }
         if use_auth is not None:
             kwargs['use_auth'] = use_auth
@@ -224,6 +225,7 @@ class TestBuildRequest(object):
             'kojihub': koji_hub,
             'koji_certs_secret': certs_dir,
             'scratch': scratch,
+            'build_from': 'image:buildroot:latest',
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -279,6 +281,7 @@ class TestBuildRequest(object):
             'kojihub': koji_hub,
             'koji_certs_secret': certs_dir,
             'scratch': scratch,
+            'build_from': 'image:buildroot:latest',
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -356,11 +359,7 @@ class TestBuildRequest(object):
         ["registry.example.com:5000"],
         ["registry.example.com:5000", "localhost:6000"],
     ])
-    @pytest.mark.parametrize('build_image', [
-        None,
-        'fancy_buildroot:latestest'
-    ])
-    def test_render_simple_request(self, registry_uris, build_image):
+    def test_render_simple_request(self, registry_uris):
         build_request = BuildRequest(INPUTS_PATH)
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -370,7 +369,7 @@ class TestBuildRequest(object):
             'registry_uris': registry_uris,
             'openshift_uri': "http://openshift/",
             'builder_openshift_url': "http://openshift/",
-            'build_image': build_image,
+            'build_image': 'fancy_buildroot:latestest',
             'base_image': 'fedora:latest',
             'name_label': 'fedora/resultingimage',
             'registry_api_versions': ['v1'],
@@ -404,14 +403,14 @@ class TestBuildRequest(object):
                                     "registries", r) == {"insecure": True}
 
         rendered_build_image = build_json["spec"]["strategy"]["customStrategy"]["from"]["name"]
-        assert rendered_build_image == (build_image if build_image else DEFAULT_BUILD_IMAGE)
+        assert rendered_build_image == 'fancy_buildroot:latestest'
 
     @pytest.mark.parametrize('proxy', [
         None,
         'http://proxy.example.com',
     ])
     @pytest.mark.parametrize(('build_image', 'build_imagestream', 'valid'), (
-        (None, None, True),
+        (None, None, False),
         ('ultimate-buildroot:v1.0', None, True),
         (None, 'buildroot-stream:v1.0', True),
         ('ultimate-buildroot:v1.0', 'buildroot-stream:v1.0', False)
@@ -521,7 +520,7 @@ class TestBuildRequest(object):
 
         rendered_build_image = build_json["spec"]["strategy"]["customStrategy"]["from"]["name"]
         if not build_imagestream:
-            assert rendered_build_image == (build_image if build_image else DEFAULT_BUILD_IMAGE)
+            assert rendered_build_image == build_image
         else:
             assert rendered_build_image == build_imagestream
             assert build_json["spec"]["strategy"]["customStrategy"]["from"]["kind"] == \
@@ -557,7 +556,8 @@ class TestBuildRequest(object):
             'registry_api_versions': ['v1'],
             'smtp_host': 'smtp.example.com',
             'smtp_from': 'user@example.com',
-            'proxy': proxy
+            'proxy': proxy,
+            'build_from': 'image:buildroot:latest',
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -658,6 +658,7 @@ class TestBuildRequest(object):
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
+            'build_from': 'image:buildroot:latest',
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -736,6 +737,7 @@ class TestBuildRequest(object):
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
             'source_secret': 'mysecret',
+            'build_from': 'image:buildroot:latest',
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -794,6 +796,7 @@ class TestBuildRequest(object):
             'registry_secrets': registry_secrets,
             'pulp_registry': pulp_env,
             'pulp_secret': pulp_secret,
+            'build_from': 'image:buildroot:latest',
         }
         if source_registry:
             kwargs['source_registry_uri'] = source_registry
@@ -864,6 +867,7 @@ class TestBuildRequest(object):
             'registry_api_versions': ['v1'],
             'source_secret': 'mysecret',
             'registry_secrets': ['registry_secret'],
+            'build_from': 'image:buildroot:latest',
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -918,6 +922,7 @@ class TestBuildRequest(object):
             'distribution_scope': "authoritative-source-only",
             'smtp_host': 'smtp.example.com',
             'smtp_from': 'user@example.com',
+            'build_from': 'image:buildroot:latest',
         }
         build_request.set_params(**kwargs)
         with pytest.raises(OsbsValidationException):
@@ -941,6 +946,7 @@ class TestBuildRequest(object):
         kwargs = {
             'pulp_registry': pulp_env,
             'pulp_secret': pulp_secret,
+            'build_from': 'image:buildroot:latest',
         }
 
         kwargs.update({
@@ -1117,6 +1123,7 @@ class TestBuildRequest(object):
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
+            'build_from': 'image:buildroot:latest',
         }
         build_request = BuildRequest(INPUTS_PATH)
 
@@ -1191,6 +1198,7 @@ class TestBuildRequest(object):
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v2'],
+            'build_from': 'image:buildroot:latest',
         }
         if odcs_insecure is not None:
             kwargs['odcs_insecure'] = odcs_insecure
@@ -1261,6 +1269,7 @@ class TestBuildRequest(object):
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v2'],
+            'build_from': 'image:buildroot:latest',
         }
 
         build_request.set_params(**kwargs)
@@ -1298,6 +1307,7 @@ class TestBuildRequest(object):
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
+            'build_from': 'image:buildroot:latest',
         }
 
         if hub:
@@ -1353,6 +1363,7 @@ class TestBuildRequest(object):
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
+            'build_from': 'image:buildroot:latest',
         }
 
         if hub:
@@ -1536,11 +1547,19 @@ class TestBuildRequest(object):
     @pytest.mark.parametrize('arrangement_version',
                              range(3, DEFAULT_ARRANGEMENT_VERSION + 1))
     @pytest.mark.parametrize('koji_parent_build', ['fedora-26-9', None])
-    @pytest.mark.parametrize(('build_image', 'build_imagestream', 'worker_build_image', 'valid'), (
-        ('fedora:latest', None, 'fedora:latest', True),
-        (None, 'buildroot-stream:v1.0', KeyError, True),
-        (None, None, DEFAULT_BUILD_IMAGE, True),
-        ('fedora:latest', 'buildroot-stream:v1.0', KeyError, False)
+    @pytest.mark.parametrize(('build_from', 'build_image', 'build_imagestream',
+                              'worker_build_image', 'valid'), (
+
+        ('image:fedora:latest', 'fedora:latest', None, 'fedora:latest', False),
+        ('image:fedora:latest', 'fedora:latest', 'buildroot-stream:v1.0', 'fedora:latest', False),
+        ('image:fedora:latest', None, 'buildroot-stream:v1.0', 'fedora:latest', False),
+        (None, 'fedora:latest', None, 'fedora:latest', True),
+        ('image:fedora:latest', None, None, 'fedora:latest', True),
+        ('wrong:fedora:latest', None, None, KeyError, False),
+        (None, None, 'buildroot-stream:v1.0', KeyError, True),
+        ('imagestream:buildroot-stream:v1.0', None, None, KeyError, True),
+        ('wrong:buildroot-stream:v1.0', None, None, KeyError, False),
+        (None, 'fedora:latest', 'buildroot-stream:v1.0', KeyError, False),
     ))
     @pytest.mark.parametrize('additional_kwargs', (
         {
@@ -1583,7 +1602,7 @@ class TestBuildRequest(object):
         ('1.3.4', '1.3.4'),
     ))
     def test_render_orchestrate_build(self, tmpdir, platforms, secret, disabled,
-                                      arrangement_version, build_image,
+                                      arrangement_version, build_from, build_image,
                                       build_imagestream, worker_build_image,
                                       additional_kwargs, koji_parent_build,
                                       openshift_req_version, worker_openshift_req_version,
@@ -1612,6 +1631,8 @@ class TestBuildRequest(object):
             kwargs['build_image'] = build_image
         if build_imagestream:
             kwargs['build_imagestream'] = build_imagestream
+        if build_from:
+            kwargs['build_from'] = build_from
         if koji_parent_build:
             kwargs['koji_parent_build'] = koji_parent_build
         if prefer_schema1_digest is not None:
@@ -1716,6 +1737,7 @@ class TestBuildRequest(object):
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'pulp_registry': "foo",
+            'build_from': 'image:buildroot:latest',
         }
         build_request.set_params(**kwargs)
         with pytest.raises(OsbsValidationException):
@@ -1818,6 +1840,7 @@ class TestBuildRequest(object):
             'smtp_email_domain': 'example.com',
             'smtp_to_submitter': True,
             'smtp_to_pkgowner': True,
+            'build_from': 'image:buildroot:latest',
         }
         if use_auth is not None:
             kwargs['use_auth'] = use_auth
@@ -2053,6 +2076,7 @@ class TestBuildRequest(object):
             'registry_api_versions': ['v1'],
             'pulp_registry': 'foo',
             'pulp_secret': secret_name,
+            'build_from': 'image:buildroot:latest',
         }
 
         # Default required version (1.0.6), implicitly and explicitly
@@ -2101,6 +2125,7 @@ class TestBuildRequest(object):
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
             'koji_certs_secret': koji_certs_secret_name,
+            'build_from': 'image:buildroot:latest',
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -2156,6 +2181,7 @@ class TestBuildRequest(object):
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
+            'build_from': 'image:buildroot:latest',
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()

@@ -11,7 +11,7 @@ import logging
 import os
 import re
 import random
-from osbs.constants import DEFAULT_GIT_REF, DEFAULT_BUILD_IMAGE, RAND_DIGITS
+from osbs.constants import DEFAULT_GIT_REF, RAND_DIGITS
 from osbs.exceptions import OsbsValidationException
 from osbs.utils import (get_imagestreamtag_from_image,
                         make_name_from_git,
@@ -133,6 +133,7 @@ class BuildSpec(object):
         self.use_auth = BuildParam("use_auth", allow_none=True)
         self.build_image = BuildParam('build_image')
         self.build_imagestream = BuildParam('build_imagestream')
+        self.build_from = BuildParam('build_from')
         self.proxy = BuildParam("proxy", allow_none=True)
         self.trigger_imagestreamtag = BuildParam('trigger_imagestreamtag')
         self.imagestream_name = BuildParam('imagestream_name')
@@ -222,7 +223,7 @@ class BuildSpec(object):
                    user=None,
                    component=None, openshift_uri=None, source_registry_uri=None,
                    yum_repourls=None, use_auth=None, builder_openshift_url=None,
-                   build_image=None, build_imagestream=None, proxy=None,
+                   build_image=None, build_imagestream=None, build_from=None, proxy=None,
                    sources_command=None, architecture=None, vendor=None,
                    build_host=None, authoritative_registry=None, distribution_scope=None,
                    koji_target=None, kojiroot=None, kojihub=None, koji_certs_secret=None,
@@ -273,11 +274,25 @@ class BuildSpec(object):
         self.yum_repourls.value = yum_repourls or []
         self.use_auth.value = use_auth
 
-        if build_imagestream and build_image:
+        unique_build_args = (build_imagestream, build_image, build_from)
+        if sum(bool(a) for a in unique_build_args) != 1:
             raise OsbsValidationException(
-                'Please only define build_image -OR- build_imagestream, not both')
-        self.build_image.value = build_image or DEFAULT_BUILD_IMAGE
+                'Please only define one of build_from, build_image, build_imagestream')
+        self.build_image.value = build_image
         self.build_imagestream.value = build_imagestream
+        if self.build_image.value or self.build_imagestream.value:
+            logger.warning("build_image or build_imagestream is defined, they are deprecated,"
+                           "use build_from instead")
+
+        if build_from:
+            source_type, source_value = build_from.split(':', 1)
+            if source_type not in ('image', 'imagestream'):
+                raise OsbsValidationException(
+                    'first part in build_from, may be only image or imagestream')
+            if source_type == 'image':
+                self.build_image.value = source_value
+            else:
+                self.build_imagestream.value = source_value
 
         self.sources_command.value = sources_command
         self.architecture.value = architecture

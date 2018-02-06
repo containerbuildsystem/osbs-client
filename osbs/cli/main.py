@@ -728,10 +728,14 @@ def cli():
                                   default=True, help="create prod build")
 
     group = build_parser.add_mutually_exclusive_group()
+    group.add_argument("--build-from", action='store', required=False,
+                       help="builder source to use, image:image_spec,"
+                            "or imagestream:imagestream_spec")
     group.add_argument("--build-image", action='store', required=False,
-                       help="builder image to use")
+                       help="builder image to use, will be replaced by build-from")
     group.add_argument("--build-imagestream", action='store', required=False,
-                       help="builder imagestream to use (overrides build-image)")
+                       help="builder imagestream to use (overrides build-image),"
+                            "will be replaced by build-from")
     build_parser.set_defaults(func=cmd_build)
 
     get_build_image_id = subparsers.add_parser(str_on_2_unicode_on_3('get-build-image-id'),

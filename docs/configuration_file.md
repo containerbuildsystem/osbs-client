@@ -169,6 +169,8 @@ Some options are also mandatory.
 
 * `prefer_schema1_digest` (*optional*, `boolean`) — used by Atomic Reactor's koji_upload plugin when deciding which digest should be used in the image output files for a Koji build
 
+* `build_from` (*optional*, `string`) — build source to use, consists of 2 parts separated with delimiter ':', first part can be : image or imagestream, and second part is corresponding image or imagestream
+
 ## Build JSON Templates
 
 In the `build_json_dir` there must be `prod.json` and `prod_inner.json` which
