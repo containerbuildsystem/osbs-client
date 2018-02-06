@@ -61,6 +61,7 @@ class TestBuildSpec(object):
             'source_registry_uri': 'source_registry_uri',
             'git_uri': 'https://github.com/user/reponame.git',
             'registry_uris': ['http://registry.example.com:5000/v2'],
+            'build_from': 'image:buildroot:latest',
         }
 
     def test_spec_name(self):

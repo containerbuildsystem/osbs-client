@@ -563,6 +563,7 @@ class OSBS(object):
             component=req_labels[utils.Labels.LABEL_TYPE_COMPONENT],
             build_image=self.build_conf.get_build_image(),
             build_imagestream=self.build_conf.get_build_imagestream(),
+            build_from=self.build_conf.get_build_from(),
             base_image=base_image,
             name_label=req_labels[utils.Labels.LABEL_TYPE_NAME],
             registry_uris=self.build_conf.get_registry_uris(),

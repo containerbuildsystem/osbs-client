@@ -432,6 +432,7 @@ def osbs(openshift, kwargs=None, additional_config=None, platform_descriptors=No
             pdc_url = https://pdc.example.com/rest_api/v1
             use_auth = false
             can_orchestrate = true
+            build_from = image:buildroot:latest
             """)
 
         if additional_config is not None:
@@ -516,6 +517,7 @@ distribution_scope = authoritative-source-only
 koji_root = http://koji.example.com/kojiroot
 koji_hub = http://koji.example.com/kojihub
 use_auth = false
+build_from = image:buildroot:latest
 """.format(build_json_dir="inputs"))
         fp.flush()
         dummy_config = Configuration(fp.name)

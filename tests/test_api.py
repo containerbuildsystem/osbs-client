@@ -258,7 +258,7 @@ class TestOSBS(object):
 
         config = Configuration(conf_file=None,
                                openshift_url="www.example.com", registry_uri="www.example2.com",
-                               build_json_dir="inputs")
+                               build_json_dir="inputs", build_from='image:buildroot:latest')
         osbs_obj = OSBS(config, config)
 
         (flexmock(utils)
@@ -1575,6 +1575,7 @@ class TestOSBS(object):
             source_registry_uri='source_registry_uri',
             git_uri='https://github.com/user/reponame.git',
             registry_uris=['http://registry.example.com:5000/v2'],
+            build_from='image:buildroot:latest',
         )
 
         build_request = flexmock(
@@ -1831,7 +1832,7 @@ class TestOSBS(object):
         ('scratch', '_create_scratch_build'),
     ))
     def test_create_direct_build(self, variation, delegate_method):
-        config = Configuration(conf_file=None)
+        config = Configuration(conf_file=None, build_from='image:buildroot:latest')
         osbs_obj = OSBS(config, config)
 
         kwargs = {
@@ -1920,6 +1921,7 @@ class TestOSBS(object):
                 vendor = Example, Inc
                 authoritative_registry = localhost
                 reactor_config_secret = mysecret
+                build_from = image:buildroot:latest
                 """))
             fp.flush()
             config = Configuration(fp.name)
@@ -2269,6 +2271,7 @@ class TestOSBS(object):
             source_registry_uri='source_registry_uri',
             git_uri='https://github.com/user/reponame.git',
             registry_uris=['http://registry.example.com:5000/v2'],
+            build_from='image:buildroot:latest',
         )
 
         build_request = flexmock(
@@ -2409,6 +2412,7 @@ class TestOSBS(object):
             source_registry_uri='source_registry_uri',
             git_uri='https://github.com/user/reponame.git',
             registry_uris=['http://registry.example.com:5000/v2'],
+            build_from='image:buildroot:latest',
         )
 
         build_request = flexmock(
