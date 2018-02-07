@@ -139,6 +139,8 @@ Some options are also mandatory.
 
 * `reactor_config_secret` (*optional*, `string`) — name of Kubernetes secret holding [atomic-reactor configuration file](https://github.com/projectatomic/atomic-reactor/blob/master/docs/config.md)
 
+* `reactor_config_map` (*optional*, `string`) — name of Kubernetes ConfigMap holding [atomic-reactor configuration file](https://github.com/projectatomic/atomic-reactor/blob/master/docs/config.md)
+
 * `client_config_secret` (*optional*, `string`) — name of Kubernetes secret holding osbs.conf to be used by atomic-reactor in the builder image (this is provided to the orchestrate_build plugin if present)
 
 * `token_secrets` (*optional*, `string`) — whitespace-separated list of secret names with optional mount path in the format secret[:path], which can be used to hold service account tokens referenced by token_file in the osbs_client_secret osbs.conf
