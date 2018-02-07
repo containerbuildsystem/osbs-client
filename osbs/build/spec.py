@@ -180,6 +180,7 @@ class BuildSpec(object):
         self.build_type = BuildParam("build_type", allow_none=True)
         self.release = BuildParam("release", allow_none=True)
         self.reactor_config_secret = BuildParam("reactor_config_secret", allow_none=True)
+        self.reactor_config_map = BuildParam("reactor_config_map", allow_none=True)
         self.client_config_secret = BuildParam("client_config_secret", allow_none=True)
         self.token_secrets = BuildParam("token_secrets", allow_none=True)
         self.arrangement_version = BuildParam("arrangement_version", allow_none=True)
@@ -243,7 +244,8 @@ class BuildSpec(object):
                    name_label=None,
                    builder_build_json_dir=None, registry_api_versions=None,
                    platforms=None, platform=None, build_type=None, release=None,
-                   reactor_config_secret=None, client_config_secret=None,
+                   reactor_config_secret=None, reactor_config_map=None,
+                   client_config_secret=None,
                    token_secrets=None, arrangement_version=None,
                    info_url_format=None, artifacts_allowed_domains=None,
                    equal_labels=None, koji_upload_dir=None, yum_proxy=None,
@@ -349,6 +351,7 @@ class BuildSpec(object):
         self.build_type.value = build_type
         self.release.value = release
         self.reactor_config_secret.value = reactor_config_secret
+        self.reactor_config_map.value = reactor_config_map
         self.client_config_secret.value = client_config_secret
         self.token_secrets.value = token_secrets or {}
         self.arrangement_version.value = arrangement_version

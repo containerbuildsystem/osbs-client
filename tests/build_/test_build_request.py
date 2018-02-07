@@ -2826,3 +2826,44 @@ class TestBuildRequest(object):
                 get_plugin(plugins, plugin_type, plugin_name)
         else:
             assert get_plugin(plugins, plugin_type, plugin_name)
+
+    @pytest.mark.parametrize('reactor_config_map', [
+        None,
+        'reactor-config-map',
+    ])
+    def test_set_config_map(self, reactor_config_map):
+        build_request = BuildRequest(INPUTS_PATH)
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'registry_uri': "example.com",
+            'openshift_uri': "http://openshift/",
+            'builder_openshift_url': "http://openshift/",
+            'build_image': 'fedora:latest',
+            'base_image': 'fedora:latest',
+            'name_label': 'fedora/resultingimage',
+            'registry_api_versions': ['v1'],
+            'reactor_config_map': reactor_config_map,
+        }
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+
+        json_env = build_json['spec']['strategy']['customStrategy']['env']
+        envs = {}
+        for env in json_env:
+            envs[env['name']] = env.get('valueFrom', None)
+
+        if reactor_config_map:
+            configmapkeyref = {
+                'name': reactor_config_map,
+                'key': 'config.yaml'
+            }
+
+            assert 'REACTOR_CONFIG' in envs
+            assert 'configMapKeyRef' in envs['REACTOR_CONFIG']
+            assert envs['REACTOR_CONFIG']['configMapKeyRef'] == configmapkeyref
+
+        else:
+            assert 'REACTOR_CONFIG' not in envs

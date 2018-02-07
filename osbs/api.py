@@ -614,6 +614,7 @@ class OSBS(object):
             builder_build_json_dir=self.build_conf.get_builder_build_json_store(),
             scratch=self.build_conf.get_scratch(scratch),
             reactor_config_secret=self.build_conf.get_reactor_config_secret(),
+            reactor_config_map=self.build_conf.get_reactor_config_map(),
             client_config_secret=self.build_conf.get_client_config_secret(),
             token_secrets=self.build_conf.get_token_secrets(),
             arrangement_version=arrangement_version,

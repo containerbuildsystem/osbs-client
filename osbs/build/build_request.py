@@ -468,6 +468,22 @@ class BuildRequest(object):
             self.dj.dock_json_set_arg(phase, plugin, 'koji_principal', krb_principal)
             self.dj.dock_json_set_arg(phase, plugin, 'koji_keytab', krb_keytab)
 
+    def set_reactor_config_map(self):
+        if not self.spec.reactor_config_map.value:
+            return
+        custom = self.template['spec']['strategy']['customStrategy']
+
+        reactor_config_map = {
+            'name': 'REACTOR_CONFIG',
+            'valueFrom': {
+                'configMapKeyRef': {
+                    'name': self.spec.reactor_config_map.value,
+                    'key': 'config.yaml'
+                }
+            }
+        }
+        custom['env'].append(reactor_config_map)
+
     @staticmethod
     def remove_tag_and_push_registries(tag_and_push_registries, version):
         """
@@ -1664,6 +1680,7 @@ class BuildRequest(object):
         self.render_inject_parent_image()
         self.render_version()
         self.render_node_selectors()
+        self.set_reactor_config_map()
 
         self.dj.write_dock_json()
         self.build_json = self.template

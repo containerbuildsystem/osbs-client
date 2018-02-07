@@ -635,3 +635,7 @@ class Configuration(object):
             raise OsbsValidationException(msg)
 
         return platform_descriptors
+
+    def get_reactor_config_map(self):
+        return self._get_value("reactor_config_map", self.conf_section,
+                               "reactor_config_map")
