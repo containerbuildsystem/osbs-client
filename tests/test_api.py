@@ -1689,8 +1689,10 @@ class TestOSBS(object):
     ))
     def test_create_build_flatpak(self, osbs, modules):
         class MockConfiguration(object):
-            compose_data = {
-                'modules': modules
+            container = {
+                'compose': {
+                    'modules': modules
+                }
             }
 
             def is_autorebuild_enabled(self):
@@ -2108,8 +2110,10 @@ class TestOSBS(object):
         }
 
         class MockConfiguration(object):
-            compose_data = {
-                'modules': ['mod_name:mod_stream:mod_version']
+            container = {
+                'compose': {
+                    'modules': ['mod_name:mod_stream:mod_version']
+                }
             }
 
             def is_autorebuild_enabled(self):

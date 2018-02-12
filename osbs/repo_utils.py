@@ -45,7 +45,7 @@ class RepoConfiguration(object):
     def __init__(self, dir_path='', file_name=REPO_CONFIG_FILE):
 
         self._config_parser = ConfigParser()
-        self.compose_data = {}
+        self.container = {}
 
         # Set default options
         self._config_parser.readfp(StringIO(self.DEFAULT_CONFIG))
@@ -57,7 +57,7 @@ class RepoConfiguration(object):
         file_path = os.path.join(dir_path, REPO_CONTAINER_CONFIG)
         if os.path.exists(file_path):
             with open(file_path) as f:
-                self.compose_data = (yaml.load(f) or {}).get('compose')
+                self.container = (yaml.load(f) or {})
 
     def is_autorebuild_enabled(self):
         return self._config_parser.getboolean('autorebuild', 'enabled')

@@ -496,7 +496,7 @@ class OSBS(object):
         return req_labels, df_parser.baseimage
 
     def _get_flatpak_labels(self, repo_info):
-        modules = repo_info.configuration.compose_data.get('modules', [])
+        modules = repo_info.configuration.container.get('compose', {}).get('modules', [])
 
         if modules:
             source_spec = modules[0]

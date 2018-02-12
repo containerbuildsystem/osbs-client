@@ -52,8 +52,10 @@ class ArrangementBase(object):
             baseimage = base_image
 
         class MockConfiguration(object):
-            compose_data = {
-                'modules': ['mod_name:mod_stream:mod_version']
+            container = {
+                'compose': {
+                    'modules': ['mod_name:mod_stream:mod_version']
+                }
             }
 
             def is_autorebuild_enabled(self):
