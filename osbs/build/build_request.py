@@ -1298,30 +1298,33 @@ class BuildRequest(object):
         """
         Configure the import_image plugin
         """
-        phase = 'postbuild_plugins'
+        # import_image is a multi-phase plugin
+        phases = ('postbuild_plugins', 'exit_plugins')
         plugin = 'import_image'
-        if self.spec.imagestream_name is None or self.spec.imagestream_url is None:
-            logger.info("removing %s from request, "
-                        "registry or repo url is not defined", plugin)
-            self.dj.remove_plugin(phase, plugin)
-            return
 
-        if self.dj.dock_json_has_plugin_conf(phase, plugin):
-            self.dj.dock_json_set_arg(phase, plugin, 'imagestream',
-                                      self.spec.imagestream_name.value)
-            self.dj.dock_json_set_arg(phase, plugin, 'docker_image_repo',
-                                      self.spec.imagestream_url.value)
-            self.dj.dock_json_set_arg(phase, plugin, 'url',
-                                      self.spec.builder_openshift_url.value)
-            self.dj.dock_json_set_arg(phase, plugin, 'build_json_dir',
-                                      self.spec.builder_build_json_dir.value)
+        for phase in phases:
+            if self.spec.imagestream_name is None or self.spec.imagestream_url is None:
+                logger.info("removing %s from request, "
+                            "registry or repo url is not defined", plugin)
+                self.dj.remove_plugin(phase, plugin)
+                continue
 
-            use_auth = self.spec.use_auth.value
-            if use_auth is not None:
-                self.dj.dock_json_set_arg(phase, plugin, 'use_auth', use_auth)
+            if self.dj.dock_json_has_plugin_conf(phase, plugin):
+                self.dj.dock_json_set_arg(phase, plugin, 'imagestream',
+                                          self.spec.imagestream_name.value)
+                self.dj.dock_json_set_arg(phase, plugin, 'docker_image_repo',
+                                          self.spec.imagestream_url.value)
+                self.dj.dock_json_set_arg(phase, plugin, 'url',
+                                          self.spec.builder_openshift_url.value)
+                self.dj.dock_json_set_arg(phase, plugin, 'build_json_dir',
+                                          self.spec.builder_build_json_dir.value)
 
-            if self.spec.imagestream_insecure_registry.value:
-                self.dj.dock_json_set_arg(phase, plugin, 'insecure_registry', True)
+                use_auth = self.spec.use_auth.value
+                if use_auth is not None:
+                    self.dj.dock_json_set_arg(phase, plugin, 'use_auth', use_auth)
+
+                if self.spec.imagestream_insecure_registry.value:
+                    self.dj.dock_json_set_arg(phase, plugin, 'insecure_registry', True)
 
     def render_distgit_fetch_artefacts(self):
         phase = 'prebuild_plugins'
