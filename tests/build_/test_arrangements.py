@@ -1200,12 +1200,12 @@ class TestArrangementV5(TestArrangementV4):
                 'group_manifests',
                 'pulp_tag',
                 'pulp_sync',
-                'import_image',
             ],
 
             'exit_plugins': [
                 'pulp_publish',
                 'pulp_pull',
+                'import_image',
                 'delete_from_registry',
                 'koji_import',
                 'koji_tag_build',
@@ -1300,7 +1300,7 @@ class TestArrangementV5(TestArrangementV4):
         params, build_json = self.get_orchestrator_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
-        args = plugin_value_get(plugins, 'postbuild_plugins',
+        args = plugin_value_get(plugins, 'exit_plugins',
                                 'import_image', 'args')
 
         match_args = {
