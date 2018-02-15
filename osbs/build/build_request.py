@@ -1303,7 +1303,7 @@ class BuildRequest(object):
         plugin = 'import_image'
 
         for phase in phases:
-            if self.spec.imagestream_name is None or self.spec.imagestream_url is None:
+            if self.spec.imagestream_name.value is None or self.spec.imagestream_url.value is None:
                 logger.info("removing %s from request, "
                             "registry or repo url is not defined", plugin)
                 self.dj.remove_plugin(phase, plugin)

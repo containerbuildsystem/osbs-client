@@ -1245,6 +1245,8 @@ class TestBuildRequest(object):
         assert get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
         with pytest.raises(NoSuchPluginException):
             assert get_plugin(plugins, "prepublish_plugins", "squash")
+        with pytest.raises(NoSuchPluginException):
+            assert get_plugin(plugins, "postbuild_plugins", "import_image")
 
     def test_render_prod_not_flatpak(self):
         build_request = BuildRequest(INPUTS_PATH)
@@ -1283,6 +1285,7 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
         assert get_plugin(plugins, "prepublish_plugins", "squash")
+        assert get_plugin(plugins, "postbuild_plugins", "import_image")
 
     @pytest.mark.parametrize(('hub', 'disabled', 'release'), (
         ('http://hub/', False, None),

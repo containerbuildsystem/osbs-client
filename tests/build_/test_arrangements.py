@@ -1140,6 +1140,11 @@ class TestArrangementV4(TestArrangementV3):
         assert config_kwargs['pdc_url'] == pdc_url
         assert config_kwargs['pdc_insecure'] == str(pdc_insecure)
 
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "postbuild_plugins", "import_image")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "exit_plugins", "import_image")
+
     @pytest.mark.parametrize('worker', [True, False])  # noqa:F811
     def test_not_flatpak(self, osbs, worker):
         additional_params = {
