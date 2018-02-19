@@ -1073,8 +1073,12 @@ class BuildRequest(object):
             elif self.isolated:
                 tag_suffixes['primary'].extend(['{version}-{release}'])
             elif tags:
-                assert '{version}-{release}' in tags, \
-                    'Unable to find {version}-{release} in tags from container.yaml'
+                tag_suffixes['primary'].extend(['{version}-{release}'])
+                for tag in tags:
+                    assert '-' not in tag, \
+                        'Tag from container.yaml cannot contain "-" character. ' \
+                        'Provided tag was "%s"' % tag
+
                 tag_suffixes['primary'].extend(tags)
             else:
                 tag_suffixes['primary'].extend(['latest', '{version}', '{version}-{release}'])

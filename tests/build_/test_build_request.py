@@ -1468,6 +1468,7 @@ class TestBuildRequest(object):
         kwargs['build_type'] = BUILD_TYPE_ORCHESTRATOR
         kwargs['arrangement_version'] = 3
 
+        tags = set(['spam', 'bacon', 'eggs'])
         expected_primary = set(['{version}-{release}', 'spam', 'bacon', 'eggs'])
 
         class MockDfParser(object):
@@ -1477,7 +1478,7 @@ class TestBuildRequest(object):
 
         repo_info.configuration = flexmock(
             is_autorebuild_enabled=lambda: True)
-        repo_info.configuration.container = {'tags': expected_primary}
+        repo_info.configuration.container = {'tags': tags}
 
         build_json = self._render_tag_from_config_build_request(kwargs, repo_info=repo_info)
         plugins = get_plugins_from_build_json(build_json)
@@ -1487,7 +1488,7 @@ class TestBuildRequest(object):
         assert len(tag_suffixes['primary']) == len(expected_primary)
         assert set(tag_suffixes['primary']) == expected_primary
 
-    def test_render_tag_from_container_yaml_missing_version_release(self):
+    def test_render_tag_from_container_yaml_contains_hyphen(self):
         kwargs = get_sample_prod_params()
         kwargs.pop('platform', None)
 
@@ -1495,7 +1496,7 @@ class TestBuildRequest(object):
         kwargs['build_type'] = BUILD_TYPE_ORCHESTRATOR
         kwargs['arrangement_version'] = 3
 
-        expected_primary = set(['spam', 'bacon', 'eggs'])
+        expected_primary = set(['sp-am', 'bacon', 'eggs'])
 
         class MockDfParser(object):
             labels = {'label': 'foo'}
@@ -1506,9 +1507,8 @@ class TestBuildRequest(object):
             is_autorebuild_enabled=lambda: True)
         repo_info.configuration.container = {'tags': expected_primary}
 
-        with pytest.raises(AssertionError) as ex:
+        with pytest.raises(AssertionError):
             self._render_tag_from_config_build_request(kwargs, repo_info=repo_info)
-            assert ex.value == 'Unable to find {version}-{release} in tags from container.yaml'
 
     def test_render_tag_from_config_unmodified(self):
         kwargs = get_sample_prod_params()
