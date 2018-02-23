@@ -1298,12 +1298,20 @@ class TestArrangementV5(TestArrangementV4):
             'odcs_insecure': False,
         }
 
-    def test_import_image_renders(self, osbs): # noqa:F811
+    @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
+    def test_import_image_renders(self, osbs, scratch):
         additional_params = {
             'base_image': 'fedora:latest',
         }
+        if scratch:
+            additional_params['scratch'] = True
         params, build_json = self.get_orchestrator_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
+
+        if scratch:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "exit_plugins", "import_image")
+            return
 
         args = plugin_value_get(plugins, 'exit_plugins',
                                 'import_image', 'args')
