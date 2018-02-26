@@ -1060,25 +1060,14 @@ class BuildRequest(object):
         unique_tag = self.spec.image_tag.value.split(':')[-1]
         tag_suffixes = {'unique': [unique_tag], 'primary': []}
 
-        # this part is very ugly but otherwise ~900 tests will fail
-        # as self.repo_info object is not injected properly
-        tags = []
-        if self._repo_info:
-            tags = self._repo_info.configuration.container.get('tags', [])
-
         if self.spec.build_type.value == BUILD_TYPE_ORCHESTRATOR:
             if self.scratch:
                 pass
             elif self.isolated:
                 tag_suffixes['primary'].extend(['{version}-{release}'])
-            elif tags:
+            elif self._repo_info.additional_tags.from_container_yaml:
                 tag_suffixes['primary'].extend(['{version}-{release}'])
-                for tag in tags:
-                    assert '-' not in tag, \
-                        'Tag from container.yaml cannot contain "-" character. ' \
-                        'Provided tag was "%s"' % tag
-
-                tag_suffixes['primary'].extend(tags)
+                tag_suffixes['primary'].extend(self._repo_info.additional_tags.tags)
             else:
                 tag_suffixes['primary'].extend(['latest', '{version}', '{version}-{release}'])
                 tag_suffixes['primary'].extend(self._repo_info.additional_tags.tags)
