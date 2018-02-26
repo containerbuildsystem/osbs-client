@@ -29,7 +29,8 @@ class RepoInfo(object):
     def __init__(self, dockerfile_parser=None, configuration=None, additional_tags=None):
         self.dockerfile_parser = dockerfile_parser
         self.configuration = configuration or RepoConfiguration()
-        self.additional_tags = additional_tags or AdditionalTagsConfig()
+        self.additional_tags = additional_tags or AdditionalTagsConfig(
+            tags=self.configuration.container.get('tags', set()))
 
 
 class RepoConfiguration(object):
@@ -65,18 +66,25 @@ class RepoConfiguration(object):
 
 class AdditionalTagsConfig(object):
     """
-    Read specified additional tags from repository.
+    Container for additional image tags.
+    Tags are passed to constructor or are read from repository.
     """
 
     VALID_TAG_REGEX = re.compile(r'^[\w.]{0,127}$')
 
-    def __init__(self, dir_path='', file_name=ADDITIONAL_TAGS_FILE):
-        self._tags = set()
+    def __init__(self, dir_path='', file_name=ADDITIONAL_TAGS_FILE, tags=set()):
+        self._tags = set([x for x in tags if self._is_tag_valid(x)])
+        self._from_container_yaml = True if tags else False
         self._file_path = os.path.join(dir_path, file_name)
 
         self._populate_tags()
 
     def _populate_tags(self):
+        if self._from_container_yaml:
+            logger.warning('Tags were read from container.yaml file. Additional tags'
+                           'are being ignored!')
+            return
+
         if not os.path.exists(self._file_path):
             return
 
@@ -101,3 +109,7 @@ class AdditionalTagsConfig(object):
     @property
     def tags(self):
         return list(self._tags)
+
+    @property
+    def from_container_yaml(self):
+        return self._from_container_yaml
