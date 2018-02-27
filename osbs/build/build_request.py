@@ -818,10 +818,6 @@ class BuildRequest(object):
             logger.info("removing koji from request "
                         "because there is yum repo specified")
             self.dj.remove_plugin(phase, plugin)
-        elif self.spec.flatpak.value:
-            logger.info("removing koji from request "
-                        "because this is a Flatpak built from a module")
-            self.dj.remove_plugin(phase, plugin)
         elif not (self.spec.koji_target.value and
                   self.spec.kojiroot.value and
                   self.spec.kojihub.value):

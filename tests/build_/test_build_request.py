@@ -1236,6 +1236,12 @@ class TestBuildRequest(object):
         args = plugin['args']
         assert args['base_image'] == TEST_FLATPAK_BASE_IMAGE
 
+        plugin = get_plugin(plugins, "prebuild_plugins", "koji")
+        assert plugin
+
+        args = plugin['args']
+        assert args['target'] == "koji-target"
+
         plugin = get_plugin(plugins, "prebuild_plugins", "bump_release")
         assert plugin
 
