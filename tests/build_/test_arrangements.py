@@ -1094,14 +1094,20 @@ class TestArrangementV4(TestArrangementV3):
         }
         assert args == expected_args
 
-    @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
-    def test_flatpak(self, osbs, scratch):
+    @pytest.mark.parametrize('worker', [False, True])  # noqa:F811
+    @pytest.mark.parametrize('scratch', [False, True])
+    def test_flatpak(self, osbs, worker, scratch):
         additional_params = {
             'flatpak': True,
+            'target': 'koji-target',
         }
         if scratch:
             additional_params['scratch'] = True
-        params, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        if worker:
+            additional_params['compose_ids'] = [42]
+            params, build_json = self.get_worker_build_request(osbs, additional_params)
+        else:
+            params, build_json = self.get_orchestrator_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
         args = plugin_value_get(plugins, 'prebuild_plugins',
@@ -1120,6 +1126,10 @@ class TestArrangementV4(TestArrangementV3):
         }
         args.pop('module_stream', None)
         args.pop('module_name', None)
+
+        if worker:
+            match_args['compose_ids'] = [42]
+
         assert match_args == args
 
         args = plugin_value_get(plugins, 'prebuild_plugins',
@@ -1130,17 +1140,25 @@ class TestArrangementV4(TestArrangementV3):
         }
         assert match_args == args
 
-        args = plugin_value_get(plugins, 'buildstep_plugins',
-                                'orchestrate_build', 'args')
-        build_kwargs = args['build_kwargs']
-        assert build_kwargs['flatpak'] is True
+        if worker:
+            plugin = get_plugin(plugins, "prebuild_plugins", "koji")
+            assert plugin
 
-        config_kwargs = args['config_kwargs']
-        assert config_kwargs['flatpak_base_image'] == TEST_FLATPAK_BASE_IMAGE
-        assert config_kwargs['odcs_url'] == odcs_url
-        assert config_kwargs['odcs_insecure'] == str(odcs_insecure)
-        assert config_kwargs['pdc_url'] == pdc_url
-        assert config_kwargs['pdc_insecure'] == str(pdc_insecure)
+            args = plugin['args']
+            assert args['target'] == "koji-target"
+
+        if not worker:
+            args = plugin_value_get(plugins, 'buildstep_plugins',
+                                    'orchestrate_build', 'args')
+            build_kwargs = args['build_kwargs']
+            assert build_kwargs['flatpak'] is True
+
+            config_kwargs = args['config_kwargs']
+            assert config_kwargs['flatpak_base_image'] == TEST_FLATPAK_BASE_IMAGE
+            assert config_kwargs['odcs_url'] == odcs_url
+            assert config_kwargs['odcs_insecure'] == str(odcs_insecure)
+            assert config_kwargs['pdc_url'] == pdc_url
+            assert config_kwargs['pdc_insecure'] == str(pdc_insecure)
 
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
