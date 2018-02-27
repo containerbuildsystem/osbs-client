@@ -6,7 +6,6 @@
       "args": {
         "module_name": "{{MODULE_NAME}}",
         "module_stream": "{{MODULE_STREAM}}",
-        "compose_id": "{{COMPOSE_ID}}",
         "odcs_url": "{{ODCS_URL}}",
         "odcs_insecure": "{{ODCS_INSECURE}}",
         "pdc_url": "{{PDC_URL}}",
