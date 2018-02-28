@@ -152,7 +152,8 @@
         "url": "{{OPENSHIFT_URI}}",
         "verify_ssl": false,
         "build_json_dir": "{{PATH}}"
-      }
+      },
+      "required": false
     },
     {
       "name": "delete_from_registry",
