@@ -470,22 +470,22 @@ class BuildRequest(object):
             self.dj.dock_json_set_arg(phase, plugin, 'koji_principal', krb_principal)
             self.dj.dock_json_set_arg(phase, plugin, 'koji_keytab', krb_keytab)
 
-    def set_reactor_config(self):
-        if not self.spec.reactor_config_map.value and not self.spec.reactor_config_override.value:
+    def set_reactor_config(self, reactor_config_map=None, reactor_config_override=None):
+        if not reactor_config_map and not reactor_config_override:
             return
         custom = self.template['spec']['strategy']['customStrategy']
 
-        if self.spec.reactor_config_override.value:
+        if reactor_config_override:
             reactor_config = {
                 'name': 'REACTOR_CONFIG',
-                'value': yaml.dump(self.spec.reactor_config_override.value)
+                'value': yaml.dump(reactor_config_override)
             }
-        elif self.spec.reactor_config_map.value:
+        elif reactor_config_map:
             reactor_config = {
                 'name': 'REACTOR_CONFIG',
                 'valueFrom': {
                     'configMapKeyRef': {
-                        'name': self.spec.reactor_config_map.value,
+                        'name': reactor_config_map,
                         'key': 'config.yaml'
                     }
                 }
@@ -493,27 +493,29 @@ class BuildRequest(object):
 
         custom['env'].append(reactor_config)
 
-    def set_required_secrets(self):
+    def set_required_secrets(self, reactor_config_map=None,
+                             reactor_config_override=None, platforms=None):
         """
         Sets required secrets
         """
-        if not self.spec.reactor_config_map.value and not self.spec.reactor_config_override.value:
+        if not reactor_config_map and not reactor_config_override:
             return
 
         req_secrets_key = 'required_secrets'
         token_secrets_key = 'worker_token_secrets'
         required_secrets = []
         token_secrets = []
-        if self.spec.reactor_config_override.value:
-            data = self.spec.reactor_config_override.value
+        if reactor_config_override:
+            data = reactor_config_override
             required_secrets = data.get(req_secrets_key, [])
             token_secrets = data.get(token_secrets_key, [])
-        elif self.spec.reactor_config_map.value:
-            config_map = self.osbs_api.get_config_map(self.spec.reactor_config_map.value)
+        elif reactor_config_map:
+            config_map = self.osbs_api.get_config_map(reactor_config_map)
             required_secrets = config_map.get_data_by_key('config.yaml').get(req_secrets_key, [])
             token_secrets = config_map.get_data_by_key('config.yaml').get(token_secrets_key, [])
 
-        if self.spec.platforms.value is not None:
+        logger.debug("config_map %s, required %s, token %s", config_map.get_data_by_key('config.yaml'), required_secrets, token_secrets)
+        if platforms is not None:
             required_secrets += token_secrets
 
         if not required_secrets:
@@ -672,22 +674,22 @@ class BuildRequest(object):
 
             self.set_label('scratch', 'true')
 
-    def adjust_for_isolated(self):
+    def adjust_for_isolated(self, release):
         if not self.isolated:
             return
 
         self.template['spec'].pop('triggers', None)
 
-        if not self.spec.release.value:
+        if not release.value:
             raise OsbsValidationException('The release parameter is required for isolated builds.')
 
-        if not ISOLATED_RELEASE_FORMAT.match(self.spec.release.value):
+        if not ISOLATED_RELEASE_FORMAT.match(release.value):
             raise OsbsValidationException(
                 'For isolated builds, the release value must be in the format: {0}'
                 .format(ISOLATED_RELEASE_FORMAT.pattern))
 
         self.set_label('isolated', 'true')
-        self.set_label('isolated-release', self.spec.release.value)
+        self.set_label('isolated-release', release.value)
 
     def adjust_for_custom_base_image(self):
         """
@@ -1473,13 +1475,13 @@ class BuildRequest(object):
     def render_version(self):
         self.dj.dock_json_set_param('client_version', client_version)
 
-    def render_name(self):
+    def render_name(self, name, image_tag, platform):
         """Sets the Build/BuildConfig object name"""
-        name = self.spec.name.value
+        name = name.value
 
         if self.scratch or self.isolated:
-            name = self.spec.image_tag.value
-            platform = self.spec.platform.value
+            name = image_tag.value
+            platform = platform.value
             # Platform name may contain characters not allowed by OpenShift.
             if platform:
                 platform_suffix = '-{0}'.format(platform)
@@ -1496,9 +1498,9 @@ class BuildRequest(object):
         # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
         self.template['metadata']['name'] = name
 
-    def render_node_selectors(self):
+    def render_node_selectors(self, platforms=None):
         # for worker builds set nodeselectors
-        if self.spec.platforms.value is None:
+        if platforms is None:
 
             # auto or explicit build selector
             if self.is_auto:
@@ -1517,12 +1519,12 @@ class BuildRequest(object):
             if self.platform_node_selector:
                 self.template['spec']['nodeSelector'].update(self.platform_node_selector)
 
-    def render(self, validate=True):
+    def render(self, api=None, validate=True):
         if validate:
             self.spec.validate()
 
         self.render_customizations()
-        self.render_name()
+        self.render_name(self.spec.name, self.spec.image_tag, self.spec.platform)
         self.render_resource_limits()
 
         self.template['spec']['source']['git']['uri'] = self.spec.git_uri.value
@@ -1573,7 +1575,7 @@ class BuildRequest(object):
 
         self.adjust_for_repo_info()
         self.adjust_for_scratch()
-        self.adjust_for_isolated()
+        self.adjust_for_isolated(self.spec.release)
         self.adjust_for_triggers()
         self.adjust_for_custom_base_image()
 
@@ -1728,8 +1730,14 @@ class BuildRequest(object):
         self.render_inject_parent_image()
         self.render_version()
         self.render_node_selectors()
-        self.set_reactor_config()
-        self.set_required_secrets()
+        reactor_config_map = self.spec.reactor_config_map.value
+        reactor_config_override = self.spec.reactor_config_override.value
+        platforms = self.spec.platforms.value
+        self.set_reactor_config(reactor_config_map=reactor_config_map,
+                                reactor_config_override=reactor_config_override)
+        self.set_required_secrets(reactor_config_map=reactor_config_map,
+                                  reactor_config_override=reactor_config_override,
+                                  platforms=platforms)
 
         self.dj.write_dock_json()
         self.build_json = self.template

@@ -1,19 +1,19 @@
 """
-Copyright (c) 2015 Red Hat, Inc
+Copyright (c) 2015-2018 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 import pytest
+import datetime
+import random
+import sys
+
 from flexmock import flexmock
 
 from osbs.build.spec import BuildIDParam, RegistryURIsParam, BuildSpec
 from osbs.exceptions import OsbsValidationException
-
-import datetime
-import random
-import sys
 
 
 class TestBuildIDParam(object):

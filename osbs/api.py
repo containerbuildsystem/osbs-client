@@ -21,6 +21,7 @@ from contextlib import contextmanager
 from types import GeneratorType
 
 from osbs.build.build_request import BuildRequest
+from osbs.build.build_requestv2 import BuildRequestV2
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
 from osbs.build.config_map_response import ConfigMapResponse
@@ -28,7 +29,8 @@ from osbs.constants import (BUILD_RUNNING_STATES, WORKER_OUTER_TEMPLATE,
                             WORKER_INNER_TEMPLATE, WORKER_CUSTOMIZE_CONF,
                             ORCHESTRATOR_OUTER_TEMPLATE, ORCHESTRATOR_INNER_TEMPLATE,
                             ORCHESTRATOR_CUSTOMIZE_CONF, BUILD_TYPE_WORKER,
-                            BUILD_TYPE_ORCHESTRATOR, BUILD_FINISHED_STATES)
+                            BUILD_TYPE_ORCHESTRATOR, BUILD_FINISHED_STATES,
+                            DEFAULT_ARRANGEMENT_VERSION, REACTOR_CONFIG_ARRANGEMENT_VERSION)
 from osbs.core import Openshift
 from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsResponseException,
                              OsbsOrchestratorNotEnabled)
@@ -170,24 +172,32 @@ class OSBS(object):
 
     @osbsapi
     def get_build_request(self, build_type=None, inner_template=None,
-                          outer_template=None, customize_conf=None):
+                          outer_template=None, customize_conf=None,
+                          arrangement_version=DEFAULT_ARRANGEMENT_VERSION):
         """
-        return instance of BuildRequest
+        return instance of BuildRequest or BuildRequestV2
 
         :param build_type: str, unused
         :param inner_template: str, name of inner template for BuildRequest
         :param outer_template: str, name of outer template for BuildRequest
         :param customize_conf: str, name of customization config for BuildRequest
-        :return: instance of BuildRequest
+        :param arrangement_version: int, value of the arrangement version
+
+        :return: instance of BuildRequest or BuildRequestV2
         """
         if build_type is not None:
             warnings.warn("build types are deprecated, do not use the build_type argument")
 
-        build_request = BuildRequest(
-            build_json_store=self.os_conf.get_build_json_store(),
-            inner_template=inner_template,
-            outer_template=outer_template,
-            customize_conf=customize_conf)
+        if arrangement_version < REACTOR_CONFIG_ARRANGEMENT_VERSION:
+            build_request = BuildRequest(
+                build_json_store=self.os_conf.get_build_json_store(),
+                inner_template=inner_template,
+                outer_template=outer_template,
+                customize_conf=customize_conf)
+        else:
+            build_request = BuildRequestV2(
+                build_json_store=self.os_conf.get_build_json_store(),
+                customize_conf=customize_conf)
 
         # Apply configured resource limits.
         cpu_limit = self.build_conf.get_cpu_limit()

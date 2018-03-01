@@ -114,10 +114,53 @@ class SourceRegistryURIParam(BuildParam):
         BuildParam.value.fset(self, RegistryURI(val) if val else None)
 
 
-class BuildSpec(object):
-
+class BuildCommon(object):
     def __init__(self):
+        self.image_tag = BuildParam("image_tag")
+        self.koji_target = BuildParam("koji_target", allow_none=True)
+        self.platform = BuildParam("platform", allow_none=True)
+        self.arrangement_version = BuildParam("arrangement_version", allow_none=True)
+        self.filesystem_koji_task_id = BuildParam("filesystem_koji_task_id", allow_none=True)
+        self.required_params = [
+            self.koji_target,
+        ]
 
+    def _populate_image_tag(self):
+        timestamp = utcnow().strftime('%Y%m%d%H%M%S')
+        # RNG is seeded once its imported, so in cli calls scratch builds would get unique name.
+        # On brew builders we import osbs once - thus RNG is seeded once and `randrange`
+        # returns the same values throughout the life of the builder.
+        # Before each `randrange` call we should be calling `.seed` to prevent this
+        random.seed()
+
+        tag_segments = [
+            self.koji_target.value or 'none',
+            str(random.randrange(10**(RAND_DIGITS - 1), 10**RAND_DIGITS)),
+            timestamp
+        ]
+
+        if self.platform.value and (self.arrangement_version.value or 0) >= 4:
+            tag_segments.append(self.platform.value)
+
+        tag = '-'.join(tag_segments)
+        self.image_tag.value = '{0}/{1}:{2}'.format(self.user.value, self.component.value, tag)
+
+    def validate(self):
+        logger.info("Validating params of %s", self.__class__.__name__)
+        for param in self.required_params:
+            if param.value is None:
+                if param.allow_none:
+                    logger.debug("param '%s' is None; None is allowed", param.name)
+                else:
+                    logger.error("param '%s' is None; None is NOT allowed", param.name)
+                    raise OsbsValidationException("param '%s' is not valid: None is not allowed" %
+                                                  param.name)
+
+
+class BuildSpec(BuildCommon):
+    def __init__(self):
+        # defines image_tag, koji_target, platform, arrangement_version
+        super(BuildSpec, self).__init__()
         self.git_uri = BuildParam('git_uri')
         self.git_ref = BuildParam('git_ref', default=DEFAULT_GIT_REF)
         self.git_branch = BuildParam('git_branch')
@@ -146,12 +189,10 @@ class BuildSpec(object):
         self.authoritative_registry = BuildParam("authoritative_registry", allow_none=True)
         self.distribution_scope = BuildParam("distribution_scope", allow_none=True)
         self.registry_api_versions = BuildParam("registry_api_versions")
-        self.koji_target = BuildParam("koji_target", allow_none=True)
         self.kojiroot = BuildParam("kojiroot", allow_none=True)
         self.kojihub = BuildParam("kojihub", allow_none=True)
         self.koji_certs_secret = BuildParam("koji_certs_secret", allow_none=True)
         self.koji_task_id = BuildParam("koji_task_id", allow_none=True)
-        self.filesystem_koji_task_id = BuildParam("filesystem_koji_task_id", allow_none=True)
         self.koji_use_kerberos = BuildParam("koji_use_kerberos", allow_none=True)
         self.koji_kerberos_principal = BuildParam("koji_kerberos_principal", allow_none=True)
         self.koji_kerberos_keytab = BuildParam("koji_kerberos_keytab", allow_none=True)
@@ -163,7 +204,6 @@ class BuildSpec(object):
         self.odcs_ssl_secret = BuildParam("odcs_ssl_secret", allow_none=True)
         self.pdc_url = BuildParam("pdc_url", allow_none=True)
         self.pdc_insecure = BuildParam("pdc_insecure", allow_none=True)
-        self.image_tag = BuildParam("image_tag")
         self.pulp_secret = BuildParam("pulp_secret", allow_none=True)
         self.pulp_registry = BuildParam("pulp_registry", allow_none=True)
         self.smtp_host = BuildParam("smtp_host", allow_none=True)
@@ -175,7 +215,6 @@ class BuildSpec(object):
         self.smtp_to_pkgowner = BuildParam("smtp_to_pkgowner", allow_none=True)
         self.builder_build_json_dir = BuildParam("builder_build_json_dir", allow_none=True)
         self.platforms = BuildParam("platforms", allow_none=True)
-        self.platform = BuildParam("platform", allow_none=True)
         self.build_type = BuildParam("build_type", allow_none=True)
         self.release = BuildParam("release", allow_none=True)
         self.reactor_config_secret = BuildParam("reactor_config_secret", allow_none=True)
@@ -183,7 +222,6 @@ class BuildSpec(object):
         self.reactor_config_override = BuildParam("reactor_config_override", allow_none=True)
         self.client_config_secret = BuildParam("client_config_secret", allow_none=True)
         self.token_secrets = BuildParam("token_secrets", allow_none=True)
-        self.arrangement_version = BuildParam("arrangement_version", allow_none=True)
         self.info_url_format = BuildParam("info_url_format", allow_none=True)
         self.artifacts_allowed_domains = BuildParam("artifacts_allowed_domains", allow_none=True)
         self.equal_labels = BuildParam("equal_labels", allow_none=True)
@@ -398,38 +436,6 @@ class BuildSpec(object):
 
     def odcs_enabled(self):
         return self.odcs_url.value
-
-    def _populate_image_tag(self):
-        timestamp = utcnow().strftime('%Y%m%d%H%M%S')
-        # RNG is seeded once its imported, so in cli calls scratch builds would get unique name.
-        # On brew builders we import osbs once - thus RNG is seeded once and `randrange`
-        # returns the same values throughout the life of the builder.
-        # Before each `randrange` call we should be calling `.seed` to prevent this
-        random.seed()
-
-        tag_segments = [
-            self.koji_target.value or 'none',
-            str(random.randrange(10**(RAND_DIGITS - 1), 10**RAND_DIGITS)),
-            timestamp
-        ]
-
-        # Support for platform specific tags has only been added in arrangement 4.
-        if self.platform.value and (self.arrangement_version.value or 0) >= 4:
-            tag_segments.append(self.platform.value)
-
-        tag = '-'.join(tag_segments)
-        self.image_tag.value = '{0}/{1}:{2}'.format(self.user.value, self.component.value, tag)
-
-    def validate(self):
-        logger.info("Validating params of %s", self.__class__.__name__)
-        for param in self.required_params:
-            if param.value is None:
-                if param.allow_none:
-                    logger.debug("param '%s' is None; None is allowed", param.name)
-                else:
-                    logger.error("param '%s' is None; None is NOT allowed", param.name)
-                    raise OsbsValidationException("param '%s' is not valid: None is not allowed" %
-                                                  param.name)
 
     def __repr__(self):
         return "Spec(%s)" % self.__dict__
