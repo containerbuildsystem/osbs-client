@@ -82,7 +82,7 @@ class AdditionalTagsConfig(object):
     def _populate_tags(self):
         if self._from_container_yaml:
             logger.warning('Tags were read from container.yaml file. Additional tags'
-                           'are being ignored!')
+                           ' are being ignored!')
             return
 
         if not os.path.exists(self._file_path):
