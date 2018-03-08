@@ -13,8 +13,11 @@ import fnmatch
 from pkg_resources import parse_version
 import shutil
 import six
+import yaml
+from copy import deepcopy
 
 from osbs.build.build_request import BuildRequest
+from osbs.api import OSBS
 from osbs.constants import (DEFAULT_OUTER_TEMPLATE,
                             DEFAULT_INNER_TEMPLATE, SECRETS_PATH,
                             ORCHESTRATOR_INNER_TEMPLATE, WORKER_INNER_TEMPLATE,
@@ -69,7 +72,21 @@ def get_sample_prod_params():
         'platforms': ['x86_64'],
         'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID,
         'build_from': 'image:buildroot:latest',
+        'osbs_api': MockOSBSApi()
     }
+
+
+def MockOSBSApi(config_map_data=None):
+    class MockConfigMap(object):
+        def __init__(self, data):
+            self.data = data or {}
+
+        def get_data_by_key(self, key=None):
+            return self.data
+
+    mock_osbs = flexmock(OSBS)
+    flexmock(mock_osbs).should_receive('get_config_map').and_return(MockConfigMap(config_map_data))
+    return mock_osbs
 
 
 def get_plugins_from_build_json(build_json):
@@ -183,6 +200,7 @@ class TestBuildRequest(object):
             'kojihub': kojihub,
             'koji_upload_dir': 'upload',
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
         if use_auth is not None:
             kwargs['use_auth'] = use_auth
@@ -224,6 +242,7 @@ class TestBuildRequest(object):
             'koji_certs_secret': certs_dir,
             'scratch': scratch,
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -280,6 +299,7 @@ class TestBuildRequest(object):
             'koji_certs_secret': certs_dir,
             'scratch': scratch,
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -371,6 +391,7 @@ class TestBuildRequest(object):
             'base_image': 'fedora:latest',
             'name_label': 'fedora/resultingimage',
             'registry_api_versions': ['v1'],
+            'osbs_api': MockOSBSApi(),
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -446,6 +467,7 @@ class TestBuildRequest(object):
             'build_image': build_image,
             'build_imagestream': build_imagestream,
             'proxy': proxy,
+            'osbs_api': MockOSBSApi(),
         }
 
         if valid:
@@ -556,6 +578,7 @@ class TestBuildRequest(object):
             'smtp_from': 'user@example.com',
             'proxy': proxy,
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -657,6 +680,7 @@ class TestBuildRequest(object):
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -736,6 +760,7 @@ class TestBuildRequest(object):
             'registry_api_versions': ['v1'],
             'source_secret': 'mysecret',
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -795,6 +820,7 @@ class TestBuildRequest(object):
             'pulp_registry': pulp_env,
             'pulp_secret': pulp_secret,
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
         if source_registry:
             kwargs['source_registry_uri'] = source_registry
@@ -866,6 +892,7 @@ class TestBuildRequest(object):
             'source_secret': 'mysecret',
             'registry_secrets': ['registry_secret'],
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -921,6 +948,7 @@ class TestBuildRequest(object):
             'smtp_host': 'smtp.example.com',
             'smtp_from': 'user@example.com',
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
         build_request.set_params(**kwargs)
         with pytest.raises(OsbsValidationException):
@@ -945,6 +973,7 @@ class TestBuildRequest(object):
             'pulp_registry': pulp_env,
             'pulp_secret': pulp_secret,
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
 
         kwargs.update({
@@ -1122,6 +1151,7 @@ class TestBuildRequest(object):
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
         build_request = BuildRequest(INPUTS_PATH)
 
@@ -1198,6 +1228,7 @@ class TestBuildRequest(object):
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v2'],
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
         if odcs_insecure is not None:
             kwargs['odcs_insecure'] = odcs_insecure
@@ -1271,6 +1302,7 @@ class TestBuildRequest(object):
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v2'],
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
 
         build_request.set_params(**kwargs)
@@ -1310,6 +1342,7 @@ class TestBuildRequest(object):
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
 
         if hub:
@@ -1365,6 +1398,7 @@ class TestBuildRequest(object):
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
 
         if hub:
@@ -1667,6 +1701,7 @@ class TestBuildRequest(object):
             'client_config_secret': secret,
             'platforms': platforms,
             'arrangement_version': arrangement_version,
+            'osbs_api': MockOSBSApi(),
         }
         if build_image:
             kwargs['build_image'] = build_image
@@ -1778,6 +1813,7 @@ class TestBuildRequest(object):
             'distribution_scope': "authoritative-source-only",
             'pulp_registry': "foo",
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
         build_request.set_params(**kwargs)
         with pytest.raises(OsbsValidationException):
@@ -1881,6 +1917,7 @@ class TestBuildRequest(object):
             'smtp_to_submitter': True,
             'smtp_to_pkgowner': True,
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
         if use_auth is not None:
             kwargs['use_auth'] = use_auth
@@ -2117,6 +2154,7 @@ class TestBuildRequest(object):
             'pulp_registry': 'foo',
             'pulp_secret': secret_name,
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
 
         # Default required version (1.0.6), implicitly and explicitly
@@ -2166,6 +2204,7 @@ class TestBuildRequest(object):
             'registry_api_versions': ['v1'],
             'koji_certs_secret': koji_certs_secret_name,
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -2222,6 +2261,7 @@ class TestBuildRequest(object):
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
             'build_from': 'image:buildroot:latest',
+            'osbs_api': MockOSBSApi(),
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -2893,11 +2933,16 @@ class TestBuildRequest(object):
         else:
             assert get_plugin(plugins, plugin_type, plugin_name)
 
+    @pytest.mark.parametrize('reactor_config_override', [
+        None,
+        {},
+        {'version': 1},
+    ])
     @pytest.mark.parametrize('reactor_config_map', [
         None,
         'reactor-config-map',
     ])
-    def test_set_config_map(self, reactor_config_map):
+    def test_set_config_map(self, reactor_config_map, reactor_config_override):
         build_request = BuildRequest(INPUTS_PATH)
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -2912,6 +2957,8 @@ class TestBuildRequest(object):
             'name_label': 'fedora/resultingimage',
             'registry_api_versions': ['v1'],
             'reactor_config_map': reactor_config_map,
+            'reactor_config_override': reactor_config_override,
+            'osbs_api': MockOSBSApi(),
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
@@ -2919,17 +2966,122 @@ class TestBuildRequest(object):
         json_env = build_json['spec']['strategy']['customStrategy']['env']
         envs = {}
         for env in json_env:
-            envs[env['name']] = env.get('valueFrom', None)
+            envs[env['name']] = (env.get('valueFrom', None), env.get('value', None))
 
-        if reactor_config_map:
+        if reactor_config_override:
+            reactor_config_value = yaml.dump(reactor_config_override)
+            assert 'REACTOR_CONFIG' in envs
+            assert envs['REACTOR_CONFIG'][1] == reactor_config_value
+
+        elif reactor_config_map:
             configmapkeyref = {
                 'name': reactor_config_map,
                 'key': 'config.yaml'
             }
-
             assert 'REACTOR_CONFIG' in envs
-            assert 'configMapKeyRef' in envs['REACTOR_CONFIG']
-            assert envs['REACTOR_CONFIG']['configMapKeyRef'] == configmapkeyref
+            assert 'configMapKeyRef' in envs['REACTOR_CONFIG'][0]
+            assert envs['REACTOR_CONFIG'][0]['configMapKeyRef'] == configmapkeyref
 
         else:
             assert 'REACTOR_CONFIG' not in envs
+
+    @pytest.mark.parametrize('platforms', [
+        None,
+        ['some'],
+    ])
+    @pytest.mark.parametrize('reactor_config_map', [
+        None,
+        {},
+        {'required_secrets': ['secret4', 'secret5']},
+        {'required_secrets': ['secret4', 'secret5', 'reactor_secret']},
+        {'required_secrets': ['secret4', 'secret5'],
+         'worker_token_secrets': []},
+        {'required_secrets': ['secret4', 'secret5', 'reactor_secret'],
+         'worker_token_secrets': []},
+        {'required_secrets': ['secret4', 'secret5'],
+         'worker_token_secrets': ['secret7', 'secret8']},
+        {'required_secrets': ['secret4', 'secret5'],
+         'worker_token_secrets': ['secret4', 'secret5', 'secret9']},
+        {'required_secrets': ['secret4', 'secret5', 'reactor_secret'],
+         'worker_token_secrets': ['secret7', 'secret8']},
+    ])
+    @pytest.mark.parametrize('existing_secret', [
+        None,
+        'reactor_secret',
+    ])
+    @pytest.mark.parametrize('reactor_config_override', [
+        None,
+        {},
+        {'required_secrets': ['secret1', 'secret2']},
+        {'required_secrets': ['secret1', 'secret2', 'reactor_secret']},
+        {'required_secrets': ['secret1', 'secret2'],
+         'worker_token_secrets': []},
+        {'required_secrets': ['secret1', 'secret2', 'reactor_secret'],
+         'worker_token_secrets': []},
+        {'required_secrets': ['secret1', 'secret2'],
+         'worker_token_secrets': []},
+        {'required_secrets': ['secret1', 'secret2'],
+         'worker_token_secrets': ['secret10', 'secret11']},
+        {'required_secrets': ['secret1', 'secret2'],
+         'worker_token_secrets': ['secret1', 'secret2', 'secret11']},
+        {'required_secrets': ['secret1', 'secret2', 'reactor_secret'],
+         'worker_token_secrets': ['secret10', 'secret11']},
+    ])
+    def test_set_required_secrets(self, platforms, reactor_config_map,
+                                  existing_secret, reactor_config_override):
+        build_request = BuildRequest(INPUTS_PATH)
+        reactor_config_name = 'REACTOR_CONFIG'
+        all_secrets = deepcopy(reactor_config_map)
+
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'registry_uri': "example.com",
+            'openshift_uri': "http://openshift/",
+            'builder_openshift_url': "http://openshift/",
+            'build_image': 'fedora:latest',
+            'base_image': 'fedora:latest',
+            'name_label': 'fedora/resultingimage',
+            'registry_api_versions': ['v1'],
+            'reactor_config_override': reactor_config_override,
+            'reactor_config_map': reactor_config_name,
+            'osbs_api': MockOSBSApi(all_secrets),
+            'platforms': platforms,
+        }
+        if existing_secret:
+            kwargs['reactor_config_secret'] = 'reactor_secret'
+
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+
+        json_custom = build_json['spec']['strategy']['customStrategy']
+
+        if not reactor_config_map and not reactor_config_override and not existing_secret:
+            assert not json_custom['secrets']
+            return
+
+        expect_secrets = {}
+        if existing_secret:
+            expect_secrets[existing_secret] = os.path.join(SECRETS_PATH, existing_secret)
+
+        if reactor_config_override:
+            for secret in reactor_config_override['required_secrets']:
+                expect_secrets[secret] = os.path.join(SECRETS_PATH, secret)
+            if platforms and 'worker_token_secrets' in reactor_config_override:
+                for secret in reactor_config_override['worker_token_secrets']:
+                    expect_secrets[secret] = os.path.join(SECRETS_PATH, secret)
+
+        elif reactor_config_map:
+            for secret in reactor_config_map['required_secrets']:
+                expect_secrets[secret] = os.path.join(SECRETS_PATH, secret)
+            if platforms and 'worker_token_secrets' in reactor_config_map:
+                for secret in reactor_config_map['worker_token_secrets']:
+                    expect_secrets[secret] = os.path.join(SECRETS_PATH, secret)
+
+        got_secrets = {}
+        for secret in json_custom['secrets']:
+            got_secrets[secret['secretSource']['name']] = secret['mountPath']
+
+        assert expect_secrets == got_secrets
