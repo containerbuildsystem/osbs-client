@@ -22,6 +22,8 @@ from types import GeneratorType
 
 from osbs.build.build_request import BuildRequest
 from osbs.build.build_requestv2 import BuildRequestV2
+from osbs.build.user_params import BuildUserParams
+from osbs.build.plugins_configuration import PluginsConfiguration
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
 from osbs.build.config_map_response import ConfigMapResponse
@@ -1218,3 +1220,9 @@ class OSBS(object):
         self.os.retries_enabled = False
         yield
         self.os.retries_enabled = True
+
+    @osbsapi
+    def render_plugins_configuration(self, user_params_json):
+        user_params = BuildUserParams.from_json(user_params_json)
+
+        return PluginsConfiguration(user_params).render()
