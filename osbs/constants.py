@@ -97,7 +97,7 @@ OS_CONFLICT_MAX_RETRIES = 8
 # number of seconds to wait, before retrying on openshift conflict
 OS_CONFLICT_WAIT = 5
 
-BUILD_TYPE_ORCHESTRATOR = object()
-BUILD_TYPE_WORKER = object()
+BUILD_TYPE_ORCHESTRATOR = "orchestrator"
+BUILD_TYPE_WORKER = "worker"
 
 ISOLATED_RELEASE_FORMAT = re.compile(r'^\d+\.\d+(\..+)?$')
