@@ -806,7 +806,7 @@ class TestOSBS(object):
             'apiVersion': api_version,
         }
         build_request = flexmock(
-            render=lambda: build_json,
+            render=lambda x: build_json,
             set_openshift_required_version=lambda x: api_version,
             has_ist_trigger=lambda: False,
             scratch=False)
@@ -1334,7 +1334,7 @@ class TestOSBS(object):
         osbs_obj = OSBS(config, config)
         build_json = {'apiVersion': 'spam'}
         build_request = flexmock(
-            render=lambda: build_json,
+            render=lambda x: build_json,
             has_ist_trigger=lambda: False,
             scratch=False)
 
@@ -1363,7 +1363,7 @@ class TestOSBS(object):
         existing_build_json['metadata']['labels']['git-branch'] = 'branch2'
 
         build_request = flexmock(
-            render=lambda: build_json,
+            render=lambda x: build_json,
             has_ist_trigger=lambda: False,
             scratch=False)
 
@@ -1397,7 +1397,7 @@ class TestOSBS(object):
         existing_build_json['metadata']['name'] = 'existing-build'
 
         build_request = flexmock(
-            render=lambda: build_json,
+            render=lambda x: build_json,
             has_ist_trigger=lambda: False,
             scratch=False)
 
@@ -1437,7 +1437,7 @@ class TestOSBS(object):
         existing_build_json['metadata']['labels']['new-label'] = 'new-value'
 
         build_request = flexmock(
-            render=lambda: build_json,
+            render=lambda x: build_json,
             has_ist_trigger=lambda: False,
             scratch=False)
 
@@ -1482,7 +1482,7 @@ class TestOSBS(object):
         }
 
         build_request = flexmock(
-            render=lambda: build_json,
+            render=lambda x: build_json,
             has_ist_trigger=lambda: False,
             scratch=False)
 
@@ -1574,7 +1574,7 @@ class TestOSBS(object):
         )
 
         build_request = flexmock(
-            render=lambda: build_json,
+            render=lambda x: build_json,
             has_ist_trigger=lambda: True,
             scratch=False)
         # Cannot use spec keyword arg in flexmock constructor
@@ -1771,7 +1771,7 @@ class TestOSBS(object):
             build_json['metadata']['labels']['isolated-release'] = "1.1"
 
         build_request = flexmock(
-            render=lambda: build_json,
+            render=lambda x: build_json,
             has_ist_trigger=lambda: False,
             scratch=(build_variation == 'scratch'),
             isolated=(build_variation == 'isolated'),
@@ -2200,7 +2200,9 @@ class TestOSBS(object):
         quark_dict = {"quark": "charm"}
         data = {
                 how_str: very_str,
-                type_str: quark_dict
+                type_str: quark_dict,
+                'required_secrets': ['Nothing', 'Nada'],
+                'worker_token_secrets': ['Secret']
         }
         none_str = "special.none"
         name = 'special-config'
@@ -2294,7 +2296,7 @@ class TestOSBS(object):
         )
 
         build_request = flexmock(
-            render=lambda: build_json,
+            render=lambda x: build_json,
             has_ist_trigger=lambda: True,
             scratch=False)
         # Cannot use spec keyword arg in flexmock constructor
@@ -2435,7 +2437,7 @@ class TestOSBS(object):
         )
 
         build_request = flexmock(
-            render=lambda: build_json,
+            render=lambda x: build_json,
             has_ist_trigger=lambda: True,
             scratch=False)
         # Cannot use spec keyword arg in flexmock constructor
