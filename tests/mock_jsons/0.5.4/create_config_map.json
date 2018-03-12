@@ -2,7 +2,9 @@
     "apiVersion": "v1",
     "data": {
         "special.how": "\"very\"",
-        "special.type": "{\"quark\": \"charm\"}"
+        "special.type": "{\"quark\": \"charm\"}",
+        "required_secrets": "[\"Nothing\", \"Nada\"]",
+        "worker_token_secrets": "[\"Secret\"]"
     },
     "kind": "ConfigMap",
     "metadata": {

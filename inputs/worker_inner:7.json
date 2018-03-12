@@ -1,0 +1,123 @@
+{
+  "prebuild_plugins": [
+    {
+      "name": "resolve_module_compose"
+    },
+    {
+      "name": "flatpak_create_dockerfile",
+      "args": {
+        "base_image": "{{BASE_IMAGE}}"
+      }
+    },
+    {
+      "name": "add_filesystem",
+      "args": {
+        "repos": [],
+        "from_task_id": "{{FROM_TASK_ID}}"
+      }
+    },
+    {
+      "name": "inject_parent_image",
+      "args": {
+        "koji_parent_build": "{{KOJI_PARENT_BUILD}}"
+      }
+    },
+    {
+      "name": "pull_base_image"
+    },
+    {
+      "name": "add_labels_in_dockerfile",
+      "args": {
+        "labels": "{{IMPLICIT_LABELS}}"
+      }
+    },
+    {
+      "name": "change_from_in_dockerfile"
+    },
+    {
+      "name": "add_help"
+    },
+    {
+      "name": "add_dockerfile"
+    },
+    {
+      "name": "distgit_fetch_artefacts"
+    },
+    {
+      "name": "fetch_maven_artifacts"
+    },
+    {
+      "name": "koji",
+      "args": {
+        "target": "{{KOJI_TARGET}}"
+      }
+    },
+    {
+      "name": "add_yum_repo_by_url",
+      "args": {
+        "repourls": []
+      }
+    },
+    {
+      "name": "inject_yum_repo"
+    },
+    {
+      "name": "distribution_scope"
+    }
+  ],
+  "prepublish_plugins": [
+    {
+      "name": "squash"
+    },
+    {
+      "name": "flatpak_create_oci"
+    }
+  ],
+  "postbuild_plugins": [
+    {
+      "name": "all_rpm_packages",
+      "args": {
+        "image_id": "BUILT_IMAGE_ID"
+      }
+    },
+    {
+      "name": "tag_from_config",
+      "args": {
+        "tag_suffixes": "{{TAG_SUFFIXES}}"
+      }
+    },
+    {
+      "name": "tag_and_push"
+    },
+    {
+      "name": "pulp_push"
+    },
+    {
+      "name": "compress",
+      "args": {
+        "load_exported_image": true,
+        "method": "gzip"
+      }
+    },
+    {
+      "name": "koji_upload",
+      "args": {
+        "verify_ssl": false,
+        "blocksize": 10485760,
+        "koji_keytab": false,
+        "koji_principal": false
+      }
+    }
+  ],
+  "exit_plugins": [
+    {
+      "name": "store_metadata_in_osv3",
+      "args": {
+        "verify_ssl": false
+      }
+    },
+    {
+      "name": "remove_built_image"
+    }
+  ]
+}
