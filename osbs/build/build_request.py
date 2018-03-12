@@ -291,8 +291,8 @@ class BuildRequest(object):
             'pulp_registry_name': self.spec.pulp_registry.value,
             'prefer_schema1_digest': self.spec.prefer_schema1_digest.value,
             'registry_api_versions': ','.join(self.spec.registry_api_versions.value or []) or None,
-            'smtp_additional_addresses': ','.join(self.spec.smtp_additional_addresses.value or [])
-                                         or None,
+            'smtp_additional_addresses': ','.join(self.spec.smtp_additional_addresses.value or
+                                                  []) or None,
             'smtp_email_domain': self.spec.smtp_email_domain.value,
             'smtp_error_addresses': ','.join(self.spec.smtp_error_addresses.value or []) or None,
             'smtp_from': self.spec.smtp_from.value,
@@ -303,8 +303,8 @@ class BuildRequest(object):
             'sources_command': self.spec.sources_command.value,
             'vendor': self.spec.vendor.value,
             'equal_labels': equal_labels_string,
-            'artifacts_allowed_domains': ','.join(self.spec.artifacts_allowed_domains.value or [])
-                                         or None,
+            'artifacts_allowed_domains': ','.join(self.spec.artifacts_allowed_domains.value or
+                                                  []) or None,
             'yum_proxy': self.spec.yum_proxy.value,
         }
 
@@ -514,7 +514,6 @@ class BuildRequest(object):
             required_secrets = config_map.get_data_by_key('config.yaml').get(req_secrets_key, [])
             token_secrets = config_map.get_data_by_key('config.yaml').get(token_secrets_key, [])
 
-        logger.debug("config_map %s, required %s, token %s", config_map.get_data_by_key('config.yaml'), required_secrets, token_secrets)
         if platforms is not None:
             required_secrets += token_secrets
 
@@ -1477,11 +1476,9 @@ class BuildRequest(object):
 
     def render_name(self, name, image_tag, platform):
         """Sets the Build/BuildConfig object name"""
-        name = name.value
 
         if self.scratch or self.isolated:
-            name = image_tag.value
-            platform = platform.value
+            name = image_tag
             # Platform name may contain characters not allowed by OpenShift.
             if platform:
                 platform_suffix = '-{0}'.format(platform)
@@ -1524,7 +1521,8 @@ class BuildRequest(object):
             self.spec.validate()
 
         self.render_customizations()
-        self.render_name(self.spec.name, self.spec.image_tag, self.spec.platform)
+        self.render_name(self.spec.name.value, self.spec.image_tag.value,
+                         self.spec.platform.value)
         self.render_resource_limits()
 
         self.template['spec']['source']['git']['uri'] = self.spec.git_uri.value
@@ -1729,10 +1727,10 @@ class BuildRequest(object):
         self.render_tag_from_config()
         self.render_inject_parent_image()
         self.render_version()
-        self.render_node_selectors()
+        platforms = self.spec.platforms.value
+        self.render_node_selectors(platforms)
         reactor_config_map = self.spec.reactor_config_map.value
         reactor_config_override = self.spec.reactor_config_override.value
-        platforms = self.spec.platforms.value
         self.set_reactor_config(reactor_config_map=reactor_config_map,
                                 reactor_config_override=reactor_config_override)
         self.set_required_secrets(reactor_config_map=reactor_config_map,

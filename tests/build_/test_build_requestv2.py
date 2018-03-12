@@ -10,13 +10,11 @@ import glob
 import json
 import os
 import fnmatch
-from pkg_resources import parse_version
 import shutil
-import six
-import sys
+from copy import deepcopy
 
 from osbs.build.build_requestv2 import BuildRequestV2
-from osbs.constants import DEFAULT_OUTER_TEMPLATE, BUILD_TYPE_WORKER
+from osbs.constants import DEFAULT_OUTER_TEMPLATE, BUILD_TYPE_WORKER, SECRETS_PATH
 from osbs.exceptions import OsbsValidationException
 from osbs.repo_utils import RepoInfo, RepoConfiguration
 from osbs.api import OSBS
@@ -29,8 +27,6 @@ from tests.constants import (INPUTS_PATH, TEST_BUILD_CONFIG, TEST_BUILD_JSON,
                              TEST_GIT_URI, TEST_GIT_URI_HUMAN_NAME,
                              TEST_FILESYSTEM_KOJI_TASK_ID, TEST_SCRATCH_BUILD_NAME,
                              TEST_ISOLATED_BUILD_NAME)
-# These are used as fixtures
-from tests.fake_api import openshift  # noqa
 
 USE_DEFAULT_TRIGGERS = object()
 
@@ -52,7 +48,9 @@ def MockOSBSApi(config_map_data=None):
     return mock_osbs
 
 
-def get_sample_prod_params(osbs_api=MockOSBSApi()):
+def get_sample_prod_params(osbs_api='blank'):
+    if osbs_api == 'blank':
+        osbs_api = MockOSBSApi()
     return {
         'git_uri': TEST_GIT_URI,
         'git_ref': TEST_GIT_REF,
@@ -275,7 +273,7 @@ class TestBuildRequestV2(object):
 
     @pytest.mark.parametrize('platform', [None, 'x86_64'])
     @pytest.mark.parametrize('scratch', [False, True])
-    def test_render_prod_request_v1_v2(self, platform, scratch): 
+    def test_render_prod_request_v1_v2(self, platform, scratch):
         build_request = BuildRequestV2(INPUTS_PATH)
         name_label = "fedora/resultingimage"
         kwargs = {
@@ -436,12 +434,12 @@ class TestBuildRequestV2(object):
         # Verify the triggers are now disabled
         assert "triggers" not in build_json["spec"]
 
-    @pytest.mark.parametrize(('extra_kwargs', 'expected_error'), (  
+    @pytest.mark.parametrize(('extra_kwargs', 'expected_error'), (
         ({'isolated': True}, 'release parameter is required'),
         ({'isolated': True, 'release': '1'}, 'must be in the format'),
         ({'isolated': True, 'release': '1.1'}, None),
     ))
-    def test_adjust_for_isolated(self, tmpdir, extra_kwargs, expected_error):  
+    def test_adjust_for_isolated(self, tmpdir, extra_kwargs, expected_error):
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequestV2(str(tmpdir))
 
@@ -673,7 +671,6 @@ class TestBuildRequestV2(object):
          'worker_token_secrets': ['secret7', 'secret8']},
     ])
     def test_set_required_secrets(self, platforms, reactor_config_map):
-        reactor_config_name = 'REACTOR_CONFIG'
         all_secrets = deepcopy(reactor_config_map)
 
         br = BuildRequestV2(INPUTS_PATH)
@@ -694,7 +691,7 @@ class TestBuildRequestV2(object):
         if reactor_config_map:
             for secret in reactor_config_map['required_secrets']:
                 expect_secrets[secret] = os.path.join(SECRETS_PATH, secret)
-            if platforms and 'worker_token_secrets' in reactor_config_map:
+            if 'worker_token_secrets' in reactor_config_map:
                 for secret in reactor_config_map['worker_token_secrets']:
                     expect_secrets[secret] = os.path.join(SECRETS_PATH, secret)
 

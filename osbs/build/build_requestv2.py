@@ -8,12 +8,10 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import print_function, absolute_import, unicode_literals
 
 import logging
-import os
 
 from osbs.build.build_request import BuildRequest
 from osbs.build.user_params import BuildUserParams
 from osbs.exceptions import OsbsValidationException
-from osbs.constants import SECRETS_PATH
 from osbs.utils import git_repo_humanish_part_from_uri
 
 logger = logging.getLogger(__name__)
@@ -32,7 +30,7 @@ class BuildRequestV2(BuildRequest):
         super(BuildRequestV2, self).__init__(build_json_store=build_json_store,
                                              customize_conf=customize_conf)
         self.spec = None
-        self.user_params = BuildUserParams(build_json_store)
+        self.user_params = BuildUserParams(build_json_store, customize_conf)
         self.osbs_api = None
 
     # Override
@@ -63,7 +61,7 @@ class BuildRequestV2(BuildRequest):
         :param reactor_config_map: str, name of the config map containing the reactor environment
         :param yum_repourls: list of str, uris of the yum repos to pull from
         :param signing_intent: bool, True to sign the resulting image
-        :param compose_ids: list of str,
+        :param compose_ids: list of int, ODCS composes to use instead of generating new ones
         :param filesystem_koji_task_id: int, Koji Task that created the base filesystem
         :param platform_node_selector: dict, a nodeselector for a user_paramsific platform
         :param scratch_build_node_selector: dict, a nodeselector for scratch builds
@@ -131,8 +129,8 @@ class BuildRequestV2(BuildRequest):
         if validate:
             self.user_params.validate()
 
-        self.render_name(self.user_params.name, self.user_params.image_tag,
-                         self.user_params.platform)
+        self.render_name(self.user_params.name.value, self.user_params.image_tag.value,
+                         self.user_params.platform.value)
         self.render_resource_limits()
 
         self.template['spec']['source']['git']['uri'] = self.user_params.git_uri.value
@@ -166,7 +164,6 @@ class BuildRequestV2(BuildRequest):
         # Set template.spec.strategy.customStrategy.env[] USER_PARAMS
         # Set required_secrets based on reactor_config
         # Set worker_token_secrets based on reactor_config, if any
-        logger.debug('calling reactor config with %s',self.user_params.reactor_config_map.value)
         self.set_reactor_config(reactor_config_map=self.user_params.reactor_config_map.value)
         self.set_required_secrets(reactor_config_map=self.user_params.reactor_config_map.value,
                                   platforms=self.user_params.platforms.value)
