@@ -311,6 +311,9 @@ class OSBS(object):
         build_json['spec']['serviceAccount'] = 'builder'
 
         builder_img = build_json['spec']['strategy']['customStrategy']['from']
+        build_name = builder_img['name']
+        build_kind = builder_img['kind']
+
         kind = builder_img['kind']
         if kind == 'ImageStreamTag':
             # Only BuildConfigs get to specify an ImageStreamTag. When
@@ -320,6 +323,11 @@ class OSBS(object):
             ref = response.json()['image']['dockerImageReference']
             builder_img['kind'] = 'DockerImage'
             builder_img['name'] = ref
+
+        build_json['metadata'].setdefault('annotations', {})
+        build_json['metadata']['annotations']['from'] = json.dumps({
+            'kind': build_kind,
+            'name': build_name})
 
         if unique:
             unique_labels = {}
