@@ -1780,6 +1780,11 @@ class TestOSBS(object):
         updated_build_json = copy.deepcopy(build_json)
         updated_build_json['kind'] = 'Build'
         updated_build_json['spec']['serviceAccount'] = 'builder'
+        updated_build_json['metadata']['annotations'] = {}
+        updated_build_json['metadata']['annotations']['from'] = json.dumps({
+            'kind': kind,
+            'name': 'buildroot:latest'})
+
         img = updated_build_json['spec']['strategy']['customStrategy']['from']
         img['kind'] = 'DockerImage'
         img['name'] = expect_name
