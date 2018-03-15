@@ -21,6 +21,7 @@ import copy
 import getpass
 import sys
 import time
+import yaml
 from tempfile import NamedTemporaryFile
 
 from osbs.api import OSBS, osbsapi
@@ -2194,27 +2195,35 @@ class TestOSBS(object):
             .with_args('inputs/config_map.json')
             .and_return(flexmock(read=lambda: raw)))
 
-        how_str = "special.how"
-        very_str = "very"
-        type_str = "special.type"
-        quark_dict = {"quark": "charm"}
-        data = {
-                how_str: very_str,
-                type_str: quark_dict
-        }
+        conf_name = 'special-config'
         none_str = "special.none"
-        name = 'special-config'
-        config_map = osbs.create_config_map(name, data)
+
+        data = {
+            "special.how": "very",
+            "special.type": {"quark": "charm"},
+            "config.yaml": "version:1",
+            "config.yml": "version:2",
+            "config.ymlll": {"version": 3},
+            "config.json": {"version": 4}
+        }
+
+        config_map = osbs.create_config_map(conf_name, data)
+        assert isinstance(config_map, ConfigMapResponse)
+
+        (flexmock(yaml)
+            .should_call('load')
+            .times(6))  # 2*2 in get_data, 2 in get_data_by_key
+
+        assert config_map.get_data() == data
+        config_map = osbs.get_config_map(conf_name)
         assert isinstance(config_map, ConfigMapResponse)
         assert config_map.get_data() == data
-        config_map = osbs.get_config_map(name)
-        assert isinstance(config_map, ConfigMapResponse)
-        assert config_map.get_data() == data
-        assert config_map.get_data_by_key(how_str) == very_str
-        assert config_map.get_data_by_key(type_str) == quark_dict
         assert not config_map.get_data_by_key(none_str)
 
-        config_map = osbs.delete_config_map(name)
+        for key, value in data.items():
+            assert config_map.get_data_by_key(key) == value
+
+        config_map = osbs.delete_config_map(conf_name)
         assert config_map is None
 
     def test_retries_disabled(self, osbs): # noqa

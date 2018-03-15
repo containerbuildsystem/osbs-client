@@ -9,6 +9,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 
 import logging
 import json
+import yaml
 
 from osbs.utils import graceful_chain_get
 
@@ -31,6 +32,11 @@ class ConfigMapResponse(object):
     def json(self):
         return self._json
 
+    def is_yaml(self, name):
+        if name.rsplit('.', 1)[-1] in ('yaml', 'yml'):
+            return True
+        return False
+
     def get_data(self):
         """
         Find the data stored in the config_map
@@ -43,7 +49,10 @@ class ConfigMapResponse(object):
 
         data_dict = {}
         for key in data:
-            data_dict[key] = json.loads(data[key])
+            if self.is_yaml(key):
+                data_dict[key] = yaml.load(data[key])
+            else:
+                data_dict[key] = json.loads(data[key])
 
         return data_dict
 
@@ -58,4 +67,6 @@ class ConfigMapResponse(object):
         if data is None or name not in data:
             return {}
 
+        if self.is_yaml(name):
+            return yaml.load(data[name]) or {}
         return json.loads(data[name])
