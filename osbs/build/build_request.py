@@ -469,7 +469,7 @@ class BuildRequest(object):
             self.dj.dock_json_set_arg(phase, plugin, 'koji_keytab', krb_keytab)
 
     def set_reactor_config(self):
-        if not self.spec.reactor_config_map.value and not self.spec.reactor_config_override.value:
+        if not (self.spec.reactor_config_map.value or self.spec.reactor_config_override.value):
             return
         custom = self.template['spec']['strategy']['customStrategy']
 
@@ -495,7 +495,7 @@ class BuildRequest(object):
         """
         Sets required secrets
         """
-        if not self.spec.reactor_config_map.value and not self.spec.reactor_config_override.value:
+        if not (self.spec.reactor_config_map.value or self.spec.reactor_config_override.value):
             return
 
         req_secrets_key = 'required_secrets'
