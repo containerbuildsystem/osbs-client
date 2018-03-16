@@ -228,7 +228,9 @@ class BuildRequest(object):
         self.template['metadata']['labels'][name] = value
 
     def render_reactor_config(self):
-        if self.spec.reactor_config_secret.value is None:
+        if self.spec.reactor_config_secret.value is None and \
+                self.spec.reactor_config_map.value is None and \
+                self.spec.reactor_config_override.value is None:
             logger.debug("removing reactor_config plugin: no secret")
             self.dj.remove_plugin('prebuild_plugins', 'reactor_config')
 
