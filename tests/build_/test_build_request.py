@@ -3091,3 +3091,50 @@ class TestBuildRequest(object):
             got_secrets[secret['secretSource']['name']] = secret['mountPath']
 
         assert expect_secrets == got_secrets
+
+    @pytest.mark.parametrize('reactor_config_secret', [
+        None,
+        'reactor_config_secret',
+    ])
+    @pytest.mark.parametrize('reactor_config_override', [
+        None,
+        {'version': 1},
+    ])
+    @pytest.mark.parametrize('reactor_config_map', [
+        None,
+        'reactor-config-map',
+    ])
+    def test_render_reactor_config(self, reactor_config_secret,
+                                   reactor_config_override, reactor_config_map):
+        plugin_type = 'prebuild_plugins'
+        plugin_name = 'reactor_config'
+
+        build_request = BuildRequest(INPUTS_PATH)
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'user': "john-foo",
+            'component': TEST_COMPONENT,
+            'registry_uri': "example.com",
+            'openshift_uri': "http://openshift/",
+            'builder_openshift_url': "http://openshift/",
+            'build_image': 'fedora:latest',
+            'base_image': 'fedora:latest',
+            'name_label': 'fedora/resultingimage',
+            'registry_api_versions': ['v1'],
+            'reactor_config_map': reactor_config_map,
+            'reactor_config_override': reactor_config_override,
+            'reactor_config_secret': reactor_config_secret,
+            'osbs_api': MockOSBSApi(),
+        }
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+
+        plugins = get_plugins_from_build_json(build_json)
+
+        if reactor_config_secret is None and reactor_config_override is None and \
+                reactor_config_map is None:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, plugin_type, plugin_name)
+        else:
+            assert get_plugin(plugins, plugin_type, plugin_name)
