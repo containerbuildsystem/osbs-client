@@ -822,7 +822,7 @@ class Openshift(object):
                 break
 
             if changetype == WATCH_ERROR:
-                logger.error("Error watching ImageStream")
+                logger.error("Error watching ImageStream: %s", obj)
                 break
 
             if changetype == WATCH_MODIFIED:
