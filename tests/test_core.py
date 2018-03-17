@@ -6,6 +6,7 @@ All rights reserved.
 This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
+from copy import deepcopy
 from flexmock import flexmock
 from textwrap import dedent
 import six
@@ -25,6 +26,7 @@ from osbs.core import check_response, Openshift
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
                              TEST_LABEL_VALUE, TEST_IMAGESTREAM)
 from tests.fake_api import openshift, OAPI_PREFIX, API_VER  # noqa
+from tests.test_utils import JsonMatcher
 from requests.exceptions import ConnectionError
 import pytest
 
@@ -494,28 +496,27 @@ class TestOpenshift(object):
         this_dir = os.path.dirname(this_file)
 
         json_path = os.path.join(this_dir, "mock_jsons", openshift._con.version, 'imagestream.json')
-        resource_json = json.load(open(json_path))
+        template_resource_json = json.load(open(json_path))
 
+        initial_resource_json = deepcopy(template_resource_json)
         # keep just 1 tag, so it will be different from oldtags (3 tags)
         if modify:
-            resource_json['status']['tags'] = [resource_json['status']['tags'][0]]
+            initial_resource_json['status']['tags'] = [initial_resource_json['status']['tags'][0]]
 
+        # "put" response will have resource_version incremented by one
+        resource_version = str(int(initial_resource_json['metadata']['resourceVersion']) + 1)
         (flexmock(openshift)
             .should_receive('watch_resource')
-            .and_yield((state, resource_json)))
+            .with_args('imagestreams', 'test_imagestream', resourceVersion=resource_version)
+            .and_yield((state, initial_resource_json)))
 
-        SERIALIZED = object()
-
-        def fake_json_dumps(imagestream_json):
-            check_annotation = 'openshift.io/image.dockerRepositoryCheck'
-            assert check_annotation not in imagestream_json['metadata']['annotations']
-            return SERIALIZED
-
-        flexmock(json).should_receive('dumps').replace_with(fake_json_dumps)
+        modified_resource_json = deepcopy(template_resource_json)
+        modified_resource_json['metadata']['annotations'].pop(
+            'openshift.io/image.dockerRepositoryCheck', None)
 
         put_url = openshift._build_url("imagestreams/%s" % TEST_IMAGESTREAM)
         (flexmock(openshift)
             .should_call('_put')
-            .with_args(put_url, data=SERIALIZED, use_json=True))
+            .with_args(put_url, data=JsonMatcher(modified_resource_json), use_json=True))
 
         assert openshift.import_image(TEST_IMAGESTREAM) is imported
