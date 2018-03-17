@@ -813,7 +813,7 @@ class Openshift(object):
         check_response(response)
 
         # Watch for it to be updated
-        resource_version = imagestream_json['metadata']['resourceVersion']
+        resource_version = response.json()['metadata']['resourceVersion']
         for changetype, obj in self.watch_resource("imagestreams", name,
                                                    resourceVersion=resource_version):
             logger.info("Change type: %r", changetype)
