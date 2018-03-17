@@ -10,6 +10,7 @@ import os
 import os.path
 import pytest
 import datetime
+import json
 import re
 import sys
 from time import tzset
@@ -485,3 +486,13 @@ def test_split_module_spec(module, should_raise, expected):
             split_module_spec(module)
     else:
         assert split_module_spec(module) == expected
+
+
+class JsonMatcher(object):
+    """Match python object to json string"""
+
+    def __init__(self, expected):
+        self.expected = expected
+
+    def __eq__(self, json_str):
+        return self.expected == json.loads(json_str)

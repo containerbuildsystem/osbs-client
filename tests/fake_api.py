@@ -11,6 +11,7 @@ import os
 import re
 import pytest
 import inspect
+import json
 import logging
 import fnmatch
 from osbs.core import Openshift
@@ -258,8 +259,9 @@ class Connection(object):
                 },
                 "put": {
                     # Contains imagestream
-                    # with 3 tags
-                    "file": "imagestream.json"
+                    # with 3 tags but with different resourceVersion
+                    "file": "imagestream.json",
+                    "custom_callback": self.increment_resource_version
                 }
             },
 
@@ -340,6 +342,13 @@ class Connection(object):
             }
 
         return custom_func
+
+    @staticmethod
+    def increment_resource_version(key, content):
+        content = json.loads(content)
+        ver = int(content['metadata']['resourceVersion']) + 1
+        content['metadata']['resourceVersion'] = str(ver)
+        return {"content": json.dumps(content).encode('utf-8')}
 
     def get_definition_for(self, key):
         """
