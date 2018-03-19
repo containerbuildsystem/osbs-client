@@ -234,7 +234,7 @@ class BuildRequest(object):
             logger.debug("removing reactor_config plugin: no secret")
             self.dj.remove_plugin('prebuild_plugins', 'reactor_config')
 
-    def render_orchestrate_build(self):
+    def render_orchestrate_build(self, use_auth=None):
         phase = 'buildstep_plugins'
         plugin = 'orchestrate_build'
         if not self.dj.dock_json_has_plugin_conf(phase, plugin):
@@ -316,6 +316,15 @@ class BuildRequest(object):
             config_kwargs['build_image'] = self.spec.build_image.value
 
         self.dj.dock_json_set_arg(phase, plugin, 'config_kwargs', config_kwargs)
+
+        goarch = {}
+        for platform, architecture in self.platform_descriptors.items():
+            goarch[platform] = architecture['architecture']
+        self.dj.dock_json_set_arg(phase, plugin, 'goarch', goarch)
+        self.dj.dock_json_set_arg(phase, plugin, 'url', self.spec.builder_openshift_url.value)
+
+        if use_auth is not None:
+            self.dj.dock_json_set_arg(phase, plugin, 'use_auth', use_auth)
 
     def render_resource_limits(self):
         if self._resource_limits is not None:
@@ -1346,8 +1355,8 @@ class BuildRequest(object):
         self.dj.dock_json_set_arg('postbuild_plugins', 'group_manifests',
                                   'group', self.spec.group_manifests.value)
         goarch = {}
-        for platform in self.platform_descriptors:
-            goarch[platform] = self.platform_descriptors[platform]['architecture']
+        for platform, architecture in self.platform_descriptors.items():
+            goarch[platform] = architecture['architecture']
         self.dj.dock_json_set_arg('postbuild_plugins', 'group_manifests',
                                   'goarch', goarch)
 
@@ -1700,7 +1709,7 @@ class BuildRequest(object):
 
         use_auth = self.spec.use_auth.value
         self.render_reactor_config()
-        self.render_orchestrate_build()
+        self.render_orchestrate_build(use_auth=use_auth)
         self.render_resolve_module_compose()
         self.render_resolve_composes()
         self.render_flatpak_create_dockerfile()
