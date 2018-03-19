@@ -1628,7 +1628,6 @@ class TestBuildRequest(object):
     ))
     @pytest.mark.parametrize('arrangement_version',
                              range(3, DEFAULT_ARRANGEMENT_VERSION + 1))
-    @pytest.mark.parametrize('koji_parent_build', ['fedora-26-9', None])
     @pytest.mark.parametrize(('build_from', 'build_image', 'build_imagestream',
                               'worker_build_image', 'valid'), (
 
@@ -1677,7 +1676,15 @@ class TestBuildRequest(object):
         },
         {}
     ))
-    @pytest.mark.parametrize('prefer_schema1_digest', [True, False, None])
+    @pytest.mark.parametrize(('koji_parent_build', 'prefer_schema1_digest',
+                              'platform_descriptors', 'goarch'), (
+            ('fedora-26-9', True, {}, {}),
+            ('fedora-26-9', False, {'ham': {'architecture': 'ham'}}, {'ham': 'ham'}),
+            ('fedora-26-9', None, {'ham': {'architecture': 'bacon'},
+                                   'eggs': {'architecture': 'eggs'}},
+             {'ham': 'bacon', 'eggs': 'eggs'}),
+            (None, None, {}, {}),
+    ))
     @pytest.mark.parametrize(('openshift_req_version', 'worker_openshift_req_version'), (
         (None, '1.0.6'),
         ('1.3.4', '1.3.4'),
@@ -1687,7 +1694,8 @@ class TestBuildRequest(object):
                                       build_imagestream, worker_build_image,
                                       additional_kwargs, koji_parent_build,
                                       openshift_req_version, worker_openshift_req_version,
-                                      prefer_schema1_digest, valid):
+                                      prefer_schema1_digest, valid, platform_descriptors,
+                                      goarch):
         phase = 'buildstep_plugins'
         plugin = 'orchestrate_build'
 
@@ -1708,6 +1716,7 @@ class TestBuildRequest(object):
             'platforms': platforms,
             'arrangement_version': arrangement_version,
             'osbs_api': MockOSBSApi(),
+            'platform_descriptors': platform_descriptors,
         }
         if build_image:
             kwargs['build_image'] = build_image
@@ -1741,6 +1750,7 @@ class TestBuildRequest(object):
 
         else:
             assert plugin_value_get(plugins, phase, plugin, 'args', 'platforms') == platforms
+            assert plugin_value_get(plugins, phase, plugin, 'args', 'goarch') == goarch
             build_kwargs = plugin_value_get(plugins, phase, plugin, 'args', 'build_kwargs')
             assert build_kwargs['arrangement_version'] == arrangement_version
             assert build_kwargs.get('koji_parent_build') == koji_parent_build
