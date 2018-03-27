@@ -80,6 +80,41 @@ class TestBuildUserParams(object):
         img_tag = img_tag.format(random_number=rand, time_string=timestr, **kwargs)
         assert spec.image_tag.value == img_tag
 
+    def test_user_params_bad_json(self):
+        required_json = json.dumps({
+            'arrangement_version': 6,
+            'customize_conf': 'prod_customize.json',
+            'git_ref': 'master'
+        }, sort_keys=True)
+        spec = BuildUserParams()
+
+        spec.from_json(None)
+        assert spec.to_json() == required_json
+        spec.from_json("")
+        assert spec.to_json() == required_json
+        assert '{0}'.format(spec)
+
+    @pytest.mark.parametrize(('missing_arg'), (
+        'name_label',
+        'base_image',
+    ))
+    def test_user_params_bad_none_flatpak(self, missing_arg):
+        kwargs = self.get_minimal_kwargs()
+        kwargs['flatpak'] = False
+        kwargs.pop(missing_arg)
+        spec = BuildUserParams()
+
+        with pytest.raises(OsbsValidationException):
+            spec.set_params(**kwargs)
+
+    def test_user_params_bad_compose_ids(self):
+        kwargs = self.get_minimal_kwargs()
+        kwargs['compose_ids'] = True
+        spec = BuildUserParams()
+
+        with pytest.raises(OsbsValidationException):
+            spec.set_params(**kwargs)
+
     @pytest.mark.parametrize(('signing_intent', 'compose_ids', 'yum_repourls', 'exc'), (
         ('release', [1, 2], ['http://example.com/my.repo'], OsbsValidationException),
         ('release', [1, 2], None, OsbsValidationException),
