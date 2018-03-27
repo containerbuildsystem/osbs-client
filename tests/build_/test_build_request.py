@@ -22,6 +22,7 @@ from osbs.constants import (DEFAULT_OUTER_TEMPLATE,
                             DEFAULT_INNER_TEMPLATE, SECRETS_PATH,
                             ORCHESTRATOR_INNER_TEMPLATE, WORKER_INNER_TEMPLATE,
                             DEFAULT_ARRANGEMENT_VERSION,
+                            REACTOR_CONFIG_ARRANGEMENT_VERSION,
                             BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR,
                             ADDITIONAL_TAGS_FILE)
 from osbs.exceptions import OsbsValidationException
@@ -39,6 +40,11 @@ from tests.constants import (INPUTS_PATH, TEST_BUILD_CONFIG, TEST_BUILD_JSON,
                              TEST_ISOLATED_BUILD_NAME, TEST_FLATPAK_BASE_IMAGE)
 
 USE_DEFAULT_TRIGGERS = object()
+
+
+# Don't use REACTOR_CONFIG_ARRANGEMENT templates
+TEST_ARRANGEMENT_VERSION = min(DEFAULT_ARRANGEMENT_VERSION,
+                               REACTOR_CONFIG_ARRANGEMENT_VERSION - 1)
 
 
 class NoSuchPluginException(Exception):
@@ -183,7 +189,7 @@ class TestBuildRequest(object):
     @pytest.mark.parametrize('prefer_schema1_digest', (True, False, None))
     def test_render_koji_upload(self, use_auth, kojihub, prefer_schema1_digest):
         inner_template = WORKER_INNER_TEMPLATE.format(
-            arrangement_version=DEFAULT_ARRANGEMENT_VERSION)
+            arrangement_version=TEST_ARRANGEMENT_VERSION)
         build_request = BuildRequest(INPUTS_PATH, inner_template=inner_template,
                                      outer_template=None, customize_conf=None)
         kwargs = {
@@ -282,7 +288,7 @@ class TestBuildRequest(object):
 
         if enabled:
             inner_template = ORCHESTRATOR_INNER_TEMPLATE.format(
-                arrangement_version=DEFAULT_ARRANGEMENT_VERSION)
+                arrangement_version=TEST_ARRANGEMENT_VERSION)
         else:
             inner_template = None
         build_request = BuildRequest(INPUTS_PATH, inner_template=inner_template)
@@ -960,7 +966,7 @@ class TestBuildRequest(object):
         ['v2'],
     ])
     @pytest.mark.parametrize('platform', [None, 'x86_64'])
-    @pytest.mark.parametrize('arrangement_version', range(3, DEFAULT_ARRANGEMENT_VERSION + 1))
+    @pytest.mark.parametrize('arrangement_version', range(3, TEST_ARRANGEMENT_VERSION + 1))
     @pytest.mark.parametrize('scratch', [False, True])
     def test_render_prod_request_v1_v2(self, registry_api_versions, platform, arrangement_version,
                                        scratch):
@@ -1627,7 +1633,7 @@ class TestBuildRequest(object):
         (None, None, True),
     ))
     @pytest.mark.parametrize('arrangement_version',
-                             range(3, DEFAULT_ARRANGEMENT_VERSION + 1))
+                             range(3, TEST_ARRANGEMENT_VERSION + 1))
     @pytest.mark.parametrize(('build_from', 'build_image', 'build_imagestream',
                               'worker_build_image', 'valid'), (
 
@@ -2526,7 +2532,7 @@ class TestBuildRequest(object):
         kwargs = get_sample_prod_params()
         kwargs['client_config_secret'] = secret
         kwargs['platforms'] = ['x86_64', 'ppc64le']
-        kwargs['arrangement_version'] = DEFAULT_ARRANGEMENT_VERSION
+        kwargs['arrangement_version'] = TEST_ARRANGEMENT_VERSION
         br.set_params(**kwargs)
 
         br.dj.dock_json_set_param(plugin_type, [])

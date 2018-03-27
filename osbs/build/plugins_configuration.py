@@ -313,7 +313,7 @@ class PluginsConfiguration(object):
 
     def render_koji(self):
         """
-        if there is yum repo user_paramsified, don't pick stuff from koji
+        if there is yum repo in user params, don't pick stuff from koji
         """
         phase = 'prebuild_plugins'
         plugin = 'koji'

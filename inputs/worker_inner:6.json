@@ -1,35 +1,25 @@
 {
   "prebuild_plugins": [
     {
+      "name": "reactor_config"
+    },
+    {
       "name": "resolve_module_compose"
     },
     {
-      "name": "flatpak_create_dockerfile",
-      "args": {
-        "base_image": "{{BASE_IMAGE}}"
-      }
+      "name": "flatpak_create_dockerfile"
     },
     {
-      "name": "add_filesystem",
-      "args": {
-        "repos": [],
-        "from_task_id": "{{FROM_TASK_ID}}"
-      }
+      "name": "add_filesystem"
     },
     {
-      "name": "inject_parent_image",
-      "args": {
-        "koji_parent_build": "{{KOJI_PARENT_BUILD}}"
-      }
+      "name": "inject_parent_image"
     },
     {
       "name": "pull_base_image"
     },
     {
-      "name": "add_labels_in_dockerfile",
-      "args": {
-        "labels": "{{IMPLICIT_LABELS}}"
-      }
+      "name": "add_labels_in_dockerfile"
     },
     {
       "name": "change_from_in_dockerfile"
@@ -47,16 +37,10 @@
       "name": "fetch_maven_artifacts"
     },
     {
-      "name": "koji",
-      "args": {
-        "target": "{{KOJI_TARGET}}"
-      }
+      "name": "koji"
     },
     {
-      "name": "add_yum_repo_by_url",
-      "args": {
-        "repourls": []
-      }
+      "name": "add_yum_repo_by_url"
     },
     {
       "name": "inject_yum_repo"
@@ -90,7 +74,10 @@
       "name": "tag_and_push"
     },
     {
-      "name": "pulp_push"
+      "name": "pulp_push",
+      "args": {
+        "publish": false
+      }
     },
     {
       "name": "compress",
@@ -102,19 +89,13 @@
     {
       "name": "koji_upload",
       "args": {
-        "verify_ssl": false,
-        "blocksize": 10485760,
-        "koji_keytab": false,
-        "koji_principal": false
+        "blocksize": 10485760
       }
     }
   ],
   "exit_plugins": [
     {
-      "name": "store_metadata_in_osv3",
-      "args": {
-        "verify_ssl": false
-      }
+      "name": "store_metadata_in_osv3"
     },
     {
       "name": "remove_built_image"
