@@ -147,6 +147,7 @@ class TestBuildUserParams(object):
             'platform': 'x86_64',
             'platforms': ['x86_64', ],
             'reactor_config_map': 'reactor-config-map',
+            'reactor_config_override': 'reactor-config-override',
             'release': '29',
             'scratch': False,
             'signing_intent': False,
@@ -201,6 +202,7 @@ class TestBuildUserParams(object):
             "platform": "x86_64",
             "platforms": ["x86_64"],
             "reactor_config_map": "reactor-config-map",
+            "reactor_config_override": "reactor-config-override",
             "release": "29",
             "trigger_imagestreamtag": "buildroot:old",
             "user": TEST_USER

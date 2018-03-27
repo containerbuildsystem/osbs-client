@@ -431,6 +431,8 @@ class TestPluginsConfiguration(object):
             'name_label': 'fedora/resultingimage',
             'platforms': platforms,
             'build_type': BUILD_TYPE_ORCHESTRATOR,
+            'reactor_config_map': 'reactor-config-map',
+            'reactor_config_override': 'reactor-config-override',
         }
         if build_image:
             kwargs['build_image'] = build_image
@@ -464,6 +466,8 @@ class TestPluginsConfiguration(object):
             build_kwargs = plugin_value_get(plugins, phase, plugin, 'args', 'build_kwargs')
             assert build_kwargs['arrangement_version'] == REACTOR_CONFIG_ARRANGEMENT_VERSION
             assert build_kwargs.get('koji_parent_build') == koji_parent_build
+            assert build_kwargs.get('reactor_config_map') == 'reactor-config-map'
+            assert build_kwargs.get('reactor_config_override') == 'reactor-config-override'
 
             worker_config_kwargs = plugin_value_get(plugins, phase, plugin, 'args',
                                                     'config_kwargs')
