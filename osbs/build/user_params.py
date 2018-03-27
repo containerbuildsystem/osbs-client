@@ -49,6 +49,7 @@ class BuildUserParams(BuildCommon):
         self.name = BuildIDParam()
         self.platforms = BuildParam('platforms', allow_none=True)
         self.reactor_config_map = BuildParam("reactor_config_map", allow_none=True)
+        self.reactor_config_override = BuildParam("reactor_config_override", allow_none=True)
         self.release = BuildParam('release', allow_none=True)
         self.scratch = BuildParam('scratch', allow_none=True)
         self.signing_intent = BuildParam('signing_intent', allow_none=True)
@@ -81,7 +82,7 @@ class BuildUserParams(BuildCommon):
                    koji_target=None, koji_task_id=None, filesystem_koji_task_id=None,
                    koji_parent_build=None,
                    flatpak=None, flatpak_base_image=None,
-                   reactor_config_map=None,
+                   reactor_config_map=None, reactor_config_override=None,
                    yum_repourls=None, signing_intent=None, compose_ids=None,
                    isolated=None, scratch=None,
                    **kwargs):
@@ -96,6 +97,7 @@ class BuildUserParams(BuildCommon):
 
         self.name.value = make_name_from_git(self.git_uri.value, self.git_branch.value)
         self.reactor_config_map.value = reactor_config_map
+        self.reactor_config_override.value = reactor_config_override
 
         unique_build_args = (build_imagestream, build_image, build_from)
         if sum(bool(a) for a in unique_build_args) != 1:

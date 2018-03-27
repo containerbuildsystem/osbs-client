@@ -152,6 +152,7 @@ class TestBuildRequestV2(object):
             'name_label': 'fedora/resultingimage',
             'build_type': BUILD_TYPE_WORKER,
             'osbs_api': MockOSBSApi(),
+            'reactor_config_map': 'reactor-config-map',
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()

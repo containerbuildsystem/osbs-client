@@ -59,6 +59,9 @@ class BuildRequestV2(BuildRequest):
         :param flatpak: if we should build a Flatpak OCI Image
         :param flatpak_base_image: str, name of the Flatpack OCI Image
         :param reactor_config_map: str, name of the config map containing the reactor environment
+        :param reactor_config_override: dict, data structure for reactor config to be injected as
+                                        an environment variable into a worker build;
+                                        when used, reactor_config_map is ignored.
         :param yum_repourls: list of str, uris of the yum repos to pull from
         :param signing_intent: bool, True to sign the resulting image
         :param compose_ids: list of int, ODCS composes to use instead of generating new ones
@@ -164,8 +167,11 @@ class BuildRequestV2(BuildRequest):
         # Set template.spec.strategy.customStrategy.env[] USER_PARAMS
         # Set required_secrets based on reactor_config
         # Set worker_token_secrets based on reactor_config, if any
-        self.set_reactor_config(reactor_config_map=self.user_params.reactor_config_map.value)
+        reactor_config_override = self.user_params.reactor_config_override.value
+        self.set_reactor_config(reactor_config_map=self.user_params.reactor_config_map.value,
+                                reactor_config_override=reactor_config_override)
         self.set_required_secrets(reactor_config_map=self.user_params.reactor_config_map.value,
+                                  reactor_config_override=reactor_config_override,
                                   platforms=self.user_params.platforms.value)
 
         # Adjust triggers for custom base image
