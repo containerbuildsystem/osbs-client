@@ -40,6 +40,7 @@ from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             DEFAULT_CUSTOMIZE_CONF, WORKER_CUSTOMIZE_CONF,
                             ORCHESTRATOR_OUTER_TEMPLATE, ORCHESTRATOR_INNER_TEMPLATE,
                             DEFAULT_ARRANGEMENT_VERSION,
+                            REACTOR_CONFIG_ARRANGEMENT_VERSION,
                             ORCHESTRATOR_CUSTOMIZE_CONF,
                             BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR,
                             OS_CONFLICT_MAX_RETRIES)
@@ -193,14 +194,15 @@ class TestOSBS(object):
         assert isinstance(response, BuildResponse)
 
     # osbs is a fixture here
-    @pytest.mark.parametrize(('inner_template', 'outer_template', 'customize_conf'), (  # noqa
-        (DEFAULT_INNER_TEMPLATE, DEFAULT_OUTER_TEMPLATE, DEFAULT_CUSTOMIZE_CONF),
+    @pytest.mark.parametrize(('inner_template', 'outer_template',  # noqa
+                              'customize_conf', 'version'), (
+        (DEFAULT_INNER_TEMPLATE, DEFAULT_OUTER_TEMPLATE, DEFAULT_CUSTOMIZE_CONF, 1),
         (WORKER_INNER_TEMPLATE.format(
             arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
-         WORKER_OUTER_TEMPLATE, WORKER_CUSTOMIZE_CONF),
+         WORKER_OUTER_TEMPLATE, WORKER_CUSTOMIZE_CONF, DEFAULT_ARRANGEMENT_VERSION),
     ))
     def test_create_prod_build_build_request(self, osbs, inner_template,
-                                             outer_template, customize_conf):
+                                             outer_template, customize_conf, version):
         (flexmock(utils)
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
@@ -210,14 +212,24 @@ class TestOSBS(object):
             .should_call('get_build_request')
             .with_args(inner_template=inner_template,
                        outer_template=outer_template,
-                       customize_conf=customize_conf)
+                       customize_conf=customize_conf,
+                       arrangement_version=None)
             .once())
-        response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                          TEST_GIT_BRANCH, TEST_USER,
-                                          inner_template=inner_template,
-                                          outer_template=outer_template,
-                                          customize_conf=customize_conf)
-        assert isinstance(response, BuildResponse)
+
+        if version < REACTOR_CONFIG_ARRANGEMENT_VERSION:
+            response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                              TEST_GIT_BRANCH, TEST_USER,
+                                              inner_template=inner_template,
+                                              outer_template=outer_template,
+                                              customize_conf=customize_conf)
+            assert isinstance(response, BuildResponse)
+        else:
+            with pytest.raises(OsbsException):
+                response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                                  TEST_GIT_BRANCH, TEST_USER,
+                                                  inner_template=inner_template,
+                                                  outer_template=outer_template,
+                                                  customize_conf=customize_conf)
 
     @pytest.mark.parametrize('has_task_id', [True, False])
     def test_create_prod_build_remove_koji_task_id(self, has_task_id):
@@ -453,13 +465,33 @@ class TestOSBS(object):
             .and_return(self.mock_repo_info()))
 
         invalid_version = INVALID_ARRANGEMENT_VERSION
-        with pytest.raises(OsbsValidationException) as ex:
-            osbs.create_worker_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
-                                     git_branch=TEST_GIT_BRANCH, user=TEST_USER,
-                                     platform='spam', release='bacon',
-                                     arrangement_version=invalid_version)
+        if INVALID_ARRANGEMENT_VERSION < REACTOR_CONFIG_ARRANGEMENT_VERSION:
+            with pytest.raises(OsbsValidationException) as ex:
+                osbs.create_worker_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
+                                         git_branch=TEST_GIT_BRANCH, user=TEST_USER,
+                                         platform='spam', release='bacon',
+                                         arrangement_version=invalid_version)
 
-        assert 'arrangement_version' in ex.value.message
+            assert 'arrangement_version' in ex.value.message
+        # REACTOR_CONFIG arrangements can't fail
+        else:
+            flexmock(OSBS, _create_build_config_and_build=request_as_response)
+            response = osbs.create_worker_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
+                                                git_branch=TEST_GIT_BRANCH, user=TEST_USER,
+                                                platform='spam', release='bacon',
+                                                arrangement_version=invalid_version)
+            env = response.json['spec']['strategy']['customStrategy']['env']
+            user_params = {}
+            for entry in env:
+                if entry['name'] == 'USER_PARAMS':
+                    user_params = json.loads(entry['value'])
+                    break
+
+            user_params['arrangement_version'] = invalid_version
+            with pytest.raises(OsbsException) as ex:
+                osbs.render_plugins_configuration(json.dumps(user_params))
+
+            assert 'inner:{0}'.format(invalid_version) in ex.value.message
 
     # osbs is a fixture here
     def test_create_worker_build_ioerror(self, osbs):  # noqa
@@ -601,13 +633,33 @@ class TestOSBS(object):
             .and_return(self.mock_repo_info()))
 
         invalid_version = INVALID_ARRANGEMENT_VERSION
-        with pytest.raises(OsbsValidationException) as ex:
-            osbs.create_orchestrator_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
-                                           git_branch=TEST_GIT_BRANCH, user=TEST_USER,
-                                           platforms=['spam'],
-                                           arrangement_version=invalid_version)
+        if invalid_version < REACTOR_CONFIG_ARRANGEMENT_VERSION:
+            with pytest.raises(OsbsValidationException) as ex:
+                osbs.create_orchestrator_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
+                                               git_branch=TEST_GIT_BRANCH, user=TEST_USER,
+                                               platforms=['spam'],
+                                               arrangement_version=invalid_version)
 
-        assert 'arrangement_version' in ex.value.message
+            assert 'arrangement_version' in ex.value.message
+        # REACTOR_CONFIG arrangements are hard to make fail
+        else:
+            flexmock(OSBS, _create_build_config_and_build=request_as_response)
+            response = osbs.create_orchestrator_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
+                                                      git_branch=TEST_GIT_BRANCH, user=TEST_USER,
+                                                      platforms=['spam'],
+                                                      arrangement_version=invalid_version)
+            env = response.json['spec']['strategy']['customStrategy']['env']
+            user_params = {}
+            for entry in env:
+                if entry['name'] == 'USER_PARAMS':
+                    user_params = json.loads(entry['value'])
+                    break
+
+            user_params['arrangement_version'] = invalid_version
+            with pytest.raises(OsbsException) as ex:
+                osbs.render_plugins_configuration(json.dumps(user_params))
+
+            assert 'inner:{0}'.format(invalid_version) in ex.value.message
 
     # osbs is a fixture here
     def test_create_prod_build_missing_name_label(self, osbs):  # noqa
@@ -2073,7 +2125,7 @@ class TestOSBS(object):
                                    worker, orchestrator), osbs)
 
     # osbs is a fixture here
-    @pytest.mark.parametrize('isolated', [True, False]) # noqa
+    @pytest.mark.parametrize('isolated', [True, False])  # noqa
     def test_flatpak_args_from_cli(self, caplog, osbs, isolated):
         class MockArgs(object):
             def __init__(self, isolated):
@@ -2172,7 +2224,8 @@ class TestOSBS(object):
             .should_call('get_build_request')
             .with_args(inner_template=inner_template,
                        outer_template=outer_template,
-                       customize_conf=customize_conf)
+                       customize_conf=customize_conf,
+                       arrangement_version=None)
             .once())
 
         if branch_name:
@@ -2191,7 +2244,7 @@ class TestOSBS(object):
                                            customize_conf=customize_conf)
 
     # osbs is a fixture here
-    def test_config_map(self, osbs): # noqa
+    def test_config_map(self, osbs):  # noqa
         with open(os.path.join(INPUTS_PATH, "config_map.json")) as fp:
             raw = fp.read()
         mock = flexmock(sys.modules['__builtin__' if six.PY2 else 'builtins'])
@@ -2231,7 +2284,7 @@ class TestOSBS(object):
         config_map = osbs.delete_config_map(conf_name)
         assert config_map is None
 
-    def test_retries_disabled(self, osbs): # noqa
+    def test_retries_disabled(self, osbs):  # noqa
         (flexmock(osbs.os._con)
             .should_call('get')
             .with_args("/oapi/v1/namespaces/default/builds/", headers={},

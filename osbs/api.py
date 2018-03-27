@@ -190,7 +190,7 @@ class OSBS(object):
         if build_type is not None:
             warnings.warn("build types are deprecated, do not use the build_type argument")
 
-        if arrangement_version < REACTOR_CONFIG_ARRANGEMENT_VERSION:
+        if not arrangement_version or arrangement_version < REACTOR_CONFIG_ARRANGEMENT_VERSION:
             build_request = BuildRequest(
                 build_json_store=self.os_conf.get_build_json_store(),
                 inner_template=inner_template,
@@ -569,7 +569,8 @@ class OSBS(object):
         repo_info = utils.get_repo_info(git_uri, git_ref, git_branch=git_branch)
         build_request = self.get_build_request(inner_template=inner_template,
                                                outer_template=outer_template,
-                                               customize_conf=customize_conf)
+                                               customize_conf=customize_conf,
+                                               arrangement_version=arrangement_version)
 
         if flatpak:
             req_labels, base_image = self._get_flatpak_labels(repo_info)
@@ -1223,6 +1224,7 @@ class OSBS(object):
 
     @osbsapi
     def render_plugins_configuration(self, user_params_json):
-        user_params = BuildUserParams.from_json(user_params_json)
+        user_params = BuildUserParams()
+        user_params.from_json(user_params_json)
 
         return PluginsConfiguration(user_params).render()

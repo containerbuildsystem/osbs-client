@@ -19,6 +19,7 @@ from osbs.constants import (DEFAULT_ARRANGEMENT_VERSION,
 from osbs import utils
 from osbs.repo_utils import RepoInfo
 from osbs.build.build_request import BuildRequest
+from osbs.build.plugins_configuration import PluginsConfiguration
 from tests.constants import (TEST_GIT_URI,
                              TEST_GIT_REF,
                              TEST_GIT_BRANCH,
@@ -70,6 +71,9 @@ class ArrangementBase(object):
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
         flexmock(OSBS, _create_scratch_build=request_as_response)
 
+    def get_plugins_from_buildrequest(self, build_request, template=None):
+        return build_request.inner_template
+
     @pytest.mark.parametrize('template', [  # noqa:F811
         ORCHESTRATOR_INNER_TEMPLATE,
         WORKER_INNER_TEMPLATE,
@@ -85,8 +89,9 @@ class ArrangementBase(object):
         inner_template = template.format(
             arrangement_version=self.ARRANGEMENT_VERSION,
         )
-        build_request = osbs.get_build_request(inner_template=inner_template)
-        inner = build_request.inner_template
+        build_request = osbs.get_build_request(inner_template=inner_template,
+                                               arrangement_version=self.ARRANGEMENT_VERSION)
+        plugins = self.get_plugins_from_buildrequest(build_request, template)
         phases = ('prebuild_plugins',
                   'buildstep_plugins',
                   'prepublish_plugins',
@@ -95,7 +100,7 @@ class ArrangementBase(object):
         actual = {}
         for phase in phases:
             actual[phase] = [plugin['name']
-                             for plugin in inner.get(phase, {})]
+                             for plugin in plugins.get(phase, {})]
 
         assert actual == self.DEFAULT_PLUGINS[template]
 
@@ -1287,16 +1292,6 @@ class TestArrangementV5(TestArrangementV4):
         },
     }
 
-    def test_is_default(self):
-        """
-        Test this is the default arrangement
-        """
-
-        # Note! If this test fails it probably means you need to
-        # derive a new TestArrangementV[n] class from this class and
-        # move the method to the new class.
-        assert DEFAULT_ARRANGEMENT_VERSION == self.ARRANGEMENT_VERSION
-
     def test_resolve_composes(self, osbs):  # noqa:F811
         koji_target = 'koji-target'
 
@@ -1345,5 +1340,277 @@ class TestArrangementV5(TestArrangementV4):
             "verify_ssl": False,
             "build_json_dir": "inputs",
             "use_auth": False
+        }
+        assert match_args == args
+
+
+class TestArrangementV6(ArrangementBase):
+    """
+    No change to parameters, but use UserParams, BuildRequestV2, and PluginsConfiguration
+    instead of Spec and BuildRequest. Most plugin arguments are not populated by
+    osbs-client but are pulled from the REACTOR_CONFIG environment variable in
+    atomic-reactor at runtime.
+
+    Inherit from ArrangementBase, not the previous arrangements, because argument handling is
+    different now and all previous tests break.
+
+    No orchestrator build differences from arrangement version 5
+
+    No worker build differences from arrangement version 5
+    """
+
+    ARRANGEMENT_VERSION = 6
+
+    # Override common params
+    COMMON_PARAMS = {
+        'git_uri': TEST_GIT_URI,
+        'git_ref': TEST_GIT_REF,
+        'git_branch': TEST_GIT_BRANCH,
+        'user': 'john-foo',
+        'build_image': 'test',
+        'base_image': 'test',
+        'name_label': 'test',
+    }
+
+    ORCHESTRATOR_ADD_PARAMS = {
+        'build_type': 'orchestrator',
+        'platforms': ['x86_64'],
+    }
+
+    WORKER_ADD_PARAMS = {
+        'build_type': 'worker',
+        'platform': 'x86_64',
+        'release': 1,
+    }
+
+    DEFAULT_PLUGINS = {
+        # Changing this? Add test methods
+        ORCHESTRATOR_INNER_TEMPLATE: {
+            'prebuild_plugins': [
+                'reactor_config',
+                'resolve_module_compose',
+                'flatpak_create_dockerfile',
+                'add_filesystem',
+                'inject_parent_image',
+                'pull_base_image',
+                'bump_release',
+                'add_labels_in_dockerfile',
+                'koji_parent',
+                'check_and_set_rebuild',
+                'resolve_composes',
+            ],
+
+            'buildstep_plugins': [
+                'orchestrate_build',
+            ],
+
+            'prepublish_plugins': [
+            ],
+
+            'postbuild_plugins': [
+                'fetch_worker_metadata',
+                'compare_components',
+                'tag_from_config',
+                'group_manifests',
+                'pulp_tag',
+                'pulp_sync',
+            ],
+
+            'exit_plugins': [
+                'pulp_publish',
+                'pulp_pull',
+                'import_image',
+                'delete_from_registry',
+                'koji_tag_build',
+                'store_metadata_in_osv3',
+                'sendmail',
+                'remove_built_image',
+                'remove_worker_metadata',
+            ],
+        },
+
+        # Changing this? Add test methods
+        WORKER_INNER_TEMPLATE: {
+            'prebuild_plugins': [
+                'reactor_config',
+                'resolve_module_compose',
+                'flatpak_create_dockerfile',
+                'add_filesystem',
+                'inject_parent_image',
+                'pull_base_image',
+                'add_labels_in_dockerfile',
+                'change_from_in_dockerfile',
+                'add_help',
+                'add_dockerfile',
+                'distgit_fetch_artefacts',
+                'fetch_maven_artifacts',
+                'koji',
+                'add_yum_repo_by_url',
+                'inject_yum_repo',
+                'distribution_scope',
+            ],
+
+            'buildstep_plugins': [
+            ],
+
+            'prepublish_plugins': [
+                'squash',
+                'flatpak_create_oci',
+            ],
+
+            'postbuild_plugins': [
+                'all_rpm_packages',
+                'tag_from_config',
+                'tag_and_push',
+                'pulp_push',
+                'compress',
+                'koji_upload',
+            ],
+
+            'exit_plugins': [
+                'store_metadata_in_osv3',
+                'remove_built_image',
+            ],
+        },
+    }
+
+    # override
+    def get_plugins_from_buildrequest(self, build_request, template):
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': 'john-foo',
+            'build_type': template.split('_')[0],
+            'build_image': 'test',
+            'base_image': 'test',
+            'name_label': 'test',
+        }
+        build_request.set_params(**kwargs)
+        return PluginsConfiguration(build_request.user_params).pt.template
+
+    def get_build_request(self, build_type, osbs,  # noqa:F811
+                          additional_params=None):
+        params, build_json = super(TestArrangementV6, self).get_build_request(build_type, osbs,
+                                                                              additional_params)
+        # Make the REACTOR_CONFIG return look like previous returns
+        env = build_json['spec']['strategy']['customStrategy']['env']
+        for entry in env:
+            if entry['name'] == 'USER_PARAMS':
+                user_params = entry['value']
+                break
+
+        plugins_json = osbs.render_plugins_configuration(user_params)
+        for entry in env:
+            if entry['name'] == 'ATOMIC_REACTOR_PLUGINS':
+                entry['value'] = plugins_json
+                break
+        else:
+            env.append({
+                'name': 'ATOMIC_REACTOR_PLUGINS',
+                'value': plugins_json
+            })
+
+        return params, build_json
+
+    def test_is_default(self):
+        """
+        Test this is the default arrangement
+        """
+
+        # Note! If this test fails it probably means you need to
+        # derive a new TestArrangementV[n] class from this class and
+        # move the method to the new class.
+        assert DEFAULT_ARRANGEMENT_VERSION == self.ARRANGEMENT_VERSION
+
+    @pytest.mark.parametrize('build_type', [  # noqa:F811
+        'orchestrator',
+        'worker',
+    ])
+    @pytest.mark.parametrize('scratch', [False, True])
+    @pytest.mark.parametrize('base_image, expect_plugin', [
+        ('koji/image-build', False),
+        ('foo', True),
+    ])
+    def test_pull_base_image(self, osbs, build_type, scratch,
+                             base_image, expect_plugin):
+        phase = 'prebuild_plugins'
+        plugin = 'pull_base_image'
+        additional_params = {
+            'base_image': base_image,
+        }
+        if scratch:
+            additional_params['scratch'] = True
+
+        params, build_json = self.get_build_request(build_type, osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        if not expect_plugin:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, phase, plugin)
+        else:
+            assert get_plugin(plugins, phase, plugin)
+
+    @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
+    @pytest.mark.parametrize('base_image, expect_plugin', [
+        ('koji/image-build', True),
+        ('foo', False)
+    ])
+    def test_add_filesystem_in_worker(self, osbs, base_image, scratch,
+                                      expect_plugin):
+        additional_params = {
+            'base_image': base_image,
+            'yum_repourls': ['https://example.com/my.repo'],
+        }
+        if scratch:
+            additional_params['scratch'] = True
+        params, build_json = self.get_worker_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        if not expect_plugin:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, 'prebuild_plugins', 'add_filesystem')
+        else:
+            args = plugin_value_get(plugins, 'prebuild_plugins', 'add_filesystem', 'args')
+
+            assert 'repos' in args.keys()
+            assert args['repos'] == params['yum_repourls']
+
+    def test_resolve_composes(self, osbs):  # noqa:F811
+        koji_target = 'koji-target'
+
+        additional_params = {
+            'base_image': 'fedora:latest',
+            'target': koji_target,
+        }
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        assert get_plugin(plugins, 'prebuild_plugins', 'reactor_config')
+        assert get_plugin(plugins, 'prebuild_plugins', 'resolve_composes')
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, 'prebuild_plugins', 'resolve_module_compose')
+
+    @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
+    def test_import_image_renders(self, osbs, scratch):
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        if scratch:
+            additional_params['scratch'] = True
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        if scratch:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "exit_plugins", "import_image")
+            return
+
+        args = plugin_value_get(plugins, 'exit_plugins',
+                                'import_image', 'args')
+
+        match_args = {
+            "imagestream": "fedora23-something",
+            "build_json_dir": "inputs",
         }
         assert match_args == args

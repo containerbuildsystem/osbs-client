@@ -95,7 +95,7 @@ class BuildRequestV2(BuildRequest):
         self.auto_build_node_selector = kwargs.get('auto_build_node_selector', {})
         self.isolated_build_node_selector = kwargs.get('isolated_build_node_selector', {})
 
-        logger.debug("setting params '%s' for %s", kwargs, self.user_params)
+        logger.debug("now setting params '%s' for user_params", kwargs)
         self.user_params.set_params(**kwargs)
 
     # Override
@@ -183,6 +183,16 @@ class BuildRequestV2(BuildRequest):
         self.adjust_for_isolated(self.user_params.release)
         self.render_node_selectors(self.user_params.platforms.value)
 
+        # Set our environment variables
+        custom_strategy['env'].append({
+            'name': 'USER_PARAMS',
+            'value': self.user_params.to_json(),
+        })
+        # delete the ATOMIC_REACTOR_PLUGINS placeholder
+        for (index, env) in enumerate(custom_strategy['env']):
+            if env['name'] == 'ATOMIC_REACTOR_PLUGINS':
+                del custom_strategy['env'][index]
+                break
         # Log build json
         # Return build json
         self.build_json = self.template

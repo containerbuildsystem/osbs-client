@@ -168,6 +168,22 @@ class TestBuildRequestV2(object):
         rendered_build_image = build_json["spec"]["strategy"]["customStrategy"]["from"]["name"]
         assert rendered_build_image == 'fancy_buildroot:latestest'
 
+        json_env = build_json['spec']['strategy']['customStrategy']['env']
+        envs = {}
+        for env in json_env:
+            envs[env['name']] = (env.get('valueFrom', None), env.get('value', None))
+
+        configmapkeyref = {
+            'name': 'reactor-config-map',
+            'key': 'config.yaml'
+        }
+        assert 'REACTOR_CONFIG' in envs
+        assert 'configMapKeyRef' in envs['REACTOR_CONFIG'][0]
+        assert envs['REACTOR_CONFIG'][0]['configMapKeyRef'] == configmapkeyref
+
+        assert 'USER_PARAMS' in envs
+        assert 'ATOMIC_REACTOR_PLUGINS' not in envs
+
     @pytest.mark.parametrize('proxy', [  # noqa:F811
         None,
         'http://proxy.example.com',

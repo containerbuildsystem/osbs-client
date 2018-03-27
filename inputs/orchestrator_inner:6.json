@@ -1,0 +1,106 @@
+{
+  "prebuild_plugins": [
+    {
+      "name": "reactor_config"
+    },
+    {
+      "name": "resolve_module_compose"
+    },
+    {
+      "name": "flatpak_create_dockerfile"
+    },
+    {
+      "name": "add_filesystem"
+    },
+    {
+      "name": "inject_parent_image"
+    },
+    {
+      "name": "pull_base_image"
+    },
+    {
+      "name": "bump_release"
+    },
+    {
+      "name": "add_labels_in_dockerfile"
+    },
+    {
+      "name": "koji_parent"
+    },
+    {
+      "name": "check_and_set_rebuild",
+      "args": {
+        "label_key": "is_autorebuild",
+        "label_value": "true"
+      }
+    },
+    {
+      "name": "resolve_composes"
+    }
+  ],
+  "buildstep_plugins": [
+    {
+      "name": "orchestrate_build"
+    }
+  ],
+  "postbuild_plugins": [
+    {
+      "name": "fetch_worker_metadata"
+    },
+    {
+      "name": "compare_components"
+    },
+    {
+      "name": "tag_from_config",
+      "args": {
+        "tag_suffixes": "{{TAG_SUFFIXES}}"
+      }
+    },
+    {
+      "name": "group_manifests"
+    },
+    {
+      "name": "pulp_tag"
+    },
+    {
+      "name": "pulp_sync",
+      "args": {
+        "publish": false
+      }
+    }
+  ],
+  "prepublish_plugins": [],
+  "exit_plugins": [
+    {
+      "name": "pulp_publish"
+    },
+    {
+      "name": "pulp_pull",
+      "args": {
+        "insecure": true
+      }
+    },
+    {
+      "name": "import_image",
+      "required": false
+    },
+    {
+      "name": "delete_from_registry"
+    },
+    {
+      "name": "koji_tag_build"
+    },
+    {
+      "name": "store_metadata_in_osv3"
+    },
+    {
+      "name": "sendmail"
+    },
+    {
+      "name": "remove_built_image"
+    },
+    {
+      "name": "remove_worker_metadata"
+    }
+  ]
+}
