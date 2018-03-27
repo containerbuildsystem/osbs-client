@@ -487,7 +487,7 @@ class BuildRequest(object):
         if reactor_config_override:
             reactor_config = {
                 'name': 'REACTOR_CONFIG',
-                'value': yaml.dump(reactor_config_override)
+                'value': yaml.safe_dump(reactor_config_override)
             }
         elif reactor_config_map:
             reactor_config = {

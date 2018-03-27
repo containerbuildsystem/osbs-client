@@ -3009,7 +3009,7 @@ class TestBuildRequest(object):
             envs[env['name']] = (env.get('valueFrom', None), env.get('value', None))
 
         if reactor_config_override:
-            reactor_config_value = yaml.dump(reactor_config_override)
+            reactor_config_value = yaml.safe_dump(reactor_config_override)
             assert 'REACTOR_CONFIG' in envs
             assert envs['REACTOR_CONFIG'][1] == reactor_config_value
 
