@@ -110,13 +110,11 @@ class PluginsTemplate(object):
             raise RuntimeError("no such plugin in template: \"%s\"" % name)
         return conf
 
-    def set_param(self, param, value):
-        self.template[param] = value
-
     def merge_plugin_arg(self, phase, name, arg_key, arg_dict):
         plugin_conf = self._get_plugin_conf_or_fail(phase, name)
 
         # Values supplied by the caller override those from the template JSON
+        plugin_conf.setdefault("args", {})
         template_value = plugin_conf['args'].get(arg_key, {})
         if not isinstance(template_value, dict):
             template_value = {}
@@ -156,6 +154,7 @@ class PluginsConfiguration(object):
         phase = 'postbuild_plugins'
         plugin = 'tag_from_config'
         if not self.pt.has_plugin_conf(phase, plugin):
+            logger.debug('no tag suffix placeholder')
             return False
 
         placeholder = '{{TAG_SUFFIXES}}'
@@ -182,6 +181,8 @@ class PluginsConfiguration(object):
                 ("exit_plugins", "koji_tag_build"),
                 ("exit_plugins", "remove_worker_metadata"),
                 ("exit_plugins", "import_image"),
+                ("prebuild_plugins", "check_and_set_rebuild"),
+                ("prebuild_plugins", "stop_autorebuild_if_disabled")
             ]
 
             if not self.has_tag_suffixes_placeholder():
@@ -190,9 +191,19 @@ class PluginsConfiguration(object):
             for when, which in remove_plugins:
                 self.pt.remove_plugin(when, which, 'removed from scratch build request')
 
-            if self.pt.has_plugin_conf('postbuild_plugins', 'tag_by_labels'):
-                self.pt.set_plugin_arg('postbuild_plugins', 'tag_by_labels',
-                                       'unique_tag_only', True)
+    def adjust_for_isolated(self):
+        """
+        Remove certain plugins in order to handle the "isolated build"
+        scenario.
+        """
+        if self.user_params.isolated.value:
+            remove_plugins = [
+                ("prebuild_plugins", "check_and_set_rebuild"),
+                ("prebuild_plugins", "stop_autorebuild_if_disabled")
+            ]
+
+            for when, which in remove_plugins:
+                self.pt.remove_plugin(when, which, 'removed from isolated build request')
 
     def is_custom_base_image(self):
         return bool(re.match('^koji/image-build(:.*)?$',
@@ -209,6 +220,8 @@ class PluginsConfiguration(object):
             plugins.append(("prebuild_plugins", "pull_base_image"))
             plugins.append(("prebuild_plugins", "koji_parent"))
             plugins.append(("prebuild_plugins", "inject_parent_image"))
+            plugins.append(("prebuild_plugins", "check_and_set_rebuild"))
+            plugins.append(("prebuild_plugins", "stop_autorebuild_if_disabled"))
             msg = 'removed from custom image build request'
 
         else:
@@ -247,18 +260,14 @@ class PluginsConfiguration(object):
         self.pt.merge_plugin_arg(phase, plugin, 'labels', implicit_labels)
 
     def render_add_yum_repo_by_url(self):
-        if (self.user_params.yum_repourls.value is not None and
-                self.pt.has_plugin_conf('prebuild_plugins', "add_yum_repo_by_url")):
-            self.pt.set_plugin_arg('prebuild_plugins', "add_yum_repo_by_url", "repourls",
-                                   self.user_params.yum_repourls.value)
+        if self.pt.has_plugin_conf('prebuild_plugins', "add_yum_repo_by_url"):
+            self.pt.set_plugin_arg_valid('prebuild_plugins', "add_yum_repo_by_url", "repourls",
+                                         self.user_params.yum_repourls.value)
 
     def render_customizations(self):
         """
         Customize template for site user specified customizations
         """
-        if self.user_params.customize_conf_path is None:
-            return
-
         disable_plugins = self.pt.customize_conf.get('disable_plugins', [])
         if not disable_plugins:
             logger.debug('No site-user specified plugins to disable')
@@ -364,16 +373,6 @@ class PluginsConfiguration(object):
 
         self.pt.set_plugin_arg(phase, plugin, 'koji_parent_build', koji_parent_build)
 
-    def render_koji_promote(self, use_auth=None):
-        if not self.pt.has_plugin_conf('exit_plugins', 'koji_promote'):
-            return
-
-        koji_target = self.user_params.koji_target.value
-        if not self.pt.set_plugin_arg_valid('exit_plugins', 'koji_promote',
-                                            'target', koji_target):
-            self.pt.remove_plugin("exit_plugins", "koji_promote",
-                                  'no koji target in user parameters')
-
     def render_koji_upload(self, use_auth=None):
         phase = 'postbuild_plugins'
         name = 'koji_upload'
@@ -386,15 +385,6 @@ class PluginsConfiguration(object):
         set_arg('build_json_dir', self.user_params.build_json_dir.value)
         set_arg('platform', self.user_params.platform.value)
         set_arg('report_multiple_digests', True)
-
-    def render_koji_import(self, use_auth=None):
-        if not self.pt.has_plugin_conf('exit_plugins', 'koji_import'):
-            return
-
-        koji_target = self.user_params.koji_target.value
-        if not self.pt.set_plugin_arg_valid('exit_plugins', 'koji_import', 'target', koji_target):
-            self.pt.remove_plugin("exit_plugins", "koji_import",
-                                  'no koji target in user parameters')
 
     def render_koji_tag_build(self):
         phase = 'exit_plugins'
@@ -422,7 +412,8 @@ class PluginsConfiguration(object):
         worker_params = [
             'component', 'git_branch', 'git_ref', 'git_uri', 'koji_task_id',
             'filesystem_koji_task_id', 'scratch', 'koji_target', 'user', 'yum_repourls',
-            'arrangement_version', 'koji_parent_build', 'isolated',
+            'arrangement_version', 'koji_parent_build', 'isolated', 'reactor_config_map',
+            'reactor_config_override'
         ]
 
         build_kwargs = self.user_params.to_dict(worker_params)
@@ -512,8 +503,11 @@ class PluginsConfiguration(object):
 
     def render(self):
         self.user_params.validate()
+        # adjust for custom configuration first
+        self.render_customizations()
 
         self.adjust_for_scratch()
+        self.adjust_for_isolated()
         self.adjust_for_custom_base_image()
 
         # Set parameters on each plugin as needed
@@ -521,14 +515,11 @@ class PluginsConfiguration(object):
         self.render_add_labels_in_dockerfile()
         self.render_add_yum_repo_by_url()
         self.render_bump_release()
-        self.render_customizations()
         self.render_flatpak_create_dockerfile()
         self.render_flatpak_create_oci()
         self.render_import_image()
         self.render_inject_parent_image()
         self.render_koji()
-        self.render_koji_import()
-        self.render_koji_promote()
         self.render_koji_tag_build()
         self.render_koji_upload()
         self.render_orchestrate_build()
