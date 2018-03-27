@@ -81,9 +81,9 @@ def has_plugin(plugins, plugin_type, plugin_name):
 
 
 def plugin_value_get(plugins, plugin_type, plugin_name, *args):
-    result = get_plugin(plugins, plugin_type, plugin_name)
+    result = get_plugin(plugins, plugin_type, plugin_name) or {}
     for arg in args:
-        result = result[arg]
+        result = result.get(arg, {})
     return result
 
 
@@ -106,6 +106,19 @@ class TestPluginsConfiguration(object):
         plugin_args = plugin_value_get(plugins, phase, name, 'args')
         assert plugin_args.get('build_json_dir')
 
+    def test_bad_customize_conf(self):
+        user_params = BuildUserParams(INPUTS_PATH, customize_conf='invalid_dir')
+        build_json = PluginsConfiguration(user_params)
+        assert build_json.pt.customize_conf == {}
+
+    def test_get_conf_or_fail(self):
+        user_params = get_sample_user_params()
+        build_json = PluginsConfiguration(user_params)
+        with pytest.raises(RuntimeError):
+            build_json.pt._get_plugin_conf_or_fail('bad_plugins', 'reactor_config')
+        with pytest.raises(RuntimeError):
+            build_json.pt._get_plugin_conf_or_fail('postbuild_plugins', 'bad_plugin')
+
     @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
     def test_render_koji_upload(self, build_type):
         user_params = get_sample_user_params(build_type=build_type)
@@ -116,40 +129,6 @@ class TestPluginsConfiguration(object):
         else:
             with pytest.raises(NoSuchPluginException):
                 assert get_plugin(plugins, 'postbuild_plugins', 'koji_upload')
-
-    @pytest.mark.parametrize(('base_image', 'scratch', 'enabled'), (
-        ('fedora:latest', True, False),
-        ('fedora:latest', False, True),
-        ('fedora:latest', False, False),
-        ('koji/image-build', False, False),
-        ('koji/image-build', True, False),
-    ))
-    def test_render_koji_import(self, base_image, scratch, enabled):
-        plugin_type = 'exit_plugins'
-        plugin_name = 'koji_import'
-
-        extra_args = None
-        if not enabled:
-            extra_args = {'koji_target': None}
-
-        user_params = get_sample_user_params(extra_args)
-        build_json = PluginsConfiguration(user_params).render()
-        plugins = get_plugins_from_build_json(build_json)
-
-        if not enabled:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, plugin_type, plugin_name)
-            return
-
-        assert get_plugin(plugins, plugin_type, plugin_name)
-
-        actual_plugin_args = plugin_value_get(plugins, plugin_type, plugin_name, 'args')
-
-        expected_plugin_args = {'koji_keytab': False,
-                                'target': 'koji-target',
-                                'verify_ssl': False}
-
-        assert actual_plugin_args == expected_plugin_args
 
     def test_render_simple_request(self):
         user_params = get_sample_user_params()
@@ -552,7 +531,7 @@ class TestPluginsConfiguration(object):
         plugins_conf = PluginsConfiguration(user_params)
 
         plugin_type = "postbuild_plugins"
-        plugin_name = "compress"
+        plugin_name = "tag_from_config"
 
         plugins_conf.pt.customize_conf['disable_plugins'].append(
             {
@@ -579,7 +558,7 @@ class TestPluginsConfiguration(object):
         base_plugins = get_plugins_from_build_json(base_build_json)
 
         plugin_type = "exit_plugins"
-        plugin_name = "koji_import"
+        plugin_name = "pulp_publish"
         plugin_args = {"foo": "bar"}
 
         for plugin_dict in base_plugins[plugin_type]:
@@ -607,6 +586,45 @@ class TestPluginsConfiguration(object):
         assert base_plugins[plugin_type][plugin_index]['name'] == \
             plugin_name
         assert plugins[plugin_type][plugin_index]['name'] == plugin_name
+
+    def test_render_all_code_paths(self, caplog):
+        # Alter the plugins configuration so that all code paths are exercised
+        sample_params = get_sample_prod_params()
+        sample_params['scratch'] = True
+        user_params = BuildUserParams(INPUTS_PATH)
+        user_params.set_params(**sample_params)
+        plugins_conf = PluginsConfiguration(user_params)
+
+        plugins_conf.pt.customize_conf['disable_plugins'].append(
+            {
+                "plugin_type": "postbuild_plugins",
+                "plugin_name": "tag_from_config"
+            }
+        )
+        plugins_conf.pt.customize_conf['disable_plugins'].append(
+            {
+                "plugin_type": "prebuild_plugins",
+                "plugin_name": "add_labels_in_dockerfile"
+            }
+        )
+        plugins_conf.pt.customize_conf['disable_plugins'].append(
+            {
+                "bad_plugin_type": "postbuild_plugins",
+                "bad_plugin_name": "tag_from_config"
+            },
+        )
+        plugins_conf.pt.customize_conf['enable_plugins'].append(
+            {
+                "bad_plugin_type": "postbuild_plugins",
+                "bad_plugin_name": "tag_from_config"
+            },
+        )
+        plugins_conf.render()
+
+        log_messages = [l.getMessage() for l in caplog.records()]
+        assert 'no tag suffix placeholder' in log_messages
+        assert 'Invalid custom configuration found for disable_plugins' in log_messages
+        assert 'Invalid custom configuration found for enable_plugins' in log_messages
 
     @pytest.mark.parametrize(('koji_parent_build'), (
         ('fedora-26-9'),
