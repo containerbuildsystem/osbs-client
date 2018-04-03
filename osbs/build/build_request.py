@@ -840,6 +840,10 @@ class BuildRequest(object):
                 self.dj.dock_json_set_arg(phase, plugin, 'architectures',
                                           self.spec.platforms.value)
 
+            if self.spec.platform.value:
+                self.dj.dock_json_set_arg(phase, plugin, 'architecture',
+                                          self.spec.platform.value)
+
             if self.spec.filesystem_koji_task_id.value:
                 self.dj.dock_json_set_arg(phase, plugin, 'from_task_id',
                                           self.spec.filesystem_koji_task_id.value)
