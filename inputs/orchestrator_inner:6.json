@@ -4,6 +4,10 @@
       "name": "reactor_config"
     },
     {
+      "name": "check_and_set_platforms",
+      "required": false
+    },
+    {
       "name": "resolve_module_compose"
     },
     {
@@ -16,7 +20,10 @@
       "name": "inject_parent_image"
     },
     {
-      "name": "pull_base_image"
+      "name": "pull_base_image",
+      "args": {
+        "check_platforms": true
+      }
     },
     {
       "name": "bump_release"

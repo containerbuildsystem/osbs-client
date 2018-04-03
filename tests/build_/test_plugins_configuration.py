@@ -130,6 +130,33 @@ class TestPluginsConfiguration(object):
             with pytest.raises(NoSuchPluginException):
                 assert get_plugin(plugins, 'postbuild_plugins', 'koji_upload')
 
+    @pytest.mark.parametrize(('enabled'), (
+        (True, False),
+    ))
+    def test_render_check_and_set_platforms(self, enabled):
+        plugin_type = 'prebuild_plugins'
+        plugin_name = 'check_and_set_platforms'
+
+        extra_args = []
+        if not enabled:
+            extra_args = {'koji_target': None}
+        user_params = get_sample_user_params(extra_args)
+        build_json = PluginsConfiguration(user_params).render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        if not enabled:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, plugin_type, plugin_name)
+            return
+
+        assert get_plugin(plugins, plugin_type, plugin_name)
+
+        actual_plugin_args = plugin_value_get(plugins, plugin_type, plugin_name, 'args')
+
+        expected_plugin_args = {'target': 'koji-target'}
+
+        assert actual_plugin_args == expected_plugin_args
+
     def test_render_simple_request(self):
         user_params = get_sample_user_params()
         build_json = PluginsConfiguration(user_params).render()

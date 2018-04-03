@@ -1388,6 +1388,7 @@ class TestArrangementV6(ArrangementBase):
         ORCHESTRATOR_INNER_TEMPLATE: {
             'prebuild_plugins': [
                 'reactor_config',
+                'check_and_set_platforms',
                 'resolve_module_compose',
                 'flatpak_create_dockerfile',
                 'add_filesystem',

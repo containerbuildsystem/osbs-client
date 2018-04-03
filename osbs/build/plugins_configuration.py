@@ -347,6 +347,19 @@ class PluginsConfiguration(object):
         if self.user_params.flatpak.value:
             self.pt.set_plugin_arg(phase, plugin, 'append', True)
 
+    def render_check_and_set_platforms(self):
+        """
+        If the check_and_set_platforms plugin is present, configure it
+        """
+        phase = 'prebuild_plugins'
+        plugin = 'check_and_set_platforms'
+        if not self.pt.has_plugin_conf(phase, plugin):
+            return
+
+        if not self.pt.set_plugin_arg_valid(phase, plugin, "target",
+                                            self.user_params.koji_target.value):
+            self.pt.remove_plugin(phase, plugin, 'no koji target supplied in user parameters')
+
     def render_import_image(self, use_auth=None):
         """
         Configure the import_image plugin
@@ -517,6 +530,7 @@ class PluginsConfiguration(object):
         self.render_add_labels_in_dockerfile()
         self.render_add_yum_repo_by_url()
         self.render_bump_release()
+        self.render_check_and_set_platforms()
         self.render_flatpak_create_dockerfile()
         self.render_flatpak_create_oci()
         self.render_import_image()

@@ -16,7 +16,10 @@
       "name": "inject_parent_image"
     },
     {
-      "name": "pull_base_image"
+      "name": "pull_base_image",
+      "args": {
+        "check_platforms": false
+      }
     },
     {
       "name": "add_labels_in_dockerfile"
