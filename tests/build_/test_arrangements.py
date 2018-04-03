@@ -322,6 +322,7 @@ class TestArrangementV1(ArrangementBase):
             allowed_args = set([
                 'koji_hub',
                 'repos',
+                'architecture',
             ])
             assert set(args.keys()) <= allowed_args
             assert 'koji_hub' in args
@@ -480,6 +481,7 @@ class TestArrangementV2(TestArrangementV1):
                 'koji_hub',
                 'repos',
                 'from_task_id',
+                'architecture',
             ])
             assert set(args.keys()) <= allowed_args
             assert 'koji_hub' in args
