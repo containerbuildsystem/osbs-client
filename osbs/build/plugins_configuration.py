@@ -241,6 +241,8 @@ class PluginsConfiguration(object):
                                          self.user_params.yum_repourls.value)
             self.pt.set_plugin_arg_valid(phase, plugin, 'from_task_id',
                                          self.user_params.filesystem_koji_task_id.value)
+            self.pt.set_plugin_arg_valid(phase, plugin, 'architecture',
+                                         self.user_params.platform.value)
 
     def render_add_labels_in_dockerfile(self):
         phase = 'prebuild_plugins'

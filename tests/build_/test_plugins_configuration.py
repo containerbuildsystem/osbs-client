@@ -483,6 +483,27 @@ class TestPluginsConfiguration(object):
         assert add_filesystem_args['repos'] == kwargs['yum_repourls']
         assert add_filesystem_args['from_task_id'] == kwargs['filesystem_koji_task_id']
 
+    def test_worker_custom_base_image(self, tmpdir):
+        kwargs = get_sample_prod_params(BUILD_TYPE_WORKER)
+        kwargs['base_image'] = 'koji/image-build'
+        kwargs['yum_repourls'] = ["http://example.com/my.repo"]
+        kwargs.pop('platforms', None)
+        kwargs['platform'] = 'ppc64le'
+
+        user_params = BuildUserParams(INPUTS_PATH)
+        user_params.set_params(**kwargs)
+        build_json = PluginsConfiguration(user_params).render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, 'prebuild_plugins', 'pull_base_image')
+
+        add_filesystem_args = plugin_value_get(plugins, 'prebuild_plugins',
+                                               'add_filesystem', 'args')
+        assert add_filesystem_args['repos'] == kwargs['yum_repourls']
+        assert add_filesystem_args['from_task_id'] == kwargs['filesystem_koji_task_id']
+        assert add_filesystem_args['architecture'] == kwargs['platform']
+
     def test_prod_non_custom_base_image(self, tmpdir):
         user_params = get_sample_user_params()
         build_json = PluginsConfiguration(user_params).render()
