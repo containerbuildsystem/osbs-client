@@ -10,7 +10,6 @@ from __future__ import print_function, absolute_import, unicode_literals
 import logging
 import os
 import json
-import copy
 import re
 
 from osbs.constants import BUILD_TYPE_ORCHESTRATOR
@@ -109,19 +108,6 @@ class PluginsTemplate(object):
         except IndexError:
             raise RuntimeError("no such plugin in template: \"%s\"" % name)
         return conf
-
-    def merge_plugin_arg(self, phase, name, arg_key, arg_dict):
-        plugin_conf = self._get_plugin_conf_or_fail(phase, name)
-
-        # Values supplied by the caller override those from the template JSON
-        plugin_conf.setdefault("args", {})
-        template_value = plugin_conf['args'].get(arg_key, {})
-        if not isinstance(template_value, dict):
-            template_value = {}
-
-        value = copy.deepcopy(template_value)
-        value.update(arg_dict)
-        plugin_conf['args'][arg_key] = value
 
     def set_plugin_arg(self, phase, name, arg_key, arg_value):
         plugin_conf = self._get_plugin_conf_or_fail(phase, name)
@@ -247,19 +233,10 @@ class PluginsConfiguration(object):
     def render_add_labels_in_dockerfile(self):
         phase = 'prebuild_plugins'
         plugin = 'add_labels_in_dockerfile'
-        if not self.pt.has_plugin_conf(phase, plugin):
-            return
-
-        implicit_labels = {}
-        label_user_params = {
-            'release': self.user_params.release,
-        }
-
-        for label, user_params in label_user_params.items():
-            if user_params.value is not None:
-                implicit_labels[label] = user_params.value
-
-        self.pt.merge_plugin_arg(phase, plugin, 'labels', implicit_labels)
+        if self.pt.has_plugin_conf(phase, plugin):
+            if self.user_params.release.value:
+                release_label = {'release': self.user_params.release.value}
+                self.pt.set_plugin_arg(phase, plugin, 'labels', release_label)
 
     def render_add_yum_repo_by_url(self):
         if self.pt.has_plugin_conf('prebuild_plugins', "add_yum_repo_by_url"):
