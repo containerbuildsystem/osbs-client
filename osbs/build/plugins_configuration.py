@@ -371,8 +371,6 @@ class PluginsConfiguration(object):
         elif self.pt.has_plugin_conf('exit_plugins', 'import_image'):
             self.pt.set_plugin_arg('exit_plugins', 'import_image', 'imagestream',
                                    self.user_params.imagestream_name.value)
-            self.pt.set_plugin_arg('exit_plugins', 'import_image', 'build_json_dir',
-                                   self.user_params.build_json_dir.value)
 
     def render_inject_parent_image(self):
         phase = 'prebuild_plugins'
@@ -398,7 +396,6 @@ class PluginsConfiguration(object):
             self.pt.set_plugin_arg(phase, name, arg, value)
 
         set_arg('koji_upload_dir', self.user_params.koji_upload_dir.value)
-        set_arg('build_json_dir', self.user_params.build_json_dir.value)
         set_arg('platform', self.user_params.platform.value)
         set_arg('report_multiple_digests', True)
 
