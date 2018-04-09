@@ -56,6 +56,7 @@ class BuildRequestV2(BuildRequest):
         :param koji_target: str, koji tag with packages used to build the image
         :param koji_task_id: str, koji ID
         :param koji_parent_build: str,
+        :param koji_upload_dir: str, koji directory where the completed image will be uploaded
         :param flatpak: if we should build a Flatpak OCI Image
         :param flatpak_base_image: str, name of the Flatpack OCI Image
         :param reactor_config_map: str, name of the config map containing the reactor environment
