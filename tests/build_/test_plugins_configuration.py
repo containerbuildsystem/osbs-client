@@ -115,7 +115,6 @@ class TestPluginsConfiguration(object):
     def test_render_koji_upload(self, build_type):
         user_params = get_sample_user_params({'koji_upload_dir': 'test'},
                                              build_type=build_type)
-        user_params = get_sample_user_params(build_type=build_type)
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
         if build_type == BUILD_TYPE_WORKER:

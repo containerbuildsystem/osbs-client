@@ -1611,6 +1611,5 @@ class TestArrangementV6(ArrangementBase):
 
         match_args = {
             "imagestream": "fedora23-something",
-            "build_json_dir": "inputs",
         }
         assert match_args == args
