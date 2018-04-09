@@ -46,6 +46,7 @@ class BuildUserParams(BuildCommon):
         self.isolated = BuildParam('isolated', allow_none=True)
         self.koji_parent_build = BuildParam('koji_parent_build', allow_none=True)
         self.koji_task_id = BuildParam('koji_task_id', allow_none=True)
+        self.koji_upload_dir = BuildParam('koji_upload_dir', allow_none=True)
         self.name = BuildIDParam()
         self.platforms = BuildParam('platforms', allow_none=True)
         self.reactor_config_map = BuildParam("reactor_config_map", allow_none=True)
@@ -80,7 +81,7 @@ class BuildUserParams(BuildCommon):
                    build_image=None, build_imagestream=None, build_from=None,
                    platforms=None, platform=None, build_type=None,
                    koji_target=None, koji_task_id=None, filesystem_koji_task_id=None,
-                   koji_parent_build=None,
+                   koji_parent_build=None, koji_upload_dir=None,
                    flatpak=None, flatpak_base_image=None,
                    reactor_config_map=None, reactor_config_override=None,
                    yum_repourls=None, signing_intent=None, compose_ids=None,
@@ -125,6 +126,7 @@ class BuildUserParams(BuildCommon):
         self.koji_task_id.value = koji_task_id
         self.filesystem_koji_task_id.value = filesystem_koji_task_id
         self.koji_parent_build.value = koji_parent_build
+        self.koji_upload_dir.value = koji_upload_dir
         self.flatpak.value = flatpak
         self.flatpak_base_image.value = flatpak_base_image
         self.isolated.value = isolated

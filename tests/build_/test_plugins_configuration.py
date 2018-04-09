@@ -98,14 +98,6 @@ class TestPluginsConfiguration(object):
 
         assert plugin_args['imagestream'] == name_label.replace('/', '-')
 
-    def assert_koji_upload_plugin(self, plugins):
-        phase = 'postbuild_plugins'
-        name = 'koji_upload'
-
-        assert get_plugin(plugins, phase, name)
-        plugin_args = plugin_value_get(plugins, phase, name, 'args')
-        assert plugin_args.get('build_json_dir')
-
     def test_bad_customize_conf(self):
         user_params = BuildUserParams(INPUTS_PATH, customize_conf='invalid_dir')
         build_json = PluginsConfiguration(user_params)
@@ -121,11 +113,15 @@ class TestPluginsConfiguration(object):
 
     @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
     def test_render_koji_upload(self, build_type):
+        user_params = get_sample_user_params({'koji_upload_dir': 'test'},
+                                             build_type=build_type)
         user_params = get_sample_user_params(build_type=build_type)
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
         if build_type == BUILD_TYPE_WORKER:
-            self.assert_koji_upload_plugin(plugins)
+            assert get_plugin(plugins, 'postbuild_plugins', 'koji_upload')
+            plugin_args = plugin_value_get(plugins, 'postbuild_plugins', 'koji_upload', 'args')
+            assert plugin_args.get('koji_upload_dir') == 'test'
         else:
             with pytest.raises(NoSuchPluginException):
                 assert get_plugin(plugins, 'postbuild_plugins', 'koji_upload')

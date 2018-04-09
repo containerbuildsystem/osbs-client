@@ -397,6 +397,7 @@ class PluginsConfiguration(object):
         def set_arg(arg, value):
             self.pt.set_plugin_arg(phase, name, arg, value)
 
+        set_arg('koji_upload_dir', self.user_params.koji_upload_dir.value)
         set_arg('build_json_dir', self.user_params.build_json_dir.value)
         set_arg('platform', self.user_params.platform.value)
         set_arg('report_multiple_digests', True)
