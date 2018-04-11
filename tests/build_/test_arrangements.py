@@ -1614,3 +1614,16 @@ class TestArrangementV6(ArrangementBase):
             "imagestream": "fedora23-something",
         }
         assert match_args == args
+
+    def test_orchestrate_render_no_platforms(self, osbs):  # noqa:F811
+        additional_params = {
+            'platforms': None,
+            'base_image': 'fedora:latest',
+        }
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        args = plugin_value_get(plugins, 'buildstep_plugins',
+                                'orchestrate_build', 'args')
+
+        assert 'platforms' not in args

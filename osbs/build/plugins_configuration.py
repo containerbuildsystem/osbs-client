@@ -394,10 +394,6 @@ class PluginsConfiguration(object):
         if not self.pt.has_plugin_conf(phase, plugin):
             return
 
-        if self.user_params.platforms.value is None:
-            self.pt.remove_plugin(phase, plugin, 'no platforms in user parameters')
-            return
-
         # Parameters to be used in call to create_worker_build
         worker_params = [
             'component', 'git_branch', 'git_ref', 'git_uri', 'koji_task_id',
@@ -413,7 +409,7 @@ class PluginsConfiguration(object):
         if self.user_params.flatpak.value:
             build_kwargs['flatpak'] = True
 
-        self.pt.set_plugin_arg(phase, plugin, 'platforms', self.user_params.platforms.value)
+        self.pt.set_plugin_arg_valid(phase, plugin, 'platforms', self.user_params.platforms.value)
         self.pt.set_plugin_arg(phase, plugin, 'build_kwargs', build_kwargs)
 
         # Parameters to be used as Configuration overrides for each worker
