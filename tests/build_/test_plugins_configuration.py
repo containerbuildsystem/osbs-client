@@ -148,7 +148,7 @@ class TestPluginsConfiguration(object):
 
         actual_plugin_args = plugin_value_get(plugins, plugin_type, plugin_name, 'args')
 
-        expected_plugin_args = {'target': 'koji-target'}
+        expected_plugin_args = {'koji_target': 'koji-target'}
 
         assert actual_plugin_args == expected_plugin_args
 
