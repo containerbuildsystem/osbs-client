@@ -390,9 +390,9 @@ class TestPluginsConfiguration(object):
         assert len(tag_suffixes['primary']) == len(expected_primary)
         assert set(tag_suffixes['primary']) == expected_primary
 
-    @pytest.mark.parametrize(('platforms', 'disabled'), (
-        (['x86_64', 'ppc64le'], False),
-        (None, True),
+    @pytest.mark.parametrize(('platforms'), (
+        (['x86_64', 'ppc64le']),
+        (None),
     ))
     @pytest.mark.parametrize('koji_parent_build', ['fedora-26-9', None])
     @pytest.mark.parametrize(('build_from', 'build_image', 'build_imagestream',
@@ -416,7 +416,7 @@ class TestPluginsConfiguration(object):
         },
         {},
     ))
-    def test_render_orchestrate_build(self, tmpdir, platforms, disabled,
+    def test_render_orchestrate_build(self, tmpdir, platforms,
                                       build_from, build_image,
                                       build_imagestream, worker_build_image,
                                       additional_kwargs, koji_parent_build, valid):
@@ -458,34 +458,31 @@ class TestPluginsConfiguration(object):
 
         plugins = get_plugins_from_build_json(build_json)
 
-        if disabled:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, phase, plugin)
+        if platforms is None:
+            platforms = {}
+        assert plugin_value_get(plugins, phase, plugin, 'args', 'platforms') == platforms or {}
+        build_kwargs = plugin_value_get(plugins, phase, plugin, 'args', 'build_kwargs')
+        assert build_kwargs['arrangement_version'] == REACTOR_CONFIG_ARRANGEMENT_VERSION
+        assert build_kwargs.get('koji_parent_build') == koji_parent_build
+        assert build_kwargs.get('reactor_config_map') == 'reactor-config-map'
+        assert build_kwargs.get('reactor_config_override') == 'reactor-config-override'
 
+        worker_config_kwargs = plugin_value_get(plugins, phase, plugin, 'args',
+                                                'config_kwargs')
+
+        worker_config = Configuration(conf_file=None, **worker_config_kwargs)
+
+        if isinstance(worker_build_image, type):
+            with pytest.raises(worker_build_image):
+                worker_config_kwargs['build_image']
+            assert not worker_config.get_build_image()
         else:
-            assert plugin_value_get(plugins, phase, plugin, 'args', 'platforms') == platforms
-            build_kwargs = plugin_value_get(plugins, phase, plugin, 'args', 'build_kwargs')
-            assert build_kwargs['arrangement_version'] == REACTOR_CONFIG_ARRANGEMENT_VERSION
-            assert build_kwargs.get('koji_parent_build') == koji_parent_build
-            assert build_kwargs.get('reactor_config_map') == 'reactor-config-map'
-            assert build_kwargs.get('reactor_config_override') == 'reactor-config-override'
+            assert worker_config_kwargs['build_image'] == worker_build_image
+            assert worker_config.get_build_image() == worker_build_image
 
-            worker_config_kwargs = plugin_value_get(plugins, phase, plugin, 'args',
-                                                    'config_kwargs')
-
-            worker_config = Configuration(conf_file=None, **worker_config_kwargs)
-
-            if isinstance(worker_build_image, type):
-                with pytest.raises(worker_build_image):
-                    worker_config_kwargs['build_image']
-                assert not worker_config.get_build_image()
-            else:
-                assert worker_config_kwargs['build_image'] == worker_build_image
-                assert worker_config.get_build_image() == worker_build_image
-
-            if kwargs.get('flatpak', False):
-                assert kwargs.get('flatpak') is True
-                assert kwargs.get('flatpak_base_image') == worker_config.get_flatpak_base_image()
+        if kwargs.get('flatpak', False):
+            assert kwargs.get('flatpak') is True
+            assert kwargs.get('flatpak_base_image') == worker_config.get_flatpak_base_image()
 
     def test_prod_custom_base_image(self, tmpdir):
         kwargs = get_sample_prod_params()

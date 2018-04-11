@@ -529,17 +529,13 @@ class TestOSBS(object):
             (None, None, None, None),
         )
     )
-    @pytest.mark.parametrize(('platforms', 'raises_exception'), (
-        (None, True),
-        ([], True),
-        (['spam'], False),
-        (['spam', 'bacon'], False),
+    @pytest.mark.parametrize('platforms', (
+        None, [], ['spam'], ['spam', 'bacon'],
     ))
     @pytest.mark.parametrize(('flatpak'), (True, False))
     def test_create_orchestrator_build(self, osbs, inner_template_fmt,
                                        outer_template, customize_conf,
-                                       arrangement_version,
-                                       platforms, raises_exception,
+                                       arrangement_version, platforms,
                                        flatpak):
         branch = TEST_GIT_BRANCH
         (flexmock(utils)
@@ -573,7 +569,6 @@ class TestOSBS(object):
             'git_ref': TEST_GIT_REF,
             'git_branch': branch,
             'user': TEST_USER,
-            'platforms': platforms,
             'build_type': BUILD_TYPE_ORCHESTRATOR,
             'inner_template': ORCHESTRATOR_INNER_TEMPLATE.format(
                 arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
@@ -582,6 +577,8 @@ class TestOSBS(object):
             'arrangement_version': DEFAULT_ARRANGEMENT_VERSION,
             'release': '1'
         }
+        if platforms is not None:
+            expected_kwargs['platforms'] = platforms
 
         if flatpak:
             expected_kwargs['flatpak'] = True
@@ -589,15 +586,11 @@ class TestOSBS(object):
         (flexmock(osbs)
             .should_receive('_do_create_prod_build')
             .with_args(**expected_kwargs)
-            .times(0 if raises_exception else 1)
-            .and_return(BuildResponse({})))
+            .and_return(BuildResponse({}))
+            .once())
 
-        if raises_exception:
-            with pytest.raises(OsbsException):
-                osbs.create_orchestrator_build(**kwargs)
-        else:
-            response = osbs.create_orchestrator_build(**kwargs)
-            assert isinstance(response, BuildResponse)
+        response = osbs.create_orchestrator_build(**kwargs)
+        assert isinstance(response, BuildResponse)
 
     # osbs_cant_orchestrate is a fixture here
     def test_create_orchestrator_build_cant_orchestrate(self, osbs_cant_orchestrate):  # noqa

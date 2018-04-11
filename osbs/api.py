@@ -774,9 +774,6 @@ class OSBS(object):
 
         :return: BuildResponse instance
         """
-        if not kwargs.get('platforms'):
-            raise ValueError('Orchestrator build requires platforms param')
-
         if not self.can_orchestrate():
             raise OsbsOrchestratorNotEnabled("can't create orchestrate build "
                                              "when can_orchestrate isn't enabled")
@@ -787,6 +784,9 @@ class OSBS(object):
 
         arrangement_version = kwargs.setdefault('arrangement_version',
                                                 self.build_conf.get_arrangement_version())
+
+        if arrangement_version < REACTOR_CONFIG_ARRANGEMENT_VERSION and not kwargs.get('platforms'):
+            raise ValueError('Orchestrator build requires platforms param')
 
         kwargs.setdefault('inner_template', ORCHESTRATOR_INNER_TEMPLATE.format(
             arrangement_version=arrangement_version))

@@ -709,7 +709,8 @@ def cli():
                                                          description='Required arguments for '
                                                          'creating an orchestrator build')
     orchestrator_group.add_argument('--platforms', action='append', metavar='PLATFORM',
-                                    help='name of each platform to use')
+                                    help='name of each platform to use (only required for '
+                                    'arrangement 5 or earlier; deprecated in arrangement 6+')
 
     build_parser.add_argument('--source-registry-uri', action='store', required=False,
                               help="set source registry for pulling parent image")
