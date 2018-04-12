@@ -443,6 +443,9 @@ class PluginsConfiguration(object):
         self.pt.set_plugin_arg_valid(phase, plugin, 'signing_intent',
                                      self.user_params.signing_intent.value)
 
+        self.pt.set_plugin_arg_valid(phase, plugin, 'koji_target',
+                                     self.user_params.koji_target.value)
+
     def render_resolve_module_compose(self):
         phase = 'prebuild_plugins'
         plugin = 'resolve_module_compose'
