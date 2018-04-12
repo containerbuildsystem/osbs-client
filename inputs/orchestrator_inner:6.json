@@ -95,6 +95,9 @@
       "name": "delete_from_registry"
     },
     {
+      "name": "koji_import"
+    },
+    {
       "name": "koji_tag_build"
     },
     {
