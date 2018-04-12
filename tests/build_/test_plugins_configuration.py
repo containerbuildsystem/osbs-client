@@ -694,6 +694,7 @@ class TestPluginsConfiguration(object):
         {'signing_intent': 'release'},
         {'compose_ids': [1, ]},
         {'compose_ids': [1, 2]},
+        {'koji_target': 'koji_target'},
     ))
     def test_render_resolve_composes(self, additional_params):
         plugin_type = 'prebuild_plugins'
