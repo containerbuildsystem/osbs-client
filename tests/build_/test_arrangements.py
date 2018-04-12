@@ -1422,6 +1422,7 @@ class TestArrangementV6(ArrangementBase):
                 'pulp_pull',
                 'import_image',
                 'delete_from_registry',
+                'koji_import',
                 'koji_tag_build',
                 'store_metadata_in_osv3',
                 'sendmail',
