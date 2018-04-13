@@ -460,6 +460,69 @@ class TestOpenshift(object):
                         self._make_tag_template(),
                         expected_scheduled) == expected_change)
 
+    @pytest.mark.parametrize(('status_codes', 'should_raise'), [  # noqa
+        ([http_client.OK], False),
+        ([http_client.CONFLICT, http_client.CONFLICT, http_client.OK], False),
+        ([http_client.CONFLICT, http_client.OK], False),
+        ([http_client.CONFLICT, http_client.CONFLICT, http_client.UNAUTHORIZED], True),
+        ([http_client.UNAUTHORIZED], True),
+        ([http_client.CONFLICT for _ in range(OS_CONFLICT_MAX_RETRIES + 1)], True),
+    ])
+    def test_retry_ensure_image_stream_tag(self, openshift,
+                                           status_codes, should_raise):
+        get_expectation = (flexmock(openshift)
+                           .should_receive('_get')
+                           .times(len(status_codes)))
+        put_expectation = (flexmock(openshift)
+                           .should_receive('_put')
+                           .times(len(status_codes)))
+        for status_code in status_codes:
+            get_response = HttpResponse(http_client.NOT_FOUND,
+                                        headers={},
+                                        content=b'')
+            put_response = HttpResponse(status_code,
+                                        headers={},
+                                        content=b'')
+            get_expectation = get_expectation.and_return(get_response)
+            put_expectation = put_expectation.and_return(put_response)
+
+        (flexmock(time)
+            .should_receive('sleep')
+            .and_return(None))
+
+        fn = openshift.ensure_image_stream_tag
+        args = (
+            {
+                'kind': 'ImageStream',
+                'metadata': {
+                    'name': 'imagestream',
+                },
+                'spec': {
+                    'dockerImageRepository': 'registry.example.com/repo',
+                },
+            },
+            'tag',
+            {
+                'kind': 'ImageStreamTag',
+                'metadata': {
+                    'name': 'imagestream:tag',
+                },
+                'tag': {
+                    'name': 'tag',
+                    'from': {
+                        'kind': 'DockerImage',
+                        'name': 'registry.example.com/repo:tag',
+                    },
+                    'importPolicy': {},
+                },
+            })
+
+        if should_raise:
+            with pytest.raises(OsbsResponseException):
+                fn(*args)
+        else:
+            fn(*args)
+
     @pytest.mark.parametrize(('kwargs', 'called'), (
         ({'use_auth': True, 'use_kerberos': True}, False),
         ({'use_auth': True, 'username': 'foo', 'password': 'bar'}, False),

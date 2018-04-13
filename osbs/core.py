@@ -732,6 +732,7 @@ class Openshift(object):
         check_response(response)
         return response
 
+    @retry_on_conflict
     def ensure_image_stream_tag(self, stream, tag_name, tag_template,
                                 scheduled=False):
         stream_id = stream['metadata']['name']
