@@ -1388,6 +1388,7 @@ class TestArrangementV6(ArrangementBase):
         ORCHESTRATOR_INNER_TEMPLATE: {
             'prebuild_plugins': [
                 'reactor_config',
+                'check_and_set_rebuild',
                 'check_and_set_platforms',
                 'resolve_module_compose',
                 'flatpak_create_dockerfile',
@@ -1397,7 +1398,6 @@ class TestArrangementV6(ArrangementBase):
                 'bump_release',
                 'add_labels_in_dockerfile',
                 'koji_parent',
-                'check_and_set_rebuild',
                 'resolve_composes',
             ],
 
