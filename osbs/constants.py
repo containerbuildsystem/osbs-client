@@ -61,7 +61,7 @@ SERVICEACCOUNT_CACRT = "ca.crt"
 SECRETS_PATH = "/var/run/secrets/atomic-reactor"
 
 # Backup/restore
-BACKUP_RESOURCES = ('buildconfigs', 'imagestreams', 'builds',)
+BACKUP_RESOURCES = ('buildconfigs', 'imagestreams',)
 
 CLI_LIST_BUILDS_DEFAULT_COLS = ["name", "status", "image"]
 CLI_WATCH_BUILDS_DEFAULT_COLS = ["changetype", "status", "created", "name"]
