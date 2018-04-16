@@ -4,6 +4,13 @@
       "name": "reactor_config"
     },
     {
+      "name": "check_and_set_rebuild",
+      "args": {
+        "label_key": "is_autorebuild",
+        "label_value": "true"
+      }
+    },
+    {
       "name": "check_and_set_platforms",
       "required": false
     },
@@ -33,13 +40,6 @@
     },
     {
       "name": "koji_parent"
-    },
-    {
-      "name": "check_and_set_rebuild",
-      "args": {
-        "label_key": "is_autorebuild",
-        "label_value": "true"
-      }
     },
     {
       "name": "resolve_composes"
