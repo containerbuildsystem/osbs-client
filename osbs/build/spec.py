@@ -48,14 +48,6 @@ class UserParam(BuildParam):
     def __init__(self):
         super(UserParam, self).__init__(self.name)
 
-    @BuildParam.value.setter
-    def value(self, val):  # pylint: disable=W0221
-        try:
-            val = val.ljust(4, "_")  # py3
-        except TypeError:
-            val = val.ljust(4, b"_")  # py2
-        BuildParam.value.fset(self, val)
-
 
 class BuildIDParam(BuildParam):
     """ validate build ID """
