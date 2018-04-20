@@ -22,12 +22,14 @@ class BuildRequestV2(BuildRequest):
     Wraps logic for creating build inputs
     """
 
-    def __init__(self, build_json_store, customize_conf=None):
+    def __init__(self, build_json_store, outer_template=None, customize_conf=None):
         """
         :param build_json_store: str, path to directory with JSON build files
+        :param outer_template: str, path to outer template JSON
         :param customize_conf: str, path to customize configuration JSON
         """
         super(BuildRequestV2, self).__init__(build_json_store=build_json_store,
+                                             outer_template=outer_template,
                                              customize_conf=customize_conf)
         self.spec = None
         self.user_params = BuildUserParams(build_json_store, customize_conf)
@@ -113,6 +115,11 @@ class BuildRequestV2(BuildRequest):
     @property
     def dj(self):
         raise RuntimeError('DockJson not supported in BuildRequestV2')
+
+    # Override
+    @property
+    def trigger_imagestreamtag(self):
+        return self.user_params.trigger_imagestreamtag.value
 
     def adjust_for_scratch(self):
         """

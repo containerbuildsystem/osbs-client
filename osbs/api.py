@@ -199,6 +199,7 @@ class OSBS(object):
         else:
             build_request = BuildRequestV2(
                 build_json_store=self.os_conf.get_build_json_store(),
+                outer_template=outer_template,
                 customize_conf=customize_conf)
 
         # Apply configured resource limits.
@@ -362,7 +363,7 @@ class OSBS(object):
         image_stream_tag_name = None
 
         if build_request.has_ist_trigger():
-            image_stream_tag_id = build_request.spec.trigger_imagestreamtag.value
+            image_stream_tag_id = build_request.trigger_imagestreamtag
             image_stream_id, image_stream_tag_name = image_stream_tag_id.split(':')
 
             try:

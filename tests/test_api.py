@@ -1570,6 +1570,7 @@ class TestOSBS(object):
             config = Configuration(fp.name)
 
         osbs_obj = OSBS(config, config)
+        new_trigger = 'fedora23-python:new_trigger'
 
         build_json = {
             'apiVersion': 'v1',
@@ -1582,7 +1583,7 @@ class TestOSBS(object):
                 },
             },
             'spec': {
-                'triggers': [{'name': 'new_trigger'}]
+                'triggers': [{'imageChange': {'from': {'name': new_trigger}}}]
             },
         }
         if not triggers_bj:
@@ -1599,7 +1600,7 @@ class TestOSBS(object):
                 },
             },
             'spec': {
-                'triggers': [{'name': 'old_trigger'}]
+                'triggers': [{'imageChange': {'from': {'name': 'fedora23-python:old_trigger'}}}]
             },
             'status': {'lastVersion': 'lastVersion'},
         }
@@ -1621,11 +1622,13 @@ class TestOSBS(object):
 
         build_request = flexmock(
             render=lambda: build_json,
-            has_ist_trigger=lambda: True,
+            has_ist_trigger=lambda: triggers_bj,
             scratch=False)
         # Cannot use spec keyword arg in flexmock constructor
         # because it appears to be used by flexmock itself
         build_request.spec = spec
+        if triggers_bj:
+            build_request.trigger_imagestreamtag = new_trigger
 
         get_existing_count = 1
         if existing_bc:
@@ -1654,7 +1657,7 @@ class TestOSBS(object):
         (flexmock(osbs_obj.os)
             .should_receive('get_image_stream')
             .with_args('fedora23-python')
-            .once()
+            .times(1 if triggers_bj else 0)
             .replace_with(mock_get_image_stream))
 
         if existing_is:
@@ -1665,14 +1668,15 @@ class TestOSBS(object):
                 return flexmock(json=lambda: image_stream_tag_json)
             (flexmock(osbs_obj.os)
                 .should_receive('get_image_stream_tag')
-                .with_args('fedora23-python:latest')
-                .once()
+                .with_args(new_trigger)
+                .times(1 if triggers_bj else 0)
                 .replace_with(mock_get_image_stream_tag))
 
+            ist_tag = new_trigger.split(':')[1]
             (flexmock(osbs_obj.os)
                 .should_receive('ensure_image_stream_tag')
-                .with_args(image_stream_json, 'latest', dict, True)
-                .once()
+                .with_args(image_stream_json, ist_tag, dict, True)
+                .times(1 if triggers_bj else 0)
                 .and_return(True))
 
         update_build_config_times = 0
@@ -2306,6 +2310,7 @@ class TestOSBS(object):
             config = Configuration(fp.name)
 
         osbs_obj = OSBS(config, config)
+        new_trigger = 'fedora23-python:new_trigger'
 
         build_json = {
             'apiVersion': 'v1',
@@ -2318,7 +2323,7 @@ class TestOSBS(object):
                 },
             },
             'spec': {
-                'triggers': [{'name': 'new_trigger'}]
+                'triggers': [{'imageChange': {'from': {'name': new_trigger}}}]
             },
         }
 
@@ -2336,7 +2341,7 @@ class TestOSBS(object):
                 },
             },
             'spec': {
-                'triggers': [{'name': 'old_trigger'}]
+                'triggers': [{'imageChange': {'from': {'name': 'fedora23-python:old_trigger'}}}]
             },
             'status': {'lastVersion': 'lastVersion'},
         }
@@ -2355,11 +2360,13 @@ class TestOSBS(object):
 
         build_request = flexmock(
             render=lambda: build_json,
-            has_ist_trigger=lambda: True,
+            has_ist_trigger=lambda: triggers,
             scratch=False)
         # Cannot use spec keyword arg in flexmock constructor
         # because it appears to be used by flexmock itself
         build_request.spec = spec
+        if triggers:
+            build_request.trigger_imagestreamtag = new_trigger
 
         get_existing_count = 0
         if existing_bc:
@@ -2390,7 +2397,7 @@ class TestOSBS(object):
         (flexmock(osbs_obj.os)
             .should_receive('get_image_stream')
             .with_args('fedora23-python')
-            .once()
+            .times(1 if triggers else 0)
             .replace_with(mock_get_image_stream))
 
         if existing_bc:
@@ -2450,6 +2457,7 @@ class TestOSBS(object):
                            http_client.CONFLICT,
                            http_client.CONFLICT,
                            http_client.OK]
+        new_trigger = 'fedora23-python:new_trigger'
 
         build_json = {
             'apiVersion': 'v1',
@@ -2462,7 +2470,7 @@ class TestOSBS(object):
                 },
             },
             'spec': {
-                'triggers': [{'name': 'new_trigger'}]
+                'triggers': [{'imageChange': {'from': {'name': new_trigger}}}]
             },
         }
 
@@ -2477,7 +2485,7 @@ class TestOSBS(object):
                 },
             },
             'spec': {
-                'triggers': [{'name': 'old_trigger'}]
+                'triggers': [{'imageChange': {'from': {'name': 'fedora23-python:old_trigger'}}}]
             },
             'status': {'lastVersion': 'lastVersion'},
         }
@@ -2501,6 +2509,7 @@ class TestOSBS(object):
         # Cannot use spec keyword arg in flexmock constructor
         # because it appears to be used by flexmock itself
         build_request.spec = spec
+        build_request.trigger_imagestreamtag = new_trigger
         get_existing_count = (len(update_response) * 2) + 1
 
         (flexmock(osbs_obj)
