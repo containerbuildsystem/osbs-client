@@ -200,6 +200,10 @@ class BuildRequest(object):
             self._dj = DockJsonManipulator(self.template, self.inner_template)
         return self._dj
 
+    @property
+    def trigger_imagestreamtag(self):
+        return self.spec.trigger_imagestreamtag.value
+
     def has_ist_trigger(self):
         """Return True if this BuildConfig has ImageStreamTag trigger."""
         triggers = self.template['spec'].get('triggers', [])
