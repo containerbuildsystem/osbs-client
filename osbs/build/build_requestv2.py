@@ -8,11 +8,14 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import print_function, absolute_import, unicode_literals
 
 import logging
+import os
+import yaml
 
 from osbs.build.build_request import BuildRequest
 from osbs.build.user_params import BuildUserParams
 from osbs.exceptions import OsbsValidationException
 from osbs.utils import git_repo_humanish_part_from_uri
+from osbs.constants import SECRETS_PATH, BUILD_TYPE_ORCHESTRATOR
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +133,79 @@ class BuildRequestV2(BuildRequest):
             self.template['spec'].pop('triggers', None)
             self.set_label('scratch', 'true')
 
+    def set_reactor_config(self):
+        reactor_config_override = self.user_params.reactor_config_override.value
+        reactor_config_map = self.user_params.reactor_config_map.value
+
+        if not reactor_config_map and not reactor_config_override:
+            return
+        custom = self.template['spec']['strategy']['customStrategy']
+
+        if reactor_config_override:
+            reactor_config = {
+                'name': 'REACTOR_CONFIG',
+                'value': yaml.safe_dump(reactor_config_override)
+            }
+        elif reactor_config_map:
+            reactor_config = {
+                'name': 'REACTOR_CONFIG',
+                'valueFrom': {
+                    'configMapKeyRef': {
+                        'name': reactor_config_map,
+                        'key': 'config.yaml'
+                    }
+                }
+            }
+
+        custom['env'].append(reactor_config)
+
+    def set_required_secrets(self):
+        """
+        Sets required secrets
+        """
+        reactor_config_override = self.user_params.reactor_config_override.value
+        reactor_config_map = self.user_params.reactor_config_map.value
+        if not reactor_config_map and not reactor_config_override:
+            return
+
+        req_secrets_key = 'required_secrets'
+        token_secrets_key = 'worker_token_secrets'
+        required_secrets = []
+        token_secrets = []
+        if reactor_config_override:
+            data = reactor_config_override
+            required_secrets = data.get(req_secrets_key, [])
+            token_secrets = data.get(token_secrets_key, [])
+        elif reactor_config_map:
+            config_map = self.osbs_api.get_config_map(reactor_config_map)
+            required_secrets = config_map.get_data_by_key('config.yaml').get(req_secrets_key, [])
+            token_secrets = config_map.get_data_by_key('config.yaml').get(token_secrets_key, [])
+
+        if self.user_params.build_type.value == BUILD_TYPE_ORCHESTRATOR:
+            required_secrets += token_secrets
+
+        if not required_secrets:
+            return
+
+        secrets = self.template['spec']['strategy']['customStrategy'].setdefault('secrets', [])
+        existing = set(secret_mount['secretSource']['name'] for secret_mount in secrets)
+        required_secrets = set(required_secrets)
+
+        already_set = required_secrets.intersection(existing)
+        if already_set:
+            logger.debug("secrets %s are already set", already_set)
+
+        for secret in required_secrets - existing:
+            secret_path = os.path.join(SECRETS_PATH, secret)
+            logger.info("Configuring %s secret at %s", secret, secret_path)
+
+            secrets.append({
+                'secretSource': {
+                    'name': secret,
+                },
+                'mountPath': secret_path,
+            })
+
     def render(self, validate=True):
         # the api is required for BuildRequestV2
         # can't check that its an OSBS object because of the circular import
@@ -175,12 +251,8 @@ class BuildRequestV2(BuildRequest):
         # Set template.spec.strategy.customStrategy.env[] USER_PARAMS
         # Set required_secrets based on reactor_config
         # Set worker_token_secrets based on reactor_config, if any
-        reactor_config_override = self.user_params.reactor_config_override.value
-        self.set_reactor_config(reactor_config_map=self.user_params.reactor_config_map.value,
-                                reactor_config_override=reactor_config_override)
-        self.set_required_secrets(reactor_config_map=self.user_params.reactor_config_map.value,
-                                  reactor_config_override=reactor_config_override,
-                                  platforms=self.user_params.platforms.value)
+        self.set_reactor_config()
+        self.set_required_secrets()
 
         # Adjust triggers for custom base image
         if self.template['spec'].get('triggers', []) and self.is_custom_base_image():

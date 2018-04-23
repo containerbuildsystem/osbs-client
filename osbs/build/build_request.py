@@ -11,7 +11,6 @@ import json
 import logging
 import os
 import re
-import yaml
 from pkg_resources import parse_version
 
 from six.moves import zip_longest
@@ -100,7 +99,6 @@ class BuildRequest(object):
         :param auto_build_node_selector: dict, a nodeselector for auto builds
         :param isolated_build_node_selector: dict, a nodeselector for isolated builds
         :param is_auto: bool, indicates if build is auto build
-        :param reactor_config_override: str, serialized reactor config yaml
         """
 
         # Here we cater to the koji "scratch" build type, this will disable
@@ -232,9 +230,7 @@ class BuildRequest(object):
         self.template['metadata']['labels'][name] = value
 
     def render_reactor_config(self):
-        if self.spec.reactor_config_secret.value is None and \
-                self.spec.reactor_config_map.value is None and \
-                self.spec.reactor_config_override.value is None:
+        if self.spec.reactor_config_secret.value is None:
             logger.debug("removing reactor_config plugin: no secret")
             self.dj.remove_plugin('prebuild_plugins', 'reactor_config')
 
@@ -483,74 +479,6 @@ class BuildRequest(object):
             self.dj.dock_json_set_arg(phase, plugin, 'koji_principal', krb_principal)
             self.dj.dock_json_set_arg(phase, plugin, 'koji_keytab', krb_keytab)
 
-    def set_reactor_config(self, reactor_config_map=None, reactor_config_override=None):
-        if not reactor_config_map and not reactor_config_override:
-            return
-        custom = self.template['spec']['strategy']['customStrategy']
-
-        if reactor_config_override:
-            reactor_config = {
-                'name': 'REACTOR_CONFIG',
-                'value': yaml.safe_dump(reactor_config_override)
-            }
-        elif reactor_config_map:
-            reactor_config = {
-                'name': 'REACTOR_CONFIG',
-                'valueFrom': {
-                    'configMapKeyRef': {
-                        'name': reactor_config_map,
-                        'key': 'config.yaml'
-                    }
-                }
-            }
-
-        custom['env'].append(reactor_config)
-
-    def set_required_secrets(self, reactor_config_map=None,
-                             reactor_config_override=None, platforms=None):
-        """
-        Sets required secrets
-        """
-        if not reactor_config_map and not reactor_config_override:
-            return
-
-        req_secrets_key = 'required_secrets'
-        token_secrets_key = 'worker_token_secrets'
-        required_secrets = []
-        token_secrets = []
-        if reactor_config_override:
-            data = reactor_config_override
-            required_secrets = data.get(req_secrets_key, [])
-            token_secrets = data.get(token_secrets_key, [])
-        elif reactor_config_map:
-            config_map = self.osbs_api.get_config_map(reactor_config_map)
-            required_secrets = config_map.get_data_by_key('config.yaml').get(req_secrets_key, [])
-            token_secrets = config_map.get_data_by_key('config.yaml').get(token_secrets_key, [])
-
-        if platforms is not None:
-            required_secrets += token_secrets
-
-        if not required_secrets:
-            return
-
-        secrets = self.template['spec']['strategy']['customStrategy'].setdefault('secrets', [])
-        existing = set(secret_mount['secretSource']['name'] for secret_mount in secrets)
-        required_secrets = set(required_secrets)
-
-        already_set = required_secrets.intersection(existing)
-        if already_set:
-            logger.debug("secrets %s are already set", already_set)
-
-        for secret in required_secrets - existing:
-            secret_path = os.path.join(SECRETS_PATH, secret)
-            logger.info("Configuring %s secret at %s", secret, secret_path)
-
-            secrets.append({
-                'secretSource': {
-                    'name': secret,
-                },
-                'mountPath': secret_path,
-            })
 
     @staticmethod
     def remove_tag_and_push_registries(tag_and_push_registries, version):
@@ -1746,13 +1674,6 @@ class BuildRequest(object):
         self.render_version()
         platforms = self.spec.platforms.value
         self.render_node_selectors(platforms)
-        reactor_config_map = self.spec.reactor_config_map.value
-        reactor_config_override = self.spec.reactor_config_override.value
-        self.set_reactor_config(reactor_config_map=reactor_config_map,
-                                reactor_config_override=reactor_config_override)
-        self.set_required_secrets(reactor_config_map=reactor_config_map,
-                                  reactor_config_override=reactor_config_override,
-                                  platforms=platforms)
 
         self.dj.write_dock_json()
         self.build_json = self.template

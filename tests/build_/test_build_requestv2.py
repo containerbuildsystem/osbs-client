@@ -11,10 +11,12 @@ import json
 import os
 import fnmatch
 import shutil
+import yaml
 from copy import deepcopy
 
 from osbs.build.build_requestv2 import BuildRequestV2
-from osbs.constants import DEFAULT_OUTER_TEMPLATE, BUILD_TYPE_WORKER, SECRETS_PATH
+from osbs.constants import (DEFAULT_OUTER_TEMPLATE, BUILD_TYPE_WORKER,
+                            BUILD_TYPE_ORCHESTRATOR, SECRETS_PATH)
 from osbs.exceptions import OsbsValidationException
 from osbs.repo_utils import RepoInfo, RepoConfiguration
 from osbs.api import OSBS
@@ -639,23 +641,40 @@ class TestBuildRequestV2(object):
         else:
             assert 'nodeSelector' not in build_json['spec']
 
+    @pytest.mark.parametrize('build_type', [
+        BUILD_TYPE_WORKER,
+        BUILD_TYPE_ORCHESTRATOR,
+    ])
+    @pytest.mark.parametrize('reactor_config_override', [
+        None,
+        {},
+        {'version': 1},
+    ])
     @pytest.mark.parametrize('reactor_config_map', [
         None,
         'reactor-config-map',
     ])
-    def test_set_config_map(self, reactor_config_map):
-        br = BuildRequestV2(INPUTS_PATH)
+    def test_set_config_map(self, build_type, reactor_config_map, reactor_config_override):
+        build_request = BuildRequestV2(INPUTS_PATH)
         kwargs = get_sample_prod_params()
         kwargs['reactor_config_map'] = reactor_config_map
-        br.set_params(**kwargs)
-        build_json = br.render()
+        kwargs['reactor_config_override'] = reactor_config_override
+        kwargs['build_type'] = build_type
+
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
 
         json_env = build_json['spec']['strategy']['customStrategy']['env']
         envs = {}
         for env in json_env:
             envs[env['name']] = (env.get('valueFrom', None), env.get('value', None))
 
-        if reactor_config_map:
+        if reactor_config_override:
+            reactor_config_value = yaml.safe_dump(reactor_config_override)
+            assert 'REACTOR_CONFIG' in envs
+            assert envs['REACTOR_CONFIG'][1] == reactor_config_value
+
+        elif reactor_config_map:
             configmapkeyref = {
                 'name': reactor_config_map,
                 'key': 'config.yaml'
@@ -667,9 +686,13 @@ class TestBuildRequestV2(object):
         else:
             assert 'REACTOR_CONFIG' not in envs
 
-    @pytest.mark.parametrize('platforms', [
-        None,
-        ['some'],
+    @pytest.mark.parametrize('build_type', [
+        BUILD_TYPE_WORKER,
+        BUILD_TYPE_ORCHESTRATOR,
+    ])
+    @pytest.mark.parametrize('existing', [
+        [],
+        ['secret4', 'secret5'],
     ])
     @pytest.mark.parametrize('reactor_config_map', [
         None,
@@ -687,28 +710,72 @@ class TestBuildRequestV2(object):
         {'required_secrets': ['secret4', 'secret5', 'reactor_secret'],
          'worker_token_secrets': ['secret7', 'secret8']},
     ])
-    def test_set_required_secrets(self, platforms, reactor_config_map):
+    @pytest.mark.parametrize('reactor_config_override', [
+        None,
+        {},
+        {'required_secrets': ['secret1', 'secret2']},
+        {'required_secrets': ['secret1', 'secret2', 'reactor_secret']},
+        {'required_secrets': ['secret1', 'secret2'],
+         'worker_token_secrets': []},
+        {'required_secrets': ['secret1', 'secret2', 'reactor_secret'],
+         'worker_token_secrets': []},
+        {'required_secrets': ['secret1', 'secret2'],
+         'worker_token_secrets': []},
+        {'required_secrets': ['secret1', 'secret2'],
+         'worker_token_secrets': ['secret10', 'secret11']},
+        {'required_secrets': ['secret1', 'secret2'],
+         'worker_token_secrets': ['secret1', 'secret2', 'secret11']},
+        {'required_secrets': ['secret1', 'secret2', 'reactor_secret'],
+         'worker_token_secrets': ['secret10', 'secret11']},
+    ])
+    def test_set_required_secrets(self, build_type, existing, reactor_config_map,
+                                  reactor_config_override):
+        build_request = BuildRequestV2(INPUTS_PATH)
+        reactor_config_name = 'REACTOR_CONFIG'
         all_secrets = deepcopy(reactor_config_map)
 
-        br = BuildRequestV2(INPUTS_PATH)
         mock_api = MockOSBSApi(all_secrets)
         kwargs = get_sample_prod_params(osbs_api=mock_api)
-        kwargs['reactor_config_map'] = reactor_config_map
-        br.set_params(**kwargs)
-        build_json = br.render()
+        kwargs['reactor_config_map'] = reactor_config_name
+        kwargs['reactor_config_override'] = reactor_config_override
+        kwargs['build_type'] = build_type
+
+        build_request.set_params(**kwargs)
+        expect_secrets = {}
+        secrets = build_request.template['spec']['strategy']['customStrategy'].\
+            setdefault('secrets', [])
+
+        for secret in existing:
+            secret_path = os.path.join(SECRETS_PATH, secret)
+            secrets.append({
+                'secretSource': {
+                    'name': secret,
+                },
+                'mountPath': secret_path,
+            })
+            expect_secrets[secret] = secret_path
+
+        build_json = build_request.render()
 
         json_custom = build_json['spec']['strategy']['customStrategy']
 
-        if not reactor_config_map:
+        if not reactor_config_map and not reactor_config_override and not existing:
             assert not json_custom['secrets']
             return
 
-        expect_secrets = {}
+        if reactor_config_override:
+            for secret in reactor_config_override['required_secrets']:
+                expect_secrets[secret] = os.path.join(SECRETS_PATH, secret)
+            if build_type == BUILD_TYPE_ORCHESTRATOR \
+                    and 'worker_token_secrets' in reactor_config_override:
+                for secret in reactor_config_override['worker_token_secrets']:
+                    expect_secrets[secret] = os.path.join(SECRETS_PATH, secret)
 
-        if reactor_config_map:
+        elif reactor_config_map:
             for secret in reactor_config_map['required_secrets']:
                 expect_secrets[secret] = os.path.join(SECRETS_PATH, secret)
-            if 'worker_token_secrets' in reactor_config_map:
+            if build_type == BUILD_TYPE_ORCHESTRATOR \
+                    and 'worker_token_secrets' in reactor_config_map:
                 for secret in reactor_config_map['worker_token_secrets']:
                     expect_secrets[secret] = os.path.join(SECRETS_PATH, secret)
 
