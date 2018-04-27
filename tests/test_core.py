@@ -17,14 +17,15 @@ import inspect
 import os
 
 from osbs.http import HttpResponse
-from osbs.constants import (BUILD_FINISHED_STATES,
-                            BUILD_CANCELLED_STATE, WATCH_MODIFIED, WATCH_ERROR, WATCH_DELETED,
-                            OS_CONFLICT_MAX_RETRIES, OS_CONFLICT_WAIT)
+from osbs.constants import (BUILD_FINISHED_STATES, BUILD_CANCELLED_STATE,
+                            OS_CONFLICT_MAX_RETRIES,
+                            ANNOTATION_SOURCE_REPO)
 from osbs.exceptions import (OsbsResponseException, OsbsException, OsbsNetworkException)
 from osbs.core import check_response, Openshift
 
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
-                             TEST_LABEL_VALUE, TEST_IMAGESTREAM)
+                             TEST_LABEL_VALUE, TEST_IMAGESTREAM, TEST_IMAGESTREAM_NO_TAGS,
+                             TEST_IMAGESTREAM_WITH_ANNOTATION)
 from tests.fake_api import openshift, OAPI_PREFIX, API_VER  # noqa
 from tests.test_utils import JsonMatcher
 from requests.exceptions import ConnectionError
@@ -544,13 +545,12 @@ class TestOpenshift(object):
             openshift_mock.never()
         Openshift(OAPI_PREFIX, API_VER, "/oauth/authorize", **kwargs)
 
-    @pytest.mark.parametrize('modify', (True, False))  # noqa
-    @pytest.mark.parametrize(('state', 'imported'), (
-        (WATCH_MODIFIED, True),
-        (WATCH_ERROR, False),
-        (WATCH_DELETED, False),
+    @pytest.mark.parametrize(('imagestream_name', 'expect_update', 'expect_import'), (  # noqa:F811
+        (TEST_IMAGESTREAM, True, True),
+        (TEST_IMAGESTREAM_NO_TAGS, True, False),
+        (TEST_IMAGESTREAM_WITH_ANNOTATION, False, True),
     ))
-    def test_import_image(self, openshift, modify, state, imported):
+    def test_import_image(self, openshift, imagestream_name, expect_update, expect_import):
         """
         tests that import_image return True
         regardless if tags were changed
@@ -562,24 +562,18 @@ class TestOpenshift(object):
         template_resource_json = json.load(open(json_path))
 
         initial_resource_json = deepcopy(template_resource_json)
-        # keep just 1 tag, so it will be different from oldtags (3 tags)
-        if modify:
-            initial_resource_json['status']['tags'] = [initial_resource_json['status']['tags'][0]]
-
-        # "put" response will have resource_version incremented by one
-        resource_version = str(int(initial_resource_json['metadata']['resourceVersion']) + 1)
-        (flexmock(openshift)
-            .should_receive('watch_resource')
-            .with_args('imagestreams', 'test_imagestream', resourceVersion=resource_version)
-            .and_yield((state, initial_resource_json)))
 
         modified_resource_json = deepcopy(template_resource_json)
-        modified_resource_json['metadata']['annotations'].pop(
-            'openshift.io/image.dockerRepositoryCheck', None)
+        source_repo = modified_resource_json['spec'].pop('dockerImageRepository')
+        modified_resource_json['metadata']['annotations'][ANNOTATION_SOURCE_REPO] = source_repo
+        if not expect_import:
+            modified_resource_json['spec']['tags'] = []
 
-        put_url = openshift._build_url("imagestreams/%s" % TEST_IMAGESTREAM)
+        put_url = openshift._build_url("imagestreams/%s" % imagestream_name)
         (flexmock(openshift)
             .should_call('_put')
+            .times(1 if expect_update else 0)
             .with_args(put_url, data=JsonMatcher(modified_resource_json), use_json=True))
 
-        assert openshift.import_image(TEST_IMAGESTREAM) is imported
+        stream_import = {'metadata': {'name': 'FOO'}, 'spec': {'images': []}}
+        assert openshift.import_image(imagestream_name, stream_import) is expect_import

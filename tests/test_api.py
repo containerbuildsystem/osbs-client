@@ -43,7 +43,8 @@ from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             REACTOR_CONFIG_ARRANGEMENT_VERSION,
                             ORCHESTRATOR_CUSTOMIZE_CONF,
                             BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR,
-                            OS_CONFLICT_MAX_RETRIES)
+                            OS_CONFLICT_MAX_RETRIES,
+                            ANNOTATION_SOURCE_REPO)
 from osbs import utils
 from osbs.repo_utils import RepoInfo
 
@@ -1981,6 +1982,66 @@ class TestOSBS(object):
 
         response = osbs_obj.ensure_image_stream_tag(stream, tag_name, scheduled)
         assert response == 'eggs'
+
+    def test_import_image(self):
+        with NamedTemporaryFile(mode='wt') as fp:
+            fp.write(dedent("""\
+                [general]
+                build_json_dir = {build_json_dir}
+                """.format(build_json_dir='inputs')))
+            fp.flush()
+            config = Configuration(fp.name)
+            osbs_obj = OSBS(config, config)
+
+        image_stream_name = 'spam'
+        (flexmock(osbs_obj.os)
+            .should_receive('import_image')
+            .with_args(image_stream_name, dict)
+            .once()
+            .and_return(True))
+
+        response = osbs_obj.import_image(image_stream_name)
+        assert response is True
+
+    @pytest.mark.parametrize('insecure', (True, False))
+    def test_create_image_stream(self, insecure):
+        with NamedTemporaryFile(mode='wt') as fp:
+            fp.write(dedent("""\
+                [general]
+                build_json_dir = {build_json_dir}
+                """.format(build_json_dir='inputs')))
+            fp.flush()
+            config = Configuration(fp.name)
+            osbs_obj = OSBS(config, config)
+
+        image_stream_name = 'spam'
+        image_repository = 'registry.example.com/spam'
+
+        mocked_result = object()
+
+        def mock_create_image_stream(stream_json):
+            stream = json.loads(stream_json)
+            assert stream['metadata']['name'] == image_stream_name
+
+            assert (stream['metadata']['annotations'][ANNOTATION_SOURCE_REPO] ==
+                    image_repository)
+            if insecure:
+                assert (
+                    stream['metadata']['annotations']['openshift.io/image.insecureRepository'] ==
+                    'true')
+            else:
+                assert ('openshift.io/image.insecureRepository'
+                        not in stream['metadata']['annotations'])
+            return mocked_result
+
+        (flexmock(osbs_obj.os)
+            .should_receive('create_image_stream')
+            .once()
+            .replace_with(mock_create_image_stream))
+
+        response = osbs_obj.create_image_stream(image_stream_name, image_repository,
+                                                insecure_registry=insecure)
+        assert response is mocked_result
 
     def test_reactor_config_secret(self):
         with NamedTemporaryFile(mode='wt') as fp:

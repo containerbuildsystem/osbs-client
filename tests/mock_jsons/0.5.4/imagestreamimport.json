@@ -1,0 +1,195 @@
+{
+    "status": {
+        "images": [
+            {
+                "status": {
+                    "status": "Success",
+                    "metadata": {}
+                },
+                "image": {
+                    "dockerImageManifestMediaType": "application/vnd.docker.distribution.manifest.v1+json",
+                    "dockerImageMetadataVersion": "1.0",
+                    "dockerImageLayers": [
+                        {
+                            "mediaType": "application/vnd.docker.container.image.rootfs.diff+x-gtar",
+                            "name": "sha256:87f05fc278b9fb3ced3f7ca56d264c7f967eb1f8abcecb56a98a7e8182579be2",
+                            "size": 81348860
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.container.image.rootfs.diff+x-gtar",
+                            "name": "sha256:f549bd1d9711e598e995b223d8791a6365815cc6663dc7db4d8cf8361bbef1eb",
+                            "size": 710
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.container.image.rootfs.diff+x-gtar",
+                            "name": "sha256:34467983caaeda2f9dc30d1eb554c2bee07332588a932df1c7d7e5389345d385",
+                            "size": 4491308
+                        }
+                    ],
+                    "dockerImageReference": "example.com/lucarval/rsyslog@sha256:2b80dd6f25a2eef8696ecb8caacbad8c48984ef72fa61d63d1a12c7edb200572",
+                    "metadata": {
+                        "annotations": {
+                            "image.openshift.io/dockerLayersOrder": "ascending"
+                        },
+                        "creationTimestamp": "2018-04-30T12:21:49Z",
+                        "name": "sha256:2b80dd6f25a2eef8696ecb8caacbad8c48984ef72fa61d63d1a12c7edb200572",
+                        "uid": "0e5c260b-4c71-11e8-b942-fa163ec407ed"
+                    },
+                    "dockerImageMetadata": {
+                        "kind": "DockerImage",
+                        "DockerVersion": "1.12.5",
+                        "Parent": "b6dc5ac173e88389336148451c2d8b85631faa2cd1c1faede7790f7edfd20e27",
+                        "Created": "2017-10-10T18:19:56Z",
+                        "Author": "Red Hat, Inc.",
+                        "apiVersion": "1.0",
+                        "Architecture": "amd64",
+                        "ContainerConfig": {
+                            "Cmd": [
+                                "/bin/sh",
+                                "-c",
+                                "rm -f '/etc/yum.repos.d/extras-rhel-7.2-candidate.repo'"
+                            ],
+                            "Hostname": "f8377a82acd3",
+                            "Labels": {
+                                "com.redhat.component": "rsyslog-docker",
+                                "authoritative-source-url": "registry.access.redhat.com",
+                                "distribution-scope": "private",
+                                "run": "docker run -d --privileged --name NAME --net=host --pid=host -v /etc/pki/rsyslog:/etc/pki/rsyslog -v /etc/rsyslog.conf:/etc/rsyslog.conf -v /etc/sysconfig/rsyslog:/etc/sysconfig/rsyslog -v /etc/rsyslog.d:/etc/rsyslog.d -v /var/log:/var/log -v /var/lib/rsyslog:/var/lib/rsyslog -v /run:/run -v /etc/machine-id:/etc/machine-id -v /etc/localtime:/etc/localtime -e IMAGE=IMAGE -e NAME=NAME --restart=always IMAGE /bin/rsyslog.sh",
+                                "name": "lucarval/rsyslog",
+                                "License": "GPLv3",
+                                "vcs-type": "git",
+                                "vcs-ref": "8bf624ebf9fb6fb735f1391980d567055d2d0326",
+                                "version": "7.2.lucarval",
+                                "architecture": "x86_64",
+                                "install": "docker run --rm --privileged -v /:/host -e HOST=/host -e IMAGE=IMAGE -e NAME=NAME IMAGE /bin/install.sh",
+                                "uninstall": "docker run --rm --privileged -v /:/host -e HOST=/host -e IMAGE=IMAGE -e NAME=NAME IMAGE /bin/uninstall.sh",
+                                "release": "104",
+                                "vendor": "Red Hat, Inc.",
+                                "build-date": "2017-10-10T18:17:47.804500",
+                                "com.redhat.build-host": "rcm-img-docker03-test.build.eng.bos.redhat.com"
+                            },
+                            "Image": "sha256:21f2e1b1ff939b055fcd2e8427ecaac78996d392b35117b8393ae3f09a5180fc",
+                            "Env": [
+                                "PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin",
+                                "container=docker"
+                            ]
+                        },
+                        "Config": {
+                            "Cmd": [
+                                "/bin/rsyslog.sh"
+                            ],
+                            "Hostname": "f8377a82acd3",
+                            "Labels": {
+                                "com.redhat.component": "rsyslog-docker",
+                                "authoritative-source-url": "registry.access.redhat.com",
+                                "distribution-scope": "private",
+                                "run": "docker run -d --privileged --name NAME --net=host --pid=host -v /etc/pki/rsyslog:/etc/pki/rsyslog -v /etc/rsyslog.conf:/etc/rsyslog.conf -v /etc/sysconfig/rsyslog:/etc/sysconfig/rsyslog -v /etc/rsyslog.d:/etc/rsyslog.d -v /var/log:/var/log -v /var/lib/rsyslog:/var/lib/rsyslog -v /run:/run -v /etc/machine-id:/etc/machine-id -v /etc/localtime:/etc/localtime -e IMAGE=IMAGE -e NAME=NAME --restart=always IMAGE /bin/rsyslog.sh",
+                                "name": "lucarval/rsyslog",
+                                "License": "GPLv3",
+                                "vcs-type": "git",
+                                "vcs-ref": "8bf624ebf9fb6fb735f1391980d567055d2d0326",
+                                "version": "7.2.lucarval",
+                                "architecture": "x86_64",
+                                "install": "docker run --rm --privileged -v /:/host -e HOST=/host -e IMAGE=IMAGE -e NAME=NAME IMAGE /bin/install.sh",
+                                "uninstall": "docker run --rm --privileged -v /:/host -e HOST=/host -e IMAGE=IMAGE -e NAME=NAME IMAGE /bin/uninstall.sh",
+                                "release": "104",
+                                "vendor": "Red Hat, Inc.",
+                                "build-date": "2017-10-10T18:17:47.804500",
+                                "com.redhat.build-host": "rcm-img-docker03-test.build.eng.bos.redhat.com"
+                            },
+                            "Image": "8d8e1f6078d4f190d4cce134a201a33acb7bc656a6caabd696e7fef9356066be",
+                            "Env": [
+                                "PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin",
+                                "container=docker"
+                            ]
+                        },
+                        "Id": "3be1b299d1c80b027283ada3bf97cbd11f24a2db1493282a71c02e0c043bf462",
+                        "Size": 85840878
+                    }
+                },
+                "tag": "latest"
+            }
+        ],
+        "import": {
+            "status": {
+                "dockerImageRepository": "docker-registry.default.svc:5000/osbs/test_imagestream",
+                "tags": [
+                    {
+                        "items": [
+                            {
+                                "generation": 2,
+                                "image": "sha256:2b80dd6f25a2eef8696ecb8caacbad8c48984ef72fa61d63d1a12c7edb200572",
+                                "dockerImageReference": "example.com/lucarval/rsyslog@sha256:2b80dd6f25a2eef8696ecb8caacbad8c48984ef72fa61d63d1a12c7edb200572",
+                                "created": "2018-04-27T14:18:43Z"
+                            }
+                        ],
+                        "tag": "latest"
+                    }
+                ]
+            },
+            "spec": {
+                "lookupPolicy": {
+                    "local": false
+                },
+                "tags": [
+                    {
+                        "importPolicy": {
+                            "insecure": true
+                        },
+                        "from": {
+                            "kind": "DockerImage",
+                            "name": "example.com/lucarval/rsyslog:latest"
+                        },
+                        "name": "latest",
+                        "generation": 2,
+                        "referencePolicy": {
+                            "type": "Source"
+                        },
+                        "annotations": null
+                    }
+                ]
+            },
+            "metadata": {
+                "name": "test_imagestream",
+                "generation": 2,
+                "namespace": "osbs",
+                "resourceVersion": "17356342",
+                "creationTimestamp": "2018-04-27T14:18:42Z",
+                "annotations": {
+                    "openshift.io/image.insecureRepository": "true",
+                    "openshift.io/image.dockerRepositoryCheck": "2018-04-27T14:18:43Z"
+                },
+                "uid": "e3b3cab4-4a25-11e8-90c1-fa163e2c0f1d"
+            }
+        }
+    },
+    "kind": "ImageStreamImport",
+    "spec": {
+        "images": [
+            {
+                "to": {
+                    "name": "latest"
+                },
+                "referencePolicy": {
+                    "type": "Source"
+                },
+                "from": {
+                    "kind": "DockerImage",
+                    "name": "example.com/lucarval/rsyslog:latest"
+                },
+                "importPolicy": {
+                    "insecure": true
+                }
+            }
+        ],
+        "import": true
+    },
+    "apiVersion": "v1",
+    "metadata": {
+        "creationTimestamp": "2018-04-30T12:21:48Z",
+        "namespace": "osbs",
+        "name": "test_imagestream",
+        "selfLink": "/oapi/v1/namespaces/osbs/imagestreamimports/test_imagestream",
+        "uid": "0e09a3a0-4c71-11e8-b942-fa163ec407ed"
+    }
+}

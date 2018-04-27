@@ -18,9 +18,11 @@ from osbs.core import Openshift
 from osbs.http import HttpResponse
 from osbs.conf import Configuration
 from osbs.api import OSBS
+from osbs.constants import ANNOTATION_SOURCE_REPO
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_ORCHESTRATOR_BUILD,
                              TEST_GIT_BRANCH, TEST_BUILD_CONFIG, TEST_GIT_URI_HUMAN_NAME,
-                             TEST_KOJI_TASK_ID, TEST_IMAGESTREAM)
+                             TEST_KOJI_TASK_ID, TEST_IMAGESTREAM, TEST_IMAGESTREAM_NO_TAGS,
+                             TEST_IMAGESTREAM_WITH_ANNOTATION)
 from tempfile import NamedTemporaryFile
 from textwrap import dedent
 
@@ -265,6 +267,42 @@ class Connection(object):
                 }
             },
 
+            OAPI_PREFIX + "namespaces/default/imagestreams/%s" %
+            TEST_IMAGESTREAM_NO_TAGS: {
+                "get": {
+                    # Contains imagestream with no tags
+                    "file": "imagestream.json",
+                    "custom_callback": self.remove_tags
+                },
+                "put": {
+                    # Contains imagestream with no tags
+                    "file": "imagestream.json",
+                    "custom_callback": self.remove_tags
+                }
+            },
+
+            OAPI_PREFIX + "namespaces/default/imagestreams/%s" %
+            TEST_IMAGESTREAM_WITH_ANNOTATION: {
+                "get": {
+                    # Contains imagestream with 3 tags; source repository
+                    # is listed in annotation instead of spec.
+                    "file": "imagestream.json",
+                    "custom_callback": self.move_repo_to_annotation
+                },
+                "put": {
+                    # Contains imagestream with 3 tags; source repository
+                    # is listed in annotation instead of spec.
+                    "file": "imagestream.json",
+                    "custom_callback": self.move_repo_to_annotation
+                }
+            },
+
+            OAPI_PREFIX + "namespaces/default/imagestreamimports/": {
+                "post": {
+                    "file": "imagestreamimport.json",
+                }
+            },
+
             API_PREFIX + "namespaces/default/pods/?labelSelector=openshift.io%%2Fbuild.name%%3D%s" %
             TEST_BUILD: {
                 "get": {
@@ -348,6 +386,19 @@ class Connection(object):
         content = json.loads(content)
         ver = int(content['metadata']['resourceVersion']) + 1
         content['metadata']['resourceVersion'] = str(ver)
+        return {"content": json.dumps(content).encode('utf-8')}
+
+    @staticmethod
+    def remove_tags(key, content):
+        content = json.loads(content)
+        content['spec']['tags'] = []
+        return {"content": json.dumps(content).encode('utf-8')}
+
+    @staticmethod
+    def move_repo_to_annotation(key, content):
+        content = json.loads(content)
+        repo = content['spec'].pop('dockerImageRepository', None)
+        content['metadata']['annotations'][ANNOTATION_SOURCE_REPO] = repo
         return {"content": json.dumps(content).encode('utf-8')}
 
     def get_definition_for(self, key):
