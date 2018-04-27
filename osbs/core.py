@@ -15,10 +15,10 @@ import base64
 import logging
 from osbs.kerberos_ccache import kerberos_ccache_init
 from osbs.build.build_response import BuildResponse
-from osbs.constants import DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNNING_STATES
-from osbs.constants import WATCH_MODIFIED, WATCH_DELETED, WATCH_ERROR
-from osbs.constants import (SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
-                            SERVICEACCOUNT_CACRT)
+from osbs.constants import (DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNNING_STATES,
+                            WATCH_MODIFIED, WATCH_DELETED,
+                            SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
+                            SERVICEACCOUNT_CACRT, ANNOTATION_SOURCE_REPO)
 from osbs.exceptions import (OsbsResponseException, OsbsException,
                              OsbsWatchBuildNotFound, OsbsAuthException)
 from osbs.utils import graceful_chain_get, retry_on_conflict
@@ -738,7 +738,13 @@ class Openshift(object):
         stream_id = stream['metadata']['name']
         insecure = (stream['metadata'].get('annotations', {})
                     .get('openshift.io/image.insecureRepository') == 'true')
-        repo = stream['spec']['dockerImageRepository']
+
+        repo = stream['metadata'].get('annotations', {}).get(ANNOTATION_SOURCE_REPO)
+        # ImageStream may not have been updated with new annotation, fallback
+        # to fetching repo from dockerImageRepository
+        if not repo:
+            repo = stream['spec']['dockerImageRepository']
+
         tag_id = '{0}:{1}'.format(stream_id, tag_name)
 
         changed = False
@@ -786,61 +792,60 @@ class Openshift(object):
         check_response(response)
         return response
 
-    def import_image(self, name):
+    def update_image_stream(self, stream_id, stream_json):
+        url = self._build_url("imagestreams/%s" % stream_id)
+        response = self._put(url, data=json.dumps(stream_json),
+                             use_json=True)
+        check_response(response)
+        return response
+
+    @retry_on_conflict
+    def import_image(self, name, stream_import):
         """
         Import image tags from a Docker registry into an ImageStream
 
-        :return: bool, whether new tags were imported
+        :return: bool, whether tags were imported
         """
 
         # Get the JSON for the ImageStream
-        url = self._build_url("imagestreams/%s" % name)
-        imagestream_json = self._get(url).json()
+        imagestream_json = self.get_image_stream(name).json()
         logger.debug("imagestream: %r", imagestream_json)
-        spec = imagestream_json.get('spec', {})
-        if 'dockerImageRepository' not in spec:
-            raise OsbsException('No dockerImageRepository for image import')
+
+        if 'dockerImageRepository' in imagestream_json.get('spec', {}):
+            logger.debug("Removing 'dockerImageRepository' from ImageStream %s", name)
+            source_repo = imagestream_json['spec'].pop('dockerImageRepository')
+            imagestream_json['metadata']['annotations'][ANNOTATION_SOURCE_REPO] = source_repo
+            imagestream_json = self.update_image_stream(name, imagestream_json).json()
 
         # Note the tags before import
         oldtags = imagestream_json.get('status', {}).get('tags', [])
         logger.debug("tags before import: %r", oldtags)
 
-        # Mark it as needing import
-        imagestream_json['metadata'].setdefault('annotations', {})
-        check_annotation = "openshift.io/image.dockerRepositoryCheck"
-        imagestream_json['metadata']['annotations'].pop(check_annotation, None)
-        response = self._put(url, data=json.dumps(imagestream_json),
-                             use_json=True)
-        check_response(response)
+        stream_import['metadata']['name'] = name
+        for tag in imagestream_json.get('spec', {}).get('tags', []):
+            image_import = {
+                'from': tag['from'],
+                'to': {'name': tag['name']},
+                'importPolicy': tag.get('importPolicy'),
+                'referencePolicy': tag.get('referencePolicy'),
+            }
+            stream_import['spec']['images'].append(image_import)
 
-        # Watch for it to be updated
-        resource_version = response.json()['metadata']['resourceVersion']
-        for changetype, obj in self.watch_resource("imagestreams", name,
-                                                   resourceVersion=resource_version):
-            logger.info("Change type: %r", changetype)
-            if changetype == WATCH_DELETED:
-                logger.info("Watched ImageStream was deleted")
-                break
+        if not stream_import['spec']['images']:
+            logger.debug('No tags to import')
+            return False
 
-            if changetype == WATCH_ERROR:
-                logger.error("Error watching ImageStream: %s", obj)
-                break
+        import_url = self._build_url("imagestreamimports/")
+        import_response = self._post(import_url, data=json.dumps(stream_import),
+                                     use_json=True)
+        check_response(import_response)
 
-            if changetype == WATCH_MODIFIED:
-                logger.info("ImageStream modified")
-                metadata = obj.get('metadata', {})
-                annotations = metadata.get('annotations', {})
-                logger.info("ImageStream annotations: %r", annotations)
-                if annotations.get(check_annotation, False):
-                    logger.info("ImageStream updated")
+        new_tags = [
+            image['tag']
+            for image in import_response.json().get('status', {}).get('images', [])]
+        logger.debug("tags after import: %r", new_tags)
 
-                    # Find out if there are new tags
-                    status = obj.get('status', {})
-                    newtags = status.get('tags', [])
-                    logger.debug("tags after import: %r", newtags)
-                    return True
-
-        return False
+        return True
 
     def dump_resource(self, resource_type):
         url = self._build_url("%s" % resource_type)

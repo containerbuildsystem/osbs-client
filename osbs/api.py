@@ -32,7 +32,8 @@ from osbs.constants import (BUILD_RUNNING_STATES, WORKER_OUTER_TEMPLATE,
                             ORCHESTRATOR_OUTER_TEMPLATE, ORCHESTRATOR_INNER_TEMPLATE,
                             ORCHESTRATOR_CUSTOMIZE_CONF, BUILD_TYPE_WORKER,
                             BUILD_TYPE_ORCHESTRATOR, BUILD_FINISHED_STATES,
-                            DEFAULT_ARRANGEMENT_VERSION, REACTOR_CONFIG_ARRANGEMENT_VERSION)
+                            DEFAULT_ARRANGEMENT_VERSION, REACTOR_CONFIG_ARRANGEMENT_VERSION,
+                            ANNOTATION_SOURCE_REPO)
 from osbs.core import Openshift
 from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsResponseException,
                              OsbsOrchestratorNotEnabled)
@@ -935,10 +936,12 @@ class OSBS(object):
         """
         Import image tags from a Docker registry into an ImageStream
 
-        :return: bool, whether new tags were imported
+        :return: bool, whether tags were imported
         """
-
-        return self.os.import_image(name)
+        stream_import_file = os.path.join(self.os_conf.get_build_json_store(),
+                                          'image_stream_import.json')
+        stream_import = json.load(open(stream_import_file))
+        return self.os.import_image(name, stream_import)
 
     @osbsapi
     def get_token(self):
@@ -1048,9 +1051,9 @@ class OSBS(object):
         img_stream_file = os.path.join(self.os_conf.get_build_json_store(), 'image_stream.json')
         stream = json.load(open(img_stream_file))
         stream['metadata']['name'] = name
-        stream['spec']['dockerImageRepository'] = docker_image_repository
+        stream['metadata'].setdefault('annotations', {})
+        stream['metadata']['annotations'][ANNOTATION_SOURCE_REPO] = docker_image_repository
         if insecure_registry:
-            stream['metadata'].setdefault('annotations', {})
             insecure_annotation = 'openshift.io/image.insecureRepository'
             stream['metadata']['annotations'][insecure_annotation] = 'true'
 

@@ -1,0 +1,12 @@
+{
+  "apiVersion": "v1",
+  "kind": "ImageStreamImport",
+  "metadata": {
+    "name": "{{NAME}}"
+  },
+  "spec": {
+    "import": true,
+    "images": []
+  }
+}
+
