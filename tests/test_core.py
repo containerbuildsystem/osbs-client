@@ -559,7 +559,8 @@ class TestOpenshift(object):
         this_dir = os.path.dirname(this_file)
 
         json_path = os.path.join(this_dir, "mock_jsons", openshift._con.version, 'imagestream.json')
-        template_resource_json = json.load(open(json_path))
+        with open(json_path) as f:
+            template_resource_json = json.load(f)
 
         initial_resource_json = deepcopy(template_resource_json)
 
