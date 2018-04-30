@@ -19,7 +19,7 @@ import os
 from osbs.http import HttpResponse
 from osbs.constants import (BUILD_FINISHED_STATES, BUILD_CANCELLED_STATE,
                             OS_CONFLICT_MAX_RETRIES,
-                            ANNOTATION_SOURCE_REPO)
+                            ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO)
 from osbs.exceptions import (OsbsResponseException, OsbsException, OsbsNetworkException)
 from osbs.core import check_response, Openshift
 
@@ -358,8 +358,8 @@ class TestOpenshift(object):
     @pytest.mark.parametrize('existing_insecure', (True, False, None))
     @pytest.mark.parametrize('expected_scheduled', (True, False))
     @pytest.mark.parametrize(('s_annotations', 'expected_insecure'), (
-        ({'openshift.io/image.insecureRepository': 'true'}, True),
-        ({'openshift.io/image.insecureRepository': 'false'}, False),
+        ({ANNOTATION_INSECURE_REPO: 'true'}, True),
+        ({ANNOTATION_INSECURE_REPO: 'false'}, False),
         ({}, False),
         (None, False),
     ))

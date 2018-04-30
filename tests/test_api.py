@@ -44,7 +44,7 @@ from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             ORCHESTRATOR_CUSTOMIZE_CONF,
                             BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR,
                             OS_CONFLICT_MAX_RETRIES,
-                            ANNOTATION_SOURCE_REPO)
+                            ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO)
 from osbs import utils
 from osbs.repo_utils import RepoInfo
 
@@ -2026,12 +2026,9 @@ class TestOSBS(object):
             assert (stream['metadata']['annotations'][ANNOTATION_SOURCE_REPO] ==
                     image_repository)
             if insecure:
-                assert (
-                    stream['metadata']['annotations']['openshift.io/image.insecureRepository'] ==
-                    'true')
+                assert stream['metadata']['annotations'][ANNOTATION_INSECURE_REPO] == 'true'
             else:
-                assert ('openshift.io/image.insecureRepository'
-                        not in stream['metadata']['annotations'])
+                assert ANNOTATION_INSECURE_REPO not in stream['metadata']['annotations']
             return mocked_result
 
         (flexmock(osbs_obj.os)
