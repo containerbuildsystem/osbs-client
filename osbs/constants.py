@@ -104,3 +104,4 @@ BUILD_TYPE_WORKER = "worker"
 ISOLATED_RELEASE_FORMAT = re.compile(r'^\d+\.\d+(\..+)?$')
 
 ANNOTATION_SOURCE_REPO = 'osbs/source_repo'
+ANNOTATION_INSECURE_REPO = 'openshift.io/image.insecureRepository'

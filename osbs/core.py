@@ -18,7 +18,8 @@ from osbs.build.build_response import BuildResponse
 from osbs.constants import (DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNNING_STATES,
                             WATCH_MODIFIED, WATCH_DELETED,
                             SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
-                            SERVICEACCOUNT_CACRT, ANNOTATION_SOURCE_REPO)
+                            SERVICEACCOUNT_CACRT, ANNOTATION_SOURCE_REPO,
+                            ANNOTATION_INSECURE_REPO)
 from osbs.exceptions import (OsbsResponseException, OsbsException,
                              OsbsWatchBuildNotFound, OsbsAuthException)
 from osbs.utils import graceful_chain_get, retry_on_conflict
@@ -737,7 +738,7 @@ class Openshift(object):
                                 scheduled=False):
         stream_id = stream['metadata']['name']
         insecure = (stream['metadata'].get('annotations', {})
-                    .get('openshift.io/image.insecureRepository') == 'true')
+                    .get(ANNOTATION_INSECURE_REPO) == 'true')
 
         repo = stream['metadata'].get('annotations', {}).get(ANNOTATION_SOURCE_REPO)
         # ImageStream may not have been updated with new annotation, fallback

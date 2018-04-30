@@ -33,7 +33,7 @@ from osbs.constants import (BUILD_RUNNING_STATES, WORKER_OUTER_TEMPLATE,
                             ORCHESTRATOR_CUSTOMIZE_CONF, BUILD_TYPE_WORKER,
                             BUILD_TYPE_ORCHESTRATOR, BUILD_FINISHED_STATES,
                             DEFAULT_ARRANGEMENT_VERSION, REACTOR_CONFIG_ARRANGEMENT_VERSION,
-                            ANNOTATION_SOURCE_REPO)
+                            ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO)
 from osbs.core import Openshift
 from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsResponseException,
                              OsbsOrchestratorNotEnabled)
@@ -1057,8 +1057,7 @@ class OSBS(object):
         stream['metadata'].setdefault('annotations', {})
         stream['metadata']['annotations'][ANNOTATION_SOURCE_REPO] = docker_image_repository
         if insecure_registry:
-            insecure_annotation = 'openshift.io/image.insecureRepository'
-            stream['metadata']['annotations'][insecure_annotation] = 'true'
+            stream['metadata']['annotations'][ANNOTATION_INSECURE_REPO] = 'true'
 
         return self.os.create_image_stream(json.dumps(stream))
 
