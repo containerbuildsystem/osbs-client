@@ -940,7 +940,8 @@ class OSBS(object):
         """
         stream_import_file = os.path.join(self.os_conf.get_build_json_store(),
                                           'image_stream_import.json')
-        stream_import = json.load(open(stream_import_file))
+        with open(stream_import_file) as f:
+            stream_import = json.load(f)
         return self.os.import_image(name, stream_import)
 
     @osbsapi
@@ -1026,7 +1027,8 @@ class OSBS(object):
         """
         img_stream_tag_file = os.path.join(self.os_conf.get_build_json_store(),
                                            'image_stream_tag.json')
-        tag_template = json.load(open(img_stream_tag_file))
+        with open(img_stream_tag_file) as f:
+            tag_template = json.load(f)
         return self.os.ensure_image_stream_tag(stream, tag_name, tag_template,
                                                scheduled)
 
@@ -1049,7 +1051,8 @@ class OSBS(object):
         :return: response
         """
         img_stream_file = os.path.join(self.os_conf.get_build_json_store(), 'image_stream.json')
-        stream = json.load(open(img_stream_file))
+        with open(img_stream_file) as f:
+            stream = json.load(f)
         stream['metadata']['name'] = name
         stream['metadata'].setdefault('annotations', {})
         stream['metadata']['annotations'][ANNOTATION_SOURCE_REPO] = docker_image_repository
@@ -1178,7 +1181,8 @@ class OSBS(object):
         :returns: ConfigMapResponse containing the ConfigMap with name and data
         """
         config_data_file = os.path.join(self.os_conf.get_build_json_store(), 'config_map.json')
-        config_data = json.load(open(config_data_file))
+        with open(config_data_file) as f:
+            config_data = json.load(f)
         config_data['metadata']['name'] = name
         data_dict = {}
         for key, value in data.items():
