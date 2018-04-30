@@ -495,4 +495,6 @@ class JsonMatcher(object):
         self.expected = expected
 
     def __eq__(self, json_str):
+        # Assert to provide a more meaningful error
+        assert self.expected == json.loads(json_str)
         return self.expected == json.loads(json_str)
