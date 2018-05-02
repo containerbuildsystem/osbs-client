@@ -77,8 +77,6 @@ class BuildRequestV2(BuildRequest):
         :param explicit_build_node_selector: dict, a nodeselector for explicit builds
         :param auto_build_node_selector: dict, a nodeselector for auto builds
         :param isolated_build_node_selector: dict, a nodeselector for isolated builds
-        :param additional_tag_data: dict, str of dir path and filename of additional tags
-                                    and set of str of tags
         """
 
         # Here we cater to the koji "scratch" build type, this will disable

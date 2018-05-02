@@ -25,7 +25,6 @@ class BuildUserParams(BuildCommon):
     def __init__(self, build_json_dir=None, customize_conf=None):
         # defines image_tag, koji_target, filesystem_koji_task_id, platform, arrangement_version
         super(BuildUserParams, self).__init__()
-        self.additional_tags = None
         self.arrangement_version.value = REACTOR_CONFIG_ARRANGEMENT_VERSION
         self.base_image = BuildParam('base_image', allow_none=True)
         self.build_from = BuildParam('build_from')
@@ -75,8 +74,7 @@ class BuildUserParams(BuildCommon):
 
     def set_params(self,
                    git_uri=None, git_ref=None, git_branch=None,
-                   base_image=None, name_label=None,
-                   user=None, additional_tag_data=None,
+                   base_image=None, name_label=None, user=None,
                    component=None, release=None,
                    build_image=None, build_imagestream=None, build_from=None,
                    platforms=None, platform=None, build_type=None,
@@ -155,10 +153,6 @@ class BuildUserParams(BuildCommon):
         self.signing_intent.value = signing_intent
         self.compose_ids.value = compose_ids or []
 
-        if additional_tag_data:
-            self.additional_tags = AdditionalTagsConfig(additional_tag_data['dir_path'],
-                                                        additional_tag_data['file_name'],
-                                                        additional_tag_data['tags'])
         self._populate_image_tag()
 
     def __repr__(self):
@@ -173,9 +167,6 @@ class BuildUserParams(BuildCommon):
                 self.convert_dict[key].value = value
             except KeyError:
                 continue
-        # Special cases
-        if 'additional_tags' in json_dict.keys():
-            self.additional_tags = AdditionalTagsConfig(tags=json_dict['additional_tags'])
 
     def set_if_exists(self, json_dict, param):
         if self.convert_dict[param].value:
@@ -189,7 +180,4 @@ class BuildUserParams(BuildCommon):
 
     def to_json(self):
         json_dict = self.to_dict(self.convert_dict.keys())
-        # Special cases
-        if self.additional_tags:
-            json_dict['additional_tags'] = sorted(self.additional_tags.tags)
         return json.dumps(json_dict, sort_keys=True)
