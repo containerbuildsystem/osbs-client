@@ -7,6 +7,7 @@ of the BSD license. See the LICENSE file for details.
 """
 import json
 import os
+from flexmock import flexmock
 
 from osbs.build.user_params import BuildUserParams
 from osbs.build.plugins_configuration import PluginsConfiguration
@@ -14,6 +15,8 @@ from osbs.constants import (BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR,
                             ADDITIONAL_TAGS_FILE, REACTOR_CONFIG_ARRANGEMENT_VERSION)
 from osbs.exceptions import OsbsValidationException
 from osbs.conf import Configuration
+from osbs import utils
+from osbs.repo_utils import RepoInfo, AdditionalTagsConfig
 
 import pytest
 
@@ -88,6 +91,11 @@ def plugin_value_get(plugins, plugin_type, plugin_name, *args):
 
 
 class TestPluginsConfiguration(object):
+    def mock_repo_info(self, additional_tags=None):
+        (flexmock(utils)
+            .should_receive('get_repo_info')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(RepoInfo(additional_tags=additional_tags)))
 
     def assert_import_image_plugin(self, plugins, name_label):
         phase = 'postbuild_plugins'
@@ -115,6 +123,7 @@ class TestPluginsConfiguration(object):
     def test_render_koji_upload(self, build_type):
         user_params = get_sample_user_params({'koji_upload_dir': 'test'},
                                              build_type=build_type)
+        self.mock_repo_info()
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
         if build_type == BUILD_TYPE_WORKER:
@@ -136,6 +145,7 @@ class TestPluginsConfiguration(object):
         if not enabled:
             extra_args = {'koji_target': None}
         user_params = get_sample_user_params(extra_args)
+        self.mock_repo_info()
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
 
@@ -154,6 +164,7 @@ class TestPluginsConfiguration(object):
 
     def test_render_simple_request(self):
         user_params = get_sample_user_params()
+        self.mock_repo_info()
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
 
@@ -180,6 +191,7 @@ class TestPluginsConfiguration(object):
             'build_type': build_type,
         }
 
+        self.mock_repo_info()
         if valid:
             user_params = get_sample_user_params(extra_args)
             build_json = PluginsConfiguration(user_params).render()
@@ -225,6 +237,7 @@ class TestPluginsConfiguration(object):
     ))
     def test_render_build_name(self, tmpdir, extra_args, expected_name):
         user_params = get_sample_user_params(extra_args)
+        self.mock_repo_info()
         build_json = PluginsConfiguration(user_params).render()
 
         assert get_plugins_from_build_json(build_json)
@@ -241,6 +254,7 @@ class TestPluginsConfiguration(object):
         }
 
         user_params = get_sample_user_params(extra_args)
+        self.mock_repo_info()
         build_json = PluginsConfiguration(user_params).render()
 
         plugins = get_plugins_from_build_json(build_json)
@@ -286,6 +300,7 @@ class TestPluginsConfiguration(object):
             'build_type': build_type,
         }
         user_params = get_sample_user_params(extra_args)
+        self.mock_repo_info()
         build_json = PluginsConfiguration(user_params).render()
 
         plugins = get_plugins_from_build_json(build_json)
@@ -317,6 +332,7 @@ class TestPluginsConfiguration(object):
         }
 
         user_params = get_sample_user_params(extra_args)
+        self.mock_repo_info()
         build_json = PluginsConfiguration(user_params).render()
 
         plugins = get_plugins_from_build_json(build_json)
@@ -335,6 +351,7 @@ class TestPluginsConfiguration(object):
         if plugin.get('args'):
             assert plugin['args'].get('append', False) == flatpak
 
+    @pytest.mark.parametrize('from_container_yaml', (True, False))
     @pytest.mark.parametrize(('extra_args', 'has_platform_tag', 'extra_tags', 'primary_tags'), (
         # Worker build cases
         ({'build_type': BUILD_TYPE_WORKER, 'platform': 'x86_64'}, True, (), ()),
@@ -358,22 +375,32 @@ class TestPluginsConfiguration(object):
         ({'scratch': True}, False, (), ()),
         ({'isolated': True, 'release': '1.1'}, False, (), ()),
     ))
-    def test_render_tag_from_config(self, tmpdir, extra_args, has_platform_tag, extra_tags,
-                                    primary_tags):
+    def test_render_tag_from_config(self, tmpdir, from_container_yaml, extra_args,
+                                    has_platform_tag, extra_tags, primary_tags):
         kwargs = get_sample_prod_params(BUILD_TYPE_WORKER)
         kwargs.pop('platforms', None)
         kwargs.pop('platform', None)
         expected_primary = set(primary_tags)
+        exclude_for_override = set(['latest', '{version}'])
 
-        if extra_tags:
+        if extra_tags and not from_container_yaml:
             with open(os.path.join(str(tmpdir), ADDITIONAL_TAGS_FILE), 'w') as f:
                 f.write('\n'.join(extra_tags))
-            extra_args['additional_tag_data'] = {
-                'dir_path': str(tmpdir),
-                'file_name': ADDITIONAL_TAGS_FILE,
-                'tags': set(),
-            }
         kwargs.update(extra_args)
+
+        if from_container_yaml:
+            if extra_tags:
+                expected_primary -= exclude_for_override
+            (flexmock(utils)
+                .should_receive('get_repo_info')
+                .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+                .and_return(RepoInfo(additional_tags=AdditionalTagsConfig(tags=extra_tags))))
+        else:
+            (flexmock(utils)
+                .should_receive('get_repo_info')
+                .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+                .and_return(RepoInfo(additional_tags=AdditionalTagsConfig(dir_path=str(tmpdir)))))
+
         user_params = BuildUserParams(INPUTS_PATH)
         user_params.set_params(**kwargs)
         build_json = PluginsConfiguration(user_params).render()
@@ -426,6 +453,7 @@ class TestPluginsConfiguration(object):
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
             'user': "john-foo",
             'component': TEST_COMPONENT,
             'base_image': 'fedora:latest',
@@ -445,6 +473,7 @@ class TestPluginsConfiguration(object):
             kwargs['koji_parent_build'] = koji_parent_build
         kwargs.update(additional_kwargs)
 
+        self.mock_repo_info()
         user_params = BuildUserParams(INPUTS_PATH)
 
         if valid:
@@ -489,6 +518,7 @@ class TestPluginsConfiguration(object):
         kwargs['base_image'] = 'koji/image-build'
         kwargs['yum_repourls'] = ["http://example.com/my.repo"]
 
+        self.mock_repo_info()
         user_params = BuildUserParams(INPUTS_PATH)
         user_params.set_params(**kwargs)
         build_json = PluginsConfiguration(user_params).render()
@@ -503,6 +533,7 @@ class TestPluginsConfiguration(object):
         assert add_filesystem_args['from_task_id'] == kwargs['filesystem_koji_task_id']
 
     def test_worker_custom_base_image(self, tmpdir):
+        self.mock_repo_info()
         kwargs = get_sample_prod_params(BUILD_TYPE_WORKER)
         kwargs['base_image'] = 'koji/image-build'
         kwargs['yum_repourls'] = ["http://example.com/my.repo"]
@@ -524,6 +555,7 @@ class TestPluginsConfiguration(object):
         assert add_filesystem_args['architecture'] == kwargs['platform']
 
     def test_prod_non_custom_base_image(self, tmpdir):
+        self.mock_repo_info()
         user_params = get_sample_user_params()
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
@@ -539,6 +571,7 @@ class TestPluginsConfiguration(object):
         # Test to make sure that when we attempt to enable a plugin, it is
         # actually enabled in the JSON for the build_request after running
         # build_request.render()
+        self.mock_repo_info()
         sample_params = get_sample_prod_params()
         user_params = BuildUserParams(INPUTS_PATH)
         user_params.set_params(**sample_params)
@@ -590,6 +623,7 @@ class TestPluginsConfiguration(object):
         # Test to make sure that when we attempt to override a plugin's args,
         # they are actually overridden in the JSON for the build_request
         # after running build_request.render()
+        self.mock_repo_info()
         sample_params = get_sample_prod_params()
         base_user_params = BuildUserParams(INPUTS_PATH)
         base_user_params.set_params(**sample_params)
@@ -678,6 +712,7 @@ class TestPluginsConfiguration(object):
             'koji_parent_build': koji_parent_build,
         }
 
+        self.mock_repo_info()
         user_params = get_sample_user_params(extra_args)
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
@@ -700,6 +735,7 @@ class TestPluginsConfiguration(object):
         plugin_type = 'prebuild_plugins'
         plugin_name = 'resolve_composes'
 
+        self.mock_repo_info()
         user_params = get_sample_user_params(additional_params)
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
@@ -720,6 +756,7 @@ class TestPluginsConfiguration(object):
             'yum_repourls': yum_repos
         }
 
+        self.mock_repo_info()
         user_params = get_sample_user_params(additional_params)
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)

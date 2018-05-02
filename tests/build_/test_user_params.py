@@ -193,11 +193,6 @@ class TestBuildUserParams(object):
         }
         # additional values that BuildUserParams requires but stores under different names
         param_kwargs.update({
-            'additional_tag_data': {
-                'dir_path': '',
-                'file_name': '',
-                'tags': ('previous', 'next')
-            },
             'name_label': 'name_label',
         })
         rand = '12345'
@@ -215,7 +210,6 @@ class TestBuildUserParams(object):
         spec = BuildUserParams(build_json_dir)
         spec.set_params(**param_kwargs)
         expected_json = {
-            "additional_tags": ["next", "previous"],
             "arrangement_version": REACTOR_CONFIG_ARRANGEMENT_VERSION,
             "base_image": "buildroot:old",
             "build_image": "buildroot:latest",
