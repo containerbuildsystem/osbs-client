@@ -79,6 +79,7 @@
     {
       "name": "pulp_push",
       "args": {
+        "load_exported_image": true,
         "publish": false
       }
     },
