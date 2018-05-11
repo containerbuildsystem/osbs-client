@@ -12,8 +12,8 @@ abstraction on top of http api calls
 from __future__ import print_function, absolute_import, unicode_literals
 
 import sys
-import json
 import logging
+import json
 from six.moves import http_client
 
 
@@ -212,4 +212,10 @@ class HttpResponse(object):
         if check and self.status_code not in (0, requests.codes.OK, requests.codes.CREATED):
             raise OsbsResponseException(text, self.status_code)
 
-        return json.loads(text)
+        try:
+            return json.loads(text)
+        except ValueError:
+            msg = '{0}Headers {1}\nContent {2}'.format('HtttpResponse has corrupt json:\n',
+                                                       self.headers, self.content)
+            logger.exception(msg)
+            raise OsbsResponseException(msg, self.status_code)

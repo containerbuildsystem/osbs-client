@@ -13,7 +13,7 @@ import pytest
 import requests
 
 from requests.packages.urllib3.util import Retry
-from osbs.http import HttpSession, HttpStream, http_client
+from osbs.http import HttpSession, HttpStream, http_client, HttpResponse
 from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsResponseException
 from osbs.constants import HTTP_RETRIES_STATUS_FORCELIST, HTTP_REQUEST_TIMEOUT
 
@@ -215,3 +215,18 @@ class TestHttpSession(object):
             .once())
 
         HttpStream(url, method, verify_ssl=False, **kwargs)
+
+
+class TestHttpResponse(object):
+    def test_simple_response(self):
+        content_json = b'"this is content"'
+        content_str = "this is content"
+        response = HttpResponse(status_code=http_client.OK, headers={}, content=content_json)
+        assert content_str == response.json()
+
+    def test_bad_coding_guess(self):
+        bad_json = b'[\"cat\", \"dog\"][\"cat\", \"dog\"]'
+        response = HttpResponse(status_code=http_client.OK, headers={}, content=bad_json)
+        with pytest.raises(OsbsResponseException) as exc_info:
+            response.json()
+        assert 'HtttpResponse has corrupt json' in exc_info.value.message
