@@ -35,6 +35,13 @@ from .http import HttpSession
 logger = logging.getLogger(__name__)
 
 
+# Retry each connection attempt after 30 seconds, for a maximum of 10 times
+WATCH_RETRY_SECS = 30
+WATCH_RETRY = 10
+# Give up after 12 hours
+WAIT_RETRY_HOURS = 12
+WAIT_RETRY = int(WAIT_RETRY_HOURS * 3600 / (WATCH_RETRY_SECS * WATCH_RETRY))
+
 def check_response(response, log_level=logging.ERROR):
     if response.status_code not in (http_client.OK, http_client.CREATED):
         if hasattr(response, 'content'):
@@ -563,34 +570,34 @@ class Openshift(object):
             path += "%s/" % resource_name
         url = self._build_url(path, _prepend_namespace=False, **request_args)
 
-        while True:
-            with self._get(url, stream=True, headers={'Connection': 'close'}) as response:
-                check_response(response)
-                encoding = None
-                for line in response.iter_lines():
-                    logger.debug(line)
+        for retry in range(WATCH_RETRY):
+            response = self._get(url, stream=True, headers={'Connection': 'close'})
+            check_response(response)
+            encoding = None
+            for line in response.iter_lines():
+                logger.debug(line)
 
-                    if not encoding:
-                        encoding = guess_json_utf(line)
+                if not encoding:
+                    encoding = guess_json_utf(line)
 
-                    try:
-                        j = json.loads(line.decode(encoding))
-                    except ValueError:
-                        logger.error("Cannot decode watch event: %s", line)
-                        continue
+                try:
+                    j = json.loads(line.decode(encoding))
+                except ValueError:
+                    logger.error("Cannot decode watch event: %s", line)
+                    continue
 
-                    if 'object' not in j:
-                        logger.error("Watch event has no 'object': %s", j)
-                        continue
+                if 'object' not in j:
+                    logger.error("Watch event has no 'object': %s", j)
+                    continue
 
-                    if 'type' not in j:
-                        logger.error("Watch event has no 'type': %s", j)
-                        continue
+                if 'type' not in j:
+                    logger.error("Watch event has no 'type': %s", j)
+                    continue
 
-                    yield (j['type'].lower(), j['object'])
+                yield (j['type'].lower(), j['object'])
 
-            logger.debug("connection closed, reconnecting in 30s")
-            time.sleep(30)
+            logger.debug("connection closed, reconnecting in %ds", WATCH_RETRY_SECS)
+            time.sleep(WATCH_RETRY_SECS)
 
     def wait(self, build_id, states):
         """
@@ -630,24 +637,30 @@ class Openshift(object):
         #   1. our object was found and we are returning in the loop
         #   2. our object was not found and we keep waiting (in the loop)
         # Therefore, let's raise here
-        logger.error("build '%s' was not found during wait", build_id)
+        logger.warning("build '%s' was not found during wait", build_id)
         raise OsbsWatchBuildNotFound("build '%s' was not found and response stream ended" %
                                      build_id)
 
     def wait_for_build_to_finish(self, build_id):
-        for retry in range(1, 10):
+        for retry in range(WAIT_RETRY):
             try:
                 build_response = self.wait(build_id, BUILD_FINISHED_STATES)
                 return build_response
             except OsbsWatchBuildNotFound:
                 # this is woraround for https://github.com/openshift/origin/issues/2348
-                logger.error("I'm going to wait again. Retry #%d.", retry)
+                logger.warning("I'm going to wait again. Retry #%d.", retry)
                 continue
         raise OsbsException("Failed to wait for a build: %s" % build_id)
 
     def wait_for_build_to_get_scheduled(self, build_id):
-        build_response = self.wait(build_id, BUILD_FINISHED_STATES + BUILD_RUNNING_STATES)
-        return build_response
+        for retry in range(WAIT_RETRY):
+            try:
+                build_response = self.wait(build_id, BUILD_FINISHED_STATES + BUILD_RUNNING_STATES)
+                return build_response
+            except OsbsWatchBuildNotFound:
+                continue
+            raise OsbsException('Failed to schedule a build in {0} attempts: {1}'.format(WAIT_RETRY,
+                                                                                         build_id))
 
     @staticmethod
     def _update_metadata_things(metadata, things, values):

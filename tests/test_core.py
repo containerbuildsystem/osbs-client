@@ -20,7 +20,8 @@ from osbs.http import HttpResponse
 from osbs.constants import (BUILD_FINISHED_STATES, BUILD_CANCELLED_STATE,
                             OS_CONFLICT_MAX_RETRIES,
                             ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO)
-from osbs.exceptions import (OsbsResponseException, OsbsException, OsbsNetworkException)
+from osbs.exceptions import (OsbsResponseException, OsbsException,
+                             OsbsNetworkException, OsbsWatchBuildNotFound)
 from osbs.core import check_response, Openshift
 
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
@@ -167,6 +168,32 @@ class TestOpenshift(object):
     def test_get_user(self, openshift):  # noqa
         l = openshift.get_user()
         assert l.json() is not None
+
+    def test_watch_resource_and_wait_to_build_timeouts(self, caplog, openshift):  # noqa:F811
+        class MockResponse(object):
+            def __init__(self):
+                self.status_code = http_client.OK
+
+            def iter_lines(self):
+                return []
+
+        mock_reponse = MockResponse()
+        flexmock(openshift).should_receive('_get').and_return(mock_reponse)
+        flexmock(time).should_receive('sleep').and_return(None)
+        for changetype, obj in openshift.watch_resource("builds", 12):
+            # watch_resource failed and never yielded, so we shouldn't hit the assert
+            assert False
+
+        with pytest.raises(OsbsWatchBuildNotFound):
+            openshift.wait(12, None)
+
+        with pytest.raises(OsbsException):
+            openshift.wait_for_build_to_finish(12)
+
+        for log in caplog.records():
+            if 'Retry #143' in log.getMessage():
+                break
+        assert 'Retry #143' in log.getMessage()
 
     def test_watch_build(self, openshift):  # noqa
         response = openshift.wait_for_build_to_finish(TEST_BUILD)
