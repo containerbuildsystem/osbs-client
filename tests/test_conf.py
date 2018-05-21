@@ -16,6 +16,7 @@ from osbs.exceptions import OsbsValidationException
 from osbs.constants import DEFAULT_ARRANGEMENT_VERSION
 import pytest
 from tempfile import NamedTemporaryFile
+import logging
 
 
 class TestConfiguration(object):
@@ -520,3 +521,14 @@ class TestConfiguration(object):
         with self.config_file(myconfig) as config_file:
             conf = Configuration(conf_file=config_file)
             assert getattr(conf, "get_" + nodeselector_type)() == expected
+
+    def test_deprecated_warnings(self, caplog):  # noqa:F811
+        with caplog.atLevel(logging.WARNING):
+            self.test_arrangement_version({'default': {}}, DEFAULT_ARRANGEMENT_VERSION)
+            assert "it has been deprecated" not in caplog.text()
+            build_test_config = {
+                'default': {},
+                'general': {'build_json_dir': 'general'},
+            }
+            self.test_builder_build_json_dir(build_test_config, 'general')
+            assert "it has been deprecated" in caplog.text()
