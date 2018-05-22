@@ -19,7 +19,7 @@ set -ex
 #    export CURL_AUTH_OPTS="-u test_user:password"
 #    export OS_BUILD="name-of-build-within-openshift"
 
-OS_VERSION="${OS_VERSION:-0.5.4}"
+OS_VERSION="${OS_VERSION:-1.0.4}"
 
 if [ -n "$OS_PROXY_URL" ] ; then
   HTTPD_OSAPI_URL="${OS_PROXY_URL}/osapi/v1beta3"

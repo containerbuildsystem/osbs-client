@@ -53,7 +53,7 @@ class StreamingResponse(object):
 
 
 class Connection(object):
-    def __init__(self, version="0.5.4"):
+    def __init__(self, version="1.0.4"):
         self.version = version
         self.response_mapping = ResponseMapping(version,
                                                 lookup=self.get_definition_for)
@@ -455,7 +455,7 @@ class Connection(object):
         return self.request(url, "delete", *args, **kwargs)
 
 
-@pytest.fixture(params=["0.5.4", "1.0.4"])
+@pytest.fixture(params=["1.0.4"])
 def openshift(request):
     os_inst = Openshift(OAPI_PREFIX, API_VER, "/oauth/authorize",
                         k8s_api_url=API_PREFIX)
