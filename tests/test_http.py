@@ -216,6 +216,36 @@ class TestHttpSession(object):
 
         HttpStream(url, method, verify_ssl=False, **kwargs)
 
+    def test_iter_exception(self, s):
+        class MockRequest(object):
+            def __init__(self):
+                self.status_code = http_client.OK
+                self.headers = {}
+
+            def iter_lines(self, **kwargs):
+                raise requests.exceptions.ConnectionError
+
+        url = "https://httpbin.org/stream/3"
+        method = "get"
+        kwargs = {
+           'allow_redirects': True,
+           'headers': {},
+           'stream': True,
+        }
+
+        fake_response = MockRequest()
+        (flexmock(requests.Session)
+            .should_receive('request')
+            .with_args(method, url, timeout=HTTP_REQUEST_TIMEOUT, verify=True, **kwargs)
+            .and_return(fake_response))
+
+        response_multi = s.get("https://httpbin.org/stream/3", stream=True)
+        with response_multi as r:
+            with pytest.raises(requests.exceptions.ConnectionError):
+                for line in r.iter_lines():
+                    # Should have raised an error and never get here
+                    assert False
+
 
 class TestHttpResponse(object):
     def test_simple_response(self):

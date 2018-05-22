@@ -175,13 +175,9 @@ class HttpStream(object):
         }
         if requests.__version__.startswith('2.6.'):
             kwargs['chunk_size'] = 1
-        try:
-            for line in self.req.iter_lines(**kwargs):
-                yield line
-        except (requests.exceptions.ChunkedEncodingError,
-                requests.exceptions.ConnectionError,
-                http_client.IncompleteRead):
-            raise StopIteration
+        # if this fails for any reason, let someone else handle the exception
+        for line in self.req.iter_lines(**kwargs):
+            yield line
 
     def close(self):
         if not self.closed:
