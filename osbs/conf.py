@@ -376,15 +376,7 @@ class Configuration(object):
 
     def get_pulp_secret(self):
         secret = self._get_deprecated("pulp_secret", self.conf_section, "pulp_secret")
-        if not secret:
-            secret = self._get_deprecated("source_secret", self.conf_section, "pulp_secret")
         return secret
-
-    def get_source_secret(self):
-        """
-        Compatibility name for get_pulp_secret()
-        """
-        return self.get_pulp_secret()
 
     def get_smtp_host(self):
         return self._get_deprecated("smtp_host", self.conf_section, "smtp_host")

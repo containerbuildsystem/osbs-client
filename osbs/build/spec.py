@@ -262,7 +262,6 @@ class BuildSpec(BuildCommon):
                    odcs_ssl_secret=None,
                    pdc_url=None, pdc_insecure=False,
                    filesystem_koji_task_id=None,
-                   source_secret=None,  # compatibility name for pulp_secret
                    pulp_secret=None, pulp_registry=None,
                    smtp_host=None, smtp_from=None, smtp_email_domain=None,
                    smtp_additional_addresses=None, smtp_error_addresses=None,
@@ -342,7 +341,7 @@ class BuildSpec(BuildCommon):
         self.odcs_ssl_secret.value = odcs_ssl_secret
         self.pdc_url.value = pdc_url
         self.pdc_insecure.value = pdc_insecure
-        self.pulp_secret.value = pulp_secret or source_secret
+        self.pulp_secret.value = pulp_secret
         self.pulp_registry.value = pulp_registry
         self.smtp_host.value = smtp_host
         self.smtp_from.value = smtp_from

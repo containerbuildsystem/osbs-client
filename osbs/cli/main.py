@@ -671,8 +671,6 @@ def cli():
                               help="don't print logs after submitting build")
     build_parser.add_argument("--add-yum-repo", action='append', metavar="URL",
                               dest="yum_repourls", help="URL of yum repo file")
-    build_parser.add_argument("--source-secret", action='store', required=False,
-                              help="resource name of source secret")
     build_parser.add_argument("--cpu-limit", action='store', required=False,
                               help="CPU limit (KCU)")
     build_parser.add_argument("--memory-limit", action='store', required=False,

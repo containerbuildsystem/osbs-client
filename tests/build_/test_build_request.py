@@ -764,7 +764,7 @@ class TestBuildRequest(object):
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
-            'source_secret': 'mysecret',
+            'pulp_secret': 'mysecret',
             'build_from': 'image:buildroot:latest',
             'osbs_api': MockOSBSApi(),
         }
@@ -895,7 +895,7 @@ class TestBuildRequest(object):
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
             'registry_api_versions': ['v1'],
-            'source_secret': 'mysecret',
+            'pulp_secret': 'mysecret',
             'registry_secrets': ['registry_secret'],
             'build_from': 'image:buildroot:latest',
             'osbs_api': MockOSBSApi(),
