@@ -216,6 +216,37 @@ class TestHttpSession(object):
 
         HttpStream(url, method, verify_ssl=False, **kwargs)
 
+    @pytest.mark.parametrize('exc', [
+        requests.exceptions.ChunkedEncodingError,
+        http_client.IncompleteRead,
+    ])
+    def test_iter_empty(self, s, exc):
+        class MockRequest(object):
+            def __init__(self):
+                self.status_code = http_client.OK
+                self.headers = {}
+
+            def iter_lines(self, **kwargs):
+                raise exc('')
+
+        url = "https://httpbin.org/stream/3"
+        method = "get"
+        kwargs = {
+           'allow_redirects': True,
+           'headers': {},
+           'stream': True,
+        }
+
+        fake_response = MockRequest()
+        (flexmock(requests.Session)
+            .should_receive('request')
+            .with_args(method, url, timeout=HTTP_REQUEST_TIMEOUT, verify=True, **kwargs)
+            .and_return(fake_response))
+
+        response_multi = s.get("https://httpbin.org/stream/3", stream=True)
+        with response_multi as r:
+            assert not list(r.iter_lines())
+
     def test_iter_exception(self, s):
         class MockRequest(object):
             def __init__(self):

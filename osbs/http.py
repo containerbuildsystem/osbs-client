@@ -175,9 +175,15 @@ class HttpStream(object):
         }
         if requests.__version__.startswith('2.6.'):
             kwargs['chunk_size'] = 1
-        # if this fails for any reason, let someone else handle the exception
-        for line in self.req.iter_lines(**kwargs):
-            yield line
+        # if this fails for any reason other than ChunkedEncodingError
+        # or IncompleteRead (either of which may happen when no bytes
+        # are received), let someone else handle the exception
+        try:
+            for line in self.req.iter_lines(**kwargs):
+                yield line
+        except (requests.exceptions.ChunkedEncodingError,
+                http_client.IncompleteRead):
+            raise StopIteration
 
     def close(self):
         if not self.closed:
