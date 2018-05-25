@@ -615,7 +615,7 @@ class Configuration(object):
                 continue
             platform = section.split("platform:")[1]
             platform_descriptor = {}
-            logger.warning("user configuration platforms in section %s is ignored in ",
+            logger.warning("user configuration platforms in section %s is ignored in "
                            "arrangement %s and later",
                            section, REACTOR_CONFIG_ARRANGEMENT_VERSION)
             logger.warning("it has been deprecated in favor of the value in the reactor_config_map")
