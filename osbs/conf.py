@@ -60,7 +60,8 @@ class Configuration(object):
         self.args = cli_args
         self.kwargs = kwargs
 
-    def _get_value(self, args_key, conf_section, conf_key, default=None, is_bool_val=False):
+    def _get_value(self, args_key, conf_section, conf_key, default=None, is_bool_val=False,
+                   deprecated=False):
         # FIXME: this is too bloated: split it into separate classes
         # and implement it as mixins
         def get_value_from_kwargs():
@@ -84,6 +85,12 @@ class Configuration(object):
         for func in retrieval_order:
             value = func()
             if value is not None:
+                # Only print deprecation warnings for cli or file arguments
+                if deprecated and func in (get_value_from_cli_args, get_value_from_conf):
+                    logger.warning("user configuration key '%s' in section '%s' is ignored in "
+                                   "arrangement %s and later. it has been deprecated in "
+                                   "favor of the value in the reactor_config_map",
+                                   args_key, conf_section, REACTOR_CONFIG_ARRANGEMENT_VERSION)
                 break
         else:  # we didn't break
             return default
@@ -103,10 +110,8 @@ class Configuration(object):
             return value
 
     def _get_deprecated(self, args_key, conf_section, conf_key, default=None, is_bool_val=False):
-        logger.warning("user configuration %s in section %s is ignored in arrangement %s and later",
-                       args_key, conf_section, REACTOR_CONFIG_ARRANGEMENT_VERSION)
-        logger.warning("it has been deprecated in favor of the value in the reactor_config_map")
-        return self._get_value(args_key, conf_section, conf_key, default, is_bool_val)
+        return self._get_value(args_key, conf_section, conf_key, default, is_bool_val,
+                               deprecated=True)
 
     def get_openshift_required_version(self):
         """

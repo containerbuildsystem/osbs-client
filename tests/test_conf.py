@@ -526,9 +526,15 @@ class TestConfiguration(object):
         with caplog.atLevel(logging.WARNING):
             self.test_arrangement_version({'default': {}}, DEFAULT_ARRANGEMENT_VERSION)
             assert "it has been deprecated" not in caplog.text()
-            build_test_config = {
-                'default': {},
-                'general': {'build_json_dir': 'general'},
-            }
-            self.test_builder_build_json_dir(build_test_config, 'general')
+            # kwargs don't get warnings
+            self.test_param_retrieval(config={'default': {}},
+                                      kwargs={'client_config_secret': 'client_secret'},
+                                      cli_args={},
+                                      expected={'get_client_config_secret': 'client_secret'})
+            assert "it has been deprecated" not in caplog.text()
+            # cli arguments get warnings
+            self.test_param_retrieval(config={'default': {}},
+                                      kwargs={},
+                                      cli_args={'client_config_secret': 'client_secret'},
+                                      expected={'get_client_config_secret': 'client_secret'})
             assert "it has been deprecated" in caplog.text()
