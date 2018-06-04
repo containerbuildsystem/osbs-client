@@ -42,6 +42,7 @@ WATCH_RETRY = 10
 WAIT_RETRY_HOURS = 12
 WAIT_RETRY = int(WAIT_RETRY_HOURS * 3600 / (WATCH_RETRY_SECS * WATCH_RETRY))
 
+
 def check_response(response, log_level=logging.ERROR):
     if response.status_code not in (http_client.OK, http_client.CREATED):
         if hasattr(response, 'content'):
@@ -320,16 +321,23 @@ class Openshift(object):
         build_config = response.json()
         return build_config
 
+    def get_all_build_configs_by_labels(self, label_selectors):
+        """
+        Returns all builds matching a given set of label selectors. It is up to the
+        calling function to filter the results.
+        """
+        labels = ['%s=%s' % (field, value) for field, value in label_selectors]
+        labels = ','.join(labels)
+        url = self._build_url("buildconfigs/", labelSelector=labels)
+        return self._get(url).json()['items']
+
     def get_build_config_by_labels(self, label_selectors):
         """
         Returns a build config matching the given label
         selectors. This method will raise OsbsException
         if not exactly one build config is found.
         """
-        labels = ['%s=%s' % (field, value) for field, value in label_selectors]
-        labels = ','.join(labels)
-        url = self._build_url("buildconfigs/", labelSelector=labels)
-        items = self._get(url).json()['items']
+        items = self.get_all_build_configs_by_labels(label_selectors)
 
         if not items:
             raise OsbsException(
@@ -341,6 +349,28 @@ class Openshift(object):
                 (label_selectors, ))
 
         return items[0]
+
+    def get_build_config_by_labels_filtered(self, label_selectors, filter_key, filter_value):
+        """
+        Returns a build config matching the given label selectors, filtering against
+        another predetermined value. This method will raise OsbsException
+        if not exactly one build config is found.
+        """
+        items = self.get_all_build_configs_by_labels(label_selectors)
+
+        if not items:
+            raise OsbsException(
+                "Build config not found for labels: %r" %
+                (label_selectors, ))
+        if filter_value is not None:
+            for build_config in items:
+                match_value = graceful_chain_get(build_config, *filter_key.split('.'))
+                if filter_value == match_value:
+                    return build_config
+        if len(items) > 1:
+            raise OsbsException(
+                "More than one build config found for labels: %r" %
+                (label_selectors, ))
 
     def create_build_config(self, build_config_json):
         """

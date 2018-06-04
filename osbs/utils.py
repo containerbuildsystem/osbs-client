@@ -28,6 +28,7 @@ from hashlib import sha256
 from osbs.repo_utils import RepoConfiguration, RepoInfo, AdditionalTagsConfig
 from osbs.constants import OS_CONFLICT_MAX_RETRIES, OS_CONFLICT_WAIT
 from six.moves import http_client
+from six.moves.urllib.parse import urlparse
 
 try:
     # py3
@@ -359,9 +360,9 @@ def make_name_from_git(repo, branch, limit=53, separator='-', hash_size=5):
     :return: str, name representing git repo and branch.
     """
 
-    repo = git_repo_humanish_part_from_uri(repo)
     branch = branch or 'unknown'
-    full = repo + branch
+    full = urlparse(repo).path.lstrip('/') + branch
+    repo = git_repo_humanish_part_from_uri(repo)
     shaval = sha256(full.encode('utf-8')).hexdigest()
     hash_str = shaval[:hash_size]
 

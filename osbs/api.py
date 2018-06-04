@@ -33,13 +33,13 @@ from osbs.constants import (BUILD_RUNNING_STATES, WORKER_OUTER_TEMPLATE,
                             ORCHESTRATOR_CUSTOMIZE_CONF, BUILD_TYPE_WORKER,
                             BUILD_TYPE_ORCHESTRATOR, BUILD_FINISHED_STATES,
                             DEFAULT_ARRANGEMENT_VERSION, REACTOR_CONFIG_ARRANGEMENT_VERSION,
-                            ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO)
+                            ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO, FILTER_KEY)
 from osbs.core import Openshift
 from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsResponseException,
                              OsbsOrchestratorNotEnabled)
 # import utils in this way, so that we can mock standalone functions with flexmock
 from osbs import utils
-from osbs.utils import retry_on_conflict
+from osbs.utils import retry_on_conflict, graceful_chain_get
 
 from six.moves import http_client
 
@@ -85,7 +85,8 @@ class OSBS(object):
     and dict respectively.
     """
 
-    _GIT_LABEL_KEYS = ('git-repo-name', 'git-branch')
+    _GIT_LABEL_KEYS = ('git-repo-name', 'git-branch', 'git-full-repo')
+    _OLD_LABEL_KEYS = ('git-repo-name', 'git-branch')
 
     @osbsapi
     def __init__(self, openshift_configuration, build_configuration):
@@ -269,24 +270,38 @@ class OSBS(object):
         """
         Uses the given build config to find an existing matching build config.
         Build configs are a match if:
-        - metadata.name are equal
+        - metadata.labels.git-repo-name AND metadata.labels.git-branch AND
+          metadata.labels.git-full-repo are equal
         OR
-        - metadata.labels.git-repo-name AND metadata.labels.git-branch are equal
+        - metadata.labels.git-repo-name AND metadata.labels.git-branch are equal AND
+          metadata.spec.source.git.uri are equal
+        OR
+        - metadata.name are equal
         """
 
-        git_labels = [(key, build_config['metadata']['labels'][key])
-                      for key in self._GIT_LABEL_KEYS]
-        name = build_config['metadata']['name']
+        bc_labels = build_config['metadata']['labels']
+        git_labels = {
+            "label_selectors": [(key, bc_labels[key]) for key in self._GIT_LABEL_KEYS]
+        }
+        old_labels_kwargs = {
+            "label_selectors": [(key, bc_labels[key]) for key in self._OLD_LABEL_KEYS],
+            "filter_key": FILTER_KEY,
+            "filter_value": graceful_chain_get(build_config, *FILTER_KEY.split('.'))
+        }
+        name = {
+            "build_config_id": build_config['metadata']['name']
+        }
 
         queries = (
             (self.os.get_build_config_by_labels, git_labels),
+            (self.os.get_build_config_by_labels_filtered, old_labels_kwargs),
             (self.os.get_build_config, name),
         )
 
         existing_bc = None
-        for func, arg in queries:
+        for func, kwargs in queries:
             try:
-                existing_bc = func(arg)
+                existing_bc = func(**kwargs)
                 # build config found
                 break
             except OsbsException as exc:
