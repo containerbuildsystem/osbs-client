@@ -479,7 +479,6 @@ class BuildRequest(object):
             self.dj.dock_json_set_arg(phase, plugin, 'koji_principal', krb_principal)
             self.dj.dock_json_set_arg(phase, plugin, 'koji_keytab', krb_keytab)
 
-
     @staticmethod
     def remove_tag_and_push_registries(tag_and_push_registries, version):
         """
@@ -1506,12 +1505,11 @@ class BuildRequest(object):
                 self.spec.build_image.value
 
         repo_name = git_repo_humanish_part_from_uri(self.spec.git_uri.value)
-        # NOTE: Since only the repo name is used, a forked repos will have
-        # the same git-repo-name tag. This is a known limitation. If this
-        # use case must be handled properly, the git URI must be taken into
-        # account.
+        # Use the repo name to differentiate different repos, but include the full url as an
+        # optional filter.
         self.set_label('git-repo-name', repo_name)
         self.set_label('git-branch', self.spec.git_branch.value)
+        self.set_label('git-full-repo', self.spec.git_uri.value)
 
         self.render_distgit_fetch_artefacts()
         self.render_pull_base_image()

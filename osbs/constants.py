@@ -105,3 +105,6 @@ ISOLATED_RELEASE_FORMAT = re.compile(r'^\d+\.\d+(\..+)?$')
 
 ANNOTATION_SOURCE_REPO = 'osbs/source_repo'
 ANNOTATION_INSECURE_REPO = 'openshift.io/image.insecureRepository'
+
+# optional key path for filtering existing build config results
+FILTER_KEY = 'spec.source.git.uri'

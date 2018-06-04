@@ -234,14 +234,14 @@ class BuildRequestV2(BuildRequest):
         else:
             custom_strategy['from']['name'] = self.user_params.build_image.value
 
-        # Set git-repo-name label
-        # NOTE: Since only the repo name is used, a forked repos will have
-        # the same git-repo-name tag. This is a known limitation. If this
-        # use case must be handled properly, the git URI must be taken into
-        # account.
+        # Set git-repo-name and git-full-name labels
         repo_name = git_repo_humanish_part_from_uri(self.user_params.git_uri.value)
+        # Use the repo name to differentiate different repos, but include the full url as an
+        # optional filter.
         self.set_label('git-repo-name', repo_name)
         self.set_label('git-branch', self.user_params.git_branch.value)
+        self.set_label('git-full-repo', self.user_params.git_uri.value)
+
         koji_task_id = self.user_params.koji_task_id.value
         if koji_task_id is not None:
             self.set_label('koji-task-id', str(koji_task_id))

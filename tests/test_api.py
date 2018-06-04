@@ -1250,6 +1250,7 @@ class TestOSBS(object):
                 'labels': {
                     'git-repo-name': 'reponame',
                     'git-branch': 'branch',
+                    'git-full-repo': 'full-name',
                 }
             },
         }
@@ -1262,7 +1263,8 @@ class TestOSBS(object):
 
         (flexmock(osbs_obj.os)
             .should_receive('get_build_config_by_labels')
-            .with_args([('git-repo-name', 'reponame'), ('git-branch', 'branch')])
+            .with_args([('git-repo-name', 'reponame'), ('git-branch', 'branch'),
+                        ('git-full-repo', 'full-name')])
             .once()
             .and_return(existing_build_config))
         (flexmock(osbs_obj.os)
@@ -1280,6 +1282,7 @@ class TestOSBS(object):
                 'labels': {
                     'git-repo-name': 'reponame',
                     'git-branch': 'branch',
+                    'git-full-repo': 'full-name',
                 }
             },
         }
@@ -1292,7 +1295,8 @@ class TestOSBS(object):
 
         (flexmock(osbs_obj.os)
             .should_receive('get_build_config_by_labels')
-            .with_args([('git-repo-name', 'reponame'), ('git-branch', 'branch')])
+            .with_args([('git-repo-name', 'reponame'), ('git-branch', 'branch'),
+                        ('git-full-repo', 'full-name')])
             .once()
             .and_raise(OsbsException))
         (flexmock(osbs_obj.os)
@@ -1312,6 +1316,7 @@ class TestOSBS(object):
                 'labels': {
                     'git-repo-name': 'reponame',
                     'git-branch': 'branch',
+                    'git-full-repo': 'full-name',
                 }
             },
         }
@@ -1320,7 +1325,8 @@ class TestOSBS(object):
 
         (flexmock(osbs_obj.os)
             .should_receive('get_build_config_by_labels')
-            .with_args([('git-repo-name', 'reponame'), ('git-branch', 'branch')])
+            .with_args([('git-repo-name', 'reponame'), ('git-branch', 'branch'),
+                        ('git-full-repo', 'full-name')])
             .once()
             .and_raise(OsbsException))
         (flexmock(osbs_obj.os)
@@ -1399,6 +1405,7 @@ class TestOSBS(object):
                 'labels': {
                     'git-repo-name': 'reponame',
                     'git-branch': 'branch',
+                    'git-full-repo': 'full-name',
                 },
             },
             'spec': {},
