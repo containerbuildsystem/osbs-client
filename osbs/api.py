@@ -33,7 +33,8 @@ from osbs.constants import (BUILD_RUNNING_STATES, WORKER_OUTER_TEMPLATE,
                             ORCHESTRATOR_CUSTOMIZE_CONF, BUILD_TYPE_WORKER,
                             BUILD_TYPE_ORCHESTRATOR, BUILD_FINISHED_STATES,
                             DEFAULT_ARRANGEMENT_VERSION, REACTOR_CONFIG_ARRANGEMENT_VERSION,
-                            ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO, FILTER_KEY)
+                            ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO, FILTER_KEY,
+                            RELEASE_LABEL_FORMAT)
 from osbs.core import Openshift
 from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsResponseException,
                              OsbsOrchestratorNotEnabled)
@@ -505,6 +506,15 @@ class OSBS(object):
                 required_missing = True
                 logger.error("required label missing from Dockerfile : %s",
                              labels.get_name(label))
+
+        try:
+            _, release_value = labels.get_name_and_value(utils.Labels.LABEL_TYPE_RELEASE)
+            if not RELEASE_LABEL_FORMAT.match(release_value):
+                logger.error("release label '%s' doesn't match regex : %s", release_value,
+                             RELEASE_LABEL_FORMAT.pattern)
+                raise OsbsValidationException("release label doesn't have proper format")
+        except KeyError:
+            pass
 
         if required_missing:
             raise OsbsValidationException("required label missing from Dockerfile")
