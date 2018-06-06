@@ -102,6 +102,10 @@ BUILD_TYPE_ORCHESTRATOR = "orchestrator"
 BUILD_TYPE_WORKER = "worker"
 
 ISOLATED_RELEASE_FORMAT = re.compile(r'^\d+\.\d+(\..+)?$')
+RELEASE_LABEL_FORMAT = re.compile(r"""^\d+             # First character must be a digit
+                                      ([._]?           # allow separators between groups
+                                      [a-zA-Z0-9]+)*$  # last characters must be alphanumeric
+                                   """, re.X)
 
 ANNOTATION_SOURCE_REPO = 'osbs/source_repo'
 ANNOTATION_INSECURE_REPO = 'openshift.io/image.insecureRepository'

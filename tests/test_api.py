@@ -2626,3 +2626,52 @@ class TestOSBS(object):
 
         build_response = osbs_obj._create_build_config_and_build(build_request)
         assert build_response.json == {'spam': 'maps'}
+
+    @pytest.mark.parametrize(('release_value', 'exc'), [
+        ('1release with space', OsbsValidationException),
+        ('1release_with/slash', OsbsValidationException),
+        ('1release_with-dash', OsbsValidationException),
+        ('release.1', OsbsValidationException),
+        ('1release.1.', OsbsValidationException),
+        ('1release.1_', OsbsValidationException),
+        ('1release..1', OsbsValidationException),
+        ('1release__1', OsbsValidationException),
+        ('1.release_with5', None),
+        ('1_release_with5', None),
+        ('123.54.release_with5', None),
+        ('123.54.release_withalpha', None),
+    ])
+    def test_release_label_validation(self, release_value, exc):
+        with NamedTemporaryFile(mode='wt') as fp:
+            fp.write(dedent("""\
+                [general]
+                build_json_dir = inputs
+                [default]
+                build_from = image:buildroot:latest
+                openshift_url = /
+                """))
+            fp.flush()
+            config = Configuration(fp.name)
+            osbs_obj = OSBS(config, config)
+
+        mocked_df_parser = MockDfParser()
+        mocked_df_parser.labels['release'] = release_value
+
+        (flexmock(utils)
+            .should_receive('get_repo_info')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(self.mock_repo_info(mock_df_parser=mocked_df_parser)))
+
+        flexmock(OSBS, _create_build_config_and_build=request_as_response)
+
+        if exc:
+            with pytest.raises(exc):
+                osbs_obj.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                           TEST_GIT_BRANCH, TEST_USER,
+                                           TEST_COMPONENT, TEST_TARGET,
+                                           TEST_ARCH)
+        else:
+            osbs_obj.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                       TEST_GIT_BRANCH, TEST_USER,
+                                       TEST_COMPONENT, TEST_TARGET,
+                                       TEST_ARCH)
