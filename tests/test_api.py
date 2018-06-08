@@ -1983,7 +1983,13 @@ class TestOSBS(object):
         response = osbs_obj.ensure_image_stream_tag(stream, tag_name, scheduled)
         assert response == 'eggs'
 
-    def test_import_image(self):
+    @pytest.mark.parametrize('tags', (
+        None,
+        [],
+        ['tag'],
+        ['tag1', 'tag2'],
+    ))
+    def test_import_image(self, tags):
         with NamedTemporaryFile(mode='wt') as fp:
             fp.write(dedent("""\
                 [general]
@@ -1996,11 +2002,11 @@ class TestOSBS(object):
         image_stream_name = 'spam'
         (flexmock(osbs_obj.os)
             .should_receive('import_image')
-            .with_args(image_stream_name, dict)
+            .with_args(image_stream_name, dict, tags=tags)
             .once()
             .and_return(True))
 
-        response = osbs_obj.import_image(image_stream_name)
+        response = osbs_obj.import_image(image_stream_name, tags=tags)
         assert response is True
 
     @pytest.mark.parametrize('insecure', (True, False))

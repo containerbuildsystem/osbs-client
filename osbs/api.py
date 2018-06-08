@@ -932,7 +932,7 @@ class OSBS(object):
         return self.os.set_annotations_on_build(build_id, annotations)
 
     @osbsapi
-    def import_image(self, name):
+    def import_image(self, name, tags=None):
         """
         Import image tags from a Docker registry into an ImageStream
 
@@ -942,7 +942,7 @@ class OSBS(object):
                                           'image_stream_import.json')
         with open(stream_import_file) as f:
             stream_import = json.load(f)
-        return self.os.import_image(name, stream_import)
+        return self.os.import_image(name, stream_import, tags=tags)
 
     @osbsapi
     def get_token(self):

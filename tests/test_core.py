@@ -572,12 +572,18 @@ class TestOpenshift(object):
             openshift_mock.never()
         Openshift(OAPI_PREFIX, API_VER, "/oauth/authorize", **kwargs)
 
-    @pytest.mark.parametrize(('imagestream_name', 'expect_update', 'expect_import'), (  # noqa:F811
+    @pytest.mark.parametrize('tags', (  # noqa:F811
+        None,
+        [],
+        ['7.2.username-66'],
+        ['7.2.username-66', '7.2.username-67'],
+    ))
+    @pytest.mark.parametrize(('imagestream_name', 'expect_update', 'expect_import'), (
         (TEST_IMAGESTREAM, True, True),
         (TEST_IMAGESTREAM_NO_TAGS, True, False),
         (TEST_IMAGESTREAM_WITH_ANNOTATION, False, True),
     ))
-    def test_import_image(self, openshift, imagestream_name, expect_update, expect_import):
+    def test_import_image(self, openshift, tags, imagestream_name, expect_update, expect_import):
         """
         tests that import_image return True
         regardless if tags were changed
@@ -594,14 +600,42 @@ class TestOpenshift(object):
         modified_resource_json = deepcopy(template_resource_json)
         source_repo = modified_resource_json['spec'].pop('dockerImageRepository')
         modified_resource_json['metadata']['annotations'][ANNOTATION_SOURCE_REPO] = source_repo
+
+        stream_import = {'metadata': {'name': 'FOO'}, 'spec': {'images': []}}
+        stream_import_json = deepcopy(stream_import)
+        stream_import_json['metadata']['name'] = imagestream_name
         if not expect_import:
             modified_resource_json['spec']['tags'] = []
 
+        if tags:
+            for tag in modified_resource_json['spec']['tags']:
+                if tag['name'] in tags:
+                    image_import = {
+                        'from': tag['from'],
+                        'to': {'name': tag['name']},
+                        'importPolicy': tag.get('importPolicy'),
+                        'referencePolicy': tag.get('referencePolicy'),
+                    }
+                    stream_import_json['spec']['images'].append(image_import)
+        else:
+            for tag in modified_resource_json['spec']['tags']:
+                image_import = {
+                    'from': tag['from'],
+                    'to': {'name': tag['name']},
+                    'importPolicy': tag.get('importPolicy'),
+                    'referencePolicy': tag.get('referencePolicy'),
+                }
+                stream_import_json['spec']['images'].append(image_import)
+
         put_url = openshift._build_url("imagestreams/%s" % imagestream_name)
+        post_url = openshift._build_url("imagestreamimports/")
         (flexmock(openshift)
             .should_call('_put')
             .times(1 if expect_update else 0)
             .with_args(put_url, data=JsonMatcher(modified_resource_json), use_json=True))
+        (flexmock(openshift)
+            .should_call('_post')
+            .times(1 if expect_import else 0)
+            .with_args(post_url, data=JsonMatcher(stream_import_json), use_json=True))
 
-        stream_import = {'metadata': {'name': 'FOO'}, 'spec': {'images': []}}
-        assert openshift.import_image(imagestream_name, stream_import) is expect_import
+        assert openshift.import_image(imagestream_name, stream_import, tags=tags) is expect_import
