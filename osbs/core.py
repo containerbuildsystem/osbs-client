@@ -844,7 +844,7 @@ class Openshift(object):
         return response
 
     @retry_on_conflict
-    def import_image(self, name, stream_import):
+    def import_image(self, name, stream_import, tags=None):
         """
         Import image tags from a Docker registry into an ImageStream
 
@@ -866,7 +866,11 @@ class Openshift(object):
         logger.debug("tags before import: %r", oldtags)
 
         stream_import['metadata']['name'] = name
+        tags_set = set(tags) if tags else set()
         for tag in imagestream_json.get('spec', {}).get('tags', []):
+            if tags_set and tag['name'] not in tags_set:
+                continue
+
             image_import = {
                 'from': tag['from'],
                 'to': {'name': tag['name']},
