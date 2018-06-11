@@ -18,7 +18,7 @@ from pkg_resources import parse_version
 
 from osbs.utils import (buildconfig_update,
                         get_imagestreamtag_from_image,
-                        git_repo_humanish_part_from_uri,
+                        git_repo_humanish_part_from_uri, sanitize_strings_for_openshift,
                         get_time_from_rfc3339, strip_registry_from_image,
                         TarWriter, TarReader, make_name_from_git, wrap_name_from_git,
                         get_instance_token_file_name, Labels, sanitize_version,
@@ -28,6 +28,7 @@ import osbs.kerberos_ccache
 
 
 BC_NAME_REGEX = r'^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+BC_LABEL_REGEX = r'^[a-z0-9]([-a-z0-9]*[a-z0-9])?([\/\.]*[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
 
 
 def test_buildconfig_update():
@@ -152,6 +153,25 @@ def test_get_time_from_rfc3339_valid(rfc3339, seconds, tz):
     assert get_time_from_rfc3339(rfc3339) == seconds
 
 
+@pytest.mark.parametrize(('str1', 'str2', 'separator', 'limit', 'label', 'expected'), [
+    ('spam', 'bacon', '-', 10, True, 'spam-bacon'),
+    ('spam', 'bacon', '-', 5, True, 'sp-ba'),
+    ('https://github.com/blah/my_very_very_very_long_and_broken_a$$_repo.git', 'bacon', '-', 65,
+     True, 'httpsgithub.comblahmyveryveryverylongandbrokenarepo.git-bacon'),
+    ('myveryveryveryveryveryveryveryveryveryveryveryveryverylongtestcase', '', '-', 65,
+     True, 'myveryveryveryveryveryveryveryveryveryveryveryveryverylongtest'),
+    ('https://github.com/blah/my_very_very_very_long_and_broken_a$$_repo.git', 'bacon', '-', 65,
+     False, 'httpsgithubcomblahmyveryveryverylongandbrokenarepogit-bacon'),
+    ('myveryveryveryveryveryveryveryveryveryveryveryveryverylongtestcase', '', '-', 65,
+     False, 'myveryveryveryveryveryveryveryveryveryveryveryveryverylongtest'),
+])
+def test_sanitize_string(str1, str2, limit, separator, label, expected):
+    sanitized = sanitize_strings_for_openshift(str1, str2, limit, separator, label)
+    assert sanitized == expected
+    valid = re.compile(BC_LABEL_REGEX) if label else re.compile(BC_NAME_REGEX)
+    assert valid.match(sanitized)
+
+
 @pytest.mark.parametrize(('repo', 'branch', 'limit', 'separator', 'expected'), [
     ('spam', 'bacon', 10, '-', 'spam-bacon'),
     ('spam', 'bacon', 5, '-', 'sp-ba'),
@@ -173,6 +193,11 @@ def test_get_time_from_rfc3339_valid(rfc3339, seconds, tz):
     ('1_2_3_4_', '_f_', 10, '-', '1234-f'),
     ('longer-name-than', 'this', 22, '-', 'longer-name-than-this'),
     ('longer--name--than', 'this', 22, '-', 'longer--name--tha-this'),
+    ('https://github.com/blah/my_very_very_very_long_and_broken_a$$_repo.git',
+     'bacon', 65, '-', 'myveryveryverylongandbrokenarepo-bacon'),
+    ('https://github.com/blah/my_very_very_very_long_and_broken_a$$_repo.git', '',
+     65, '-', 'myveryveryverylongandbrokenarepo-unknown'),
+
 ])
 def test_make_name_from_git(repo, branch, limit, separator, expected, hash_size=5):
     bc_name = make_name_from_git(repo, branch, limit + len(separator) + hash_size, separator,
