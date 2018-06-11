@@ -14,6 +14,7 @@ from osbs.utils import graceful_chain_get, get_time_from_rfc3339
 from osbs.constants import BUILD_FINISHED_STATES, BUILD_RUNNING_STATES, \
     BUILD_SUCCEEDED_STATES, BUILD_FAILED_STATES, BUILD_PENDING_STATES, \
     BUILD_CANCELLED_STATE
+from osbs.exceptions import OsbsException
 
 
 logger = logging.getLogger(__name__)
@@ -22,13 +23,15 @@ logger = logging.getLogger(__name__)
 class BuildResponse(object):
     """ class which wraps json from http response from OpenShift """
 
-    def __init__(self, build_json):
+    def __init__(self, build_json, osbs=None):
         """
         :param build_json: dict from JSON of OpenShift Build object
+        :param osbs: object of the creater's OSBS instance
         """
         self.json = build_json
         self._status = None
         self._cancelled = None
+        self.osbs = osbs
 
     @property
     def status(self):
