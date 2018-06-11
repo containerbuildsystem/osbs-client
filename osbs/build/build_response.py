@@ -109,17 +109,33 @@ class BuildResponse(object):
         """
         Return an error message based on atomic-reactor's metadata
         """
-        try:
-            str_metadata = graceful_chain_get(self.get_annotations_or_labels(), "plugins-metadata")
-            metadata_dict = json.loads(str_metadata)
-            plugin, error_message = list(metadata_dict['errors'].items())[0]
+        error_reason = self.get_error_reason()
+        if error_reason:
+            error_message = error_reason.get('pod') or None
+            if error_message:
+                return "Error in pod: %s" % error_message
+            plugin = error_reason.get('plugin')[0] or None
+            error_message = error_reason.get('plugin')[1] or None
             if error_message:
                 # Plugin has non-empty error description
                 return "Error in plugin %s: %s" % (plugin, error_message)
             else:
                 return "Error in plugin %s" % plugin
-        except Exception:
-            return None
+
+    def get_error_reason(self):
+        try:
+            str_metadata = graceful_chain_get(self.get_annotations_or_labels(), "plugins-metadata")
+            metadata_dict = json.loads(str_metadata)
+            plugin, error_message = list(metadata_dict['errors'].items())[0]
+            return {'plugin': [plugin, error_message]}
+        except (ValueError, AttributeError):
+            if not self.osbs:
+                return {'pod': 'OSBS unavailable; Pod related errors cannot be retrieved'}
+            try:
+                pod = self.osbs.get_pod_for_build(self.get_build_name())
+                return {'pod': pod.get_failure_reason()}
+            except OsbsException:
+                return None
 
     def get_commit_id(self):
         return graceful_chain_get(self.get_annotations_or_labels(), "commit_id")
