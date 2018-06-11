@@ -22,7 +22,7 @@ from osbs.constants import ANNOTATION_SOURCE_REPO
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_ORCHESTRATOR_BUILD,
                              TEST_GIT_BRANCH, TEST_BUILD_CONFIG, TEST_GIT_URI_HUMAN_NAME,
                              TEST_KOJI_TASK_ID, TEST_IMAGESTREAM, TEST_IMAGESTREAM_NO_TAGS,
-                             TEST_IMAGESTREAM_WITH_ANNOTATION, TEST_GIT_URI_HTML)
+                             TEST_IMAGESTREAM_WITH_ANNOTATION, TEST_GIT_URI_SANITIZED)
 from tempfile import NamedTemporaryFile
 from textwrap import dedent
 
@@ -235,7 +235,7 @@ class Connection(object):
                ) % (TEST_GIT_URI_HUMAN_NAME, TEST_GIT_BRANCH)),
              ((OAPI_PREFIX + "namespaces/default/buildconfigs/?labelSelector=" +
                "git-repo-name%%3D%s" "%%2C" "git-branch%%3D%s" "%%2C" "git-full-repo%%3D%s"
-               ) % (TEST_GIT_URI_HUMAN_NAME, TEST_GIT_BRANCH, TEST_GIT_URI_HTML)),
+               ) % (TEST_GIT_URI_HUMAN_NAME, TEST_GIT_BRANCH, TEST_GIT_URI_SANITIZED)),
              ): {
                  "get": {
                      "custom_callback":

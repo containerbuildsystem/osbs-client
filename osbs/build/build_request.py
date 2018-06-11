@@ -22,7 +22,7 @@ from osbs.constants import (SECRETS_PATH, DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_
                             ISOLATED_RELEASE_FORMAT)
 from osbs.exceptions import OsbsException, OsbsValidationException
 from osbs.utils import (git_repo_humanish_part_from_uri, sanitize_version,
-                        Labels)
+                        sanitize_strings_for_openshift, Labels)
 from osbs import __version__ as client_version
 
 
@@ -227,6 +227,7 @@ class BuildRequest(object):
         if not value:
             value = ''
         self.template['metadata'].setdefault('labels', {})
+        value = sanitize_strings_for_openshift(value)
         self.template['metadata']['labels'][name] = value
 
     def render_reactor_config(self):
