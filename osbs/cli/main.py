@@ -105,7 +105,7 @@ def cmd_list_builds(args, osbs):
 
     if args.from_json:
         with open(args.from_json) as fp:
-            builds = [BuildResponse(build) for build in json.load(fp)]
+            builds = [BuildResponse(build, osbs) for build in json.load(fp)]
     else:
         builds = osbs.list_builds(**kwargs)
 

@@ -135,7 +135,7 @@ class OSBS(object):
         serialized_response = response.json()
         build_list = []
         for build in serialized_response["items"]:
-            build_list.append(BuildResponse(build))
+            build_list.append(BuildResponse(build, self))
 
         return build_list
 
@@ -150,13 +150,13 @@ class OSBS(object):
     @osbsapi
     def get_build(self, build_id):
         response = self.os.get_build(build_id)
-        build_response = BuildResponse(response.json())
+        build_response = BuildResponse(response.json(), self)
         return build_response
 
     @osbsapi
     def cancel_build(self, build_id):
         response = self.os.cancel_build(build_id)
-        build_response = BuildResponse(response.json())
+        build_response = BuildResponse(response.json(), self)
         return build_response
 
     @osbsapi
@@ -228,14 +228,14 @@ class OSBS(object):
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         build = build_request.render()
         response = self.os.create_build(json.dumps(build))
-        build_response = BuildResponse(response.json())
+        build_response = BuildResponse(response.json(), self)
         return build_response
 
     def _get_running_builds_for_build_config(self, build_config_id):
         all_builds_for_bc = self.os.list_builds(build_config_id=build_config_id).json()['items']
         running = []
         for b in all_builds_for_bc:
-            br = BuildResponse(b)
+            br = BuildResponse(b, self)
             if br.is_pending() or br.is_running():
                 running.append(br)
         return running
@@ -367,7 +367,7 @@ class OSBS(object):
                 raise RuntimeError('Matching build(s) already running: {0}'
                                    .format(', '.join(x.get_build_name() for x in running_builds)))
 
-        return BuildResponse(self.os.create_build(build_json).json())
+        return BuildResponse(self.os.create_build(build_json).json(), self)
 
     def _get_image_stream_info_for_build_request(self, build_request):
         """Return ImageStream, and ImageStreamTag name for base_image of build_request
@@ -480,10 +480,10 @@ class OSBS(object):
             prev_version = existing_bc['status']['lastVersion']
             build_id = self.os.wait_for_new_build_config_instance(
                 build_config_name, prev_version)
-            build = BuildResponse(self.os.get_build(build_id).json())
+            build = BuildResponse(self.os.get_build(build_id).json(), self)
         else:
             response = self.os.start_build(build_config_name)
-            build = BuildResponse(response.json())
+            build = BuildResponse(response.json(), self)
 
         return build
 
@@ -909,13 +909,13 @@ class OSBS(object):
     @osbsapi
     def wait_for_build_to_finish(self, build_id):
         response = self.os.wait_for_build_to_finish(build_id)
-        build_response = BuildResponse(response)
+        build_response = BuildResponse(response, self)
         return build_response
 
     @osbsapi
     def wait_for_build_to_get_scheduled(self, build_id):
         response = self.os.wait_for_build_to_get_scheduled(build_id)
-        build_response = BuildResponse(response)
+        build_response = BuildResponse(response, self)
         return build_response
 
     @osbsapi
