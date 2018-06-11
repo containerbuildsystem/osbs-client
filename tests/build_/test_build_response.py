@@ -8,6 +8,7 @@ of the BSD license. See the LICENSE file for details.
 import json
 import pytest
 from osbs.build.build_response import BuildResponse
+from osbs.exceptions import OsbsException
 
 
 class TestBuildResponse(object):
@@ -91,12 +92,29 @@ class TestBuildResponse(object):
         assert not build_response.is_finished()
         assert not build_response.is_succeeded()
 
-    @pytest.mark.parametrize(('plugin', 'message', 'expected_error_message'), [
-        ('dockerbuild', None, 'Error in plugin dockerbuild'),
-        ('foo', 'bar', 'Error in plugin foo: bar'),
-        (None, None, None)
+    @pytest.mark.parametrize(('osbs', 'pod', 'plugin', 'message', 'expected_error_message'), [
+        (True, False, 'dockerbuild', None, 'Error in plugin dockerbuild'),
+        (False, False, 'dockerbuild', None, 'Error in plugin dockerbuild'),
+        (True, False, 'foo', 'bar', 'Error in plugin foo: bar'),
+        (True, {'reason': 'Container cannot run', 'exitCode': 1}, None, None,
+         "Error in pod: {'reason': 'Container cannot run', 'exitCode': 1}"),
+        (True, False, None, None, None),
+        (False, False, None, None,
+         "Error in pod: OSBS unavailable; Pod related errors cannot be retrieved"),
     ])
-    def test_error_message(self, plugin, message, expected_error_message):
+    def test_error_message(self, osbs, pod, plugin, message, expected_error_message):
+        class MockOsbsPod:
+            def __init__(self, error):
+                self.error = error
+
+            def get_pod_for_build(self, build_id):
+                return self
+
+            def get_failure_reason(self):
+                if self.error:
+                    return self.error
+                raise OsbsException
+
         plugins_metadata = json.dumps({
             'errors': {
                 plugin: message,
@@ -104,11 +122,16 @@ class TestBuildResponse(object):
         })
         if not plugin:
             plugins_metadata = ''
+        if pod or osbs:
+            mock_pod = MockOsbsPod(pod)
+        else:
+            mock_pod = None
         build_response = BuildResponse({
             'metadata': {
                 'annotations': {
                     'plugins-metadata': plugins_metadata
                 }
             }
-        })
+        }, mock_pod)
+
         assert build_response.get_error_message() == expected_error_message
