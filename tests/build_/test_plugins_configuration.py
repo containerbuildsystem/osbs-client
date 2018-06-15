@@ -244,16 +244,23 @@ class TestPluginsConfiguration(object):
 
     @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
     @pytest.mark.parametrize('compose_ids', (None, [], [42], [42, 2]))
-    def test_render_flatpak(self, compose_ids, build_type):
+    @pytest.mark.parametrize('flatpak_base_image', (TEST_FLATPAK_BASE_IMAGE, None))
+    def test_render_flatpak(self, compose_ids, build_type, flatpak_base_image):
         extra_args = {
             'flatpak': True,
             'compose_ids': compose_ids,
-            'flatpak_base_image': TEST_FLATPAK_BASE_IMAGE,
+            'flatpak_base_image': flatpak_base_image,
             'base_image': TEST_FLATPAK_BASE_IMAGE,
             'build_type': build_type,
         }
 
-        user_params = get_sample_user_params(extra_args)
+        if flatpak_base_image is None:
+            with pytest.raises(OsbsValidationException):
+                user_params = get_sample_user_params(extra_args)
+            return
+        else:
+            user_params = get_sample_user_params(extra_args)
+
         self.mock_repo_info()
         build_json = PluginsConfiguration(user_params).render()
 
@@ -269,11 +276,12 @@ class TestPluginsConfiguration(object):
         else:
             assert args['compose_ids'] == compose_ids
 
-        plugin = get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
-        assert plugin
+        if flatpak_base_image is not None:
+            plugin = get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
+            assert plugin
 
-        args = plugin['args']
-        assert args['base_image'] == TEST_FLATPAK_BASE_IMAGE
+            args = plugin['args']
+            assert args['base_image'] == TEST_FLATPAK_BASE_IMAGE
 
         if build_type == BUILD_TYPE_ORCHESTRATOR:
             plugin = get_plugin(plugins, "prebuild_plugins", "bump_release")
@@ -294,9 +302,11 @@ class TestPluginsConfiguration(object):
             assert get_plugin(plugins, "postbuild_plugins", "import_image")
 
     @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
-    def test_render_prod_not_flatpak(self, build_type):
+    @pytest.mark.parametrize('flatpak_base_image', (TEST_FLATPAK_BASE_IMAGE, None))
+    def test_render_prod_not_flatpak(self, build_type, flatpak_base_image):
         extra_args = {
             'flatpak': False,
+            'flatpak_base_image': flatpak_base_image,
             'build_type': build_type,
         }
         user_params = get_sample_user_params(extra_args)
@@ -329,6 +339,7 @@ class TestPluginsConfiguration(object):
             'release': release,
             'flatpak': flatpak,
             'build_type': BUILD_TYPE_ORCHESTRATOR,
+            'flatpak_base_image': TEST_FLATPAK_BASE_IMAGE,
         }
 
         user_params = get_sample_user_params(extra_args)

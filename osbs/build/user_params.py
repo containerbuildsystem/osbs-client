@@ -130,7 +130,10 @@ class BuildUserParams(BuildCommon):
         self.isolated.value = isolated
         self.scratch.value = scratch
 
-        if not flatpak:
+        if flatpak:
+            if not flatpak_base_image:
+                raise OsbsValidationException("faltpak_base_image must be provided")
+        else:
             if not base_image:
                 raise OsbsValidationException("base_image must be provided")
             self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)

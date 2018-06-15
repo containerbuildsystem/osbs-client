@@ -280,6 +280,11 @@ class PluginsConfiguration(object):
         plugin = 'flatpak_create_dockerfile'
 
         if self.pt.has_plugin_conf(phase, plugin):
+
+            if not self.user_params.flatpak.value:
+                self.pt.remove_plugin(phase, plugin)
+                return
+
             if not self.pt.set_plugin_arg_valid(phase, plugin, 'base_image',
                                                 self.user_params.flatpak_base_image.value):
                 self.pt.remove_plugin(phase, plugin, 'unable to set flatpak base image')
