@@ -618,8 +618,10 @@ class TestBuildRequestV2(object):
         kwargs = get_sample_prod_params()
         if platforms:
             kwargs['platforms'] = [platforms]
+            kwargs['build_type'] = BUILD_TYPE_ORCHESTRATOR
         else:
             kwargs['platforms'] = None
+            kwargs['build_type'] = BUILD_TYPE_WORKER
 
         if platform:
             kwargs['platform_node_selector'] = platform_nodeselectors[platform]

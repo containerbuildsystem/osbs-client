@@ -1723,6 +1723,7 @@ class TestBuildRequest(object):
             'arrangement_version': arrangement_version,
             'osbs_api': MockOSBSApi(),
             'platform_descriptors': platform_descriptors,
+            'build_type': BUILD_TYPE_ORCHESTRATOR if platforms else BUILD_TYPE_WORKER,
         }
         if build_image:
             kwargs['build_image'] = build_image
@@ -1747,6 +1748,8 @@ class TestBuildRequest(object):
             return
         if openshift_req_version:
             build_request.set_openshift_required_version(parse_version(openshift_req_version))
+        repo_info = RepoInfo()
+        build_request.set_repo_info(repo_info)
         build_json = build_request.render()
         plugins = get_plugins_from_build_json(build_json)
 
@@ -2748,8 +2751,10 @@ class TestBuildRequest(object):
         kwargs = get_sample_prod_params()
         if platforms:
             kwargs['platforms'] = [platforms]
+            kwargs['build_type'] = BUILD_TYPE_ORCHESTRATOR
         else:
             kwargs['platforms'] = None
+            kwargs['build_type'] = BUILD_TYPE_WORKER
 
         if platform:
             kwargs['platform_node_selector'] = platform_nodeselectors[platform]
@@ -2767,6 +2772,7 @@ class TestBuildRequest(object):
         build_json = br.render()
 
         if expected:
+            print(build_json['spec']['nodeSelector'])
             assert build_json['spec']['nodeSelector'] == expected
         else:
             assert 'nodeSelector' not in build_json['spec']

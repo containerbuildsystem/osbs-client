@@ -19,7 +19,7 @@ from osbs.build.manipulate import DockJsonManipulator
 from osbs.build.spec import BuildSpec
 from osbs.constants import (SECRETS_PATH, DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE,
                             DEFAULT_CUSTOMIZE_CONF, BUILD_TYPE_ORCHESTRATOR,
-                            ISOLATED_RELEASE_FORMAT)
+                            BUILD_TYPE_WORKER, ISOLATED_RELEASE_FORMAT)
 from osbs.exceptions import OsbsException, OsbsValidationException
 from osbs.utils import (git_repo_humanish_part_from_uri, sanitize_version,
                         sanitize_strings_for_openshift, Labels)
@@ -241,7 +241,7 @@ class BuildRequest(object):
         if not self.dj.dock_json_has_plugin_conf(phase, plugin):
             return
 
-        if self.spec.platforms.value is None:
+        if self.spec.build_type.value == BUILD_TYPE_WORKER:
             logger.debug('removing %s plugin: no platforms', plugin)
             self.dj.remove_plugin(phase, plugin)
             return
@@ -1440,9 +1440,9 @@ class BuildRequest(object):
         # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
         self.template['metadata']['name'] = name
 
-    def render_node_selectors(self, platforms=None):
+    def render_node_selectors(self, build_type):
         # for worker builds set nodeselectors
-        if platforms is None:
+        if build_type == BUILD_TYPE_WORKER:
 
             # auto or explicit build selector
             if self.is_auto:
@@ -1671,8 +1671,7 @@ class BuildRequest(object):
         self.render_tag_from_config()
         self.render_inject_parent_image()
         self.render_version()
-        platforms = self.spec.platforms.value
-        self.render_node_selectors(platforms)
+        self.render_node_selectors(self.spec.build_type.value)
 
         self.dj.write_dock_json()
         self.build_json = self.template
