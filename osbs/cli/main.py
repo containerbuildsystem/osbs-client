@@ -404,7 +404,7 @@ def cmd_watch_build(args, osbs):
 
 
 def cmd_import_image(args, osbs):
-    osbs.import_image(args.NAME[0])
+    osbs.import_image(args.NAME[0], tags=args.tags)
 
 
 def cmd_get_token(args, osbs):  # pylint: disable=W0613
@@ -608,6 +608,8 @@ def cli():
     import_image_parser = subparsers.add_parser(str_on_2_unicode_on_3('import-image'),
                                                 help='import tags for ImageStream')
     import_image_parser.add_argument("NAME", help="ImageStream name", nargs=1)
+    import_image_parser.add_argument("--tag", action="append", dest="tags", metavar="TAG",
+                                     help="restrict import to TAG; may be used multiple times")
     import_image_parser.set_defaults(func=cmd_import_image)
 
     get_token_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-token'),
