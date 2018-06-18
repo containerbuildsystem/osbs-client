@@ -87,3 +87,11 @@ class OsbsOrchestratorNotEnabled(OsbsValidationException):
 
 class OsbsWatchBuildNotFound(OsbsException):
     """ watch stream ended and build was not found """
+
+
+class ImportImageFailed(OsbsException):
+    """Import image via ImageStream failed"""
+
+
+class ImportImageFailedServerError(ImportImageFailed):
+    """Import image via ImageStream failed due to server error"""

@@ -578,20 +578,46 @@ class Labels(object):
             return (label_type, self._df_labels[label_type])
 
 
-def retry_on_conflict(func,
-                      retry_times=OS_CONFLICT_MAX_RETRIES,
-                      retry_delay=OS_CONFLICT_WAIT):
+def retry_on_conflict(func):
     @wraps(func)
     def retry(*args, **kwargs):
-        for counter in range(retry_times + 1):
-            try:
-                return func(*args, **kwargs)
-            except OsbsResponseException as ex:
-                if ex.status_code == http_client.CONFLICT and counter != retry_times:
-                    logger.info("retrying on conflict %s", ex.message)
-                    logger.debug("attempt %d to call %s", counter + 1, func.__name__)
-                    time.sleep(retry_delay * (2 ** counter))
-                else:
-                    raise
+        # Only retry when OsbsResponseException was raised due to a conflict
+        def should_retry_cb(ex):
+            return ex.status_code == http_client.CONFLICT
+
+        retry_func = RetryFunc(OsbsResponseException, should_retry_cb=should_retry_cb)
+        return retry_func.go(func, *args, **kwargs)
 
     return retry
+
+
+def retry_on_exception(exception_type):
+    def do_retry_on_exception(func):
+        @wraps(func)
+        def retry(*args, **kwargs):
+            return RetryFunc(exception_type).go(func, *args, **kwargs)
+
+        return retry
+
+    return do_retry_on_exception
+
+
+class RetryFunc(object):
+    def __init__(self, exception_type, should_retry_cb=None):
+        self.exception_type = exception_type
+        self.should_retry_cb = should_retry_cb or (lambda ex: True)
+
+        self.retry_times = OS_CONFLICT_MAX_RETRIES
+        self.retry_delay = OS_CONFLICT_WAIT
+
+    def go(self, func, *args, **kwargs):
+        for counter in range(self.retry_times + 1):
+            try:
+                return func(*args, **kwargs)
+            except self.exception_type as ex:
+                if self.should_retry_cb(ex) and counter != self.retry_times:
+                    logger.info("retrying on exception: %s", ex.message)
+                    logger.debug("attempt %d to call %s", counter + 1, func.__name__)
+                    time.sleep(self.retry_delay * (2 ** counter))
+                else:
+                    raise
