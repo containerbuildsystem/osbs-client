@@ -259,7 +259,7 @@ class BuildRequestV2(BuildRequest):
         self.adjust_for_repo_info()
         self.adjust_for_scratch()
         self.adjust_for_isolated(self.user_params.release)
-        self.render_node_selectors(self.user_params.platforms.value)
+        self.render_node_selectors(self.user_params.build_type.value)
 
         # Set our environment variables
         custom_strategy['env'].append({
