@@ -21,10 +21,12 @@ from osbs.constants import (DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNN
                             SERVICEACCOUNT_CACRT, ANNOTATION_SOURCE_REPO,
                             ANNOTATION_INSECURE_REPO)
 from osbs.exceptions import (OsbsResponseException, OsbsException,
-                             OsbsWatchBuildNotFound, OsbsAuthException)
-from osbs.utils import graceful_chain_get, retry_on_conflict
+                             OsbsWatchBuildNotFound, OsbsAuthException,
+                             ImportImageFailed, ImportImageFailedServerError)
+from osbs.utils import graceful_chain_get, retry_on_conflict, retry_on_exception
 from requests.exceptions import ConnectionError
 from requests.utils import guess_json_utf
+from requests import codes
 
 from six.moves import http_client
 from six.moves.urllib.parse import urljoin, urlencode, urlparse, parse_qs
@@ -844,6 +846,7 @@ class Openshift(object):
         return response
 
     @retry_on_conflict
+    @retry_on_exception(ImportImageFailedServerError)
     def import_image(self, name, stream_import, tags=None):
         """
         Import image tags from a Docker registry into an ImageStream
@@ -866,6 +869,7 @@ class Openshift(object):
         logger.debug("tags before import: %r", oldtags)
 
         stream_import['metadata']['name'] = name
+        stream_import['spec']['images'] = []
         tags_set = set(tags) if tags else set()
         for tag in imagestream_json.get('spec', {}).get('tags', []):
             if tags_set and tag['name'] not in tags_set:
@@ -886,7 +890,7 @@ class Openshift(object):
         import_url = self._build_url("imagestreamimports/")
         import_response = self._post(import_url, data=json.dumps(stream_import),
                                      use_json=True)
-        check_response(import_response)
+        self._check_import_image_response(import_response)
 
         new_tags = [
             image['tag']
@@ -894,6 +898,28 @@ class Openshift(object):
         logger.debug("tags after import: %r", new_tags)
 
         return True
+
+    def _check_import_image_response(self, import_response):
+        check_response(import_response)
+
+        failed_images = []
+        failed_images_server_error = False
+
+        for image in import_response.json()['status']['images']:
+            if image['status']['status'] == 'Success':
+                continue
+            logger.error('Error importing image %s: %r', image['tag'], image)
+            failed_images.append(image)
+            if image['status']['code'] == codes.server_error:
+                failed_images_server_error = True
+
+        if failed_images:
+            error_msg = 'Failed to import {0} image(s)'.format(len(failed_images))
+            logger.error(error_msg)
+            if failed_images_server_error:
+                raise ImportImageFailedServerError(error_msg)
+            else:
+                raise ImportImageFailed(error_msg)
 
     def dump_resource(self, resource_type):
         url = self._build_url("%s" % resource_type)

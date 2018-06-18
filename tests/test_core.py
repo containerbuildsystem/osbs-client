@@ -21,7 +21,8 @@ from osbs.constants import (BUILD_FINISHED_STATES, BUILD_CANCELLED_STATE,
                             OS_CONFLICT_MAX_RETRIES,
                             ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO)
 from osbs.exceptions import (OsbsResponseException, OsbsException,
-                             OsbsNetworkException, OsbsWatchBuildNotFound)
+                             OsbsNetworkException, OsbsWatchBuildNotFound,
+                             ImportImageFailed)
 from osbs.core import check_response, Openshift
 
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
@@ -700,3 +701,48 @@ class TestOpenshift(object):
             .with_args(post_url, data=JsonMatcher(stream_import_json), use_json=True))
 
         assert openshift.import_image(imagestream_name, stream_import, tags=tags) is expect_import
+
+    @pytest.mark.parametrize(('image_status', 'expect_retry'), (  # noqa:F811
+        ({'status': 'Failure', 'code': 500, 'reason': 'InternalError'}, True),
+        ({'status': 'Failure', 'code': 400, 'reason': 'BadRequest'}, False),
+    ))
+    def test_import_image_retry(self, openshift, image_status, expect_retry):
+        imagestream_name = TEST_IMAGESTREAM
+
+        # Load example API response
+        this_file = inspect.getfile(TestCheckResponse)
+        this_dir = os.path.dirname(this_file)
+        json_path = os.path.join(this_dir, "mock_jsons", openshift._con.version,
+                                 'imagestreamimport.json')
+        with open(json_path) as f:
+            content_json = json.load(f)
+
+        # Assume mocked data contains a good response
+        good_resp = HttpResponse(200, {}, content=json.dumps(content_json).encode('utf-8'))
+
+        # Create a bad response by marking the first image as failed
+        for key in ('status', 'code', 'reason'):
+            content_json['status']['images'][0]['status'][key] = image_status[key]
+        bad_resp = HttpResponse(200, {}, content=json.dumps(content_json).encode('utf-8'))
+
+        # Make time go faster
+        flexmock(time).should_receive('sleep')
+
+        stream_import = {'metadata': {'name': 'FOO'}, 'spec': {'images': []}}
+        tags = ['7.2.username-66', '7.2.username-67']
+
+        if expect_retry:
+            (flexmock(openshift)
+                .should_receive('_post')
+                .times(3)
+                .and_return(bad_resp)
+                .and_return(bad_resp)
+                .and_return(good_resp))
+            assert openshift.import_image(imagestream_name, stream_import, tags=tags) is True
+        else:
+            (flexmock(openshift)
+                .should_receive('_post')
+                .once()
+                .and_return(bad_resp))
+            with pytest.raises(ImportImageFailed):
+                openshift.import_image(imagestream_name, stream_import, tags=tags)
