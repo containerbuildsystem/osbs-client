@@ -766,3 +766,35 @@ class TestPluginsConfiguration(object):
                 get_plugin(plugins, plugin_type, plugin_name)
         else:
             assert get_plugin(plugins, plugin_type, plugin_name)
+
+    def test_render_scratch(self):
+        additional_params = {
+            'scratch': True
+        }
+
+        self.mock_repo_info()
+        user_params = get_sample_user_params(additional_params)
+        build_json = PluginsConfiguration(user_params).render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        remove_plugins = [
+            ("prebuild_plugins", "koji_parent"),
+            ("prebuild_plugins", "check_and_set_platforms"),
+            ("postbuild_plugins", "compress"),
+            ("postbuild_plugins", "pulp_pull"),
+            ("postbuild_plugins", "koji_upload"),
+            ("postbuild_plugins", "fetch_worker_metadata"),
+            ("postbuild_plugins", "compare_components"),
+            ("postbuild_plugins", "import_image"),
+            ("exit_plugins", "koji_promote"),
+            ("exit_plugins", "koji_import"),
+            ("exit_plugins", "koji_tag_build"),
+            ("exit_plugins", "remove_worker_metadata"),
+            ("exit_plugins", "import_image"),
+            ("prebuild_plugins", "check_and_set_rebuild"),
+            ("prebuild_plugins", "stop_autorebuild_if_disabled")
+        ]
+
+        for (plugin_type, plugin) in remove_plugins:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, plugin_type, plugin)
