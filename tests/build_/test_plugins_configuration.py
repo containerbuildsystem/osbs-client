@@ -284,6 +284,12 @@ class TestPluginsConfiguration(object):
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
         else:
+            plugin = get_plugin(plugins, "prebuild_plugins", "koji")
+            assert plugin
+
+            args = plugin['args']
+            assert args['target'] == "koji-target"
+
             assert get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
             with pytest.raises(NoSuchPluginException):
                 plugin = get_plugin(plugins, "prebuild_plugins", "bump_release")
