@@ -262,6 +262,9 @@ class TestPluginsConfiguration(object):
         plugin = get_plugin(plugins, "prebuild_plugins", "resolve_module_compose")
         assert plugin
 
+        with pytest.raises(NoSuchPluginException):
+            assert get_plugin(plugins, "prebuild_plugins", "resolve_composes")
+
         args = plugin['args']
         # compose_ids will always have a value of at least []
         if compose_ids is None:

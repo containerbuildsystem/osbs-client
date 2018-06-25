@@ -432,6 +432,10 @@ class PluginsConfiguration(object):
         if not self.pt.has_plugin_conf(phase, plugin):
             return
 
+        if self.user_params.flatpak.value:
+            self.pt.remove_plugin(phase, plugin, 'flatpak build')
+            return
+
         if self.user_params.yum_repourls.value:
             self.pt.remove_plugin(phase, plugin, 'yum repourls specified in user parameters')
             return
