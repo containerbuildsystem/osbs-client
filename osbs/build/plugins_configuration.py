@@ -300,8 +300,6 @@ class PluginsConfiguration(object):
 
         if self.user_params.yum_repourls.value:
             self.pt.remove_plugin(phase, plugin, 'there is a yum repo user parameter')
-        elif self.user_params.flatpak.value:
-            self.pt.remove_plugin(phase, plugin, 'flatpak build requested')
         elif not self.pt.set_plugin_arg_valid(phase, plugin, "target",
                                               self.user_params.koji_target.value):
             self.pt.remove_plugin(phase, plugin, 'no koji target supplied in user parameters')
