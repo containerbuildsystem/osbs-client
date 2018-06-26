@@ -767,6 +767,26 @@ class TestPluginsConfiguration(object):
         else:
             assert get_plugin(plugins, plugin_type, plugin_name)
 
+    def test_render_isolated(self):
+        additional_params = {
+            'isolated': True
+        }
+
+        self.mock_repo_info()
+        user_params = get_sample_user_params(additional_params)
+        build_json = PluginsConfiguration(user_params).render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        remove_plugins = [
+            ("prebuild_plugins", "check_and_set_platforms"),
+            ("prebuild_plugins", "check_and_set_rebuild"),
+            ("prebuild_plugins", "stop_autorebuild_if_disabled")
+        ]
+
+        for (plugin_type, plugin) in remove_plugins:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, plugin_type, plugin)
+
     def test_render_scratch(self):
         additional_params = {
             'scratch': True

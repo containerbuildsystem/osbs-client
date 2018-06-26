@@ -186,6 +186,7 @@ class PluginsConfiguration(object):
         """
         if self.user_params.isolated.value:
             remove_plugins = [
+                ("prebuild_plugins", "check_and_set_platforms"),  # don't override arch_override
                 ("prebuild_plugins", "check_and_set_rebuild"),
                 ("prebuild_plugins", "stop_autorebuild_if_disabled")
             ]
