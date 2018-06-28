@@ -778,7 +778,6 @@ class TestPluginsConfiguration(object):
         plugins = get_plugins_from_build_json(build_json)
 
         remove_plugins = [
-            ("prebuild_plugins", "check_and_set_platforms"),
             ("prebuild_plugins", "check_and_set_rebuild"),
             ("prebuild_plugins", "stop_autorebuild_if_disabled")
         ]
@@ -799,7 +798,6 @@ class TestPluginsConfiguration(object):
 
         remove_plugins = [
             ("prebuild_plugins", "koji_parent"),
-            ("prebuild_plugins", "check_and_set_platforms"),
             ("postbuild_plugins", "compress"),
             ("postbuild_plugins", "pulp_pull"),
             ("postbuild_plugins", "koji_upload"),
