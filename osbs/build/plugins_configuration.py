@@ -157,7 +157,6 @@ class PluginsConfiguration(object):
         if self.user_params.scratch.value:
             remove_plugins = [
                 ("prebuild_plugins", "koji_parent"),
-                ("prebuild_plugins", "check_and_set_platforms"),  # don't override arch_override
                 ("postbuild_plugins", "compress"),  # required only to make an archive for Koji
                 ("postbuild_plugins", "pulp_pull"),  # required only to make an archive for Koji
                 ("postbuild_plugins", "koji_upload"),
@@ -186,7 +185,6 @@ class PluginsConfiguration(object):
         """
         if self.user_params.isolated.value:
             remove_plugins = [
-                ("prebuild_plugins", "check_and_set_platforms"),  # don't override arch_override
                 ("prebuild_plugins", "check_and_set_rebuild"),
                 ("prebuild_plugins", "stop_autorebuild_if_disabled")
             ]
