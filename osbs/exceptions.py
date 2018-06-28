@@ -31,7 +31,7 @@ class OsbsException(Exception):
             return ("%s\n\n" % self.message +
                     "Original traceback (most recent call last):\n" +
                     "".join(format_tb(self.traceback)) +
-                    "%r" % self.cause)
+                    "%s" % self.cause)
         else:
             return super(OsbsException, self).__str__()
 

@@ -10,12 +10,57 @@ from __future__ import absolute_import, unicode_literals
 import pytest
 import logging
 from osbs.conf import Configuration
-from osbs.api import OSBS
+from osbs.api import OSBS, osbsapi
 from osbs.exceptions import OsbsException
+import sys
 from tempfile import NamedTemporaryFile
+from textwrap import dedent
+import yaml
 
 
 logger = logging.getLogger("osbs.tests")
+
+
+class TestOsbsException(object):
+    def test_str(self):
+        """
+        The str() representation of the exception should include the str()
+        representation of the underlying cause.
+        """
+        class StrRepr(Exception):
+            def __str__(self):
+                return "str representation"
+
+            def __repr__(self):
+                return "repr representation"
+
+        @osbsapi
+        def do_raise():
+            raise StrRepr
+
+        try:
+            do_raise()
+        except OsbsException as exc:
+            assert "str representation" in str(exc)
+
+    def test_yaml(self):
+        """
+        Exceptions caused by yaml parsing should include line and column
+        """
+        @osbsapi
+        def do_raise():
+            yaml.load(dedent("""\
+                items:
+                - foo
+                bar
+                - baz
+            """.rstrip()))
+
+        try:
+            do_raise()
+        except OsbsException as exc:
+            str_rep = str(exc)
+            assert 'line' in str_rep and 'column' in str_rep
 
 
 def test_missing_config():
