@@ -241,14 +241,6 @@ class OSBS(object):
                 running.append(br)
         return running
 
-    def _panic_msg_for_more_running_builds(self, build_config_name, builds):
-        # this should never happen, but if it does, we want to know all the builds
-        #  that were running at the time
-        builds = ', '.join(['%s: %s' % (b.get_build_name(), b.status) for b in builds])
-        msg = "Multiple builds for %s running, can't proceed: %s" % \
-            (build_config_name, builds)
-        return msg
-
     def _verify_labels_match(self, new_build_config, existing_build_config):
         new_labels = new_build_config['metadata']['labels']
         existing_labels = existing_build_config['metadata']['labels']
@@ -313,18 +305,14 @@ class OSBS(object):
 
         return existing_bc
 
-    def _verify_no_running_builds(self, build_config_name):
+    def _verify_running_builds(self, build_config_name):
         running_builds = self._get_running_builds_for_build_config(build_config_name)
         rb_len = len(running_builds)
 
         if rb_len > 0:
-            if rb_len == 1:
-                rb = running_builds[0]
-                msg = "Build %s for %s in state %s, can't proceed." % \
-                    (rb.get_build_name(), build_config_name, rb.status)
-            else:
-                msg = self._panic_msg_for_more_running_builds(build_config_name, running_builds)
-            raise OsbsException(msg)
+            # report the number of simeltamous builds to detect build spam or runaway processes
+            builds = ', '.join(['%s: %s' % (b.get_build_name(), b.status) for b in running_builds])
+            logger.info("Multiple builds for %s running: %s", build_config_name, builds)
 
     def _create_scratch_build(self, build_request):
         return self._create_build_directly(build_request)
@@ -408,7 +396,7 @@ class OSBS(object):
         build_config_name = existing_bc['metadata']['name']
         logger.debug('existing build config name to be used "%s"',
                      build_config_name)
-        self._verify_no_running_builds(build_config_name)
+        self._verify_running_builds(build_config_name)
 
         # Remove nodeSelector, will be set from build_json for worker build
         old_nodeselector = existing_bc['spec'].pop('nodeSelector', None)

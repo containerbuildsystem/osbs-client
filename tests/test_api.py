@@ -288,7 +288,7 @@ class TestOSBS(object):
             .and_return())
 
         (flexmock(osbs_obj)
-            .should_receive('_verify_no_running_builds')
+            .should_receive('_verify_running_builds')
             .and_return())
 
         (flexmock(osbs_obj.os)
@@ -1337,7 +1337,7 @@ class TestOSBS(object):
 
         assert osbs_obj._get_existing_build_config(build_config) is None
 
-    def test_verify_no_running_builds_zero(self):
+    def test_verify_running_builds_zero(self, caplog):  # noqa:F811
         config = Configuration(conf_name=None)
         osbs_obj = OSBS(config, config)
 
@@ -1347,9 +1347,10 @@ class TestOSBS(object):
             .once()
             .and_return([]))
 
-        osbs_obj._verify_no_running_builds('build_config_name')
+        osbs_obj._verify_running_builds('build_config_name')
+        assert 'Multiple builds' not in caplog.text()
 
-    def test_verify_no_running_builds_one(self):
+    def test_verify_running_builds_one(self, caplog):  # noqa:F811
         config = Configuration(conf_name=None)
         osbs_obj = OSBS(config, config)
 
@@ -1361,11 +1362,11 @@ class TestOSBS(object):
                 flexmock(status='Running', get_build_name=lambda: 'build-1'),
             ]))
 
-        with pytest.raises(OsbsException) as exc:
-            osbs_obj._verify_no_running_builds('build_config_name')
-        assert str(exc.value).startswith('Build build-1 for build_config_name')
+        osbs_obj._verify_running_builds('build_config_name')
+        assert 'Multiple builds for build_config_name' in caplog.text()
+        assert 'build-1: Running' in caplog.text()
 
-    def test_verify_no_running_builds_many(self):
+    def test_verify_running_builds_many(self, caplog):  # noqa:F811
         config = Configuration(conf_name=None)
         osbs_obj = OSBS(config, config)
 
@@ -1378,9 +1379,10 @@ class TestOSBS(object):
                 flexmock(status='Running', get_build_name=lambda: 'build-2'),
             ]))
 
-        with pytest.raises(OsbsException) as exc:
-            osbs_obj._verify_no_running_builds('build_config_name')
-        assert str(exc.value).startswith('Multiple builds for')
+        osbs_obj._verify_running_builds('build_config_name')
+        assert 'Multiple builds for build_config_name' in caplog.text()
+        assert 'build-1: Running' in caplog.text()
+        assert 'build-2: Running' in caplog.text()
 
     def test_create_build_config_bad_version(self):
         config = Configuration(conf_name=None)
