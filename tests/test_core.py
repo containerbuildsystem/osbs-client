@@ -402,6 +402,37 @@ class TestOpenshift(object):
         else:
             fn(*args)
 
+    @pytest.mark.parametrize(('status_codes', 'should_raise'), [  # noqa
+        ([http_client.OK], False),
+        ([http_client.GATEWAY_TIMEOUT, http_client.GATEWAY_TIMEOUT, http_client.OK], False),
+        ([http_client.BAD_GATEWAY, http_client.GATEWAY_TIMEOUT, http_client.SERVICE_UNAVAILABLE,
+          http_client.OK], False),
+        ([http_client.CONFLICT], True),
+        ([http_client.BAD_GATEWAY, http_client.GATEWAY_TIMEOUT, http_client.UNAUTHORIZED], True),
+        ([http_client.UNAUTHORIZED], True),
+        ([http_client.GATEWAY_TIMEOUT for _ in range(OS_CONFLICT_MAX_RETRIES + 1)], True),
+    ])
+    def test_retry_get_image_stream_tag(self, openshift, status_codes, should_raise):
+        get_expectation = (flexmock(openshift)
+                           .should_receive('_get')
+                           .times(len(status_codes)))
+        for status_code in status_codes:
+            get_response = HttpResponse(status_code,
+                                        headers={},
+                                        content=b'')
+            get_expectation = get_expectation.and_return(get_response)
+
+        (flexmock(time)
+            .should_receive('sleep')
+            .and_return(None))
+
+        fn = openshift.get_image_stream_tag
+        if should_raise:
+            with pytest.raises(OsbsResponseException):
+                fn(tag_id='maps:spam')
+        else:
+            fn(tag_id='maps:spam')
+
     def test_put_image_stream_tag(self, openshift):  # noqa
         tag_name = 'spam'
         tag_id = 'maps:' + tag_name

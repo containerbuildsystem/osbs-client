@@ -23,7 +23,7 @@ from osbs.constants import (DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNN
 from osbs.exceptions import (OsbsResponseException, OsbsException,
                              OsbsWatchBuildNotFound, OsbsAuthException,
                              ImportImageFailed, ImportImageFailedServerError)
-from osbs.utils import graceful_chain_get, retry_on_conflict, retry_on_exception
+from osbs.utils import graceful_chain_get, retry_on_conflict, retry_on_exception, retry_on_timeout
 from requests.exceptions import ConnectionError
 from requests.utils import guess_json_utf
 from requests import codes
@@ -765,6 +765,7 @@ class Openshift(object):
                                                 'annotations', annotations,
                                                 self._replace_metadata_things)
 
+    @retry_on_timeout
     def get_image_stream_tag(self, tag_id):
         url = self._build_url("imagestreamtags/%s" % tag_id)
         response = self._get(url)
