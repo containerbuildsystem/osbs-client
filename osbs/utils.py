@@ -578,6 +578,21 @@ class Labels(object):
             return (label_type, self._df_labels[label_type])
 
 
+def retry_on_timeout(func):
+    @wraps(func)
+    def retry(*args, **kwargs):
+        # Only retry when OsbsResponseException was raised due bad connection
+        def should_retry_to(ex):
+            retry_codes = (http_client.BAD_GATEWAY,
+                           http_client.SERVICE_UNAVAILABLE, http_client.GATEWAY_TIMEOUT)
+            return ex.status_code in retry_codes
+
+        retry_func = RetryFunc(OsbsResponseException, should_retry_cb=should_retry_to)
+        return retry_func.go(func, *args, **kwargs)
+
+    return retry
+
+
 def retry_on_conflict(func):
     @wraps(func)
     def retry(*args, **kwargs):
