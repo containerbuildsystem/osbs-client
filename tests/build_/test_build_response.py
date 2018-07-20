@@ -115,23 +115,30 @@ class TestBuildResponse(object):
                     return self.error
                 raise OsbsException
 
-        plugins_metadata = json.dumps({
-            'errors': {
-                plugin: message,
-            },
-        })
-        if not plugin:
-            plugins_metadata = ''
         if pod or osbs:
             mock_pod = MockOsbsPod(pod)
         else:
             mock_pod = None
-        build_response = BuildResponse({
-            'metadata': {
-                'annotations': {
-                    'plugins-metadata': plugins_metadata
-                }
+        if plugin:
+            plugins_metadata = json.dumps({
+                'errors': {
+                    plugin: message,
+                },
+            })
+            build = {
+                'metadata': {
+                    'annotations': {
+                        'plugins-metadata': plugins_metadata,
+                    },
+                },
             }
-        }, mock_pod)
+        else:
+            build = {
+                'metadata': {
+                    'annotations': {},
+                },
+            }
+
+        build_response = BuildResponse(build, mock_pod)
 
         assert build_response.get_error_message() == expected_error_message
