@@ -134,9 +134,7 @@ class TestPluginsConfiguration(object):
             with pytest.raises(NoSuchPluginException):
                 assert get_plugin(plugins, 'postbuild_plugins', 'koji_upload')
 
-    @pytest.mark.parametrize(('enabled'), (
-        (True, False),
-    ))
+    @pytest.mark.parametrize('enabled', (True, False))
     def test_render_check_and_set_platforms(self, enabled):
         plugin_type = 'prebuild_plugins'
         plugin_name = 'check_and_set_platforms'
