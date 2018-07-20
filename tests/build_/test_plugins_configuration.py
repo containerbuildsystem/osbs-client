@@ -147,16 +147,14 @@ class TestPluginsConfiguration(object):
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
 
-        if not enabled:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, plugin_type, plugin_name)
-            return
-
         assert get_plugin(plugins, plugin_type, plugin_name)
 
         actual_plugin_args = plugin_value_get(plugins, plugin_type, plugin_name, 'args')
 
-        expected_plugin_args = {'koji_target': 'koji-target'}
+        if enabled:
+            expected_plugin_args = {'koji_target': 'koji-target'}
+        else:
+            expected_plugin_args = {}
 
         assert actual_plugin_args == expected_plugin_args
 
