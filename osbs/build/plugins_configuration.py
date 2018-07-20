@@ -337,9 +337,9 @@ class PluginsConfiguration(object):
         if not self.pt.has_plugin_conf(phase, plugin):
             return
 
-        if not self.pt.set_plugin_arg_valid(phase, plugin, "koji_target",
-                                            self.user_params.koji_target.value):
-            self.pt.remove_plugin(phase, plugin, 'no koji target supplied in user parameters')
+        if self.user_params.koji_target.value:
+            self.pt.set_plugin_arg(phase, plugin, "koji_target",
+                                   self.user_params.koji_target.value)
 
     def render_import_image(self, use_auth=None):
         """
