@@ -77,20 +77,26 @@ REPO_CONFIG_FILE = '.osbs-repo-config'
 ADDITIONAL_TAGS_FILE = 'additional-tags'
 REPO_CONTAINER_CONFIG = 'container.yaml'
 
+# Analysis of server logs shows that most requests either complete almost immediately or take
+# 10+ minutes to complete, but only degenerate cases take longer than 30 minutes to complete.
+# Perform a limited number of retries with a long back-off factor and set a long enough max
+# timeout to account for all the retries.
+# The first retry happens with no back-off, so this shouldn't affect momentary server glitches.
+
 # number of retries for http requests
-HTTP_MAX_RETRIES = 8
+HTTP_MAX_RETRIES = 6
 
 # how many seconds should request wait for in case non-critical error has occurred
-HTTP_BACKOFF_FACTOR = 4
+HTTP_BACKOFF_FACTOR = 60
+
+# requests timeout in seconds
+HTTP_REQUEST_TIMEOUT = 1900
 
 # Statuses which should trigger automatic retry
 HTTP_RETRIES_STATUS_FORCELIST = [408, 500, 502, 503, 504]
 
 # HTTP methods that we should retry on
 HTTP_RETRIES_METHODS_WHITELIST = ['GET', 'PUT', 'POST', 'DELETE']
-
-# requests timeout in seconds
-HTTP_REQUEST_TIMEOUT = 600
 
 # number of retries on openshift conflict
 OS_CONFLICT_MAX_RETRIES = 8
