@@ -29,7 +29,8 @@
     {
       "name": "pull_base_image",
       "args": {
-        "check_platforms": true
+        "check_platforms": true,
+        "inspect_only": true
       }
     },
     {
