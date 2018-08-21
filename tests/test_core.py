@@ -316,8 +316,23 @@ class TestOpenshift(object):
                 openshift.get_build_config_by_labels(label_selectors)
         assert str(exc.value).startswith('More than one build config found')
 
-    def test_get_missing_build_config_by_labels_filtered(self, openshift):  # noqa:F811
-        mock_response = {"items": []}
+    @pytest.mark.parametrize(('items', 'filter_value', 'error'), [  # noqa:F811
+        ([], "value-3", "Build config not found for labels"),
+        ([{"spam": "maps"}], "value-3", "Build config not found for labels"),
+        ([{"spam": "maps", "maps": {"spam": "value-3"}},
+          {"spam": "maps", "maps": {"spam": "value-3"}}], "value-3",
+         "More than one build config found for labels"),
+        ([{"spam": "maps", "maps": {"spam": "value-3"}},
+          {"spam": "maps", "maps": {"spam": "value-3"}}], "value-4",
+         "Build config not found for labels"),
+        ([], None, "Build config not found for labels"),
+        ([{"spam": "maps", "maps": {"spam": "value-3"}},
+          {"spam": "maps", "maps": {"spam": "value-3"}}], None,
+          "More than one build config found for labels"),
+    ])
+    def test_get_build_config_by_labels_filtered_fail(self, openshift,
+                                                      items, filter_value, error):
+        mock_response = {"items": items}
         label_selectors = (
             ('label-1', 'value-1'),
             ('label-2', 'value-2'),
@@ -331,11 +346,12 @@ class TestOpenshift(object):
             .and_return(make_json_response(mock_response)))
 
         with pytest.raises(OsbsException) as exc:
-            openshift.get_build_config_by_labels_filtered(label_selectors, "maps.spam", "value-3")
-        assert str(exc.value).startswith('Build config not found')
+            openshift.get_build_config_by_labels_filtered(label_selectors, "maps.spam",
+                                                          filter_value)
+        assert str(exc.value).startswith(error)
 
-    def test_get_multiple_build_config_by_labels_filtered(self, openshift):  # noqa:F811
-        mock_response = {"items": [{"spam": "maps"}, {"eggs": "sgge"}]}
+    def test_get_build_config_by_labels_filtered_no_filter(self, openshift):  # noqa:F811
+        mock_response = {"items": [{"spam": "maps"}]}
         label_selectors = (
             ('label-1', 'value-1'),
             ('label-2', 'value-2'),
@@ -348,9 +364,8 @@ class TestOpenshift(object):
             .once()
             .and_return(make_json_response(mock_response)))
 
-        with pytest.raises(OsbsException) as exc:
-            openshift.get_build_config_by_labels_filtered(label_selectors, "maps.spam", "value-3")
-        assert str(exc.value).startswith('More than one build config found')
+        response = openshift.get_build_config_by_labels_filtered(label_selectors, None, None)
+        assert response["spam"] == "maps"
 
     @pytest.mark.parametrize(('status_codes', 'should_raise'), [  # noqa
         ([http_client.OK], False),
