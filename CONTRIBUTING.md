@@ -18,6 +18,8 @@ Before a pull request is approved it must meet these criteria:
 
 Once it is approved by two developer team members it may be merged. To avoid creating merge commits the pull request will be rebased during the merge.
 
+Please read the [review checklist](https://osbs.readthedocs.io/en/latest/contributors.html#submitting-changes).
+
 Licensing
 ---------
 
