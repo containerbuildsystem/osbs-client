@@ -69,7 +69,7 @@ Some options are also mandatory.
 
 * `odcs_ssl_secret` (*optional*, `string`) - name of [kubernetes secret](https://github.com/kubernetes/kubernetes/blob/master/docs/design/secrets.md) to use for authenticating to the ODCS instance via SSL Certificate. The secret must contain one key, called 'cert'.
 
-* `pdc_url` (*optional*, `string`) - URL for API requests for the Product Definition Center. Needed for building Flatpaks
+* `pdc_url` (*optional*, `string`) - URL for API requests for the Product Definition Center. No longer used
 
 * `pdc_insecure` (*optional*, `boolean`) - If set, valid SSL certificates will not be required for requests to `pdc_url`
 
