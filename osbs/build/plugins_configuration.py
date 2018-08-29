@@ -283,9 +283,9 @@ class PluginsConfiguration(object):
                 self.pt.remove_plugin(phase, plugin)
                 return
 
-            if not self.pt.set_plugin_arg_valid(phase, plugin, 'base_image',
-                                                self.user_params.flatpak_base_image.value):
-                self.pt.remove_plugin(phase, plugin, 'unable to set flatpak base image')
+            # Preferrably set in the reactor config map
+            self.pt.set_plugin_arg_valid(phase, plugin, 'base_image',
+                                         self.user_params.flatpak_base_image.value)
 
     def render_flatpak_create_oci(self):
         phase = 'prepublish_plugins'
