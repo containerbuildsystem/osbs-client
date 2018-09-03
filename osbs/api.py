@@ -241,6 +241,18 @@ class OSBS(object):
                 running.append(br)
         return running
 
+    def _get_not_cancelled_builds_for_koji_task(self, koji_task_id):
+        all_builds_for_task = self.os.list_builds(koji_task_id=koji_task_id).json()['items']
+        not_cancelled = []
+
+        for b in all_builds_for_task:
+            br = BuildResponse(b)
+            build_labels = br.get_labels()
+            if not br.is_cancelled() and build_labels['is_autorebuild'] == "false":
+                not_cancelled.append(br)
+
+        return not_cancelled
+
     def _verify_labels_match(self, new_build_config, existing_build_config):
         new_labels = new_build_config['metadata']['labels']
         existing_labels = existing_build_config['metadata']['labels']
@@ -680,11 +692,30 @@ class OSBS(object):
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         build_request.set_repo_info(repo_info)
-        if build_request.scratch:
+
+        builds_for_koji_task = []
+        if koji_task_id and build_type == BUILD_TYPE_ORCHESTRATOR:
+            # try to find build for koji_task which isn't canceled and use that one
+            builds_for_koji_task = self._get_not_cancelled_builds_for_koji_task(koji_task_id)
+
+        builds_count = len(builds_for_koji_task)
+        if builds_count == 1:
+            logger.info("found running build for koji task: %s" %
+                        builds_for_koji_task[0].get_build_name())
+            response =\
+                BuildResponse(self.os.get_build(builds_for_koji_task[0].get_build_name()).json,
+                              self)
+        elif builds_count > 1:
+            raise OsbsException("Multiple builds %s for koji task id %s" %
+                                (builds_count, koji_task_id))
+        elif build_request.scratch:
+            logger.info("creating scratch build")
             response = self._create_scratch_build(build_request)
         elif build_request.isolated:
+            logger.info("creating isolated build")
             response = self._create_isolated_build(build_request)
         else:
+            logger.info("creating build from build_config")
             response = self._create_build_config_and_build(build_request)
         logger.debug(response.json)
         return response

@@ -1384,6 +1384,19 @@ class TestOSBS(object):
         assert 'build-1: Running' in caplog.text()
         assert 'build-2: Running' in caplog.text()
 
+    @pytest.mark.parametrize(('koji_task_id', 'count'), (  # noqa:F811
+        (123456789, 2),
+        (123459876, 1),
+        (987654321, 0),
+    ))
+    def test_not_cancelled_buils(self, openshift, koji_task_id, count):
+        config = Configuration(conf_name=None)
+        osbs_obj = OSBS(config, config)
+        osbs_obj.os = openshift
+
+        builds_list = osbs_obj._get_not_cancelled_builds_for_koji_task(koji_task_id)
+        assert len(builds_list) == count
+
     def test_create_build_config_bad_version(self):
         config = Configuration(conf_name=None)
         osbs_obj = OSBS(config, config)
@@ -1950,6 +1963,69 @@ class TestOSBS(object):
 
         build_response = osbs_obj.create_build(**kwargs)
         assert build_response.json() == {'spam': 'maps'}
+
+    @pytest.mark.parametrize(('variation', 'delegate_method'), (  # noqa:F811
+        ('isolated', '_create_isolated_build'),
+        ('scratch', '_create_scratch_build'),
+        (None, '_create_build_config_and_build'),
+    ))
+    @pytest.mark.parametrize(('koji_task_id', 'use_build', 'exc'), (
+        (123456789, False, OsbsException),
+        (123459876, True, None),
+        (987654321, False, None),
+    ))
+    def test_use_already_created_build(self, openshift, variation, delegate_method,
+                                       koji_task_id, use_build, exc):
+        config = Configuration(conf_file=None, build_from='image:buildroot:latest')
+        osbs_obj = OSBS(config, config)
+        osbs_obj.os = openshift
+
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': TEST_USER,
+            'component': TEST_COMPONENT,
+            'target': TEST_TARGET,
+            'architecture': TEST_ARCH,
+            'yum_repourls': None,
+            'koji_task_id': koji_task_id,
+            'build_type': BUILD_TYPE_ORCHESTRATOR,
+        }
+        if variation:
+            kwargs[variation] = True
+
+        (flexmock(utils)
+            .should_receive('get_repo_info')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .and_return(self.mock_repo_info()))
+
+        if use_build:
+            (flexmock(osbs_obj)
+                .should_receive(delegate_method)
+                .never())
+
+            (flexmock(osbs_obj.os)
+                .should_receive('get_build')
+                .once()
+                .and_return(flexmock(json=lambda: {'spam': 'maps'})))
+        elif exc:
+            (flexmock(osbs_obj)
+                .should_receive(delegate_method)
+                .never())
+        else:
+            (flexmock(osbs_obj)
+                .should_receive(delegate_method)
+                .once()
+                .and_return(flexmock(json=lambda: {'spam': 'maps'})))
+
+        if exc:
+            with pytest.raises(OsbsException) as exc_info:
+                osbs_obj.create_build(**kwargs)
+            assert "Multiple builds 2 for koji task id %s" % koji_task_id in exc_info.value.message
+        else:
+            build_response = osbs_obj.create_build(**kwargs)
+            assert build_response.json() == {'spam': 'maps'}
 
     def test_get_image_stream_tag(self):
         config = Configuration(conf_name=None)

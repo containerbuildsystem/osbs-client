@@ -65,7 +65,8 @@ class Connection(object):
         # --capture-dir parameter, and edited as needed.
         self.DEFINITION = {
             (OAPI_PREFIX + "namespaces/default/builds",
-             OAPI_PREFIX + "namespaces/default/builds/"): {
+             OAPI_PREFIX + "namespaces/default/builds/",
+             OAPI_PREFIX + "namespaces/default/builds/?labelSelector=koji-task-id%3D123456789"): {
                 "get": {
                     # Contains a list of builds
                     "file": "builds_list.json",
@@ -73,6 +74,20 @@ class Connection(object):
                 "post": {
                     # Contains a single build named test-build-123
                     "file": "build_test-build-123.json",
+                },
+            },
+
+            (OAPI_PREFIX + "namespaces/default/builds/?labelSelector=koji-task-id%3D987654321"): {
+                "get": {
+                    # no build for this koji id
+                    "file": "builds_list_empty.json",
+                },
+            },
+
+            (OAPI_PREFIX + "namespaces/default/builds/?labelSelector=koji-task-id%3D123459876"): {
+                "get": {
+                    # one build for this koji id
+                    "file": "builds_list_one.json",
                 },
             },
 
