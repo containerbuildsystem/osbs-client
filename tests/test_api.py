@@ -2017,7 +2017,7 @@ class TestOSBS(object):
             (flexmock(osbs_obj)
                 .should_receive(delegate_method)
                 .once()
-                .and_return(flexmock(json=lambda: {'spam': 'maps'})))
+                .and_return(BuildResponse({'spam': 'maps'})))
 
         if exc:
             with pytest.raises(OsbsException) as exc_info:
@@ -2025,7 +2025,7 @@ class TestOSBS(object):
             assert "Multiple builds 2 for koji task id %s" % koji_task_id in exc_info.value.message
         else:
             build_response = osbs_obj.create_build(**kwargs)
-            assert build_response.json() == {'spam': 'maps'}
+            assert build_response.json == {'spam': 'maps'}
 
     def test_get_image_stream_tag(self):
         config = Configuration(conf_name=None)
