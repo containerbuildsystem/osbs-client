@@ -246,7 +246,7 @@ class OSBS(object):
         not_cancelled = []
 
         for b in all_builds_for_task:
-            br = BuildResponse(b)
+            br = BuildResponse(b, self)
             build_labels = br.get_labels()
             if not br.is_cancelled() and build_labels['is_autorebuild'] == "false":
                 not_cancelled.append(br)
@@ -703,7 +703,7 @@ class OSBS(object):
             logger.info("found running build for koji task: %s" %
                         builds_for_koji_task[0].get_build_name())
             response =\
-                BuildResponse(self.os.get_build(builds_for_koji_task[0].get_build_name()).json,
+                BuildResponse(self.os.get_build(builds_for_koji_task[0].get_build_name()).json(),
                               self)
         elif builds_count > 1:
             raise OsbsException("Multiple builds %s for koji task id %s" %
