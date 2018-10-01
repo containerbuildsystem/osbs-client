@@ -1420,6 +1420,7 @@ class TestArrangementV6(ArrangementBase):
             'exit_plugins': [
                 'pulp_publish',
                 'pulp_pull',
+                'verify_media_types',
                 'import_image',
                 'delete_from_registry',
                 'koji_import',

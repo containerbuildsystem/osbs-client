@@ -89,6 +89,10 @@
       }
     },
     {
+      "name": "verify_media_types",
+      "required": false
+    },
+    {
       "name": "import_image",
       "required": false
     },
