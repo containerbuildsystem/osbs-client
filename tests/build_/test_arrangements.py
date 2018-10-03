@@ -38,6 +38,35 @@ from flexmock import flexmock
 import pytest
 
 
+# Copied from atomic_reactor.constants
+# Can't import directly, because atomic_reactor depends on osbs-client and therefore
+# osbs-client can't dpeend on atomic_reactor.
+# Don't want to put these in osbs.constants and then have atomic_reactor import them,
+# because then atomic_reactor could break in weird ways if run with the wrong version
+# of osbs-client
+# But we need to verify the input json against the actual keys, so keeping this list
+# up to date is the best solution.
+PLUGIN_KOJI_PROMOTE_PLUGIN_KEY = 'koji_promote'
+PLUGIN_KOJI_IMPORT_PLUGIN_KEY = 'koji_import'
+PLUGIN_KOJI_UPLOAD_PLUGIN_KEY = 'koji_upload'
+PLUGIN_KOJI_TAG_BUILD_KEY = 'koji_tag_build'
+PLUGIN_PULP_PUBLISH_KEY = 'pulp_publish'
+PLUGIN_PULP_PUSH_KEY = 'pulp_push'
+PLUGIN_PULP_SYNC_KEY = 'pulp_sync'
+PLUGIN_PULP_PULL_KEY = 'pulp_pull'
+PLUGIN_PULP_TAG_KEY = 'pulp_tag'
+PLUGIN_ADD_FILESYSTEM_KEY = 'add_filesystem'
+PLUGIN_FETCH_WORKER_METADATA_KEY = 'fetch_worker_metadata'
+PLUGIN_GROUP_MANIFESTS_KEY = 'group_manifests'
+PLUGIN_BUILD_ORCHESTRATE_KEY = 'orchestrate_build'
+PLUGIN_KOJI_PARENT_KEY = 'koji_parent'
+PLUGIN_COMPARE_COMPONENTS_KEY = 'compare_components'
+PLUGIN_CHECK_AND_SET_PLATFORMS_KEY = 'check_and_set_platforms'
+PLUGIN_REMOVE_WORKER_METADATA_KEY = 'remove_worker_metadata'
+PLUGIN_RESOLVE_COMPOSES_KEY = 'resolve_composes'
+PLUGIN_VERIFY_MEDIA_KEY = 'verify_media'
+
+
 class ArrangementBase(object):
     COMMON_PARAMS = {}
     ORCHESTRATOR_ADD_PARAMS = {}
@@ -182,7 +211,7 @@ class TestArrangementV1(ArrangementBase):
             ],
 
             'buildstep_plugins': [
-                'orchestrate_build',
+                PLUGIN_BUILD_ORCHESTRATE_KEY,
             ],
 
             'prepublish_plugins': [
@@ -200,7 +229,7 @@ class TestArrangementV1(ArrangementBase):
         # Changing this? Add test methods
         WORKER_INNER_TEMPLATE: {
             'prebuild_plugins': [
-                'add_filesystem',
+                PLUGIN_ADD_FILESYSTEM_KEY,
                 'pull_base_image',
                 'add_labels_in_dockerfile',
                 'change_from_in_dockerfile',
@@ -226,15 +255,15 @@ class TestArrangementV1(ArrangementBase):
                 'tag_by_labels',
                 'tag_from_config',
                 'tag_and_push',
-                'pulp_push',
-                'pulp_sync',
+                PLUGIN_PULP_PUSH_KEY,
+                PLUGIN_PULP_SYNC_KEY,
                 'compress',
-                'pulp_pull',
+                PLUGIN_PULP_PULL_KEY,
             ],
 
             'exit_plugins': [
                 'delete_from_registry',  # not tested
-                'koji_promote',  # not tested
+                PLUGIN_KOJI_PROMOTE_PLUGIN_KEY,  # not tested
                 'store_metadata_in_osv3',  # not tested
                 'koji_tag_build',  # not tested
                 'sendmail',  # not tested
@@ -319,10 +348,10 @@ class TestArrangementV1(ArrangementBase):
 
         if not expect_plugin:
             with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, 'prebuild_plugins', 'add_filesystem')
+                get_plugin(plugins, 'prebuild_plugins', PLUGIN_ADD_FILESYSTEM_KEY)
         else:
             args = plugin_value_get(plugins, 'prebuild_plugins',
-                                    'add_filesystem', 'args')
+                                    PLUGIN_ADD_FILESYSTEM_KEY, 'args')
 
             allowed_args = set([
                 'koji_hub',
@@ -354,16 +383,16 @@ class TestArrangementV2(TestArrangementV1):
         # Changing this? Add test methods
         ORCHESTRATOR_INNER_TEMPLATE: {
             'prebuild_plugins': [
-                'add_filesystem',
+                PLUGIN_ADD_FILESYSTEM_KEY,
                 'pull_base_image',
                 'bump_release',
                 'add_labels_in_dockerfile',
-                'koji_parent',
+                PLUGIN_KOJI_PARENT_KEY,
                 'reactor_config',
             ],
 
             'buildstep_plugins': [
-                'orchestrate_build',
+                PLUGIN_BUILD_ORCHESTRATE_KEY,
             ],
 
             'prepublish_plugins': [
@@ -381,7 +410,7 @@ class TestArrangementV2(TestArrangementV1):
         # Changing this? Add test methods
         WORKER_INNER_TEMPLATE: {
             'prebuild_plugins': [
-                'add_filesystem',
+                PLUGIN_ADD_FILESYSTEM_KEY,
                 'pull_base_image',
                 'add_labels_in_dockerfile',
                 'change_from_in_dockerfile',
@@ -407,15 +436,15 @@ class TestArrangementV2(TestArrangementV1):
                 'tag_by_labels',
                 'tag_from_config',
                 'tag_and_push',
-                'pulp_push',
-                'pulp_sync',
+                PLUGIN_PULP_PUSH_KEY,
+                PLUGIN_PULP_SYNC_KEY,
                 'compress',
-                'pulp_pull',
+                PLUGIN_PULP_PULL_KEY,
             ],
 
             'exit_plugins': [
                 'delete_from_registry',
-                'koji_promote',
+                PLUGIN_KOJI_PROMOTE_PLUGIN_KEY,
                 'store_metadata_in_osv3',
                 'koji_tag_build',
                 'sendmail',
@@ -445,10 +474,10 @@ class TestArrangementV2(TestArrangementV1):
 
         if not expect_plugin:
             with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, 'prebuild_plugins', 'add_filesystem')
+                get_plugin(plugins, 'prebuild_plugins', PLUGIN_ADD_FILESYSTEM_KEY)
         else:
             args = plugin_value_get(plugins, 'prebuild_plugins',
-                                    'add_filesystem', 'args')
+                                    PLUGIN_ADD_FILESYSTEM_KEY, 'args')
             allowed_args = set([
                 'koji_hub',
                 'repos',
@@ -478,10 +507,10 @@ class TestArrangementV2(TestArrangementV1):
 
         if not expect_plugin:
             with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, 'prebuild_plugins', 'add_filesystem')
+                get_plugin(plugins, 'prebuild_plugins', PLUGIN_ADD_FILESYSTEM_KEY)
         else:
             args = plugin_value_get(plugins, 'prebuild_plugins',
-                                    'add_filesystem', 'args')
+                                    PLUGIN_ADD_FILESYSTEM_KEY, 'args')
             allowed_args = set([
                 'koji_hub',
                 'repos',
@@ -511,10 +540,10 @@ class TestArrangementV2(TestArrangementV1):
 
         if not expect_plugin:
             with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, 'prebuild_plugins', 'koji_parent')
+                get_plugin(plugins, 'prebuild_plugins', PLUGIN_KOJI_PARENT_KEY)
         else:
             args = plugin_value_get(plugins, 'prebuild_plugins',
-                                    'koji_parent', 'args')
+                                    PLUGIN_KOJI_PARENT_KEY, 'args')
             allowed_args = set([
                 'koji_hub',
             ])
@@ -537,29 +566,29 @@ class TestArrangementV3(TestArrangementV2):
         # Changing this? Add test methods
         ORCHESTRATOR_INNER_TEMPLATE: {
             'prebuild_plugins': [
-                'add_filesystem',
+                PLUGIN_ADD_FILESYSTEM_KEY,
                 'pull_base_image',
                 'bump_release',
                 'add_labels_in_dockerfile',
-                'koji_parent',
+                PLUGIN_KOJI_PARENT_KEY,
                 'reactor_config',
                 'check_and_set_rebuild',
             ],
 
             'buildstep_plugins': [
-                'orchestrate_build',
+                PLUGIN_BUILD_ORCHESTRATE_KEY,
             ],
 
             'prepublish_plugins': [
             ],
 
             'postbuild_plugins': [
-                'fetch_worker_metadata',
+                PLUGIN_FETCH_WORKER_METADATA_KEY,
             ],
 
             'exit_plugins': [
                 'delete_from_registry',
-                'koji_import',
+                PLUGIN_KOJI_IMPORT_PLUGIN_KEY,
                 'koji_tag_build',
                 'store_metadata_in_osv3',
                 'sendmail',
@@ -570,7 +599,7 @@ class TestArrangementV3(TestArrangementV2):
         # Changing this? Add test methods
         WORKER_INNER_TEMPLATE: {
             'prebuild_plugins': [
-                'add_filesystem',
+                PLUGIN_ADD_FILESYSTEM_KEY,
                 'pull_base_image',
                 'add_labels_in_dockerfile',
                 'change_from_in_dockerfile',
@@ -596,11 +625,11 @@ class TestArrangementV3(TestArrangementV2):
                 'tag_by_labels',
                 'tag_from_config',
                 'tag_and_push',
-                'pulp_push',
-                'pulp_sync',
+                PLUGIN_PULP_PUSH_KEY,
+                PLUGIN_PULP_SYNC_KEY,
                 'compress',
-                'pulp_pull',
-                'koji_upload',
+                PLUGIN_PULP_PULL_KEY,
+                PLUGIN_KOJI_UPLOAD_PLUGIN_KEY,
             ],
 
             'exit_plugins': [
@@ -624,11 +653,11 @@ class TestArrangementV3(TestArrangementV2):
 
         if scratch:
             with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, 'postbuild_plugins', 'koji_upload')
+                get_plugin(plugins, 'postbuild_plugins', PLUGIN_KOJI_UPLOAD_PLUGIN_KEY)
             return
 
         args = plugin_value_get(plugins, 'postbuild_plugins',
-                                         'koji_upload', 'args')
+                                         PLUGIN_KOJI_UPLOAD_PLUGIN_KEY, 'args')
 
         match_args = {
             'blocksize': 10485760,
@@ -657,11 +686,11 @@ class TestArrangementV3(TestArrangementV2):
 
         if scratch:
             with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, 'exit_plugins', 'koji_import')
+                get_plugin(plugins, 'exit_plugins', PLUGIN_KOJI_IMPORT_PLUGIN_KEY)
             return
 
         args = plugin_value_get(plugins, 'exit_plugins',
-                                         'koji_import', 'args')
+                                         PLUGIN_KOJI_IMPORT_PLUGIN_KEY, 'args')
 
         match_args = {
             'koji_keytab': False,
@@ -684,11 +713,11 @@ class TestArrangementV3(TestArrangementV2):
 
         if scratch:
             with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, 'postbuild_plugins', 'fetch_worker_metadata')
+                get_plugin(plugins, 'postbuild_plugins', PLUGIN_FETCH_WORKER_METADATA_KEY)
             return
 
         args = plugin_value_get(plugins, 'postbuild_plugins',
-                                         'fetch_worker_metadata', 'args')
+                                         PLUGIN_FETCH_WORKER_METADATA_KEY, 'args')
 
         match_args = {}
         assert match_args == args
@@ -782,41 +811,41 @@ class TestArrangementV4(TestArrangementV3):
                 'reactor_config',
                 'resolve_module_compose',
                 'flatpak_create_dockerfile',
-                'add_filesystem',
+                PLUGIN_ADD_FILESYSTEM_KEY,
                 'inject_parent_image',
                 'pull_base_image',
                 'bump_release',
                 'add_labels_in_dockerfile',
-                'koji_parent',
+                PLUGIN_KOJI_PARENT_KEY,
                 'check_and_set_rebuild',
             ],
 
             'buildstep_plugins': [
-                'orchestrate_build',
+                PLUGIN_BUILD_ORCHESTRATE_KEY,
             ],
 
             'prepublish_plugins': [
             ],
 
             'postbuild_plugins': [
-                'fetch_worker_metadata',
-                'compare_components',
+                PLUGIN_FETCH_WORKER_METADATA_KEY,
+                PLUGIN_COMPARE_COMPONENTS_KEY,
                 'tag_from_config',
-                'group_manifests',
-                'pulp_tag',
-                'pulp_sync',
+                PLUGIN_GROUP_MANIFESTS_KEY,
+                PLUGIN_PULP_TAG_KEY,
+                PLUGIN_PULP_SYNC_KEY,
             ],
 
             'exit_plugins': [
-                'pulp_publish',
-                'pulp_pull',
+                PLUGIN_PULP_PUBLISH_KEY,
+                PLUGIN_PULP_PULL_KEY,
                 'delete_from_registry',
-                'koji_import',
+                PLUGIN_KOJI_IMPORT_PLUGIN_KEY,
                 'koji_tag_build',
                 'store_metadata_in_osv3',
                 'sendmail',
                 'remove_built_image',
-                'remove_worker_metadata',
+                PLUGIN_REMOVE_WORKER_METADATA_KEY,
             ],
         },
 
@@ -825,7 +854,7 @@ class TestArrangementV4(TestArrangementV3):
             'prebuild_plugins': [
                 'resolve_module_compose',
                 'flatpak_create_dockerfile',
-                'add_filesystem',
+                PLUGIN_ADD_FILESYSTEM_KEY,
                 'inject_parent_image',
                 'pull_base_image',
                 'add_labels_in_dockerfile',
@@ -852,9 +881,9 @@ class TestArrangementV4(TestArrangementV3):
                 'all_rpm_packages',
                 'tag_from_config',
                 'tag_and_push',
-                'pulp_push',
+                PLUGIN_PULP_PUSH_KEY,
                 'compress',
-                'koji_upload',
+                PLUGIN_KOJI_UPLOAD_PLUGIN_KEY,
             ],
 
             'exit_plugins': [
@@ -904,7 +933,7 @@ class TestArrangementV4(TestArrangementV3):
         _, build_json = self.get_worker_build_request(osbs_api, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
-        args = plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push', 'args')
+        args = plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_PULP_PUSH_KEY, 'args')
 
         build_conf = osbs_api.build_conf
         # Use first docker registry and strip off /v2
@@ -942,11 +971,11 @@ class TestArrangementV4(TestArrangementV3):
 
         if scratch:
             with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, 'postbuild_plugins', 'koji_upload')
+                get_plugin(plugins, 'postbuild_plugins', PLUGIN_KOJI_UPLOAD_PLUGIN_KEY)
             return
 
         args = plugin_value_get(plugins, 'postbuild_plugins',
-                                         'koji_upload', 'args')
+                                         PLUGIN_KOJI_UPLOAD_PLUGIN_KEY, 'args')
 
         match_args = {
             'blocksize': 10485760,
@@ -973,7 +1002,7 @@ class TestArrangementV4(TestArrangementV3):
         _, build_json = self.get_orchestrator_build_request(osbs_with_pulp, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
-        args = plugin_value_get(plugins, 'postbuild_plugins', 'pulp_tag', 'args')
+        args = plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_PULP_TAG_KEY, 'args')
         build_conf = osbs_with_pulp.build_conf
         pulp_registry_name = build_conf.get_pulp_registry()
         pulp_secret_path = '/'.join([SECRETS_PATH, build_conf.get_pulp_secret()])
@@ -993,7 +1022,7 @@ class TestArrangementV4(TestArrangementV3):
         _, build_json = self.get_orchestrator_build_request(osbs_with_pulp, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
-        args = plugin_value_get(plugins, 'postbuild_plugins', 'pulp_sync', 'args')
+        args = plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_PULP_SYNC_KEY, 'args')
 
         build_conf = osbs_with_pulp.build_conf
         docker_registry = self.get_pulp_sync_registry(build_conf)
@@ -1016,7 +1045,7 @@ class TestArrangementV4(TestArrangementV3):
         _, build_json = self.get_orchestrator_build_request(osbs_with_pulp, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
-        args = plugin_value_get(plugins, 'exit_plugins', 'pulp_publish', 'args')
+        args = plugin_value_get(plugins, 'exit_plugins', PLUGIN_PULP_PUBLISH_KEY, 'args')
         build_conf = osbs_with_pulp.build_conf
         pulp_registry_name = build_conf.get_pulp_registry()
         pulp_secret_path = '/'.join([SECRETS_PATH, build_conf.get_pulp_secret()])
@@ -1036,7 +1065,7 @@ class TestArrangementV4(TestArrangementV3):
         _, build_json = self.get_orchestrator_build_request(osbs_with_pulp, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
-        args = plugin_value_get(plugins, 'exit_plugins', 'pulp_pull', 'args')
+        args = plugin_value_get(plugins, 'exit_plugins', PLUGIN_PULP_PULL_KEY, 'args')
         expected_args = {'insecure': True}
         assert args == expected_args
 
@@ -1072,7 +1101,7 @@ class TestArrangementV4(TestArrangementV3):
         _, build_json = self.get_orchestrator_build_request(osbs_api, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
-        args = plugin_value_get(plugins, 'postbuild_plugins', 'group_manifests', 'args')
+        args = plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_GROUP_MANIFESTS_KEY, 'args')
         docker_registry = self.get_pulp_sync_registry(osbs_api.build_conf)
 
         expected_args = {
@@ -1156,7 +1185,7 @@ class TestArrangementV4(TestArrangementV3):
 
         if not worker:
             args = plugin_value_get(plugins, 'buildstep_plugins',
-                                    'orchestrate_build', 'args')
+                                    PLUGIN_BUILD_ORCHESTRATE_KEY, 'args')
             build_kwargs = args['build_kwargs']
             assert build_kwargs['flatpak'] is True
 
@@ -1208,43 +1237,43 @@ class TestArrangementV5(TestArrangementV4):
                 'reactor_config',
                 'resolve_module_compose',
                 'flatpak_create_dockerfile',
-                'add_filesystem',
+                PLUGIN_ADD_FILESYSTEM_KEY,
                 'inject_parent_image',
                 'pull_base_image',
                 'bump_release',
                 'add_labels_in_dockerfile',
-                'koji_parent',
+                PLUGIN_KOJI_PARENT_KEY,
                 'check_and_set_rebuild',
-                'resolve_composes',
+                PLUGIN_RESOLVE_COMPOSES_KEY,
             ],
 
             'buildstep_plugins': [
-                'orchestrate_build',
+                PLUGIN_BUILD_ORCHESTRATE_KEY,
             ],
 
             'prepublish_plugins': [
             ],
 
             'postbuild_plugins': [
-                'fetch_worker_metadata',
-                'compare_components',
+                PLUGIN_FETCH_WORKER_METADATA_KEY,
+                PLUGIN_COMPARE_COMPONENTS_KEY,
                 'tag_from_config',
-                'group_manifests',
-                'pulp_tag',
-                'pulp_sync',
+                PLUGIN_GROUP_MANIFESTS_KEY,
+                PLUGIN_PULP_TAG_KEY,
+                PLUGIN_PULP_SYNC_KEY,
             ],
 
             'exit_plugins': [
-                'pulp_publish',
-                'pulp_pull',
+                PLUGIN_PULP_PUBLISH_KEY,
+                PLUGIN_PULP_PULL_KEY,
                 'import_image',
                 'delete_from_registry',
-                'koji_import',
+                PLUGIN_KOJI_IMPORT_PLUGIN_KEY,
                 'koji_tag_build',
                 'store_metadata_in_osv3',
                 'sendmail',
                 'remove_built_image',
-                'remove_worker_metadata',
+                PLUGIN_REMOVE_WORKER_METADATA_KEY,
             ],
         },
 
@@ -1253,7 +1282,7 @@ class TestArrangementV5(TestArrangementV4):
             'prebuild_plugins': [
                 'resolve_module_compose',
                 'flatpak_create_dockerfile',
-                'add_filesystem',
+                PLUGIN_ADD_FILESYSTEM_KEY,
                 'inject_parent_image',
                 'pull_base_image',
                 'add_labels_in_dockerfile',
@@ -1280,9 +1309,9 @@ class TestArrangementV5(TestArrangementV4):
                 'all_rpm_packages',
                 'tag_from_config',
                 'tag_and_push',
-                'pulp_push',
+                PLUGIN_PULP_PUSH_KEY,
                 'compress',
-                'koji_upload',
+                PLUGIN_KOJI_UPLOAD_PLUGIN_KEY,
             ],
 
             'exit_plugins': [
@@ -1306,7 +1335,7 @@ class TestArrangementV5(TestArrangementV4):
         _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
-        args = plugin_value_get(plugins, 'prebuild_plugins', 'resolve_composes', 'args')
+        args = plugin_value_get(plugins, 'prebuild_plugins', PLUGIN_RESOLVE_COMPOSES_KEY, 'args')
 
         assert args == {
             'koji_hub': koji_hub,
@@ -1389,46 +1418,46 @@ class TestArrangementV6(ArrangementBase):
             'prebuild_plugins': [
                 'reactor_config',
                 'check_and_set_rebuild',
-                'check_and_set_platforms',
+                PLUGIN_CHECK_AND_SET_PLATFORMS_KEY,
                 'resolve_module_compose',
                 'flatpak_create_dockerfile',
-                'add_filesystem',
+                PLUGIN_ADD_FILESYSTEM_KEY,
                 'inject_parent_image',
                 'pull_base_image',
                 'bump_release',
                 'add_labels_in_dockerfile',
-                'koji_parent',
-                'resolve_composes',
+                PLUGIN_KOJI_PARENT_KEY,
+                PLUGIN_RESOLVE_COMPOSES_KEY,
             ],
 
             'buildstep_plugins': [
-                'orchestrate_build',
+                PLUGIN_BUILD_ORCHESTRATE_KEY,
             ],
 
             'prepublish_plugins': [
             ],
 
             'postbuild_plugins': [
-                'fetch_worker_metadata',
-                'compare_components',
+                PLUGIN_FETCH_WORKER_METADATA_KEY,
+                PLUGIN_COMPARE_COMPONENTS_KEY,
                 'tag_from_config',
-                'group_manifests',
-                'pulp_tag',
-                'pulp_sync',
+                PLUGIN_GROUP_MANIFESTS_KEY,
+                PLUGIN_PULP_TAG_KEY,
+                PLUGIN_PULP_SYNC_KEY,
             ],
 
             'exit_plugins': [
-                'pulp_publish',
-                'pulp_pull',
-                'verify_media_types',
+                PLUGIN_PULP_PUBLISH_KEY,
+                PLUGIN_PULP_PULL_KEY,
+                PLUGIN_VERIFY_MEDIA_KEY,
                 'import_image',
                 'delete_from_registry',
-                'koji_import',
+                PLUGIN_KOJI_IMPORT_PLUGIN_KEY,
                 'koji_tag_build',
                 'store_metadata_in_osv3',
                 'sendmail',
                 'remove_built_image',
-                'remove_worker_metadata',
+                PLUGIN_REMOVE_WORKER_METADATA_KEY,
             ],
         },
 
@@ -1438,7 +1467,7 @@ class TestArrangementV6(ArrangementBase):
                 'reactor_config',
                 'resolve_module_compose',
                 'flatpak_create_dockerfile',
-                'add_filesystem',
+                PLUGIN_ADD_FILESYSTEM_KEY,
                 'inject_parent_image',
                 'pull_base_image',
                 'add_labels_in_dockerfile',
@@ -1465,9 +1494,9 @@ class TestArrangementV6(ArrangementBase):
                 'all_rpm_packages',
                 'tag_from_config',
                 'tag_and_push',
-                'pulp_push',
+                PLUGIN_PULP_PUSH_KEY,
                 'compress',
-                'koji_upload',
+                PLUGIN_KOJI_UPLOAD_PLUGIN_KEY,
             ],
 
             'exit_plugins': [
@@ -1572,9 +1601,9 @@ class TestArrangementV6(ArrangementBase):
 
         if not expect_plugin:
             with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, 'prebuild_plugins', 'add_filesystem')
+                get_plugin(plugins, 'prebuild_plugins', PLUGIN_ADD_FILESYSTEM_KEY)
         else:
-            args = plugin_value_get(plugins, 'prebuild_plugins', 'add_filesystem', 'args')
+            args = plugin_value_get(plugins, 'prebuild_plugins', PLUGIN_ADD_FILESYSTEM_KEY, 'args')
 
             assert 'repos' in args.keys()
             assert args['repos'] == params['yum_repourls']
@@ -1590,7 +1619,7 @@ class TestArrangementV6(ArrangementBase):
         plugins = get_plugins_from_build_json(build_json)
 
         assert get_plugin(plugins, 'prebuild_plugins', 'reactor_config')
-        assert get_plugin(plugins, 'prebuild_plugins', 'resolve_composes')
+        assert get_plugin(plugins, 'prebuild_plugins', PLUGIN_RESOLVE_COMPOSES_KEY)
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, 'prebuild_plugins', 'resolve_module_compose')
 
@@ -1626,6 +1655,6 @@ class TestArrangementV6(ArrangementBase):
         plugins = get_plugins_from_build_json(build_json)
 
         args = plugin_value_get(plugins, 'buildstep_plugins',
-                                'orchestrate_build', 'args')
+                                PLUGIN_BUILD_ORCHESTRATE_KEY, 'args')
 
         assert 'platforms' not in args
