@@ -89,7 +89,7 @@
       }
     },
     {
-      "name": "verify_media_types",
+      "name": "verify_media",
       "required": false
     },
     {
