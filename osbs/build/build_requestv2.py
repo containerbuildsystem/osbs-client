@@ -102,6 +102,9 @@ class BuildRequestV2(BuildRequest):
         logger.debug("now setting params '%s' for user_params", kwargs)
         self.user_params.set_params(**kwargs)
 
+        self.source_registry = None
+        self.organization = None
+
     # Override
     @property
     def inner_template(self):
@@ -157,28 +160,39 @@ class BuildRequestV2(BuildRequest):
 
         custom['env'].append(reactor_config)
 
-    def set_required_secrets(self):
+    def set_data_from_reactor_config(self):
         """
-        Sets required secrets
+        Sets data from reactor config
         """
         reactor_config_override = self.user_params.reactor_config_override.value
         reactor_config_map = self.user_params.reactor_config_map.value
-        if not reactor_config_map and not reactor_config_override:
-            return
 
-        req_secrets_key = 'required_secrets'
-        token_secrets_key = 'worker_token_secrets'
-        required_secrets = []
-        token_secrets = []
         if reactor_config_override:
             data = reactor_config_override
-            required_secrets = data.get(req_secrets_key, [])
-            token_secrets = data.get(token_secrets_key, [])
         elif reactor_config_map:
             config_map = self.osbs_api.get_config_map(reactor_config_map)
-            required_secrets = config_map.get_data_by_key('config.yaml').get(req_secrets_key, [])
-            token_secrets = config_map.get_data_by_key('config.yaml').get(token_secrets_key, [])
+            data = config_map.get_data_by_key('config.yaml')
+        else:
+            return
 
+        source_registry_key = 'source_registry'
+        registry_organization_key = 'registries_organization'
+        req_secrets_key = 'required_secrets'
+        token_secrets_key = 'worker_token_secrets'
+
+        if source_registry_key in data:
+            self.source_registry = data[source_registry_key]
+        if registry_organization_key in data:
+            self.organization = data[registry_organization_key]
+
+        required_secrets = data.get(req_secrets_key, [])
+        token_secrets = data.get(token_secrets_key, [])
+        self._set_required_secrets(required_secrets, token_secrets)
+
+    def _set_required_secrets(self, required_secrets, token_secrets):
+        """
+        Sets required secrets
+        """
         if self.user_params.build_type.value == BUILD_TYPE_ORCHESTRATOR:
             required_secrets += token_secrets
 
@@ -250,7 +264,7 @@ class BuildRequestV2(BuildRequest):
         # Set required_secrets based on reactor_config
         # Set worker_token_secrets based on reactor_config, if any
         self.set_reactor_config()
-        self.set_required_secrets()
+        self.set_data_from_reactor_config()
 
         # Adjust triggers for custom base image
         if self.template['spec'].get('triggers', []) and self.is_custom_base_image():

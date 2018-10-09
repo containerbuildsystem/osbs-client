@@ -22,7 +22,7 @@ from osbs.utils import (buildconfig_update,
                         get_time_from_rfc3339, strip_registry_from_image,
                         TarWriter, TarReader, make_name_from_git, wrap_name_from_git,
                         get_instance_token_file_name, Labels, sanitize_version,
-                        has_triggers, split_module_spec)
+                        has_triggers, split_module_spec, strip_registry_and_tag_from_image)
 from osbs.exceptions import OsbsException, OsbsValidationException
 import osbs.kerberos_ccache
 
@@ -511,6 +511,19 @@ def test_split_module_spec(module, should_raise, expected):
             split_module_spec(module)
     else:
         assert split_module_spec(module) == expected
+
+
+@pytest.mark.parametrize(('img', 'expected'), [
+    ('fedora23', 'fedora23'),
+    ('fedora23:sometag', 'fedora23'),
+    ('fedora23/python', 'fedora23/python'),
+    ('fedora23/python:sometag', 'fedora23/python'),
+    ('docker.io/fedora23', 'fedora23'),
+    ('docker.io/fedora23/python', 'fedora23/python'),
+    ('docker.io/fedora23/python:sometag', 'fedora23/python'),
+])
+def test_strip_registry_and_tag_from_image(img, expected):
+    assert strip_registry_and_tag_from_image(img) == expected
 
 
 class JsonMatcher(object):

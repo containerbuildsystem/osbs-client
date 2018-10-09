@@ -276,6 +276,12 @@ def strip_registry_from_image(image):
     return ret
 
 
+def strip_registry_and_tag_from_image(image):
+    image_with_tag = strip_registry_from_image(image)
+    parts = image_with_tag.split(':')
+    return parts[0]
+
+
 def get_imagestreamtag_from_image(image):
     """
     return ImageStreamTag, give a FROM value

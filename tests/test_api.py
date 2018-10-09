@@ -1579,8 +1579,35 @@ class TestOSBS(object):
     @pytest.mark.parametrize('existing_bc', [True, False])
     @pytest.mark.parametrize('existing_is', [True, False])
     @pytest.mark.parametrize('existing_ist', [True, False])
+    @pytest.mark.parametrize(('source_registry', 'organization', 'base_image',
+                              'expected_repo', 'expected_insecure'), [
+        (None, None, None,
+         None, False),
+        ({'url': 'source_registry.com', 'insecure': False}, None, None,
+         None, False),
+        ({'url': 'source_registry.com', 'insecure': True}, None, None,
+         None, True),
+        ({'url': 'source_registry.com', 'insecure': False}, 'my_org', None,
+         None, False),
+        ({'url': 'source_registry.com', 'insecure': True}, 'my_org', None,
+         None, True),
+        ({'url': 'source_registry.com', 'insecure': False}, None,
+         'old_registry.com/fedora23/python',
+         'source_registry.com/fedora23/python', False),
+        ({'url': 'source_registry.com', 'insecure': True}, None,
+         'old_registry.com/fedora23/python',
+         'source_registry.com/fedora23/python', True),
+        ({'url': 'source_registry.com', 'insecure': False}, 'my_org',
+         'old_registry.com/fedora23/python',
+         'source_registry.com/my_org/fedora23-python', False),
+        ({'url': 'source_registry.com', 'insecure': True}, 'my_org',
+         'old_registry.com/fedora23/python',
+         'source_registry.com/my_org/fedora23-python', True),
+    ])
     def test_create_build_config_auto_start(self, triggers_bj, existing_bc,
-                                            existing_is, existing_ist):
+                                            existing_is, existing_ist, source_registry,
+                                            organization, base_image,
+                                            expected_repo, expected_insecure):
         # If ImageStream exists, always expect auto instantiated
         # build, because this test assumes an auto_instantiated BuildRequest
         expect_auto = triggers_bj and existing_is
@@ -1635,7 +1662,8 @@ class TestOSBS(object):
         # Params needed to avoid exceptions.
         spec.set_params(
             user='user',
-            base_image='fedora23/python',
+            # for build request v1
+            base_image='old_registry.com/fedora23/python',
             name_label='name_label',
             source_registry_uri='source_registry_uri',
             git_uri='https://github.com/user/reponame.git',
@@ -1645,8 +1673,12 @@ class TestOSBS(object):
 
         build_request = flexmock(
             render=lambda: build_json,
-            has_ist_trigger=lambda: triggers_bj,
-            scratch=False)
+            has_ist_trigger=lambda: triggers_bj, scratch=False,
+            # for build request v2
+            base_image=base_image,
+            source_registry=source_registry,
+            organization=organization,
+        )
         # Cannot use spec keyword arg in flexmock constructor
         # because it appears to be used by flexmock itself
         build_request.spec = spec
@@ -1698,7 +1730,8 @@ class TestOSBS(object):
             ist_tag = new_trigger.split(':')[1]
             (flexmock(osbs_obj.os)
                 .should_receive('ensure_image_stream_tag')
-                .with_args(image_stream_json, ist_tag, dict, True)
+                .with_args(image_stream_json, ist_tag, dict, True,
+                           repository=expected_repo, insecure=expected_insecure)
                 .times(1 if triggers_bj else 0)
                 .and_return(True))
 
@@ -1727,8 +1760,7 @@ class TestOSBS(object):
         (flexmock(osbs_obj.os)
             .should_receive('update_build_config')
             .with_args('build', str)
-            .times(update_build_config_times)
-         )
+            .times(update_build_config_times))
 
         if expect_auto:
             (flexmock(osbs_obj.os)
@@ -2046,7 +2078,34 @@ class TestOSBS(object):
         ref = response.json()['image']['dockerImageReference']
         assert ref == 'spam:maps'
 
-    def test_ensure_image_stream_tag(self):
+    @pytest.mark.parametrize(('source_registry', 'organization', 'base_image',
+                              'expect_repository', 'expect_insecure'), (
+        (None, None, None, None, False),
+        ({'url': 'source_registry.com'}, None, 'old_registry.com/my_namespace/my_repo:my_tag',
+         'source_registry.com/my_namespace/my_repo', False),
+        ({'url': 'source_registry.com'}, 'my_org', 'old_registry.com/my_namespace/my_repo:my_tag',
+         'source_registry.com/my_org/my_namespace-my_repo', False),
+        ({'url': 'source_registry.com', 'insecure': False}, None,
+         'old_registry.com/my_namespace/my_repo:my_tag',
+         'source_registry.com/my_namespace/my_repo', False),
+        ({'url': 'source_registry.com', 'insecure': True}, None,
+         'old_registry.com/my_namespace/my_repo:my_tag',
+         'source_registry.com/my_namespace/my_repo', True),
+        ({'url': 'source_registry.com', 'insecure': False}, 'my_org',
+         'old_registry.com/my_namespace/my_repo:my_tag',
+         'source_registry.com/my_org/my_namespace-my_repo', False),
+        ({'url': 'source_registry.com', 'insecure': True}, 'my_org',
+         'old_registry.com/my_namespace/my_repo:my_tag',
+         'source_registry.com/my_org/my_namespace-my_repo', True),
+        ({'url': 'source_registry.com', 'insecure': False}, 'my_org',
+         'old_registry.com/my_repo:my_tag',
+         'source_registry.com/my_org/my_repo', False),
+        ({'url': 'source_registry.com', 'insecure': True}, 'my_org',
+         'old_registry.com/my_repo:my_tag',
+         'source_registry.com/my_org/my_repo', True),
+    ))
+    def test_ensure_image_stream_tag(self, source_registry, organization, base_image,
+                                     expect_repository, expect_insecure):
         with NamedTemporaryFile(mode='wt') as fp:
             fp.write(dedent("""\
                 [general]
@@ -2061,11 +2120,15 @@ class TestOSBS(object):
         scheduled = False
         (flexmock(osbs_obj.os)
             .should_receive('ensure_image_stream_tag')
-            .with_args(stream, tag_name, dict, scheduled)
+            .with_args(stream, tag_name, dict, scheduled, repository=expect_repository,
+                       insecure=expect_insecure)
             .once()
             .and_return('eggs'))
 
-        response = osbs_obj.ensure_image_stream_tag(stream, tag_name, scheduled)
+        response = osbs_obj.ensure_image_stream_tag(stream, tag_name, scheduled,
+                                                    source_registry=source_registry,
+                                                    organization=organization,
+                                                    base_image=base_image)
         assert response == 'eggs'
 
     @pytest.mark.parametrize('tags', (
@@ -2092,6 +2155,44 @@ class TestOSBS(object):
             .and_return(True))
 
         response = osbs_obj.import_image(image_stream_name, tags=tags)
+        assert response is True
+
+    @pytest.mark.parametrize('tags', (
+        None,
+        [],
+        ['tag'],
+        ['tag1', 'tag2'],
+    ))
+    @pytest.mark.parametrize(('repository', 'insecure'), (
+        (None, None),
+        ('registry/namespace/repo', None),
+        ('registry/namespace/repo', True),
+        ('registry/namespace/repo', False),
+        (None, True),
+        (None, False),
+    ))
+    def test_import_image_tags(self, tags, repository, insecure):
+        with NamedTemporaryFile(mode='wt') as fp:
+            fp.write(dedent("""\
+                [general]
+                build_json_dir = {build_json_dir}
+                """.format(build_json_dir='inputs')))
+            fp.flush()
+            config = Configuration(fp.name)
+            osbs_obj = OSBS(config, config)
+
+        expect_insecure = True if insecure else False
+        image_stream_name = 'spam'
+        (flexmock(osbs_obj.os)
+            .should_receive('import_image_tags')
+            .with_args(image_stream_name, dict, tags, repository, expect_insecure)
+            .once()
+            .and_return(True))
+
+        kwargs = {}
+        if insecure is not None:
+            kwargs['insecure'] = insecure
+        response = osbs_obj.import_image_tags(image_stream_name, tags, repository, **kwargs)
         assert response is True
 
     @pytest.mark.parametrize('insecure', (True, False))
