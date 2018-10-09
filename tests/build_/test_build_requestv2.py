@@ -786,3 +786,49 @@ class TestBuildRequestV2(object):
             got_secrets[secret['secretSource']['name']] = secret['mountPath']
 
         assert expect_secrets == got_secrets
+
+    @pytest.mark.parametrize('build_type', [
+        BUILD_TYPE_WORKER,
+        BUILD_TYPE_ORCHESTRATOR,
+    ])
+    @pytest.mark.parametrize('reactor_config_map', [
+        None,
+        {},
+        {'registries_organization': 'organization_in_cm',
+         'source_registry': {'url': 'registry_in_cm'}}
+    ])
+    @pytest.mark.parametrize('reactor_config_override', [
+        None,
+        {},
+        {'registries_organization': 'organization_in_override',
+         'source_registry': {'url': 'registry_in_override'}}
+    ])
+    def test_set_data_from_reactor_config(self, build_type, reactor_config_map,
+                                          reactor_config_override):
+        build_request = BuildRequestV2(INPUTS_PATH)
+        reactor_config_name = 'REACTOR_CONFIG'
+        all_secrets = deepcopy(reactor_config_map)
+
+        mock_api = MockOSBSApi(all_secrets)
+        kwargs = get_sample_prod_params(osbs_api=mock_api)
+        kwargs['reactor_config_map'] = reactor_config_name
+        kwargs['reactor_config_override'] = reactor_config_override
+        kwargs['build_type'] = build_type
+
+        build_request.set_params(**kwargs)
+
+        build_request.render()
+
+        expected_registry = None
+        expected_organization = None
+        if reactor_config_override and 'source_registry' in reactor_config_override:
+            expected_registry = reactor_config_override['source_registry']
+        elif reactor_config_map and 'source_registry' in reactor_config_map:
+            expected_registry = reactor_config_map['source_registry']
+        if reactor_config_override and 'registries_organization' in reactor_config_override:
+            expected_organization = reactor_config_override['registries_organization']
+        elif reactor_config_map and 'registries_organization' in reactor_config_map:
+            expected_organization = reactor_config_map['registries_organization']
+
+        assert expected_registry == build_request.source_registry
+        assert expected_organization == build_request.organization

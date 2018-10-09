@@ -18,11 +18,12 @@ from osbs.core import Openshift
 from osbs.http import HttpResponse
 from osbs.conf import Configuration
 from osbs.api import OSBS
-from osbs.constants import ANNOTATION_SOURCE_REPO
+from osbs.constants import ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_ORCHESTRATOR_BUILD,
                              TEST_GIT_BRANCH, TEST_BUILD_CONFIG, TEST_GIT_URI_HUMAN_NAME,
                              TEST_KOJI_TASK_ID, TEST_IMAGESTREAM, TEST_IMAGESTREAM_NO_TAGS,
-                             TEST_IMAGESTREAM_WITH_ANNOTATION, TEST_GIT_URI_SANITIZED)
+                             TEST_IMAGESTREAM_WITH_ANNOTATION,
+                             TEST_IMAGESTREAM_WITHOUT_IMAGEREPOSITORY, TEST_GIT_URI_SANITIZED)
 from tempfile import NamedTemporaryFile
 from textwrap import dedent
 
@@ -315,6 +316,22 @@ class Connection(object):
                 }
             },
 
+            OAPI_PREFIX + "namespaces/default/imagestreams/%s" %
+            TEST_IMAGESTREAM_WITHOUT_IMAGEREPOSITORY: {
+                "get": {
+                    # Contains imagestream with 3 tags; source repository
+                    # is listed in annotation instead of spec.
+                    "file": "imagestream.json",
+                    "custom_callback": self.remove_imagerepository
+                },
+                "put": {
+                    # Contains imagestream with 3 tags; source repository
+                    # is listed in annotation instead of spec.
+                    "file": "imagestream.json",
+                    "custom_callback": self.remove_imagerepository
+                }
+            },
+
             OAPI_PREFIX + "namespaces/default/imagestreamimports/": {
                 "post": {
                     "file": "imagestreamimport.json",
@@ -409,6 +426,14 @@ class Connection(object):
     @staticmethod
     def remove_tags(key, content):
         content = json.loads(content)
+        content['spec']['tags'] = []
+        return {"content": json.dumps(content).encode('utf-8')}
+
+    @staticmethod
+    def remove_imagerepository(key, content):
+        content = json.loads(content)
+        content['spec'].pop('dockerImageRepository', None)
+        content['metadata']['annotations'].pop(ANNOTATION_INSECURE_REPO)
         content['spec']['tags'] = []
         return {"content": json.dumps(content).encode('utf-8')}
 

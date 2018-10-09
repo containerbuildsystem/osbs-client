@@ -40,7 +40,8 @@ from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsRespons
                              OsbsOrchestratorNotEnabled)
 # import utils in this way, so that we can mock standalone functions with flexmock
 from osbs import utils
-from osbs.utils import retry_on_conflict, graceful_chain_get
+from osbs.utils import (retry_on_conflict, graceful_chain_get, RegistryURI,
+                        strip_registry_and_tag_from_image)
 
 from six.moves import http_client
 
@@ -469,9 +470,15 @@ class OSBS(object):
             existing_bc = self.os.create_build_config(json.dumps(build_json)).json()
 
         if image_stream:
+            source_registry = getattr(build_request, 'source_registry', None)
+            organization = getattr(build_request, 'organization', None)
+
             changed_ist = self.ensure_image_stream_tag(image_stream,
                                                        image_stream_tag_name,
-                                                       scheduled=True)
+                                                       scheduled=True,
+                                                       source_registry=source_registry,
+                                                       organization=organization,
+                                                       base_image=build_request.base_image)
             logger.debug('Changed parent ImageStreamTag? %s', changed_ist)
 
         if triggers:
@@ -989,6 +996,25 @@ class OSBS(object):
         return self.os.import_image(name, stream_import, tags=tags)
 
     @osbsapi
+    def import_image_tags(self, name, tags, repository, insecure=False):
+        """Import image tags from specified container repository.
+
+        :param name: str, name of ImageStream object
+        :param tags: iterable, tags to be imported
+        :param repository: str, remote location of container image
+                                in the format <registry>/<repository>
+        :param insecure: bool, indicates whenever registry is secure
+
+        :return: bool, whether tags were imported
+        """
+        stream_import_file = os.path.join(self.os_conf.get_build_json_store(),
+                                          'image_stream_import.json')
+        with open(stream_import_file) as f:
+            stream_import = json.load(f)
+        return self.os.import_image_tags(name, stream_import, tags,
+                                         repository, insecure)
+
+    @osbsapi
     def get_token(self):
         if self.os.use_kerberos:
             return self.os.get_oauth_token()
@@ -1059,7 +1085,8 @@ class OSBS(object):
         return self.os.get_image_stream_tag(tag_id)
 
     @osbsapi
-    def ensure_image_stream_tag(self, stream, tag_name, scheduled=False):
+    def ensure_image_stream_tag(self, stream, tag_name, scheduled=False,
+                                source_registry=None, organization=None, base_image=None):
         """Ensures the tag is monitored in ImageStream
 
         :param stream: dict, ImageStream object
@@ -1067,14 +1094,46 @@ class OSBS(object):
                               ImageStream as prefix
         :param scheduled: bool, if True, importPolicy.scheduled will be
                                 set to True in ImageStreamTag
+        :param source_registry: dict, info about source registry
+        :param organization: str, oganization for registry
+        :param base_image: str, base image
         :return: bool, whether or not modifications were performed
         """
         img_stream_tag_file = os.path.join(self.os_conf.get_build_json_store(),
                                            'image_stream_tag.json')
         with open(img_stream_tag_file) as f:
             tag_template = json.load(f)
+
+        repository = None
+        registry = None
+        insecure = False
+
+        if source_registry:
+            registry = RegistryURI(source_registry['url']).docker_uri
+            insecure = source_registry.get('insecure', False)
+
+        if base_image and registry:
+            repository = self._get_enclosed_repo_with_source_registry(base_image,
+                                                                      registry, organization)
+
         return self.os.ensure_image_stream_tag(stream, tag_name, tag_template,
-                                               scheduled)
+                                               scheduled, repository=repository,
+                                               insecure=insecure)
+
+    def _get_enclosed_repo_with_source_registry(self, repository, registry, organization):
+        repo_without_registry = strip_registry_and_tag_from_image(repository)
+        if not registry.endswith('/'):
+            registry += '/'
+
+        if organization:
+            s = repo_without_registry.split('/', 1)
+
+            if len(s) == 2:
+                repo_without_registry = "{0}/{1}-{2}".format(organization, s[0], s[1])
+            else:
+                repo_without_registry = "{0}/{1}".format(organization, s[0])
+
+        return registry + repo_without_registry
 
     @osbsapi
     def get_image_stream(self, stream_id):
