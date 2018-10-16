@@ -547,6 +547,7 @@ class TestPluginsConfiguration(object):
             plugins, 'prebuild_plugins', 'add_filesystem', 'args')
         assert add_filesystem_args['repos'] == kwargs['yum_repourls']
         assert add_filesystem_args['from_task_id'] == kwargs['filesystem_koji_task_id']
+        assert add_filesystem_args['koji_target'] == kwargs['koji_target']
 
     def test_worker_custom_base_image(self, tmpdir):
         self.mock_repo_info()
@@ -569,6 +570,7 @@ class TestPluginsConfiguration(object):
         assert add_filesystem_args['repos'] == kwargs['yum_repourls']
         assert add_filesystem_args['from_task_id'] == kwargs['filesystem_koji_task_id']
         assert add_filesystem_args['architecture'] == kwargs['platform']
+        assert add_filesystem_args['koji_target'] == kwargs['koji_target']
 
     def test_prod_non_custom_base_image(self, tmpdir):
         self.mock_repo_info()

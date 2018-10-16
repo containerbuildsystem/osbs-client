@@ -230,6 +230,8 @@ class PluginsConfiguration(object):
                                          self.user_params.filesystem_koji_task_id.value)
             self.pt.set_plugin_arg_valid(phase, plugin, 'architecture',
                                          self.user_params.platform.value)
+            self.pt.set_plugin_arg_valid(phase, plugin, 'koji_target',
+                                         self.user_params.koji_target.value)
 
     def render_add_labels_in_dockerfile(self):
         phase = 'prebuild_plugins'
