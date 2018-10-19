@@ -209,9 +209,6 @@ class Configuration(object):
         return self._get_value("flatpak", self.conf_section, "flatpak",
                                is_bool_val=True)
 
-    def get_flatpak_base_image(self):
-        return self._get_value("flatpak_base_image", self.conf_section, "flatpak_base_image")
-
     def get_odcs_url(self):
         return self._get_deprecated("odcs_url", self.conf_section, "odcs_url")
 

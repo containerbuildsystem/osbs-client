@@ -189,7 +189,6 @@ class BuildSpec(BuildCommon):
         self.koji_kerberos_principal = BuildParam("koji_kerberos_principal", allow_none=True)
         self.koji_kerberos_keytab = BuildParam("koji_kerberos_keytab", allow_none=True)
         self.flatpak = BuildParam("flatpak", default=False)
-        self.flatpak_base_image = BuildParam("flatpak_base_image", allow_none=True)
         self.odcs_url = BuildParam("odcs_url", allow_none=True)
         self.odcs_insecure = BuildParam("odcs_insecure", allow_none=True)
         self.odcs_openidc_secret = BuildParam("odcs_openidc_secret", allow_none=True)
@@ -257,7 +256,6 @@ class BuildSpec(BuildCommon):
                    koji_use_kerberos=None, koji_kerberos_keytab=None,
                    koji_kerberos_principal=None, koji_task_id=None,
                    flatpak=False,
-                   flatpak_base_image=None,
                    odcs_url=None, odcs_insecure=False, odcs_openidc_secret=None,
                    odcs_ssl_secret=None,
                    pdc_url=None, pdc_insecure=False,
@@ -334,7 +332,6 @@ class BuildSpec(BuildCommon):
         self.koji_kerberos_keytab.value = koji_kerberos_keytab
         self.koji_task_id.value = koji_task_id
         self.flatpak.value = flatpak
-        self.flatpak_base_image.value = flatpak_base_image
         self.odcs_url.value = odcs_url
         self.odcs_insecure.value = odcs_insecure
         self.odcs_openidc_secret.value = odcs_openidc_secret

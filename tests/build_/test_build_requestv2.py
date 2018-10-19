@@ -791,19 +791,22 @@ class TestBuildRequestV2(object):
         BUILD_TYPE_WORKER,
         BUILD_TYPE_ORCHESTRATOR,
     ])
+    @pytest.mark.parametrize('flatpak', [True, False])
     @pytest.mark.parametrize('reactor_config_map', [
         None,
         {},
         {'registries_organization': 'organization_in_cm',
-         'source_registry': {'url': 'registry_in_cm'}}
+         'source_registry': {'url': 'registry_in_cm'}},
+        {'flatpak': {'base_image': 'flatpak_base_image'}},
     ])
     @pytest.mark.parametrize('reactor_config_override', [
         None,
         {},
         {'registries_organization': 'organization_in_override',
-         'source_registry': {'url': 'registry_in_override'}}
+         'source_registry': {'url': 'registry_in_override'}},
+        {'flatpak': {'base_image': 'flatpak_base_image'}},
     ])
-    def test_set_data_from_reactor_config(self, build_type, reactor_config_map,
+    def test_set_data_from_reactor_config(self, build_type, flatpak, reactor_config_map,
                                           reactor_config_override):
         build_request = BuildRequestV2(INPUTS_PATH)
         reactor_config_name = 'REACTOR_CONFIG'
@@ -814,21 +817,40 @@ class TestBuildRequestV2(object):
         kwargs['reactor_config_map'] = reactor_config_name
         kwargs['reactor_config_override'] = reactor_config_override
         kwargs['build_type'] = build_type
+        kwargs['flatpak'] = flatpak
 
         build_request.set_params(**kwargs)
 
-        build_request.render()
+        flatpak_raises = False
+        if flatpak:
+            if reactor_config_override:
+                if 'flatpak' not in reactor_config_override:
+                    flatpak_raises = True
+            elif reactor_config_map:
+                if 'flatpak' not in reactor_config_map:
+                    flatpak_raises = True
+            else:
+                flatpak_raises = True
+
+        if flatpak_raises:
+            with pytest.raises(OsbsValidationException):
+                build_request.render()
+            return
+        else:
+            build_request.render()
 
         expected_registry = None
         expected_organization = None
-        if reactor_config_override and 'source_registry' in reactor_config_override:
-            expected_registry = reactor_config_override['source_registry']
-        elif reactor_config_map and 'source_registry' in reactor_config_map:
-            expected_registry = reactor_config_map['source_registry']
-        if reactor_config_override and 'registries_organization' in reactor_config_override:
-            expected_organization = reactor_config_override['registries_organization']
-        elif reactor_config_map and 'registries_organization' in reactor_config_map:
-            expected_organization = reactor_config_map['registries_organization']
+        if reactor_config_override:
+            if 'source_registry' in reactor_config_override:
+                expected_registry = reactor_config_override['source_registry']
+            if 'registries_organization' in reactor_config_override:
+                expected_organization = reactor_config_override['registries_organization']
+        elif reactor_config_map:
+            if 'source_registry' in reactor_config_map:
+                expected_registry = reactor_config_map['source_registry']
+            if 'registries_organization' in reactor_config_map:
+                expected_organization = reactor_config_map['registries_organization']
 
         assert expected_registry == build_request.source_registry
         assert expected_organization == build_request.organization

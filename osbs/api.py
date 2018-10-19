@@ -563,7 +563,7 @@ class OSBS(object):
             utils.Labels.LABEL_TYPE_NAME: module_name,
             utils.Labels.LABEL_TYPE_COMPONENT: module_name,
             utils.Labels.LABEL_TYPE_VERSION: module_stream
-        }, self.build_conf.get_flatpak_base_image()
+        }, None
 
     def _do_create_prod_build(self, git_uri, git_ref,
                               git_branch,
@@ -641,7 +641,6 @@ class OSBS(object):
             koji_kerberos_keytab=self.build_conf.get_koji_kerberos_keytab(),
             koji_kerberos_principal=self.build_conf.get_koji_kerberos_principal(),
             flatpak=flatpak,
-            flatpak_base_image=self.build_conf.get_flatpak_base_image(),
             odcs_url=self.build_conf.get_odcs_url(),
             odcs_insecure=self.build_conf.get_odcs_insecure(),
             odcs_openidc_secret=self.build_conf.get_odcs_openidc_secret(),

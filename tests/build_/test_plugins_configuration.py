@@ -246,23 +246,16 @@ class TestPluginsConfiguration(object):
                               ([], 'release'),
                               ([42], None),
                               ([42, 2], None)])
-    @pytest.mark.parametrize('flatpak_base_image', (TEST_FLATPAK_BASE_IMAGE, None))
-    def test_render_flatpak(self, compose_ids, signing_intent, build_type, flatpak_base_image):
+    def test_render_flatpak(self, compose_ids, signing_intent, build_type):
         extra_args = {
             'flatpak': True,
             'compose_ids': compose_ids,
             'signing_intent': signing_intent,
-            'flatpak_base_image': flatpak_base_image,
             'base_image': TEST_FLATPAK_BASE_IMAGE,
             'build_type': build_type,
         }
 
-        if flatpak_base_image is None:
-            with pytest.raises(OsbsValidationException):
-                user_params = get_sample_user_params(extra_args)
-            return
-        else:
-            user_params = get_sample_user_params(extra_args)
+        user_params = get_sample_user_params(extra_args)
 
         self.mock_repo_info()
         build_json = PluginsConfiguration(user_params).render()
@@ -287,12 +280,8 @@ class TestPluginsConfiguration(object):
         else:
             assert args['signing_intent'] == signing_intent
 
-        if flatpak_base_image is not None:
-            plugin = get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
-            assert plugin
-
-            args = plugin['args']
-            assert args['base_image'] == TEST_FLATPAK_BASE_IMAGE
+        plugin = get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
+        assert plugin
 
         if build_type == BUILD_TYPE_ORCHESTRATOR:
             plugin = get_plugin(plugins, "prebuild_plugins", "bump_release")
@@ -467,7 +456,6 @@ class TestPluginsConfiguration(object):
     @pytest.mark.parametrize('additional_kwargs', (
         {
             'flatpak': True,
-            'flatpak_base_image': "fedora:latest",
         },
         {},
     ))
@@ -539,7 +527,6 @@ class TestPluginsConfiguration(object):
 
         if kwargs.get('flatpak', False):
             assert kwargs.get('flatpak') is True
-            assert kwargs.get('flatpak_base_image') == worker_config.get_flatpak_base_image()
 
     def test_prod_custom_base_image(self, tmpdir):
         kwargs = get_sample_prod_params()

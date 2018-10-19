@@ -1216,7 +1216,6 @@ class TestBuildRequest(object):
             'git_branch': TEST_GIT_BRANCH,
             'flatpak': True,
             'compose_ids': compose_ids,
-            'flatpak_base_image': TEST_FLATPAK_BASE_IMAGE,
             'odcs_url': "https://odcs.fedoraproject.org/odcs/1",
             'pdc_url': "https://pdc.fedoraproject.org/rest_api/v1",
             'user': "john-foo",
@@ -1271,7 +1270,7 @@ class TestBuildRequest(object):
         assert plugin
 
         args = plugin['args']
-        assert args['base_image'] == TEST_FLATPAK_BASE_IMAGE
+        assert args['base_image'] == '{{BASE_IMAGE}}'
 
         plugin = get_plugin(plugins, "prebuild_plugins", "koji")
         assert plugin
@@ -1674,7 +1673,6 @@ class TestBuildRequest(object):
         },
         {
             'flatpak': True,
-            'flatpak_base_image': "fedora:latest",
             'odcs_url': "https://odcs.fedoraproject.org/rest_api/v1",
             'odcs_insecure': True,
             'pdc_url': "https://pdc.fedoraproject.org/rest_api/v1",
@@ -1810,7 +1808,6 @@ class TestBuildRequest(object):
 
             if kwargs.get('flatpak', False):
                 assert kwargs.get('flatpak') is True
-                assert kwargs.get('flatpak_base_image') == worker_config.get_flatpak_base_image()
                 assert kwargs.get('odcs_url') == worker_config.get_odcs_url()
                 assert kwargs.get('odcs_insecure') == worker_config.get_odcs_insecure()
                 assert kwargs.get('pdc_url') == worker_config.get_pdc_url()

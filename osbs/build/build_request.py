@@ -284,7 +284,6 @@ class BuildRequest(object):
             'koji_hub': self.spec.kojihub.value,
             'koji_root': self.spec.kojiroot.value,
             'openshift_required_version': sanitize_version(self._openshift_required_version),
-            'flatpak_base_image': self.spec.flatpak_base_image.value,
             'odcs_url': self.spec.odcs_url.value,
             'odcs_insecure': self.spec.odcs_insecure.value,
             'pdc_url': self.spec.pdc_url.value,
@@ -733,9 +732,6 @@ class BuildRequest(object):
             if not self.spec.flatpak.value:
                 self.dj.remove_plugin(phase, plugin)
                 return
-
-            self.dj.dock_json_set_arg(phase, plugin, 'base_image',
-                                      self.spec.flatpak_base_image.value)
 
     def render_squash(self):
         phase = 'prepublish_plugins'

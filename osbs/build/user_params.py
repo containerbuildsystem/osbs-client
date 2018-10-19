@@ -37,7 +37,6 @@ class BuildUserParams(BuildCommon):
         self.customize_conf_path = BuildParam("customize_conf", allow_none=True,
                                               default=customize_conf or DEFAULT_CUSTOMIZE_CONF)
         self.flatpak = BuildParam('flatpak', default=False)
-        self.flatpak_base_image = BuildParam("flatpak_base_image", allow_none=True)
         self.git_branch = BuildParam('git_branch')
         self.git_ref = BuildParam('git_ref', default=DEFAULT_GIT_REF)
         self.git_uri = BuildParam('git_uri')
@@ -80,8 +79,7 @@ class BuildUserParams(BuildCommon):
                    platforms=None, platform=None, build_type=None,
                    koji_target=None, koji_task_id=None, filesystem_koji_task_id=None,
                    koji_parent_build=None, koji_upload_dir=None,
-                   flatpak=None, flatpak_base_image=None,
-                   reactor_config_map=None, reactor_config_override=None,
+                   flatpak=None, reactor_config_map=None, reactor_config_override=None,
                    yum_repourls=None, signing_intent=None, compose_ids=None,
                    isolated=None, scratch=None,
                    **kwargs):
@@ -126,14 +124,10 @@ class BuildUserParams(BuildCommon):
         self.koji_parent_build.value = koji_parent_build
         self.koji_upload_dir.value = koji_upload_dir
         self.flatpak.value = flatpak
-        self.flatpak_base_image.value = flatpak_base_image
         self.isolated.value = isolated
         self.scratch.value = scratch
 
-        if flatpak:
-            if not flatpak_base_image:
-                raise OsbsValidationException("faltpak_base_image must be provided")
-        else:
+        if not flatpak:
             if not base_image:
                 raise OsbsValidationException("base_image must be provided")
             self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
