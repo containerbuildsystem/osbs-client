@@ -1174,7 +1174,7 @@ class TestArrangementV4(TestArrangementV3):
                                 'flatpak_create_dockerfile', 'args')
 
         match_args = {
-            "base_image": TEST_FLATPAK_BASE_IMAGE,
+            "base_image": '{{BASE_IMAGE}}'
         }
         assert match_args == args
 
@@ -1192,7 +1192,6 @@ class TestArrangementV4(TestArrangementV3):
             assert build_kwargs['flatpak'] is True
 
             config_kwargs = args['config_kwargs']
-            assert config_kwargs['flatpak_base_image'] == TEST_FLATPAK_BASE_IMAGE
             assert config_kwargs['odcs_url'] == odcs_url
             assert config_kwargs['odcs_insecure'] == str(odcs_insecure)
             assert config_kwargs['pdc_url'] == pdc_url

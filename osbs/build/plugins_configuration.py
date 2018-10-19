@@ -308,10 +308,6 @@ class PluginsConfiguration(object):
                 self.pt.remove_plugin(phase, plugin)
                 return
 
-            # Preferrably set in the reactor config map
-            self.pt.set_plugin_arg_valid(phase, plugin, 'base_image',
-                                         self.user_params.flatpak_base_image.value)
-
     def render_flatpak_create_oci(self):
         phase = 'prepublish_plugins'
         plugin = 'flatpak_create_oci'
@@ -441,14 +437,7 @@ class PluginsConfiguration(object):
         self.pt.set_plugin_arg_valid(phase, plugin, 'platforms', self.user_params.platforms.value)
         self.pt.set_plugin_arg(phase, plugin, 'build_kwargs', build_kwargs)
 
-        # Parameters to be used as Configuration overrides for each worker
-        config_kwargs = {
-            'flatpak_base_image': self.user_params.flatpak_base_image.value,
-        }
-
-        # Remove empty values, and always convert to string for better interaction
-        # with Configuration class and JSON encoding
-        config_kwargs = dict((k, str(v)) for k, v in config_kwargs.items() if v is not None)
+        config_kwargs = {}
 
         if not self.user_params.build_imagestream.value:
             config_kwargs['build_image'] = self.user_params.build_image.value
