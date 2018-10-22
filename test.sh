@@ -44,7 +44,13 @@ fi
 
 # Install dependencies
 $RUN $PKG install -y $PKG_EXTRA
-$RUN $BUILDDEP -y osbs-client.spec
+[[ ${PYTHON_VERSION} == '3' ]] && WITH_PY3=1 || WITH_PY3=0
+if [[ ${OS} == 'centos' && ${OS_VERSION} == 6 ]]; then
+  # yum doesnt support --define option in centos 6
+  $RUN $BUILDDEP -y osbs-client.spec
+else
+  $RUN $BUILDDEP --define "with_python3 ${WITH_PY3}" -y osbs-client.spec
+fi
 if [[ $OS != "fedora" ]]; then
   # Install dependecies for test, as check is disabled for rhel
   $RUN yum install -y python-flexmock python-six python-dockerfile-parse python-requests python-requests-kerberos
