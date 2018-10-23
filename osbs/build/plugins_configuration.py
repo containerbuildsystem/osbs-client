@@ -468,6 +468,9 @@ class PluginsConfiguration(object):
             self.pt.set_plugin_arg_valid(phase, plugin, 'compose_ids',
                                          self.user_params.compose_ids.value)
 
+            self.pt.set_plugin_arg_valid(phase, plugin, 'signing_intent',
+                                         self.user_params.signing_intent.value)
+
     def render_squash(self):
         phase = 'prepublish_plugins'
         plugin = 'squash'
