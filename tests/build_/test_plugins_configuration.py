@@ -239,12 +239,19 @@ class TestPluginsConfiguration(object):
         assert get_plugins_from_build_json(build_json)
 
     @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
-    @pytest.mark.parametrize('compose_ids', (None, [], [42], [42, 2]))
+    @pytest.mark.parametrize(('compose_ids', 'signing_intent'),
+                             [(None, None),
+                              (None, 'release'),
+                              ([], None),
+                              ([], 'release'),
+                              ([42], None),
+                              ([42, 2], None)])
     @pytest.mark.parametrize('flatpak_base_image', (TEST_FLATPAK_BASE_IMAGE, None))
-    def test_render_flatpak(self, compose_ids, build_type, flatpak_base_image):
+    def test_render_flatpak(self, compose_ids, signing_intent, build_type, flatpak_base_image):
         extra_args = {
             'flatpak': True,
             'compose_ids': compose_ids,
+            'signing_intent': signing_intent,
             'flatpak_base_image': flatpak_base_image,
             'base_image': TEST_FLATPAK_BASE_IMAGE,
             'build_type': build_type,
@@ -274,6 +281,11 @@ class TestPluginsConfiguration(object):
             assert args['compose_ids'] == []
         else:
             assert args['compose_ids'] == compose_ids
+
+        if signing_intent is None:
+            assert 'signing_intent' not in args
+        else:
+            assert args['signing_intent'] == signing_intent
 
         if flatpak_base_image is not None:
             plugin = get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
