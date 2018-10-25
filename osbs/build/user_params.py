@@ -32,7 +32,6 @@ class BuildUserParams(BuildCommon):
         self.build_imagestream = BuildParam('build_imagestream')
         self.build_json_dir = BuildParam('build_json_dir', default=build_json_dir)
         self.build_type = BuildParam('build_type')
-        self.component = BuildParam('component')
         self.compose_ids = BuildParam("compose_ids", allow_none=True)
         self.customize_conf_path = BuildParam("customize_conf", allow_none=True,
                                               default=customize_conf or DEFAULT_CUSTOMIZE_CONF)
@@ -54,7 +53,6 @@ class BuildUserParams(BuildCommon):
         self.scratch = BuildParam('scratch', allow_none=True)
         self.signing_intent = BuildParam('signing_intent', allow_none=True)
         self.trigger_imagestreamtag = BuildParam('trigger_imagestreamtag')
-        self.user = UserParam()
         self.yum_repourls = BuildParam("yum_repourls")
         self.required_params = [
             self.build_json_dir,
