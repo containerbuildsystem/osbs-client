@@ -56,7 +56,7 @@ class BuildIDParam(BuildParam):
     def __init__(self):
         super(BuildIDParam, self).__init__(self.name)
 
-    @BuildParam.value.setter
+    @BuildParam.value.setter  # pylint: disable=no-member
     def value(self, val):  # pylint: disable=W0221
         # build ID has to conform to:
         #  * 63 chars at most
@@ -74,7 +74,7 @@ class BuildIDParam(BuildParam):
             logger.error("'%s' is not valid build ID", val)
             raise OsbsValidationException("Build ID '%s', doesn't match regex '%s'" %
                                           (val, build_id_re))
-        BuildParam.value.fset(self, val)
+        BuildParam.value.fset(self, val)  # pylint: disable=no-member
 
 
 class RegistryURIsParam(BuildParam):
@@ -89,10 +89,10 @@ class RegistryURIsParam(BuildParam):
     def __init__(self):
         super(RegistryURIsParam, self).__init__(self.name)
 
-    @BuildParam.value.setter
+    @BuildParam.value.setter  # pylint: disable=no-member
     def value(self, val):  # pylint: disable=W0221
         registry_uris = [RegistryURI(uri) for uri in val]
-        BuildParam.value.fset(self, registry_uris)
+        BuildParam.value.fset(self, registry_uris)  # pylint: disable=no-member
 
 
 class SourceRegistryURIParam(BuildParam):
@@ -101,9 +101,9 @@ class SourceRegistryURIParam(BuildParam):
     def __init__(self):
         super(SourceRegistryURIParam, self).__init__(self.name)
 
-    @BuildParam.value.setter
+    @BuildParam.value.setter  # pylint: disable=no-member
     def value(self, val):  # pylint: disable=W0221
-        BuildParam.value.fset(self, RegistryURI(val) if val else None)
+        BuildParam.value.fset(self, RegistryURI(val) if val else None)  # pylint: disable=no-member
 
 
 class BuildCommon(object):
