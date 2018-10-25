@@ -113,6 +113,8 @@ class BuildCommon(object):
         self.platform = BuildParam("platform", allow_none=True)
         self.arrangement_version = BuildParam("arrangement_version", allow_none=True)
         self.filesystem_koji_task_id = BuildParam("filesystem_koji_task_id", allow_none=True)
+        self.user = UserParam()
+        self.component = BuildParam('component')
         self.required_params = [
             self.koji_target,
         ]
@@ -156,8 +158,6 @@ class BuildSpec(BuildCommon):
         self.git_uri = BuildParam('git_uri')
         self.git_ref = BuildParam('git_ref', default=DEFAULT_GIT_REF)
         self.git_branch = BuildParam('git_branch')
-        self.user = UserParam()
-        self.component = BuildParam('component')
         self.registry_uris = RegistryURIsParam()
         self.registry_secrets = BuildParam('registry_secrets', allow_none=True)
         self.source_registry_uri = SourceRegistryURIParam()
