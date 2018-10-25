@@ -68,7 +68,9 @@ PLUGIN_VERIFY_MEDIA_KEY = 'verify_media'
 
 
 class ArrangementBase(object):
+    ARRANGEMENT_VERSION = None
     COMMON_PARAMS = {}
+    DEFAULT_PLUGINS = {}
     ORCHESTRATOR_ADD_PARAMS = {}
     WORKER_ADD_PARAMS = {}
 
