@@ -103,4 +103,6 @@ ignored-classes=requests.structures.LookupDict
 # supports qualified module names, as well as Unix pattern matching.
 ignored-modules=requests.packages,
                 responses,
-                docker
+                docker,
+                http.client,
+                six.moves

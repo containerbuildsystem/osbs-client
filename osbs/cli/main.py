@@ -463,7 +463,7 @@ def cmd_backup(args, osbs):
     dirname = time.strftime("osbs-backup-{0}-%Y-%m-%d-%H%M%S"
                             .format(args.instance))
     if args.filename == '-':
-        outfile = sys.stdout.buffer if PY3 else sys.stdout
+        outfile = sys.stdout.buffer if PY3 else sys.stdout  # pylint: disable=no-member
     elif args.filename:
         outfile = args.filename
     else:
@@ -490,7 +490,7 @@ def cmd_backup(args, osbs):
 
 def cmd_restore(args, osbs):
     if args.BACKUP_ARCHIVE == '-':
-        infile = sys.stdin.buffer if PY3 else sys.stdin
+        infile = sys.stdin.buffer if PY3 else sys.stdin  # pylint: disable=no-member
     else:
         infile = args.BACKUP_ARCHIVE
     asciireader = codecs.getreader('ascii')
