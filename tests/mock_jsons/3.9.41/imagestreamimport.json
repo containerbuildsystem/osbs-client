@@ -40,7 +40,7 @@
                         "DockerVersion": "1.12.5",
                         "Parent": "b6dc5ac173e88389336148451c2d8b85631faa2cd1c1faede7790f7edfd20e27",
                         "Created": "2017-10-10T18:19:56Z",
-                        "Author": "Red Hat, Inc.",
+                        "Author": "Example, Inc.",
                         "apiVersion": "1.0",
                         "Architecture": "amd64",
                         "ContainerConfig": {
@@ -51,8 +51,8 @@
                             ],
                             "Hostname": "f8377a82acd3",
                             "Labels": {
-                                "com.redhat.component": "rsyslog-docker",
-                                "authoritative-source-url": "registry.access.redhat.com",
+                                "com.example.component": "rsyslog-docker",
+                                "authoritative-source-url": "registry.example.com",
                                 "distribution-scope": "private",
                                 "run": "docker run -d --privileged --name NAME --net=host --pid=host -v /etc/pki/rsyslog:/etc/pki/rsyslog -v /etc/rsyslog.conf:/etc/rsyslog.conf -v /etc/sysconfig/rsyslog:/etc/sysconfig/rsyslog -v /etc/rsyslog.d:/etc/rsyslog.d -v /var/log:/var/log -v /var/lib/rsyslog:/var/lib/rsyslog -v /run:/run -v /etc/machine-id:/etc/machine-id -v /etc/localtime:/etc/localtime -e IMAGE=IMAGE -e NAME=NAME --restart=always IMAGE /bin/rsyslog.sh",
                                 "name": "lucarval/rsyslog",
@@ -64,9 +64,9 @@
                                 "install": "docker run --rm --privileged -v /:/host -e HOST=/host -e IMAGE=IMAGE -e NAME=NAME IMAGE /bin/install.sh",
                                 "uninstall": "docker run --rm --privileged -v /:/host -e HOST=/host -e IMAGE=IMAGE -e NAME=NAME IMAGE /bin/uninstall.sh",
                                 "release": "104",
-                                "vendor": "Red Hat, Inc.",
+                                "vendor": "Example, Inc.",
                                 "build-date": "2017-10-10T18:17:47.804500",
-                                "com.redhat.build-host": "rcm-img-docker03-test.build.eng.bos.redhat.com"
+                                "com.example.build-host": "files.example.com"
                             },
                             "Image": "sha256:21f2e1b1ff939b055fcd2e8427ecaac78996d392b35117b8393ae3f09a5180fc",
                             "Env": [
@@ -80,8 +80,8 @@
                             ],
                             "Hostname": "f8377a82acd3",
                             "Labels": {
-                                "com.redhat.component": "rsyslog-docker",
-                                "authoritative-source-url": "registry.access.redhat.com",
+                                "com.example.component": "rsyslog-docker",
+                                "authoritative-source-url": "registry.example.com",
                                 "distribution-scope": "private",
                                 "run": "docker run -d --privileged --name NAME --net=host --pid=host -v /etc/pki/rsyslog:/etc/pki/rsyslog -v /etc/rsyslog.conf:/etc/rsyslog.conf -v /etc/sysconfig/rsyslog:/etc/sysconfig/rsyslog -v /etc/rsyslog.d:/etc/rsyslog.d -v /var/log:/var/log -v /var/lib/rsyslog:/var/lib/rsyslog -v /run:/run -v /etc/machine-id:/etc/machine-id -v /etc/localtime:/etc/localtime -e IMAGE=IMAGE -e NAME=NAME --restart=always IMAGE /bin/rsyslog.sh",
                                 "name": "lucarval/rsyslog",
@@ -93,9 +93,9 @@
                                 "install": "docker run --rm --privileged -v /:/host -e HOST=/host -e IMAGE=IMAGE -e NAME=NAME IMAGE /bin/install.sh",
                                 "uninstall": "docker run --rm --privileged -v /:/host -e HOST=/host -e IMAGE=IMAGE -e NAME=NAME IMAGE /bin/uninstall.sh",
                                 "release": "104",
-                                "vendor": "Red Hat, Inc.",
+                                "vendor": "Example, Inc.",
                                 "build-date": "2017-10-10T18:17:47.804500",
-                                "com.redhat.build-host": "rcm-img-docker03-test.build.eng.bos.redhat.com"
+                                "com.example.build-host": "files.example.com"
                             },
                             "Image": "8d8e1f6078d4f190d4cce134a201a33acb7bc656a6caabd696e7fef9356066be",
                             "Env": [
