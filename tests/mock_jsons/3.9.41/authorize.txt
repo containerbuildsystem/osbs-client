@@ -1,0 +1,11 @@
+HTTP/1.1 302 Found
+Date: Tue, 16 Jun 2015 11:04:04 GMT
+Server: Apache/2.4.6 (Red Hat Enterprise Linux) OpenSSL/1.0.1e-fips mod_auth_kerb/5.4
+Cache-Control: no-cache, no-store, max-age=0, must-revalidate
+Expires: Mon, 01 Jan 1990 00:00:00 GMT
+Location: https://192.168.121.25:8443/oauth/token/display#access_token=8AXS_8oE1Z4pd0ipCkEj9fwClJd_UG4ZppqYj2OVh3Q&expires_in=86400&token_type=bearer
+Pragma: no-cache
+Content-Length: 0
+Content-Type: text/plain; charset=utf-8
+Set-Cookie: ssn=MTQzNDQ1MjY0NHxaOHJTOTVoeFFpQWRzcExvMWlabnh2ZHhhRnVBVDJEZGpwc01JanVCMGQ2WkUtU3FYX05lWDlPV0pDOXpnYlJ3U2xoMDdESkk0RjVCbEwyMmZ0dFAyVGJWb0dyXzNUNThOMDVvbXNUNmN2cE1qTUZGYV8zOGVZZFA3SDFYZm44bFFRPT18mHokUTLdolcRC__Ak8sVlV2wgnj2iLVdIpiWsX-wxTE=; Path=/; Expires=Tue, 16 Jun 2015 11:09:04 UTC; Max-Age=300; HttpOnly; Secure
+

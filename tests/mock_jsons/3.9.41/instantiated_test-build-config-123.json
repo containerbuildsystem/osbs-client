@@ -1,0 +1,61 @@
+{
+    "apiVersion": "v1",
+    "kind": "Build",
+    "metadata": {
+        "creationTimestamp": "2015-08-20T16:41:05Z",
+        "labels": {
+            "buildconfig": "test-build-config-123",
+            "is_autorebuild": "false"
+        },
+        "name": "test-build-123",
+        "namespace": "default",
+        "resourceVersion": "2937",
+        "selfLink": "/oapi/v1/namespaces/default/buildconfigs/test-build-config-123/instantiate",
+        "uid": "3ff4b700-475a-11e5-acf2-52540080e6f8"
+    },
+    "spec": {
+        "output": {
+            "to": {
+                "kind": "DockerImage",
+                "name": "localhost:5000/twaugh/component:20150820174104"
+            }
+        },
+        "resources": {},
+        "serviceAccount": "builder",
+        "source": {
+            "git": {
+                "ref": "master",
+                "uri": "https://github.com/TomasTomecek/docker-hello-world.git"
+            },
+            "type": "Git"
+        },
+        "strategy": {
+            "customStrategy": {
+                "env": [
+                    {
+                        "name": "ATOMIC_REACTOR_PLUGINS",
+                        "value": "{\"prebuild_plugins\": [{\"args\": {}, \"name\": \"pull_base_image\"}, {\"name\": \"change_from_in_dockerfile\"}, {\"name\": \"dockerfile_content\", \"required\": false}], \"exit_plugins\": [{\"args\": {\"url\": \"https://osbs.localdomain:8443/\", \"verify_ssl\": false, \"use_auth\": false}, \"name\": \"store_metadata_in_osv3\"}, {\"name\": \"remove_built_image\"}], \"postbuild_plugins\": [{\"args\": {\"image_id\": \"BUILT_IMAGE_ID\"}, \"name\": \"all_rpm_packages\"}]}"
+                    },
+                    {
+                        "name": "OPENSHIFT_CUSTOM_BUILD_BASE_IMAGE",
+                        "value": "buildroot:latest"
+                    }
+                ],
+                "exposeDockerSocket": true,
+                "from": {
+                    "kind": "DockerImage",
+                    "name": "buildroot:latest"
+                }
+            },
+            "type": "Custom"
+        }
+    },
+    "status": {
+        "config": {
+            "kind": "BuildConfig",
+            "name": "test-build-config-123",
+            "namespace": "default"
+        },
+        "phase": "New"
+    }
+}
