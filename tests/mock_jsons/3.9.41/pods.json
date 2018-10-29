@@ -1,0 +1,144 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "metadata": {
+                "annotations": {
+                    "openshift.io/build.name": "build-20150820173208-1",
+                    "openshift.io/scc": "privileged"
+                },
+                "creationTimestamp": "2015-09-02T14:34:50Z",
+                "labels": {
+                    "openshift.io/build.name": "build-20150820173208-1"
+                },
+                "name": "build-20150820173208-1-build",
+                "namespace": "default",
+                "resourceVersion": "982",
+                "selfLink": "/api/v1/namespaces/default/pods/build-20150820173208-1-build",
+                "uid": "c4904f51-517f-11e5-88ed-52540080e6f8"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "env": [
+                            {
+                                "name": "BUILD",
+                                "value": "{\"kind\":\"Build\",\"apiVersion\":\"v1\",...}"
+                            },
+                            {
+                                "name": "SOURCE_REPOSITORY",
+                                "value": "https://github.com/TomasTomecek/docker-hello-world.git"
+                            },
+                            {
+                                "name": "ATOMIC_REACTOR_PLUGINS",
+                                "value": "{\"prebuild_plugins\": [{\"args\": {}, \"name\": \"pull_base_image\"}, {\"name\": \"change_from_in_dockerfile\"}, {\"name\": \"dockerfile_content\", \"required\": false}], \"exit_plugins\": [{\"args\": {\"url\": \"https://osbs.localdomain:8443/\", \"verify_ssl\": false, \"use_auth\": false}, \"name\": \"store_metadata_in_osv3\"}, {\"name\": \"remove_built_image\"}], \"postbuild_plugins\": [{\"args\": {\"image_id\": \"BUILT_IMAGE_ID\"}, \"name\": \"all_rpm_packages\"}]}"
+                            },
+                            {
+                                "name": "OPENSHIFT_CUSTOM_BUILD_BASE_IMAGE",
+                                "value": "buildroot:latest"
+                            },
+                            {
+                                "name": "DOCKER_SOCKET",
+                                "value": "/var/run/docker.sock"
+                            },
+                            {
+                                "name": "SOURCE_URI",
+                                "value": "https://github.com/TomasTomecek/docker-hello-world.git"
+                            },
+                            {
+                                "name": "SOURCE_REF",
+                                "value": "master"
+                            },
+                            {
+                                "name": "OUTPUT_REGISTRY"
+                            },
+                            {
+                                "name": "OUTPUT_IMAGE",
+                                "value": "twaugh/component:20150820174104"
+                            }
+                        ],
+                        "image": "buildroot:latest",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "custom-build",
+                        "resources": {},
+                        "securityContext": {
+                            "privileged": true
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/run/docker.sock",
+                                "name": "docker-socket"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "builder-token-p62zo",
+                                "readOnly": true
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "host": "osbs.localdomain",
+                "imagePullSecrets": [
+                    {
+                        "name": "builder-dockercfg-7zusx"
+                    }
+                ],
+                "nodeName": "osbs.localdomain",
+                "restartPolicy": "Never",
+                "serviceAccount": "builder",
+                "serviceAccountName": "builder",
+                "volumes": [
+                    {
+                        "hostPath": {
+                            "path": "/var/run/docker.sock"
+                        },
+                        "name": "docker-socket"
+                    },
+                    {
+                        "name": "builder-token-p62zo",
+                        "secret": {
+                            "secretName": "builder-token-p62zo"
+                        }
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "status": "False",
+                        "type": "Ready"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "containerID": "docker://d9e6dee11d7acf361f44572d839a5108034693bc902eb2d490b0b2e6f1b6d45e",
+                        "image": "buildroot:latest",
+                        "imageID": "docker://8daf4790420f666bea3bfe56d1df720d9bc03e0a85de6278eab5f13a4641b509",
+                        "lastState": {},
+                        "name": "custom-build",
+                        "ready": false,
+                        "restartCount": 0,
+                        "state": {
+                            "terminated": {
+                                "containerID": "docker://d9e6dee11d7acf361f44572d839a5108034693bc902eb2d490b0b2e6f1b6d45e",
+                                "exitCode": 1,
+                                "finishedAt": "2015-09-02T14:35:26Z",
+                                "startedAt": "2015-09-02T14:34:51Z"
+                            }
+                        }
+                    }
+                ],
+                "hostIP": "192.168.124.195",
+                "phase": "Failed",
+                "startTime": "2015-09-02T14:34:50Z"
+            }
+        }
+    ],
+    "kind": "PodList",
+    "metadata": {
+        "resourceVersion": "1970",
+        "selfLink": "/api/v1/namespaces/default/pods/"
+    }
+}
