@@ -1451,7 +1451,6 @@ class TestArrangementV6(ArrangementBase):
                 PLUGIN_PULP_PULL_KEY,
                 PLUGIN_VERIFY_MEDIA_KEY,
                 'import_image',
-                'delete_from_registry',
                 PLUGIN_KOJI_IMPORT_PLUGIN_KEY,
                 'koji_tag_build',
                 'store_metadata_in_osv3',

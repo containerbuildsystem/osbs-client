@@ -97,9 +97,6 @@
       "required": false
     },
     {
-      "name": "delete_from_registry"
-    },
-    {
       "name": "koji_import"
     },
     {
