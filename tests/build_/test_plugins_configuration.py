@@ -238,6 +238,37 @@ class TestPluginsConfiguration(object):
 
         assert get_plugins_from_build_json(build_json)
 
+    flatpak_plugins = [
+        ("ow", "prebuild_plugins", "resolve_module_compose"),
+        ("ow", "prebuild_plugins", "flatpak_create_dockerfile"),
+        ("w", "prepublish_plugins", "flatpak_create_oci"),
+    ]
+
+    not_flatpak_plugins = [
+        ("o", "prebuild_plugins", "resolve_composes"),
+        ("w", "prepublish_plugins", "squash"),
+        ("w", "postbuild_plugins", "pulp_push"),
+        ("o", "postbuild_plugins", "pulp_tag"),
+        ("o", "postbuild_plugins", "pulp_sync"),
+        ("o", "exit_plugins", "pulp_publish"),
+        ("o", "exit_plugins", "pulp_pull"),
+        ("o", "exit_plugins", "delete_from_registry"),
+        ("o", "exit_plugins", "import_image"),
+    ]
+
+    def check_plugin_presence(self, build_type, plugins, invited_plugins, uninvited_plugins):
+        for _, phase, plugin in uninvited_plugins:
+            with pytest.raises(NoSuchPluginException):
+                plugin = get_plugin(plugins, phase, plugin)
+
+        type_letter = 'o' if build_type == BUILD_TYPE_ORCHESTRATOR else 'w'
+        for types, phase, plugin in invited_plugins:
+            if type_letter in types:
+                assert get_plugin(plugins, phase, plugin)
+            else:
+                with pytest.raises(NoSuchPluginException):
+                    get_plugin(plugins, phase, plugin)
+
     @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
     @pytest.mark.parametrize(('compose_ids', 'signing_intent'),
                              [(None, None),
@@ -269,11 +300,11 @@ class TestPluginsConfiguration(object):
 
         plugins = get_plugins_from_build_json(build_json)
 
+        self.check_plugin_presence(build_type, plugins,
+                                   self.flatpak_plugins, self.not_flatpak_plugins)
+
         plugin = get_plugin(plugins, "prebuild_plugins", "resolve_module_compose")
         assert plugin
-
-        with pytest.raises(NoSuchPluginException):
-            assert get_plugin(plugins, "prebuild_plugins", "resolve_composes")
 
         args = plugin['args']
         # compose_ids will always have a value of at least []
@@ -300,8 +331,6 @@ class TestPluginsConfiguration(object):
 
             args = plugin['args']
             assert args['append'] is True
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
         else:
             plugin = get_plugin(plugins, "prebuild_plugins", "koji")
             assert plugin
@@ -309,14 +338,8 @@ class TestPluginsConfiguration(object):
             args = plugin['args']
             assert args['target'] == "koji-target"
 
-            assert get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
             with pytest.raises(NoSuchPluginException):
                 plugin = get_plugin(plugins, "prebuild_plugins", "bump_release")
-
-        with pytest.raises(NoSuchPluginException):
-            assert get_plugin(plugins, "prepublish_plugins", "squash")
-        with pytest.raises(NoSuchPluginException):
-            assert get_plugin(plugins, "postbuild_plugins", "import_image")
 
     @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
     @pytest.mark.parametrize('flatpak_base_image', (TEST_FLATPAK_BASE_IMAGE, None))
@@ -332,18 +355,8 @@ class TestPluginsConfiguration(object):
 
         plugins = get_plugins_from_build_json(build_json)
 
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "prebuild_plugins", "resolve_module_compose")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
-        if build_type == BUILD_TYPE_ORCHESTRATOR:
-            with pytest.raises(NoSuchPluginException):
-                assert get_plugin(plugins, "prepublish_plugins", "squash")
-            assert get_plugin(plugins, "exit_plugins", "import_image")
-        else:
-            assert get_plugin(plugins, "prepublish_plugins", "squash")
+        self.check_plugin_presence(build_type, plugins,
+                                   self.not_flatpak_plugins, self.flatpak_plugins)
 
     @pytest.mark.parametrize(('disabled', 'release'), (
         (False, None),
