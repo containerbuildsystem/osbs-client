@@ -2314,6 +2314,7 @@ class TestBuildRequest(object):
         ('fedora:latest', False),
         ('koji/image-build', True),
         ('koji/image-build:spam.conf', True),
+        ('scratch', False),
     ])
     def test_prod_is_custom_base_image(self, tmpdir, base_image, is_custom):
         build_request = BuildRequest(INPUTS_PATH)
@@ -2326,6 +2327,45 @@ class TestBuildRequest(object):
         build_json = build_request.render()  # noqa
 
         assert build_request.is_custom_base_image() == is_custom
+
+    @pytest.mark.parametrize(('base_image', 'is_from_scratch'), [
+        ('fedora', False),
+        ('fedora:latest', False),
+        ('koji/image-build', False),
+        ('koji/image-build:spam.conf', False),
+        ('scratch', True),
+    ])
+    def test_prod_is_from_scratch_image(self, base_image, is_from_scratch):
+        build_request = BuildRequest(INPUTS_PATH)
+        # Safe to call prior to build image being set
+        assert build_request.is_from_scratch_image() is False
+
+        kwargs = get_sample_prod_params()
+        kwargs['base_image'] = base_image
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()  # noqa
+
+        assert build_request.is_from_scratch_image() == is_from_scratch
+
+    @pytest.mark.parametrize('base_image, msg, keep_triggers', (
+        ('fedora', None, True),
+        ('scratch', 'from request because FROM scratch image', False),
+        ('koji/image-build', 'from request because custom base image', False),
+    ))
+    def test_adjust_for_triggers_base_builds(self, tmpdir, caplog, base_image, msg, keep_triggers):
+        """Test if triggers are properly adjusted for base and FROM scratch builds"""
+        self.create_image_change_trigger_json(str(tmpdir))
+        build_request = BuildRequest(str(tmpdir))
+
+        kwargs = get_sample_prod_params()
+        kwargs['base_image'] = base_image
+        build_request.set_params(**kwargs)
+        build_request.render()  # triggers are adjusted in render method
+
+        assert bool(build_request.template['spec'].get('triggers', [])) == keep_triggers
+
+        if msg is not None:
+            assert msg in caplog.text()
 
     def test_prod_missing_kojihub__custom_base_image(self, tmpdir):
         build_request = BuildRequest(INPUTS_PATH)
