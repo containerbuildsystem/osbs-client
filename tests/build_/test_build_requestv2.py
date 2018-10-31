@@ -453,6 +453,24 @@ class TestBuildRequestV2(object):
         # Verify the triggers are now disabled
         assert "triggers" not in build_json["spec"]
 
+    @pytest.mark.parametrize('use_auth', (True, False, None))
+    def test_render_from_scratch_image_with_trigger(self, tmpdir,  use_auth):
+        self.create_image_change_trigger_json(str(tmpdir))
+        build_request = BuildRequestV2(str(tmpdir))
+
+        kwargs = get_sample_prod_params()
+        kwargs['base_image'] = 'scratch'
+        if use_auth is not None:
+            kwargs['use_auth'] = use_auth
+
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+
+        assert build_request.is_from_scratch_image() is True
+
+        # Verify the triggers are now disabled
+        assert "triggers" not in build_json["spec"]
+
     @pytest.mark.parametrize(('extra_kwargs', 'expected_error'), (
         ({'isolated': True}, 'release parameter is required'),
         ({'isolated': True, 'release': '1'}, 'must be in the format'),

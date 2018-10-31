@@ -502,6 +502,12 @@ class BuildRequest(object):
         return bool(re.match('^koji/image-build(:.*)?$',
                              self.base_image or ''))
 
+    def is_from_scratch_image(self):
+        """
+        Returns whether or not this is a build `FROM scratch`
+        """
+        return self.base_image == 'scratch'
+
     def adjust_for_registry_api_versions(self):
         """
         Enable/disable plugins depending on supported registry API versions
@@ -561,8 +567,11 @@ class BuildRequest(object):
         ]
 
         should_remove = False
-        if triggers and self.is_custom_base_image():
-            msg = "removing %s from request because custom base image"
+        if triggers and (self.is_custom_base_image() or self.is_from_scratch_image()):
+            if self.is_custom_base_image():
+                msg = "removing %s from request because custom base image"
+            elif self.is_from_scratch_image():
+                msg = 'removing %s from request because FROM scratch image'
             del self.template['spec']['triggers']
             should_remove = True
 
@@ -643,7 +652,6 @@ class BuildRequest(object):
             plugins.append(("prebuild_plugins", "koji_parent"))
             plugins.append(("prebuild_plugins", "inject_parent_image"))
             msg = "removing %s from custom image build request"
-
         else:
             # Plugins not needed for building non base images.
             plugins.append(("prebuild_plugins", "add_filesystem"))

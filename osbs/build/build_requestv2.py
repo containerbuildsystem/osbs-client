@@ -267,7 +267,8 @@ class BuildRequestV2(BuildRequest):
         self.set_data_from_reactor_config()
 
         # Adjust triggers for custom base image
-        if self.template['spec'].get('triggers', []) and self.is_custom_base_image():
+        if (self.template['spec'].get('triggers', [])
+                and (self.is_custom_base_image() or self.is_from_scratch_image())):
             del self.template['spec']['triggers']
 
         self.adjust_for_repo_info()
