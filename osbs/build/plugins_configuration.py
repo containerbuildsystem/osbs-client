@@ -219,6 +219,29 @@ class PluginsConfiguration(object):
         for when, which in plugins:
             self.pt.remove_plugin(when, which, msg)
 
+    def adjust_for_flatpak(self):
+        """
+        Remove plugins that don't work when building Flatpaks
+        """
+        if self.user_params.flatpak.value:
+            remove_plugins = [
+                ("prebuild_plugins", "resolve_composes"),
+                # We'll extract the filesystem anyways for a Flatpak instead of exporting
+                # the docker image directly, so squash just slows things down.
+                ("prepublish_plugins", "squash"),
+                # Pulp can't currently handle Flatpaks, which are OCI images
+                ("postbuild_plugins", "pulp_push"),
+                ("postbuild_plugins", "pulp_tag"),
+                ("postbuild_plugins", "pulp_sync"),
+                ("exit_plugins", "pulp_publish"),
+                ("exit_plugins", "pulp_pull"),
+                # delete_from_registry is used for deleting builds from the temporary registry
+                # that pulp_sync mirrors from.
+                ("exit_plugins", "delete_from_registry"),
+            ]
+            for when, which in remove_plugins:
+                self.pt.remove_plugin(when, which, 'not needed for flatpak build')
+
     def render_add_filesystem(self):
         phase = 'prebuild_plugins'
         plugin = 'add_filesystem'
@@ -437,10 +460,6 @@ class PluginsConfiguration(object):
         if not self.pt.has_plugin_conf(phase, plugin):
             return
 
-        if self.user_params.flatpak.value:
-            self.pt.remove_plugin(phase, plugin, 'flatpak build')
-            return
-
         if self.user_params.yum_repourls.value:
             self.pt.remove_plugin(phase, plugin, 'yum repourls specified in user parameters')
             return
@@ -468,16 +487,6 @@ class PluginsConfiguration(object):
 
             self.pt.set_plugin_arg_valid(phase, plugin, 'signing_intent',
                                          self.user_params.signing_intent.value)
-
-    def render_squash(self):
-        phase = 'prepublish_plugins'
-        plugin = 'squash'
-
-        if self.user_params.flatpak.value:
-            # We'll extract the filesystem anyways for a Flatpak instead of exporting
-            # the docker image directly, so squash just slows things down.
-            self.pt.remove_plugin(phase, plugin, 'flatpak build requested')
-            return
 
     def render_tag_from_config(self):
         """Configure tag_from_config plugin"""
@@ -515,6 +524,7 @@ class PluginsConfiguration(object):
         self.adjust_for_scratch()
         self.adjust_for_isolated()
         self.adjust_for_custom_base_image()
+        self.adjust_for_flatpak()
 
         # Set parameters on each plugin as needed
         self.render_add_filesystem()
@@ -532,6 +542,5 @@ class PluginsConfiguration(object):
         self.render_orchestrate_build()
         self.render_resolve_composes()
         self.render_resolve_module_compose()
-        self.render_squash()
         self.render_tag_from_config()
         return self.pt.to_json()
