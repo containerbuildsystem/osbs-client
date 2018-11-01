@@ -96,6 +96,24 @@ class MockDfParser(object):
     baseimage = 'fedora23/python'
 
 
+class MockDfParserFromScratch(object):
+    labels = {
+        'name': 'fedora23/something',
+        'com.redhat.component': TEST_COMPONENT,
+        'version': TEST_VERSION,
+    }
+    baseimage = 'scratch'
+
+
+class MockDfParserBaseImage(object):
+    labels = {
+        'name': 'fedora23/something',
+        'com.redhat.component': TEST_COMPONENT,
+        'version': TEST_VERSION,
+    }
+    baseimage = 'koji/image-build'
+
+
 class TestOSBS(object):
 
     def mock_repo_info(self, mock_df_parser=None, mock_config=None):
@@ -2860,3 +2878,57 @@ class TestOSBS(object):
                                        TEST_GIT_BRANCH, TEST_USER,
                                        TEST_COMPONENT, TEST_TARGET,
                                        TEST_ARCH)
+
+    def test_do_create_prod_build_isolated_from_scratch(self, osbs):  # noqa
+        (flexmock(utils)
+         .should_receive('get_repo_info')
+         .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+         .and_return(self.mock_repo_info(mock_df_parser=MockDfParserFromScratch())))
+
+        inner_template = DEFAULT_INNER_TEMPLATE
+        outer_template = DEFAULT_OUTER_TEMPLATE
+        customize_conf = DEFAULT_CUSTOMIZE_CONF
+
+        (flexmock(osbs)
+         .should_call('get_build_request')
+         .with_args(inner_template=inner_template,
+                    outer_template=outer_template,
+                    customize_conf=customize_conf,
+                    arrangement_version=None)
+         .once())
+
+        with pytest.raises(ValueError) as exc:
+            osbs._do_create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                       TEST_GIT_BRANCH, TEST_USER,
+                                       inner_template=inner_template,
+                                       outer_template=outer_template,
+                                       customize_conf=customize_conf,
+                                       isolated=True)
+        assert '"FROM scratch" image build cannot be isolated' in str(exc)
+
+    def test_do_create_prod_build_isolated_base_image(self, osbs):  # noqa
+        (flexmock(utils)
+         .should_receive('get_repo_info')
+         .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+         .and_return(self.mock_repo_info(mock_df_parser=MockDfParserBaseImage())))
+
+        inner_template = DEFAULT_INNER_TEMPLATE
+        outer_template = DEFAULT_OUTER_TEMPLATE
+        customize_conf = DEFAULT_CUSTOMIZE_CONF
+
+        (flexmock(osbs)
+         .should_call('get_build_request')
+         .with_args(inner_template=inner_template,
+                    outer_template=outer_template,
+                    customize_conf=customize_conf,
+                    arrangement_version=None)
+         .once())
+
+        with pytest.raises(ValueError) as exc:
+            osbs._do_create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
+                                       TEST_GIT_BRANCH, TEST_USER,
+                                       inner_template=inner_template,
+                                       outer_template=outer_template,
+                                       customize_conf=customize_conf,
+                                       isolated=True)
+        assert 'Base image build cannot be isolated' in str(exc)
