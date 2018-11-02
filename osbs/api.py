@@ -80,6 +80,23 @@ logger = logging.getLogger(__name__)
 LogEntry = namedtuple('LogEntry', ['platform', 'line'])
 
 
+def validate_arrangement_version(arrangement_version):
+    """Validate if the arrangement_version is supported
+
+    Shows a warning when version is deprecated
+
+    :param int|None arrangement_version: version to be validated
+    :raises ValueError: when version is not supported
+    """
+    if arrangement_version is None:
+        return
+
+    if arrangement_version <= 5:
+        # TODO: raise as ValueError in release 0.54+
+        warnings.warn("arrangement_version <= 5 is deprecated and will be removed"
+                      " in release 0.54", DeprecationWarning)
+
+
 class OSBS(object):
     """
     Note: all API methods return osbs.http.Response object. This is, due to historical
@@ -193,6 +210,8 @@ class OSBS(object):
         """
         if build_type is not None:
             warnings.warn("build types are deprecated, do not use the build_type argument")
+
+        validate_arrangement_version(arrangement_version)
 
         if not arrangement_version or arrangement_version < REACTOR_CONFIG_ARRANGEMENT_VERSION:
             build_request = BuildRequest(
@@ -760,7 +779,8 @@ class OSBS(object):
         :return: BuildResponse instance
         """
         warnings.warn("prod (all-in-one) builds are deprecated, "
-                      "please use create_orchestrator_build")
+                      "please use create_orchestrator_build "
+                      "(support will be removed in version 0.54)")
         return self._do_create_prod_build(*args, **kwargs)
 
     @osbsapi

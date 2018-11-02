@@ -24,7 +24,7 @@ import time
 import yaml
 from tempfile import NamedTemporaryFile
 
-from osbs.api import OSBS, osbsapi
+from osbs.api import OSBS, osbsapi, validate_arrangement_version
 from osbs.conf import Configuration
 from osbs.build.build_request import BuildRequest
 from osbs.build.build_response import BuildResponse
@@ -112,6 +112,22 @@ class MockDfParserBaseImage(object):
         'version': TEST_VERSION,
     }
     baseimage = 'koji/image-build'
+
+
+@pytest.mark.parametrize('version,warning,exception', (
+    (5, "arrangement_version <= 5 is deprecated and will be removed in release 0.54", None),
+    (6, None, None),
+))
+def test_validate_arrangement_version(recwarn, version, warning, exception):
+    """Test deprecation mechanism of arrangement version"""
+    if exception:
+        with pytest.raises(exception):
+            validate_arrangement_version(version)
+    else:
+        validate_arrangement_version(version)
+
+    if warning:
+        assert warning in str(recwarn.pop(DeprecationWarning))
 
 
 class TestOSBS(object):
