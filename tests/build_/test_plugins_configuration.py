@@ -252,7 +252,6 @@ class TestPluginsConfiguration(object):
         ("o", "postbuild_plugins", "pulp_sync"),
         ("o", "exit_plugins", "pulp_publish"),
         ("o", "exit_plugins", "pulp_pull"),
-        ("o", "exit_plugins", "delete_from_registry"),
         ("o", "exit_plugins", "import_image"),
     ]
 
