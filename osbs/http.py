@@ -184,7 +184,7 @@ class HttpStream(object):
                 yield line
         except (requests.exceptions.ChunkedEncodingError,
                 http_client.IncompleteRead):
-            raise StopIteration
+            return
 
     def close(self):
         if not self.closed:
