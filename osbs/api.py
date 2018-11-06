@@ -1322,10 +1322,8 @@ class OSBS(object):
         Raises exception on error
 
         :param name: str, name of configMap to delete from the server
-        :returns: True on success
         """
-        response = self.os.delete_config_map(name)
-        return response
+        self.os.delete_config_map(name)
 
     @contextmanager
     def retries_disabled(self):

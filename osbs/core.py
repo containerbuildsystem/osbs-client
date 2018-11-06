@@ -1021,6 +1021,7 @@ class Openshift(object):
         url = self._build_k8s_url("configmaps/%s" % config_name)
         response = self._delete(url, data='{}')
         check_response(response)
+        return response
 
 
 if __name__ == '__main__':
