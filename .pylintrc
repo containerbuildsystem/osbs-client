@@ -36,6 +36,8 @@ disable=I,
         bad-whitespace,  # pep8, nice to have
         bare-except,
         broad-except,
+        comprehension-escape, # throws false positives on 1.9.0 (Fedora 29)
+        exception-escape, # throws false positives on 1.9.0 (Fedora 29)
         dangerous-default-value,  # should be enabled
         deprecated-method,  # should be enabled
         dict-keys-not-iterating,  # py2/3 compatibility
