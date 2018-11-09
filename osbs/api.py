@@ -93,8 +93,8 @@ def validate_arrangement_version(arrangement_version):
 
     if arrangement_version <= 5:
         # TODO: raise as ValueError in release 0.54+
-        warnings.warn("arrangement_version <= 5 is deprecated and will be removed"
-                      " in release 0.54", DeprecationWarning)
+        logger.warning("arrangement_version <= 5 is deprecated and will be removed"
+                       " in release 0.54")
 
 
 class OSBS(object):
@@ -777,9 +777,9 @@ class OSBS(object):
         :param compose_ids: list<int>, ODCS composes used
         :return: BuildResponse instance
         """
-        warnings.warn("prod (all-in-one) builds are deprecated, "
-                      "please use create_orchestrator_build "
-                      "(support will be removed in version 0.54)")
+        logger.warning("prod (all-in-one) builds are deprecated, "
+                       "please use create_orchestrator_build "
+                       "(support will be removed in version 0.54)")
         return self._do_create_prod_build(*args, **kwargs)
 
     @osbsapi

@@ -118,7 +118,7 @@ class MockDfParserBaseImage(object):
     (5, "arrangement_version <= 5 is deprecated and will be removed in release 0.54", None),
     (6, None, None),
 ))
-def test_validate_arrangement_version(recwarn, version, warning, exception):
+def test_validate_arrangement_version(caplog, version, warning, exception):
     """Test deprecation mechanism of arrangement version"""
     if exception:
         with pytest.raises(exception):
@@ -127,7 +127,7 @@ def test_validate_arrangement_version(recwarn, version, warning, exception):
         validate_arrangement_version(version)
 
     if warning:
-        assert warning in str(recwarn.pop(DeprecationWarning))
+        assert warning in caplog.text()
 
 
 class TestOSBS(object):
