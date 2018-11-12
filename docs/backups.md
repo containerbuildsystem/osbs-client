@@ -26,6 +26,8 @@ It is recommended to perform restore on freshly installed OpenShift with no data
 
 ## Manually
 
+Manual backup routines are performed with the OpenShift Client (through the `oc` command), available in Fedora in the `origin-clients` package.
+
 ### Creating Backups
 
 Creating OSBS backups is very simple. To backup all relevant data, one needs to backup data using following commands.

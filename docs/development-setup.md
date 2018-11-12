@@ -7,9 +7,9 @@ For more options how to install and run OpenShift, please see [this page](https:
 
 We'll use the `oc cluster up` method, since it's very easy to use:
 
- 1. If you're on Fedora, you can install package origin:
+ 1. If you're on Fedora, you can install package origin-clients:
     ```
-    $ dnf install -y origin
+    $ dnf install -y origin-clients
     ```
     This package provides `oc` command.
 

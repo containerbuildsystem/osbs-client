@@ -40,12 +40,9 @@ Both OpenShift Origin or OpenShift Enterprise can be used to host OSBS.
 See the [upstream documentation](https://docs.openshift.org/latest/welcome/index.html)
 for installation instructions.
 
-AFAIK Origin is not packaged for Fedora, you can use @mmilata's
-[copr](https://copr.fedoraproject.org/coprs/mmilata/openshift/) though the
-packages there will likely be outdated.
+Origin is available in Fedora, you can install it by running
 
 ```
-$ dnf copr enable mmilata/openshift
 $ dnf install origin-master origin-node
 ```
 
@@ -99,13 +96,19 @@ $ systemctl start origin-master origin-node
 
 ### Talking to OpenShift via command line
 
-All communication with OpenShift is performed via executable `oc`. The
-binary needs to authenticate, otherwise all the requests will be denied.
-Authentication is handled via configuration file for `oc`. You need to set an
-environment variable to point `oc` to the admin config:
+All communication with OpenShift is performed via executable `oc` (the
+OpenShift Client). The binary needs to authenticate, otherwise all the requests
+will be denied.  Authentication is handled via configuration file for `oc`. You
+need to set an environment variable to point `oc` to the admin config:
 
 ```
 $ export KUBECONFIG=/etc/origin/master/admin.kubeconfig
+```
+
+OpenShift client is available in Fedora through the `origin-clients` package.
+
+```
+$ dnf install origin-clients
 ```
 
 #### Useful Commands
