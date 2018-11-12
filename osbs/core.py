@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 # Retry each connection attempt after 30 seconds, for a maximum of 10 times
 WATCH_RETRY_SECS = 30
 WATCH_RETRY = 10
+MAX_BAD_RESPONSES = int(WATCH_RETRY / 3)
 # Give up after 12 hours
 WAIT_RETRY_HOURS = 12
 WAIT_RETRY = int(WAIT_RETRY_HOURS * 3600 / (WATCH_RETRY_SECS * WATCH_RETRY))
@@ -601,14 +602,31 @@ class Openshift(object):
         return response
 
     def watch_resource(self, resource_type, resource_name=None, **request_args):
+        def log_and_sleep():
+            logger.debug("connection closed, reconnecting in %ds", WATCH_RETRY_SECS)
+            time.sleep(WATCH_RETRY_SECS)
+
         path = "watch/namespaces/%s/%s/" % (self.namespace, resource_type)
         if resource_name is not None:
             path += "%s/" % resource_name
         url = self._build_url(path, _prepend_namespace=False, **request_args)
 
+        bad_responses = 0
         for retry in range(WATCH_RETRY):
-            response = self._get(url, stream=True, headers={'Connection': 'close'})
-            check_response(response)
+            try:
+                response = self._get(url, stream=True, headers={'Connection': 'close'})
+                check_response(response)
+            # we're already retrying, so there's no need to panic just because of a bad response
+            except OsbsResponseException as exc:
+                bad_responses += 1
+                if bad_responses > MAX_BAD_RESPONSES:
+                    raise exc
+                else:
+                    # check_response() already logged the message, so just report that we're
+                    # sleeping and retry
+                    log_and_sleep()
+                    continue
+
             encoding = None
             for line in response.iter_lines():
                 logger.debug(line)
@@ -632,8 +650,7 @@ class Openshift(object):
 
                 yield (j['type'].lower(), j['object'])
 
-            logger.debug("connection closed, reconnecting in %ds", WATCH_RETRY_SECS)
-            time.sleep(WATCH_RETRY_SECS)
+            log_and_sleep()
 
     def wait(self, build_id, states):
         """
@@ -968,7 +985,6 @@ class Openshift(object):
         logger.debug("tags after import: %r", new_tags)
 
         return True
-
 
     def _check_import_image_response(self, import_response):
         check_response(import_response)
