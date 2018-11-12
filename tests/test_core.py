@@ -197,6 +197,41 @@ class TestOpenshift(object):
                 break
         assert 'Retry #143' in log.getMessage()
 
+    @pytest.mark.parametrize('fail', (True, False))  # noqa:F811
+    def test_watch_response_hiccup(self, fail, openshift):
+        class MockResponse(object):
+            def __init__(self, status, lines=None, content=None):
+                self.status_code = status
+                self.lines = lines or []
+                if content:
+                    self.content = content
+
+            def iter_lines(self):
+                return self.lines
+
+        test_json = json.dumps({"object": "test", "type": "test"}).encode('utf-8')
+        bad_response = MockResponse(http_client.FORBIDDEN, None, "failure")
+        good_response = MockResponse(http_client.OK, [test_json])
+        flexmock(time).should_receive('sleep').and_return(None)
+        if fail:
+            (flexmock(openshift)
+                .should_receive('_get')
+                .and_return(bad_response, bad_response, bad_response, bad_response, good_response)
+                .one_by_one())
+            with pytest.raises(OsbsResponseException) as exc:
+                for changetype, obj in openshift.watch_resource("builds", 12):
+                    continue
+            assert str(exc.value).startswith('failure')
+        else:
+            (flexmock(openshift)
+                .should_receive('_get')
+                .and_return(good_response, bad_response, good_response)
+                .one_by_one())
+
+            for changetype, obj in openshift.watch_resource("builds", 12):
+                assert changetype == 'test'
+                assert obj == 'test'
+
     def test_watch_build(self, openshift):  # noqa
         response = openshift.wait_for_build_to_finish(TEST_BUILD)
         status_lower = response["status"]["phase"].lower()
