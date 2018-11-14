@@ -34,7 +34,7 @@ def _install_requirements():
 setup(
     name="osbs-client",
     description='Python module and command line client for OpenShift Build Service',
-    version="0.52.dev",
+    version="0.52",
     author='Red Hat, Inc.',
     author_email='atomic-devel@projectatomic.io',
     url='https://github.com/projectatomic/osbs-client',
