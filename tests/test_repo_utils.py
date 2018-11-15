@@ -58,11 +58,67 @@ class TestRepoConfiguration(object):
             f.write(dedent("""\
                 compose:
                     modules:
-                    - mod_name-mod_stream-mod_version
+                    - mod_name:mod_stream:mod_version
                 """))
 
         conf = RepoConfiguration(dir_path=str(tmpdir))
         assert conf.is_autorebuild_enabled() is expected_value
+
+    @pytest.mark.parametrize('module_a_nsv, module_b_nsv, should_raise', [
+        ('name:stream', 'name', True),
+        ('name', 'name:stream', True),
+        ('name:stream:version', 'name-stream', True),
+        ('name:stream:version', 'name:stream', False),
+        ('name::version', 'name:stream', True),
+        ('::version', 'name:stream', True),
+        ('"::"', 'name:stream', True),
+        ('"name:"', 'name:stream', True),
+        (':version', 'name:stream', True),
+    ])
+    def test_modules_nsv_validation(self, tmpdir, module_a_nsv, module_b_nsv, should_raise):
+        with open(os.path.join(str(tmpdir), REPO_CONTAINER_CONFIG), 'w') as f:
+            f.write(dedent("""\
+                compose:
+                    modules:
+                    - %s
+                    - %s
+                """ % (module_a_nsv, module_b_nsv)))
+
+        if should_raise:
+            with pytest.raises(ValueError):
+                conf = RepoConfiguration(dir_path=str(tmpdir))
+        else:
+            conf = RepoConfiguration(dir_path=str(tmpdir))
+            assert conf.container['compose']['modules'][0] == module_a_nsv
+            assert conf.container['compose']['modules'][1] == module_b_nsv
+
+    @pytest.mark.parametrize('module_nsv, should_raise, expected', [
+        ('name', True, None),
+        ('name-stream', True, None),
+        ('name-stream-version', True, None),
+        ('name:stream', False, ('name', 'stream', None)),
+        ('name:stream:version', False, ('name', 'stream', 'version')),
+        ('name:stream:version:context', True, None),
+    ])
+    def test_container_module_specs(self, tmpdir, module_nsv, should_raise, expected):
+        with open(os.path.join(str(tmpdir), REPO_CONTAINER_CONFIG), 'w') as f:
+            f.write(dedent("""\
+                compose:
+                    modules:
+                    - %s
+                """ % module_nsv))
+        if should_raise:
+            with pytest.raises(ValueError):
+                conf = RepoConfiguration(dir_path=str(tmpdir))
+        else:
+            conf = RepoConfiguration(dir_path=str(tmpdir))
+            assert conf.container['compose']['modules'][0] == module_nsv
+            spec = conf.container_module_specs[0]
+            params = module_nsv.split(':')
+            assert spec.name == expected[0]
+            assert spec.stream == expected[1]
+            if len(params) > 2:
+                assert spec.version == expected[2]
 
 
 class TestAdditionalTagsConfig(object):
