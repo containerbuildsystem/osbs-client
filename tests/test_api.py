@@ -46,7 +46,7 @@ from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             OS_CONFLICT_MAX_RETRIES,
                             ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO)
 from osbs import utils
-from osbs.repo_utils import RepoInfo
+from osbs.repo_utils import RepoInfo, ModuleSpec
 
 from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
                              TEST_GIT_URI, TEST_TARGET, TEST_USER, INPUTS_PATH,
@@ -1833,6 +1833,9 @@ class TestOSBS(object):
                     'modules': modules
                 }
             }
+
+            safe_modules = modules or []
+            container_module_specs = [ModuleSpec.from_str(module) for module in safe_modules]
 
             def is_autorebuild_enabled(self):
                 return False

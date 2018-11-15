@@ -569,19 +569,18 @@ class OSBS(object):
         return req_labels, df_parser.baseimage
 
     def _get_flatpak_labels(self, repo_info):
-        modules = repo_info.configuration.container.get('compose', {}).get('modules', [])
+        modules = repo_info.configuration.container_module_specs
 
         if modules:
-            source_spec = modules[0]
+            module = modules[0]
         else:
             raise OsbsValidationException('"compose" config is missing "modules",'
                                           ' required for Flatpak')
-        module_name, module_stream, _ = utils.split_module_spec(source_spec)
 
         return {
-            utils.Labels.LABEL_TYPE_NAME: module_name,
-            utils.Labels.LABEL_TYPE_COMPONENT: module_name,
-            utils.Labels.LABEL_TYPE_VERSION: module_stream
+            utils.Labels.LABEL_TYPE_NAME: module.name,
+            utils.Labels.LABEL_TYPE_COMPONENT: module.name,
+            utils.Labels.LABEL_TYPE_VERSION: module.stream
         }, None
 
     def _do_create_prod_build(self, git_uri, git_ref,

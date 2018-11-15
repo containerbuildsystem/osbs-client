@@ -17,7 +17,7 @@ from osbs.constants import (DEFAULT_ARRANGEMENT_VERSION,
                             SECRETS_PATH,
                             ORCHESTRATOR_OUTER_TEMPLATE)
 from osbs import utils
-from osbs.repo_utils import RepoInfo
+from osbs.repo_utils import RepoInfo, ModuleSpec
 from osbs.build.build_request import BuildRequest
 from osbs.build.plugins_configuration import PluginsConfiguration
 from tests.constants import (TEST_GIT_URI,
@@ -93,6 +93,9 @@ class ArrangementBase(object):
                     'modules': ['mod_name:mod_stream:mod_version']
                 }
             }
+
+            module = container['compose']['modules'][0]
+            container_module_specs = [ModuleSpec.from_str(module)]
 
             def is_autorebuild_enabled(self):
                 return False

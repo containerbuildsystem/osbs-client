@@ -60,8 +60,29 @@ class RepoConfiguration(object):
             with open(file_path) as f:
                 self.container = (yaml.load(f) or {})
 
+        modules = self.container.get('compose', {}).get('modules', [])
+        self.container_module_specs = [ModuleSpec.from_str(module) for module in modules]
+
     def is_autorebuild_enabled(self):
         return self._config_parser.getboolean('autorebuild', 'enabled')
+
+
+class ModuleSpec(object):
+    __slots__ = ('name', 'stream', 'version')
+
+    def __init__(self, name, stream, version=None):
+        self.name = name
+        self.stream = stream
+        self.version = version
+
+    @classmethod
+    def from_str(cls, text):
+        pieces = text.split(':')
+        if not 1 < len(pieces) < 4:
+            raise ValueError('Module specification should be NAME:STREAM or NAME:STREAM:VERSION')
+        if not all(pieces):
+            raise ValueError('Module specification contains empty fields')
+        return cls(*pieces)
 
 
 class AdditionalTagsConfig(object):
