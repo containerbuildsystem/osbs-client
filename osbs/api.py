@@ -385,7 +385,7 @@ class OSBS(object):
                 unique_labels[u] = build_json['metadata']['labels'][u]
             running_builds = self.list_builds(running=True, labels=unique_labels)
             if running_builds:
-                raise RuntimeError('Matching build(s) already running: {0}'
+                raise RuntimeError('Matching build(s) already running: {}'
                                    .format(', '.join(x.get_build_name() for x in running_builds)))
 
         return BuildResponse(self.os.create_build(build_json).json(), self)
@@ -1154,9 +1154,9 @@ class OSBS(object):
             s = repo_without_registry.split('/', 1)
 
             if len(s) == 2:
-                repo_without_registry = "{0}/{1}-{2}".format(organization, s[0], s[1])
+                repo_without_registry = "{}/{}-{}".format(organization, s[0], s[1])
             else:
-                repo_without_registry = "{0}/{1}".format(organization, s[0])
+                repo_without_registry = "{}/{}".format(organization, s[0])
 
         return registry + repo_without_registry
 

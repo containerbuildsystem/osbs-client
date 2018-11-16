@@ -47,9 +47,8 @@ class PodResponse(object):
 
             return image_id
 
-        return dict([(status['image'], remove_prefix(status['imageID'],
-                                                     'docker://'))
-                     for status in statuses])
+        return {status['image']: remove_prefix(status['imageID'], 'docker://')
+                for status in statuses}
 
     def get_failure_reason(self):
         """

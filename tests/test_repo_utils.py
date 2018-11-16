@@ -51,7 +51,7 @@ class TestRepoConfiguration(object):
             if config_value is not None:
                 f.write(dedent("""\
                     [autorebuild]
-                    enabled={0}
+                    enabled={}
                     """.format(config_value)))
 
         with open(os.path.join(str(tmpdir), REPO_CONTAINER_CONFIG), 'w') as f:

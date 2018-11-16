@@ -32,7 +32,7 @@ def run(*args):
     if err:
         logging.info("stderr:\n%s", err.rstrip())
     if p.returncode != 0:
-        raise SubprocessError("Subprocess failed w/ return code {0}".format(p.returncode))
+        raise SubprocessError("Subprocess failed w/ return code {}".format(p.returncode))
 
     return out
 
@@ -48,7 +48,7 @@ def bump_release(df_path, branch):
         raise RuntimeError("Release does not end with number")
 
     num = int(m.group(2))
-    newrelease = "{0}{1:03d}".format(m.group(1), num+1)
+    newrelease = "{}{:03d}".format(m.group(1), num+1)
 
     parser.labels["Release"] = newrelease
     return newrelease
@@ -57,7 +57,7 @@ def bump_release(df_path, branch):
 def set_initial_release(df_path, branch):
     parser = DockerfileParser(df_path)
     oldrelease = parser.labels.get("Release", "1")
-    newrelease = "{0}.{1}.iteration001".format(oldrelease, branch)
+    newrelease = "{}.{}.iteration001".format(oldrelease, branch)
     parser.labels["Release"] = newrelease
     return newrelease
 
@@ -72,7 +72,7 @@ def get_branches(branch_prefix):
 
 
 def cmd_create_branches(args):
-    branches = ["{0}{1:03d}".format(args.branch_prefix, n+1) for n in range(args.number)]
+    branches = ["{}{:03d}".format(args.branch_prefix, n+1) for n in range(args.number)]
 
     logging.info("Creating branches from current branch")
     for b in branches:
@@ -142,7 +142,7 @@ def cmd_start_builds(args):
         if i >= DEFAULT_BRANCH_COUNT:
             break
         commit = run("git", "rev-parse", b).strip()
-        branch_url = "{0}#{1}".format(remote_url, commit)
+        branch_url = "{}#{}".format(remote_url, commit)
 
         try:
             if args.use_koji:

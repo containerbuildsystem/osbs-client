@@ -62,7 +62,7 @@ class PluginsTemplate(object):
             if p.get('name') == name:
                 self.template[phase].remove(p)
                 if reason:
-                    logger.info('Removing {0}:{1}, {2}'.format(phase, name, reason))
+                    logger.info('Removing {}:{}, {}'.format(phase, name, reason))
                 break
 
     def add_plugin(self, phase, name, args, reason=None):
@@ -79,7 +79,7 @@ class PluginsTemplate(object):
         if not plugin_modified:
             self.template[phase].append({"name": name, "args": args})
             if reason:
-                logger.info('{0}:{1} with args {2}, {3}'.format(phase, name, args, reason))
+                logger.info('{}:{} with args {}, {}'.format(phase, name, args, reason))
 
     def get_plugin_conf(self, phase, name):
         """
@@ -133,7 +133,7 @@ class PluginsConfiguration(object):
         #    <build_type>_inner:<arrangement_version>.json
         arrangement_version = self.user_params.arrangement_version.value
         build_type = self.user_params.build_type.value
-        pt_path = '{0}_inner:{1}.json'.format(build_type, arrangement_version)
+        pt_path = '{}_inner:{}.json'.format(build_type, arrangement_version)
         self.pt = PluginsTemplate(self.user_params.build_json_dir.value, pt_path,
                                   self.user_params.customize_conf_path.value)
 

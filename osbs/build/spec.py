@@ -137,7 +137,7 @@ class BuildCommon(object):
             tag_segments.append(self.platform.value)
 
         tag = '-'.join(tag_segments)
-        self.image_tag.value = '{0}/{1}:{2}'.format(self.user.value, self.component.value, tag)
+        self.image_tag.value = '{}/{}:{}'.format(self.user.value, self.component.value, tag)
 
     def validate(self):
         logger.info("Validating params of %s", self.__class__.__name__)

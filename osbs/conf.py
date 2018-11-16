@@ -302,7 +302,7 @@ class Configuration(object):
         if platform is None:
             return versions
 
-        section = 'platform:{0}'.format(platform)
+        section = 'platform:{}'.format(platform)
         enable_v1 = self._get_deprecated("enable_v1", section, "enable_v1",
                                          default=False, is_bool_val=True)
         if enable_v1:
@@ -632,7 +632,7 @@ class Configuration(object):
             platform_descriptors[platform] = platform_descriptor
 
         if len(has_v1) > 1:
-            msg = "multiple platforms enable API v1: {0}".format(has_v1)
+            msg = "multiple platforms enable API v1: {}".format(has_v1)
             raise OsbsValidationException(msg)
 
         return platform_descriptors

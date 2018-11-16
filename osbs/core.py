@@ -712,7 +712,7 @@ class Openshift(object):
                 return build_response
             except OsbsWatchBuildNotFound:
                 continue
-            raise OsbsException('Failed to schedule a build in {0} attempts: {1}'.format(WAIT_RETRY,
+            raise OsbsException('Failed to schedule a build in {} attempts: {}'.format(WAIT_RETRY,
                                                                                          build_id))
 
     @staticmethod
@@ -814,7 +814,7 @@ class Openshift(object):
             if not repository:
                 repository = stream['spec']['dockerImageRepository']
 
-        tag_id = '{0}:{1}'.format(stream_id, tag_name)
+        tag_id = '{}:{}'.format(stream_id, tag_name)
 
         changed = False
         try:
@@ -829,7 +829,7 @@ class Openshift(object):
             tag = tag_template
             tag['metadata']['name'] = tag_id
             tag['tag']['name'] = tag_name
-            tag['tag']['from']['name'] = '{0}:{1}'.format(repository, tag_name)
+            tag['tag']['from']['name'] = '{}:{}'.format(repository, tag_name)
             changed = True
 
         if insecure != tag['tag']['importPolicy'].get('insecure', False):
@@ -966,7 +966,7 @@ class Openshift(object):
         for tag in tags_set:
             image_import = {
                 'from': {"kind": "DockerImage",
-                         "name": '{0}:{1}'.format(repository, tag)},
+                         "name": '{}:{}'.format(repository, tag)},
                 'to': {'name': tag},
                 'importPolicy': {'insecure': insecure},
                 # referencePolicy will default to "type: source"
@@ -1001,7 +1001,7 @@ class Openshift(object):
                 failed_images_server_error = True
 
         if failed_images:
-            error_msg = 'Failed to import {0} image(s)'.format(len(failed_images))
+            error_msg = 'Failed to import {} image(s)'.format(len(failed_images))
             logger.error(error_msg)
             if failed_images_server_error:
                 raise ImportImageFailedServerError(error_msg)

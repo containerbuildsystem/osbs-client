@@ -546,9 +546,9 @@ def osbs(openshift, kwargs=None, additional_config=None, platform_descriptors=No
             if not platform_info:
                 continue
 
-            config += '[platform:{0}]\n'.format(platform)
+            config += '[platform:{}]\n'.format(platform)
             for item, value in platform_info.items():
-                config += '{0} = {1}\n'.format(item, value)
+                config += '{} = {}\n'.format(item, value)
 
         fp.write(config.format(**kwargs))
         fp.flush()

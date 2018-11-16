@@ -310,7 +310,7 @@ class BuildRequest(object):
 
         # Remove empty values, and always convert to string for better interaction
         # with Configuration class and JSON encoding
-        config_kwargs = dict((k, str(v)) for k, v in config_kwargs.items() if v is not None)
+        config_kwargs = {k: str(v) for k, v in config_kwargs.items() if v is not None}
 
         if not self.spec.build_imagestream.value:
             config_kwargs['build_image'] = self.spec.build_image.value
@@ -633,7 +633,7 @@ class BuildRequest(object):
 
         if not ISOLATED_RELEASE_FORMAT.match(release.value):
             raise OsbsValidationException(
-                'For isolated builds, the release value must be in the format: {0}'
+                'For isolated builds, the release value must be in the format: {}'
                 .format(ISOLATED_RELEASE_FORMAT.pattern))
 
         self.set_label('isolated', 'true')
@@ -1343,7 +1343,7 @@ class BuildRequest(object):
             self.dj.dock_json_set_arg(phase, plugin, "command",
                                       self.spec.sources_command.value)
         else:
-            logger.info('removing {0}, no sources_command was provided'.format(plugin))
+            logger.info('removing {}, no sources_command was provided'.format(plugin))
             self.dj.remove_plugin(phase, plugin)
 
     def render_pull_base_image(self):
@@ -1389,7 +1389,7 @@ class BuildRequest(object):
                         plugin_dict['plugin_name']
                     )
                     logger.debug(
-                        "site-specific plugin disabled -> Type:{0} Name:{1}".format(
+                        "site-specific plugin disabled -> Type:{} Name:{}".format(
                             plugin_dict['plugin_type'],
                             plugin_dict['plugin_name']
                         )
@@ -1410,7 +1410,7 @@ class BuildRequest(object):
                         plugin_dict['plugin_args']
                     )
                     logger.debug(
-                        "site-specific plugin enabled -> Type:{0} Name:{1} Args: {2}".format(
+                        "site-specific plugin enabled -> Type:{} Name:{} Args: {}".format(
                             plugin_dict['plugin_type'],
                             plugin_dict['plugin_name'],
                             plugin_dict['plugin_args']
@@ -1430,16 +1430,16 @@ class BuildRequest(object):
             name = image_tag
             # Platform name may contain characters not allowed by OpenShift.
             if platform:
-                platform_suffix = '-{0}'.format(platform)
+                platform_suffix = '-{}'.format(platform)
                 if name.endswith(platform_suffix):
                     name = name[:-len(platform_suffix)]
 
             _, salt, timestamp = name.rsplit('-', 2)
 
             if self.scratch:
-                name = 'scratch-{0}-{1}'.format(salt, timestamp)
+                name = 'scratch-{}-{}'.format(salt, timestamp)
             elif self.isolated:
-                name = 'isolated-{0}-{1}'.format(salt, timestamp)
+                name = 'isolated-{}-{}'.format(salt, timestamp)
 
         # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
         self.template['metadata']['name'] = name
@@ -1479,7 +1479,7 @@ class BuildRequest(object):
 
         if self.spec.registry_uris.value:
             primary_registry_uri = self.spec.registry_uris.value[0].docker_uri
-            tag_with_registry = '{0}/{1}'.format(primary_registry_uri,
+            tag_with_registry = '{}/{}'.format(primary_registry_uri,
                                                  self.spec.image_tag.value)
             self.template['spec']['output']['to']['name'] = tag_with_registry
         else:

@@ -363,7 +363,7 @@ def cmd_build(args, osbs):
 def _display_build_summary(build):
     output = [
         "",  # Empty line for cleaner display
-        "build {0} is {1}".format(build.get_build_name(), build.status),
+        "build {} is {}".format(build.get_build_name(), build.status),
     ]
 
     if build.is_succeeded():
@@ -460,7 +460,7 @@ def cmd_get_build_image_id(args, osbs):
 
 
 def cmd_backup(args, osbs):
-    dirname = time.strftime("osbs-backup-{0}-%Y-%m-%d-%H%M%S"
+    dirname = time.strftime("osbs-backup-{}-%Y-%m-%d-%H%M%S"
                             .format(args.instance))
     if args.filename == '-':
         outfile = sys.stdout.buffer if PY3 else sys.stdout  # pylint: disable=no-member

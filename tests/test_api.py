@@ -526,7 +526,7 @@ class TestOSBS(object):
             with pytest.raises(OsbsException) as ex:
                 osbs.render_plugins_configuration(json.dumps(user_params))
 
-            assert 'inner:{0}'.format(invalid_version) in ex.value.message
+            assert 'inner:{}'.format(invalid_version) in ex.value.message
 
     # osbs is a fixture here
     def test_create_worker_build_ioerror(self, osbs):  # noqa
@@ -687,7 +687,7 @@ class TestOSBS(object):
             with pytest.raises(OsbsException) as ex:
                 osbs.render_plugins_configuration(json.dumps(user_params))
 
-            assert 'inner:{0}'.format(invalid_version) in ex.value.message
+            assert 'inner:{}'.format(invalid_version) in ex.value.message
 
     # osbs is a fixture here
     def test_create_prod_build_missing_name_label(self, osbs):  # noqa

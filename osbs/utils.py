@@ -433,7 +433,7 @@ def wrap_name_from_git(prefix, suffix, *args, **kwargs):
 
 def get_instance_token_file_name(instance):
     """Return the token file name for the given instance."""
-    return '{0}/.osbs/{1}.token'.format(os.path.expanduser('~'), instance)
+    return '{}/.osbs/{}.token'.format(os.path.expanduser('~'), instance)
 
 
 def run_command(*popenargs, **kwargs):
@@ -478,7 +478,7 @@ def sanitize_version(version):
         parts += [0] * (3 - len(parts))
 
     major, minor, micro = parts[:3]
-    cleaned_version = '{0}.{1}.{2}'.format(major, minor, micro)
+    cleaned_version = '{}.{}.{}'.format(major, minor, micro)
     return cleaned_version
 
 

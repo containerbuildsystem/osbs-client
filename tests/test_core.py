@@ -544,7 +544,7 @@ class TestOpenshift(object):
             stream['metadata']['annotations'] = s_annotations
 
         tag_name = 'maps'
-        tag_id = '{0}:{1}'.format(stream_name, tag_name)
+        tag_id = '{}:{}'.format(stream_name, tag_name)
 
         expected_url = openshift._build_url('imagestreamtags/' +
                                             tag_id)
@@ -562,7 +562,7 @@ class TestOpenshift(object):
                 assert data['metadata']['name'] == tag_id
                 assert data['tag']['name'] == tag_name
                 assert (data['tag']['from']['name'] ==
-                        '{0}:{1}'.format(stream_repo, tag_name))
+                        '{}:{}'.format(stream_repo, tag_name))
 
             return make_json_response({})
 
@@ -826,7 +826,7 @@ class TestOpenshift(object):
             for tag in set(tags):
                 image_import = {
                     'from': {"kind": "DockerImage",
-                             "name": '{0}:{1}'.format(source_repo, tag)},
+                             "name": '{}:{}'.format(source_repo, tag)},
                     'to': {'name': tag},
                     'importPolicy': {'insecure': insecure},
                 }

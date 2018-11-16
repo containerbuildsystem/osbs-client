@@ -71,7 +71,7 @@ class ResponseSaver(object):
 
         visit = self.visited.get(path, 0)
         self.visited[path] = visit + 1
-        path += "-{0:0>3}".format(visit)
+        path += "-{:0>3}".format(visit)
 
         if kwargs.get('stream', False):
             stream = self.fn(url, method, *args, **kwargs)

@@ -92,7 +92,7 @@ class TestBuildUserParams(object):
         assert spec.to_json() == required_json
         spec.from_json("")
         assert spec.to_json() == required_json
-        assert '{0}'.format(spec)
+        assert '{}'.format(spec)
 
     @pytest.mark.parametrize(('missing_arg'), (
         'name_label',
@@ -222,7 +222,7 @@ class TestBuildUserParams(object):
             "git_branch": TEST_GIT_BRANCH,
             "git_ref": TEST_GIT_REF,
             "git_uri": TEST_GIT_URI,
-            "image_tag": "{0}/{1}:tothepoint-{2}-{3}-x86_64".format(TEST_USER, TEST_COMPONENT,
+            "image_tag": "{}/{}:tothepoint-{}-{}-x86_64".format(TEST_USER, TEST_COMPONENT,
                                                                     rand, timestr),
             "imagestream_name": "name_label",
             "koji_parent_build": "fedora-26-9",
