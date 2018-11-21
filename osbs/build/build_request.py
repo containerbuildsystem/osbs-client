@@ -99,6 +99,11 @@ class BuildRequest(object):
         :param auto_build_node_selector: dict, a nodeselector for auto builds
         :param isolated_build_node_selector: dict, a nodeselector for isolated builds
         :param is_auto: bool, indicates if build is auto build
+        :param parent_images_digests: dict, mapping image names with tags to platform specific
+                                      digests, example:
+                                      {'registry.fedorahosted.org/fedora:29': {
+                                          x86_64': 'registry.fedorahosted.org/fedora@sha256:....'}
+                                      }
         """
 
         # Here we cater to the koji "scratch" build type, this will disable

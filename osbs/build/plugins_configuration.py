@@ -507,6 +507,15 @@ class PluginsConfiguration(object):
 
         self.pt.set_plugin_arg(phase, plugin, 'tag_suffixes', tag_suffixes)
 
+    def render_pull_base_image(self):
+        """Configure pull_base_image"""
+        phase = 'prebuild_plugins'
+        plugin = 'pull_base_image'
+
+        if self.user_params.parent_images_digests.value:
+            self.pt.set_plugin_arg(phase, plugin, 'parent_images_digests',
+                                   self.user_params.parent_images_digests.value)
+
     def render(self):
         self.user_params.validate()
         # adjust for custom configuration first
@@ -531,6 +540,7 @@ class PluginsConfiguration(object):
         self.render_koji_tag_build()
         self.render_koji_upload()
         self.render_orchestrate_build()
+        self.render_pull_base_image()
         self.render_resolve_composes()
         self.render_resolve_module_compose()
         self.render_tag_from_config()

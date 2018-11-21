@@ -609,6 +609,7 @@ class OSBS(object):
                               signing_intent=None,
                               compose_ids=None,
                               reactor_config_override=None,
+                              parent_images_digests=None,
                               **kwargs):
 
         if flatpak:
@@ -713,7 +714,8 @@ class OSBS(object):
             prefer_schema1_digest=self.build_conf.get_prefer_schema1_digest(),
             signing_intent=signing_intent,
             compose_ids=compose_ids,
-            osbs_api=self
+            osbs_api=self,
+            parent_images_digests=parent_images_digests,
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         build_request.set_repo_info(repo_info)
