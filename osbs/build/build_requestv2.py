@@ -77,6 +77,7 @@ class BuildRequestV2(BuildRequest):
         :param explicit_build_node_selector: dict, a nodeselector for explicit builds
         :param auto_build_node_selector: dict, a nodeselector for auto builds
         :param isolated_build_node_selector: dict, a nodeselector for isolated builds
+        :param parent_images_digests: dict, mapping image digests to names and platforms
         """
 
         # Here we cater to the koji "scratch" build type, this will disable

@@ -178,6 +178,12 @@ class TestBuildUserParams(object):
             'isolated': False,
             'koji_parent_build': 'fedora-26-9',
             'koji_target': 'tothepoint',
+            'parent_images_digests': {
+                'registry.fedorahosted.org/fedora:29': {
+                    'x86_64': 'registry.fedorahosted.org/fedora@sha256:8b96f2f9f88179a065738b2b37'
+                              '35e386efb2534438c2a2f45b74358c0f344c81'
+                }
+            },
             # 'name': self.name,  # calculated value
             'platform': 'x86_64',
             'platforms': ['x86_64', ],
@@ -228,6 +234,12 @@ class TestBuildUserParams(object):
             "koji_parent_build": "fedora-26-9",
             "koji_target": "tothepoint",
             "name": "path-master-cd1e4",
+            'parent_images_digests': {
+                'registry.fedorahosted.org/fedora:29': {
+                    'x86_64': 'registry.fedorahosted.org/fedora@sha256:8b96f2f9f88179a065738b2b37'
+                              '35e386efb2534438c2a2f45b74358c0f344c81'
+                }
+            },
             "platform": "x86_64",
             "platforms": ["x86_64"],
             "reactor_config_map": "reactor-config-map",
