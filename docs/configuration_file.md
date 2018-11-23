@@ -14,6 +14,8 @@ key=value
 
 There is section `[general]` which contains global configuration for all instances. You can put more sections to your config which represents multiple instances of OSBS (and then you can refer to them with command line option `--instance`).
 
+It is also possible to describe platforms in platform sections, which have the form `[platform:ARCH]` where `ARCH` is the platform name such as `x86_64` or `aarch64`. Platform sections are not interpreted as OSBS instances, but descriptions to be applied to OSBS instances running on the given platform.
+
 ### Types
 
 Options may be either string or boolean. For boolean, these values are considered false: `false`, `FALSE`, `False`, `0`; and these are true: `true`, `TRUE`, `True`, `1`.
@@ -33,7 +35,7 @@ Some options are also mandatory.
 
 * `openshift_uri` (**mandatory**, `string`) — root URL where openshift master API server is listening (e.g. `localhost:8443`)
 
-* `git_url` (*optional*, `string`) — URL of git reposiotry where dockerfile lives (it is used to perform `git clone`)
+* `git_url` (*optional*, `string`) — URL of git repository where dockerfile lives (it is used to perform `git clone`)
 
 * `git_ref` (*optional*, `string`) — name of git ref (branch/commit) to check out
 
@@ -170,6 +172,12 @@ Some options are also mandatory.
 * `prefer_schema1_digest` (*optional*, `boolean`) — used by Atomic Reactor's koji_upload plugin when deciding which digest should be used in the image output files for a Koji build
 
 * `build_from` (*optional*, `string`) — build source to use, consists of 2 parts separated with delimiter ':', first part can be : image or imagestream, and second part is corresponding image or imagestream
+
+### `[platform:ARCH]` options
+
+* `architecture` (*optional*, `string`) — platform's GOARCH (Go language platform name). If not declared, this option assumes the name of the platform being defined.
+
+* `enable_v1` (*optional*, `boolean`) — enable support for Docker Registry HTTP API v1 for a given platform. Only one platform should have this option enabled. Defaults to false.
 
 ## Build JSON Templates
 
