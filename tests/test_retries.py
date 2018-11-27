@@ -80,6 +80,6 @@ class TestHttpRetries(object):
             .should_receive('request')
             .and_return(fake_response))
 
-        with caplog.atLevel(logging.ERROR):
+        with caplog.at_level(logging.ERROR):
             for result in server.stream_logs('anything'):
                 assert isinstance(result, six.binary_type)

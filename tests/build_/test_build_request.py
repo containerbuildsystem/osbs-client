@@ -2362,7 +2362,7 @@ class TestBuildRequest(object):
         assert bool(build_request.template['spec'].get('triggers', [])) == keep_triggers
 
         if msg is not None:
-            assert msg in caplog.text()
+            assert msg in caplog.text
 
     def test_prod_missing_kojihub__custom_base_image(self, tmpdir):
         build_request = BuildRequest(INPUTS_PATH)

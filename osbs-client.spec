@@ -11,7 +11,7 @@
 %endif
 
 %if 0%{?fedora}
-# rhel/epel has no pytest-capturelog
+# rhel/epel has older incompatible version of pytest (no caplog)
 %global with_check 1
 %endif
 
@@ -57,7 +57,6 @@ BuildRequires:  python2-devel
 BuildRequires:  python-setuptools
 %if 0%{?with_check}
 BuildRequires:  pytest
-BuildRequires:  python-pytest-capturelog
 BuildRequires:  python-flexmock
 BuildRequires:  python-six
 BuildRequires:  python-dockerfile-parse
@@ -71,7 +70,6 @@ BuildRequires:  python3-setuptools
 %if 0%{?with_check}
 BuildRequires:  python3-dateutil
 BuildRequires:  python3-pytest
-BuildRequires:  python3-pytest-capturelog
 BuildRequires:  python3-flexmock
 BuildRequires:  python3-six
 BuildRequires:  python3-dockerfile-parse
@@ -198,6 +196,9 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %endif # with_python3
 
 %changelog
+* Tue Nov 27 2018 Athos Ribeiro <athos@redhat.com>
+- remove pytest-capturelog dependency
+
 * Fri Nov 16 2018 Athos Ribeiro <athos@redhat.com>
 - drop Python 2.6 support
 

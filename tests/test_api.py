@@ -127,7 +127,7 @@ def test_validate_arrangement_version(caplog, version, warning, exception):
         validate_arrangement_version(version)
 
     if warning:
-        assert warning in caplog.text()
+        assert warning in caplog.text
 
 
 class TestOSBS(object):
@@ -1382,7 +1382,7 @@ class TestOSBS(object):
             .and_return([]))
 
         osbs_obj._verify_running_builds('build_config_name')
-        assert 'Multiple builds' not in caplog.text()
+        assert 'Multiple builds' not in caplog.text
 
     def test_verify_running_builds_one(self, caplog):  # noqa:F811
         config = Configuration(conf_name=None)
@@ -1397,8 +1397,8 @@ class TestOSBS(object):
             ]))
 
         osbs_obj._verify_running_builds('build_config_name')
-        assert 'Multiple builds for build_config_name' in caplog.text()
-        assert 'build-1: Running' in caplog.text()
+        assert 'Multiple builds for build_config_name' in caplog.text
+        assert 'build-1: Running' in caplog.text
 
     def test_verify_running_builds_many(self, caplog):  # noqa:F811
         config = Configuration(conf_name=None)
@@ -1414,9 +1414,9 @@ class TestOSBS(object):
             ]))
 
         osbs_obj._verify_running_builds('build_config_name')
-        assert 'Multiple builds for build_config_name' in caplog.text()
-        assert 'build-1: Running' in caplog.text()
-        assert 'build-2: Running' in caplog.text()
+        assert 'Multiple builds for build_config_name' in caplog.text
+        assert 'build-1: Running' in caplog.text
+        assert 'build-2: Running' in caplog.text
 
     @pytest.mark.parametrize(('koji_task_id', 'count'), (  # noqa:F811
         (123456789, 2),
