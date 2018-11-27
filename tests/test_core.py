@@ -78,7 +78,7 @@ class TestCheckResponse(object):
             else:
                 check_response(response, log_level=log_type)
 
-        logged = [(l.getMessage(), l.levelno) for l in caplog.records()]
+        logged = [(l.getMessage(), l.levelno) for l in caplog.records]
         assert len(logged) == 1
         assert logged[0][0] == '[{code}] {message}'.format(code=status_code,
                                                            message=b'iterlines')
@@ -100,7 +100,7 @@ class TestCheckResponse(object):
             else:
                 check_response(response, log_level=log_type)
 
-        logged = [(l.getMessage(), l.levelno) for l in caplog.records()]
+        logged = [(l.getMessage(), l.levelno) for l in caplog.records]
         assert len(logged) == 1
         assert logged[0][0] == '[{code}] {message}'.format(code=status_code,
                                                            message=content)
@@ -192,7 +192,7 @@ class TestOpenshift(object):
         with pytest.raises(OsbsException):
             openshift.wait_for_build_to_finish(12)
 
-        for log in caplog.records():
+        for log in caplog.records:
             if 'Retry #143' in log.getMessage():
                 break
         assert 'Retry #143' in log.getMessage()

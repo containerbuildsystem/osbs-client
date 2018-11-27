@@ -26,9 +26,8 @@ from tests.constants import (TEST_GIT_URI,
                              TEST_COMPONENT,
                              TEST_VERSION,
                              TEST_FILESYSTEM_KOJI_TASK_ID,
-                             TEST_FLATPAK_BASE_IMAGE,
                              INPUTS_PATH)
-from tests.fake_api import openshift, osbs, osbs_with_pulp  # noqa:F401
+from tests.fake_api import openshift, osbs, get_pulp_additional_config  # noqa:F401
 from tests.test_api import request_as_response
 from tests.build_.test_build_request import (get_plugins_from_build_json,
                                              get_plugin,
@@ -65,6 +64,11 @@ PLUGIN_CHECK_AND_SET_PLATFORMS_KEY = 'check_and_set_platforms'
 PLUGIN_REMOVE_WORKER_METADATA_KEY = 'remove_worker_metadata'
 PLUGIN_RESOLVE_COMPOSES_KEY = 'resolve_composes'
 PLUGIN_VERIFY_MEDIA_KEY = 'verify_media'
+
+OSBS_WITH_PULP_PARAMS = {
+    'platform_descriptors': None,
+    'additional_config': get_pulp_additional_config(),
+    'kwargs': {'registry_uri': 'registry.example.com/v2'}}
 
 
 class ArrangementBase(object):
@@ -312,7 +316,8 @@ class TestArrangementV1(ArrangementBase):
 
     @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
     @pytest.mark.parametrize('base_image', ['koji/image-build', 'foo'])
-    def test_delete_from_registry(self, osbs_with_pulp, base_image, scratch):
+    @pytest.mark.parametrize('osbs', [OSBS_WITH_PULP_PARAMS], indirect=True)
+    def test_delete_from_registry(self, osbs, base_image, scratch):
         phase = 'exit_plugins'
         plugin = 'delete_from_registry'
         additional_params = {
@@ -322,7 +327,7 @@ class TestArrangementV1(ArrangementBase):
             additional_params['scratch'] = True
 
         (params, build_json) = self.get_build_request('worker',
-                                                      osbs_with_pulp,
+                                                      osbs,
                                                       additional_params)
         plugins = get_plugins_from_build_json(build_json)
         args = plugin_value_get(plugins, phase, plugin, 'args')
@@ -926,18 +931,20 @@ class TestArrangementV4(TestArrangementV3):
         if has_primary_tag:
             assert set(primary_tags) == set(['latest', '{version}', '{version}-{release}'])
 
-    def test_pulp_push(self, openshift):  # noqa:F811
-        platform_descriptors = {'x86_64': {'enable_v1': True}}
-        osbs_api = osbs_with_pulp(openshift, platform_descriptors=platform_descriptors)
+    @pytest.mark.parametrize('osbs', [  # noqa:F811
+        {'platform_descriptors': {'x86_64': {'enable_v1': True}},
+            'additional_config': get_pulp_additional_config(),
+            'kwargs': {'registry_uri': 'registry.example.com/v2'}}], indirect=True)
+    def test_pulp_push(self, osbs):
         additional_params = {
             'base_image': 'fedora:latest',
         }
-        _, build_json = self.get_worker_build_request(osbs_api, additional_params)
+        _, build_json = self.get_worker_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
         args = plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_PULP_PUSH_KEY, 'args')
 
-        build_conf = osbs_api.build_conf
+        build_conf = osbs.build_conf
         # Use first docker registry and strip off /v2
         pulp_registry_name = build_conf.get_pulp_registry()
         pulp_secret_path = '/'.join([SECRETS_PATH, build_conf.get_pulp_secret()])
@@ -953,8 +960,10 @@ class TestArrangementV4(TestArrangementV3):
         assert args == expected_args
 
     @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
-    @pytest.mark.parametrize('use_pulp', [False, True])
-    def test_koji_upload(self, osbs, osbs_with_pulp, scratch, use_pulp):
+    @pytest.mark.parametrize('osbs, use_pulp', [
+        ({'platform_descriptors': None, 'additional_config': None, 'kwargs': None}, False),
+        (OSBS_WITH_PULP_PARAMS, True)], indirect=['osbs'])
+    def test_koji_upload(self, use_pulp, osbs, scratch):
         additional_params = {
             'base_image': 'fedora:latest',
             'koji_upload_dir': 'upload',
@@ -962,12 +971,7 @@ class TestArrangementV4(TestArrangementV3):
         if scratch:
             additional_params['scratch'] = True
 
-        if use_pulp:
-            client = osbs_with_pulp
-        else:
-            client = osbs
-
-        params, build_json = self.get_worker_build_request(client,
+        params, build_json = self.get_worker_build_request(osbs,
                                                            additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
@@ -997,15 +1001,16 @@ class TestArrangementV4(TestArrangementV3):
 
         assert match_args == args
 
-    def test_pulp_tag(self, osbs_with_pulp):  # noqa:F811
+    @pytest.mark.parametrize('osbs', [OSBS_WITH_PULP_PARAMS], indirect=True)  # noqa:F811
+    def test_pulp_tag(self, osbs):
         additional_params = {
             'base_image': 'fedora:latest',
         }
-        _, build_json = self.get_orchestrator_build_request(osbs_with_pulp, additional_params)
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
         args = plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_PULP_TAG_KEY, 'args')
-        build_conf = osbs_with_pulp.build_conf
+        build_conf = osbs.build_conf
         pulp_registry_name = build_conf.get_pulp_registry()
         pulp_secret_path = '/'.join([SECRETS_PATH, build_conf.get_pulp_secret()])
 
@@ -1017,16 +1022,17 @@ class TestArrangementV4(TestArrangementV3):
 
         assert args == expected_args
 
-    def test_pulp_sync(self, osbs_with_pulp):  # noqa:F811
+    @pytest.mark.parametrize('osbs', [OSBS_WITH_PULP_PARAMS], indirect=True)  # noqa:F811
+    def test_pulp_sync(self, osbs):
         additional_params = {
             'base_image': 'fedora:latest',
         }
-        _, build_json = self.get_orchestrator_build_request(osbs_with_pulp, additional_params)
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
         args = plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_PULP_SYNC_KEY, 'args')
 
-        build_conf = osbs_with_pulp.build_conf
+        build_conf = osbs.build_conf
         docker_registry = self.get_pulp_sync_registry(build_conf)
         pulp_registry_name = build_conf.get_pulp_registry()
         pulp_secret_path = '/'.join([SECRETS_PATH, build_conf.get_pulp_secret()])
@@ -1040,15 +1046,16 @@ class TestArrangementV4(TestArrangementV3):
 
         assert args == expected_args
 
-    def test_pulp_publish(self, osbs_with_pulp):  # noqa:F811
+    @pytest.mark.parametrize('osbs', [OSBS_WITH_PULP_PARAMS], indirect=True)  # noqa:F811
+    def test_pulp_publish(self, osbs):
         additional_params = {
             'base_image': 'fedora:latest',
         }
-        _, build_json = self.get_orchestrator_build_request(osbs_with_pulp, additional_params)
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
         args = plugin_value_get(plugins, 'exit_plugins', PLUGIN_PULP_PUBLISH_KEY, 'args')
-        build_conf = osbs_with_pulp.build_conf
+        build_conf = osbs.build_conf
         pulp_registry_name = build_conf.get_pulp_registry()
         pulp_secret_path = '/'.join([SECRETS_PATH, build_conf.get_pulp_secret()])
 
@@ -1060,11 +1067,12 @@ class TestArrangementV4(TestArrangementV3):
 
         assert args == expected_args
 
-    def test_pulp_pull(self, osbs_with_pulp):  # noqa:F811
+    @pytest.mark.parametrize('osbs', [OSBS_WITH_PULP_PARAMS], indirect=True)  # noqa:F811
+    def test_pulp_pull(self, osbs):
         additional_params = {
             'base_image': 'fedora:latest',
         }
-        _, build_json = self.get_orchestrator_build_request(osbs_with_pulp, additional_params)
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
         args = plugin_value_get(plugins, 'exit_plugins', PLUGIN_PULP_PULL_KEY, 'args')
@@ -1073,7 +1081,8 @@ class TestArrangementV4(TestArrangementV3):
 
     @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
     @pytest.mark.parametrize('base_image', ['koji/image-build', 'foo'])
-    def test_delete_from_registry(self, osbs_with_pulp, base_image, scratch):
+    @pytest.mark.parametrize('osbs', [OSBS_WITH_PULP_PARAMS], indirect=True)
+    def test_delete_from_registry(self, osbs, base_image, scratch):
         phase = 'exit_plugins'
         plugin = 'delete_from_registry'
         additional_params = {
@@ -1082,33 +1091,34 @@ class TestArrangementV4(TestArrangementV3):
         if scratch:
             additional_params['scratch'] = True
 
-        _, build_json = self.get_orchestrator_build_request(osbs_with_pulp, additional_params)
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
         args = plugin_value_get(plugins, phase, plugin, 'args')
 
-        docker_registry = self.get_pulp_sync_registry(osbs_with_pulp.build_conf)
+        docker_registry = self.get_pulp_sync_registry(osbs.build_conf)
         assert args == {'registries': {docker_registry: {'insecure': True}}}
 
-    @pytest.mark.parametrize('group', (  # noqa:F811
-        True,
-        False,
-    ))
-    def test_group_manifests(self, openshift, group):
-        platform_descriptors = {'x86_64': {'architecture': 'amd64'}}
-        osbs_api = osbs_with_pulp(openshift, platform_descriptors=platform_descriptors,
-                                  group_manifests=group)
+    @pytest.mark.parametrize('osbs, with_group', [  # noqa:F811
+        ({'platform_descriptors': {'x86_64': {'architecture': 'amd64'}},
+            'additional_config': get_pulp_additional_config(),
+            'kwargs': {'registry_uri': 'registry.example.com/v2'}}, False),
+        ({'platform_descriptors': {'x86_64': {'architecture': 'amd64'}},
+            'additional_config': get_pulp_additional_config(with_group=True),
+            'kwargs': {'registry_uri': 'registry.example.com/v2'}}, True)],
+        indirect=['osbs'])
+    def test_group_manifests(self, osbs, with_group):
         additional_params = {
             'base_image': 'fedora:latest',
         }
-        _, build_json = self.get_orchestrator_build_request(osbs_api, additional_params)
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
         args = plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_GROUP_MANIFESTS_KEY, 'args')
-        docker_registry = self.get_pulp_sync_registry(osbs_api.build_conf)
+        docker_registry = self.get_pulp_sync_registry(osbs.build_conf)
 
         expected_args = {
             'goarch': {'x86_64': 'amd64'},
-            'group': group,
+            'group': with_group,
             'registries': {docker_registry: {'insecure': True, 'version': 'v2'}}
         }
         assert args == expected_args

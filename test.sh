@@ -58,12 +58,8 @@ if [[ $PYTHON_VERSION == 3 ]]; then
   # https://fedoraproject.org/wiki/Changes/Making_sudo_pip_safe
   $RUN mkdir -p /usr/local/lib/python3.6/site-packages/
 fi
-$RUN $PYTHON setup.py install
 
-# Install packages for tests
-$RUN $PIP install -r tests/requirements.txt
-
-# CentOS needs to have setuptools updates to make pytest-cov work
+# CentOS needs to have setuptools updates to use wildcards in requirements.txt and to make pytest-cov work
 if [[ $OS != "fedora" ]]; then
   $RUN $PIP install -U setuptools
 
@@ -71,6 +67,10 @@ if [[ $OS != "fedora" ]]; then
   $RUN curl -O https://bootstrap.pypa.io/2.6/get-pip.py
   $RUN $PYTHON get-pip.py
 fi
+$RUN $PYTHON setup.py install
+
+# Install packages for tests
+$RUN $PIP install -r tests/requirements.txt
 if [[ $PYTHON_VERSION -gt 2 ]]; then $RUN $PIP install -r requirements-py3.txt; fi
 
 case ${ACTION} in

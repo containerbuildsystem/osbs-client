@@ -523,18 +523,18 @@ class TestConfiguration(object):
             assert getattr(conf, "get_" + nodeselector_type)() == expected
 
     def test_deprecated_warnings(self, caplog):  # noqa:F811
-        with caplog.atLevel(logging.WARNING):
+        with caplog.at_level(logging.WARNING):
             self.test_arrangement_version({'default': {}}, DEFAULT_ARRANGEMENT_VERSION)
-            assert "it has been deprecated" not in caplog.text()
+            assert "it has been deprecated" not in caplog.text
             # kwargs don't get warnings
             self.test_param_retrieval(config={'default': {}},
                                       kwargs={'client_config_secret': 'client_secret'},
                                       cli_args={},
                                       expected={'get_client_config_secret': 'client_secret'})
-            assert "it has been deprecated" not in caplog.text()
+            assert "it has been deprecated" not in caplog.text
             # cli arguments get warnings
             self.test_param_retrieval(config={'default': {}},
                                       kwargs={},
                                       cli_args={'client_config_secret': 'client_secret'},
                                       expected={'get_client_config_secret': 'client_secret'})
-            assert "it has been deprecated" in caplog.text()
+            assert "it has been deprecated" in caplog.text

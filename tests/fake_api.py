@@ -506,10 +506,10 @@ def openshift(request):
     return os_inst
 
 
-@pytest.fixture
-def osbs(openshift, kwargs=None, additional_config=None, platform_descriptors=None):
-    kwargs = kwargs or {}
-    platform_descriptors = platform_descriptors or {}
+@pytest.fixture(params=[{'kwargs': None, 'additional_config': None, 'platform_descriptors': None}])
+def osbs(request, openshift):
+    kwargs = request.param['kwargs'] or {}
+    platform_descriptors = request.param['platform_descriptors'] or {}
 
     kwargs.setdefault('build_json_dir', 'inputs')
     kwargs.setdefault('registry_uri', 'registry.example.com')
@@ -538,8 +538,8 @@ def osbs(openshift, kwargs=None, additional_config=None, platform_descriptors=No
             build_from = image:buildroot:latest
             """)
 
-        if additional_config is not None:
-            config += additional_config
+        if request.param['additional_config'] is not None:
+            config += request.param['additional_config']
             config += '\n'
 
         for platform, platform_info in platform_descriptors.items():
@@ -559,21 +559,17 @@ def osbs(openshift, kwargs=None, additional_config=None, platform_descriptors=No
     return osbs
 
 
-@pytest.fixture
-def osbs_with_pulp(openshift, platform_descriptors=None, group_manifests=False):
-    if group_manifests:
-        additional_config = dedent("""\
+def get_pulp_additional_config(with_group=False):
+    if with_group:
+        conf = dedent("""\
             pulp_registry_name = pulp
             pulp_secret = secret
             group_manifests = true""")
     else:
-        additional_config = dedent("""\
+        conf = dedent("""\
             pulp_registry_name = pulp
             pulp_secret = secret""")
-    kwargs = {'registry_uri': 'registry.example.com/v2'}
-    return osbs(openshift, kwargs=kwargs,
-                additional_config=additional_config,
-                platform_descriptors=platform_descriptors)
+    return conf
 
 
 @pytest.fixture

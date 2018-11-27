@@ -724,7 +724,7 @@ class TestPluginsConfiguration(object):
         )
         plugins_conf.render()
 
-        log_messages = [l.getMessage() for l in caplog.records()]
+        log_messages = [l.getMessage() for l in caplog.records]
         assert 'no tag suffix placeholder' in log_messages
         assert 'Invalid custom configuration found for disable_plugins' in log_messages
         assert 'Invalid custom configuration found for enable_plugins' in log_messages
