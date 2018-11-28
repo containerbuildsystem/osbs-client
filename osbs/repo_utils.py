@@ -61,28 +61,70 @@ class RepoConfiguration(object):
                 self.container = (yaml.load(f) or {})
 
         modules = self.container.get('compose', {}).get('modules', [])
-        self.container_module_specs = [ModuleSpec.from_str(module) for module in modules]
+
+        self.container_module_specs = []
+        value_errors = []
+        for module in modules:
+            try:
+                self.container_module_specs.append(ModuleSpec.from_str(module))
+            except ValueError as e:
+                value_errors.append(e)
+        if value_errors:
+            raise ValueError(value_errors)
 
     def is_autorebuild_enabled(self):
         return self._config_parser.getboolean('autorebuild', 'enabled')
 
 
 class ModuleSpec(object):
-    __slots__ = ('name', 'stream', 'version')
+    """
+    Specification for a to-be-requested module.
 
-    def __init__(self, name, stream, version=None):
+    This module representation is simplified from the possible
+    NAME:STREAM:VERSION:CONTEXT:ARCH/PROFILE by not supporting ARCH, which
+    should be determined by the architecture of the build, and by not
+    supporting partal specifications such as NAME:::CONTEXT.
+    """
+
+    def __init__(self, name, stream, version=None, context=None, profile=None):
         self.name = name
         self.stream = stream
         self.version = version
+        self.context = context
+        self.profile = profile
+
+    def to_str(self, include_profile=True):
+        result = self.name + ':' + self.stream
+        if self.version:
+            result += ':' + self.version
+        if self.context:
+            result += ':' + self.context
+        if include_profile and self.profile:
+            result += '/' + self.profile
+
+        return result
+
+    def __repr__(self):
+        return "ModuleSpec({})".format(self.to_str())
+
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
 
     @classmethod
     def from_str(cls, text):
-        pieces = text.split(':')
-        if not 1 < len(pieces) < 4:
-            raise ValueError('Module specification should be NAME:STREAM or NAME:STREAM:VERSION')
-        if not all(pieces):
-            raise ValueError('Module specification contains empty fields')
-        return cls(*pieces)
+        profile = None
+        if '/' in text:
+            module, profile = text.rsplit('/', 1)
+        else:
+            module = text
+
+        pieces = module.split(':')
+        if not 1 < len(pieces) < 5:
+            raise ValueError('Module specification {} should be in '
+                             'NAME:STREAM[:VERSION[:CONTEXT]][/PROFILE] format'.format(module))
+        if not all(pieces) or profile == '':
+            raise ValueError('Module specification {} contains empty fields'.format(module))
+        return cls(*pieces, profile=profile)
 
 
 class AdditionalTagsConfig(object):
