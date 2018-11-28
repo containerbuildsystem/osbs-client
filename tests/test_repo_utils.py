@@ -8,7 +8,7 @@ of the BSD license. See the LICENSE file for details.
 
 from flexmock import flexmock
 from osbs.constants import REPO_CONFIG_FILE, ADDITIONAL_TAGS_FILE, REPO_CONTAINER_CONFIG
-from osbs.repo_utils import RepoInfo, RepoConfiguration, AdditionalTagsConfig
+from osbs.repo_utils import RepoInfo, RepoConfiguration, AdditionalTagsConfig, ModuleSpec
 from textwrap import dedent
 
 import os
@@ -74,6 +74,7 @@ class TestRepoConfiguration(object):
         ('"::"', 'name:stream', True),
         ('"name:"', 'name:stream', True),
         (':version', 'name:stream', True),
+        ('name', 'name::version', True),
     ])
     def test_modules_nsv_validation(self, tmpdir, module_a_nsv, module_b_nsv, should_raise):
         with open(os.path.join(str(tmpdir), REPO_CONTAINER_CONFIG), 'w') as f:
@@ -96,9 +97,13 @@ class TestRepoConfiguration(object):
         ('name', True, None),
         ('name-stream', True, None),
         ('name-stream-version', True, None),
-        ('name:stream', False, ('name', 'stream', None)),
-        ('name:stream:version', False, ('name', 'stream', 'version')),
-        ('name:stream:version:context', True, None),
+        ('name:stream', False, ('name', 'stream', None, None, None)),
+        ('n:s:version', False, ('n', 's', 'version', None, None)),
+        ('n:s:v:context', False, ('n', 's', 'v', 'context', None)),
+        ('n:s:v:c/profile', False, ('n', 's', 'v', 'c', 'profile')),
+        ('n:s:v/p', False, ('n', 's', 'v', None, 'p')),
+        ('n:s/p', False, ('n', 's', None, None, 'p')),
+        ('n/p', True, None),
     ])
     def test_container_module_specs(self, tmpdir, module_nsv, should_raise, expected):
         with open(os.path.join(str(tmpdir), REPO_CONTAINER_CONFIG), 'w') as f:
@@ -119,6 +124,22 @@ class TestRepoConfiguration(object):
             assert spec.stream == expected[1]
             if len(params) > 2:
                 assert spec.version == expected[2]
+                if len(params) > 3:
+                    assert spec.context == expected[3]
+            assert spec.profile == expected[4]
+
+
+class TestModuleSpec(object):
+    @pytest.mark.parametrize(('as_str', 'as_str_no_profile'), [
+        ('a:b', 'a:b'),
+        ('a:b/p', 'a:b'),
+        ('a:b:c', 'a:b:c'),
+        ('a:b:c/p', 'a:b:c'),
+    ])
+    def test_module_spec_to_str(self, as_str, as_str_no_profile):
+        spec = ModuleSpec.from_str(as_str)
+        assert spec.to_str() == as_str
+        assert spec.to_str(include_profile=False) == as_str_no_profile
 
 
 class TestAdditionalTagsConfig(object):
