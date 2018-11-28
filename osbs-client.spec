@@ -280,10 +280,10 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 * Thu Aug 18 2016 Martin Milata <mmilata@redhat.com> - 0.29-1
 - new upstream release: 0.29
 
-* Wed Jul 07 2016 Luiz Carvalho <lucarval@redhat.com> - 0.28-1
+* Thu Jul 07 2016 Luiz Carvalho <lucarval@redhat.com> - 0.28-1
 - new upstream release: 0.28
 
-* Wed Jun 24 2016 Luiz Carvalho <lucarval@redhat.com> - 0.27-1
+* Fri Jun 24 2016 Luiz Carvalho <lucarval@redhat.com> - 0.27-1
 - new upstream release: 0.27
 
 * Wed Jun 01 2016 Martin Milata <mmilata@redhat.com> - 0.26-1
