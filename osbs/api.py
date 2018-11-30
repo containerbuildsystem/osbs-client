@@ -579,8 +579,7 @@ class OSBS(object):
 
         return {
             utils.Labels.LABEL_TYPE_NAME: module.name,
-            utils.Labels.LABEL_TYPE_COMPONENT: module.name,
-            utils.Labels.LABEL_TYPE_VERSION: module.stream
+            utils.Labels.LABEL_TYPE_COMPONENT: module.name
         }, None
 
     def _do_create_prod_build(self, git_uri, git_ref,
