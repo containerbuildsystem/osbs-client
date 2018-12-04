@@ -63,10 +63,10 @@ def test_print_table_with_mocked_terminal(capsys):
     expected_header = """
  Header1               | Header2                          | Header3             
 -----------------------+----------------------------------+---------------------
-""".lstrip('\n')
+""".lstrip('\n')  # noqa:W291
     expected_data = """
  xxxxxxxx              | yyyyyyyyyyyyyyyyyyyy             | zzzz                
-""".lstrip('\n')
+""".lstrip('\n')  # noqa:W291
 
     assert err == expected_header
     assert out == expected_data

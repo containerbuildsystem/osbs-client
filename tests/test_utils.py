@@ -467,7 +467,7 @@ def test_labels(labels, fnc, expect):
             assert getattr(label, fn)() == expect
 
 
-vstr_re = re.compile('\d+\.\d+\.\d+')
+vstr_re = re.compile(r'\d+\.\d+\.\d+')
 
 
 @pytest.mark.parametrize(('version', 'valid'), [
@@ -493,7 +493,7 @@ def test_sanitize_version(version, valid):
             val = sanitize_version(parse_version(version))
             if val != version:
                 return
-        except:
+        except BaseException:
             pass
         with pytest.raises(ValueError):
             sanitize_version(parse_version(version))

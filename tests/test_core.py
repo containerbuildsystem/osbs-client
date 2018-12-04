@@ -168,8 +168,8 @@ class TestOpenshift(object):
         assert token is not None
 
     def test_get_user(self, openshift):  # noqa
-        l = openshift.get_user()
-        assert l.json() is not None
+        response = openshift.get_user()
+        assert response.json() is not None
 
     def test_watch_resource_and_wait_to_build_timeouts(self, caplog, openshift):  # noqa:F811
         class MockResponse(object):
@@ -735,8 +735,6 @@ class TestOpenshift(object):
         json_path = os.path.join(this_dir, "mock_jsons", openshift._con.version, 'imagestream.json')
         with open(json_path) as f:
             template_resource_json = json.load(f)
-
-        initial_resource_json = deepcopy(template_resource_json)
 
         modified_resource_json = deepcopy(template_resource_json)
         source_repo = modified_resource_json['spec'].pop('dockerImageRepository')

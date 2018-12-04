@@ -9,7 +9,6 @@ of the BSD license. See the LICENSE file for details.
 These tests are moved to a separate file due to https://github.com/bkabrda/flexmock/issues/13
 """
 import logging
-import sys
 
 from flexmock import flexmock
 import pytest

@@ -10,12 +10,11 @@ from __future__ import print_function, absolute_import, unicode_literals
 import logging
 import json
 
-from osbs.build.spec import BuildParam, BuildIDParam, UserParam, BuildCommon
+from osbs.build.spec import BuildParam, BuildIDParam, BuildCommon
 from osbs.constants import (DEFAULT_GIT_REF, REACTOR_CONFIG_ARRANGEMENT_VERSION,
                             DEFAULT_CUSTOMIZE_CONF)
 from osbs.exceptions import OsbsValidationException
 from osbs.utils import get_imagestreamtag_from_image, make_name_from_git
-from osbs.repo_utils import AdditionalTagsConfig
 
 
 logger = logging.getLogger(__name__)
