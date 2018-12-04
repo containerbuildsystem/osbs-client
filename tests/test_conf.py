@@ -476,7 +476,7 @@ class TestConfiguration(object):
 
     @pytest.mark.parametrize(('platform', 'config', 'expected', 'valid'), [
         (None, {}, ['v1', 'v2'], True),
-        (None, {'default': {'registry_api_versions': 'v1'}}, ['v1'], True),
+        (None, {'default': {'registry_api_versions': 'v1'}}, ['v1'], False),
         (None, {'default': {'registry_api_versions': 'v2'}}, ['v2'], True),
         (None, {'default': {'registry_api_versions': 'v1,v2'}}, ['v1', 'v2'], True),
         (None, {'default': {'registry_api_versions': '  v1,   v2  '}}, ['v1', 'v2'], True),

@@ -518,6 +518,9 @@ class BuildRequest(object):
         """
         versions = self.spec.registry_api_versions.value
 
+        if 'v2' not in versions:
+            raise OsbsValidationException('v1-only docker registry API is not supported')
+
         try:
             push_conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins',
                                                           'tag_and_push')
@@ -533,15 +536,6 @@ class BuildRequest(object):
 
             # remove extra tag_and_push config
             self.remove_tag_and_push_registries(tag_and_push_registries, 'v1')
-
-        if 'v2' not in versions:
-            # Remove v2-only plugins
-            logger.info("removing v2-only plugins: pulp_sync, delete_from_registry")
-            self.dj.remove_plugin('postbuild_plugins', 'pulp_sync')
-            self.dj.remove_plugin('exit_plugins', 'delete_from_registry')
-
-            # remove extra tag_and_push config
-            self.remove_tag_and_push_registries(tag_and_push_registries, 'v2')
 
         # Remove 'version' from tag_and_push plugin config as it's no
         # longer needed
@@ -1529,8 +1523,6 @@ class BuildRequest(object):
         self.adjust_for_isolated(self.spec.release)
         self.adjust_for_triggers()
         self.adjust_for_custom_base_image()
-
-        # Enable/disable plugins as needed for target registry API versions
         self.adjust_for_registry_api_versions()
 
         self.set_secrets({('prebuild_plugins',
