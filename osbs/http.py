@@ -219,6 +219,6 @@ class HttpResponse(object):
             return json.loads(text)
         except ValueError:
             msg = '{}Headers {}\nContent {}'.format('HtttpResponse has corrupt json:\n',
-                                                       self.headers, self.content)
+                                                    self.headers, self.content)
             logger.exception(msg)
             raise OsbsResponseException(msg, self.status_code)

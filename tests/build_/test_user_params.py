@@ -229,7 +229,7 @@ class TestBuildUserParams(object):
             "git_ref": TEST_GIT_REF,
             "git_uri": TEST_GIT_URI,
             "image_tag": "{}/{}:tothepoint-{}-{}-x86_64".format(TEST_USER, TEST_COMPONENT,
-                                                                    rand, timestr),
+                                                                rand, timestr),
             "imagestream_name": "name_label",
             "koji_parent_build": "fedora-26-9",
             "koji_target": "tothepoint",

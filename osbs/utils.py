@@ -340,7 +340,7 @@ def utcnow():
 
 
 VALID_BUILD_CONFIG_NAME_CHARS = re.compile('[-a-z0-9]')
-VALID_LABEL_CHARS = re.compile('[-a-z0-9\.]')
+VALID_LABEL_CHARS = re.compile(r'[-a-z0-9\.]')
 LABEL_MAX_CHARS = 63
 
 

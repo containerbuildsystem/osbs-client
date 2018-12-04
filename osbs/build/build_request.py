@@ -1479,7 +1479,7 @@ class BuildRequest(object):
         if self.spec.registry_uris.value:
             primary_registry_uri = self.spec.registry_uris.value[0].docker_uri
             tag_with_registry = '{}/{}'.format(primary_registry_uri,
-                                                 self.spec.image_tag.value)
+                                               self.spec.image_tag.value)
             self.template['spec']['output']['to']['name'] = tag_with_registry
         else:
             self.template['spec']['output']['to']['name'] = self.spec.image_tag.value
