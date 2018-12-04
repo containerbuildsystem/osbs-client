@@ -60,7 +60,9 @@ class RepoConfiguration(object):
             with open(file_path) as f:
                 self.container = (yaml.load(f) or {})
 
-        modules = self.container.get('compose', {}).get('modules', [])
+        # container values may be set to None
+        container_compose = self.container.get('compose') or {}
+        modules = container_compose.get('modules') or []
 
         self.container_module_specs = []
         value_errors = []

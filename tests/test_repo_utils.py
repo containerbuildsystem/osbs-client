@@ -128,6 +128,27 @@ class TestRepoConfiguration(object):
                     assert spec.context == expected[3]
             assert spec.profile == expected[4]
 
+    def test_empty_yaml_compose(self, tmpdir):
+        with open(os.path.join(str(tmpdir), REPO_CONTAINER_CONFIG), 'w') as f:
+            f.write(dedent("""\
+                compose:
+                """))
+
+        conf = RepoConfiguration(dir_path=str(tmpdir))
+        assert conf.container['compose'] is None
+        assert conf.container_module_specs == []
+
+    def test_empty_yaml_modules(self, tmpdir):
+        with open(os.path.join(str(tmpdir), REPO_CONTAINER_CONFIG), 'w') as f:
+            f.write(dedent("""\
+                compose:
+                    modules:
+                """))
+
+        conf = RepoConfiguration(dir_path=str(tmpdir))
+        assert conf.container['compose'] == {'modules': None}
+        assert conf.container_module_specs == []
+
 
 class TestModuleSpec(object):
     @pytest.mark.parametrize(('as_str', 'as_str_no_profile'), [
