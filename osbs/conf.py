@@ -299,6 +299,10 @@ class Configuration(object):
         value = self._get_deprecated("registry_api_versions", self.conf_section,
                                      "registry_api_versions", default='v1,v2')
         versions = [x.strip() for x in value.split(',')]
+
+        if 'v2' not in versions:
+            raise OsbsValidationException('v2 must be present in registry_api_versions')
+
         if platform is None:
             return versions
 
@@ -308,10 +312,7 @@ class Configuration(object):
         if enable_v1:
             return versions
         else:
-            if 'v2' in versions:
-                return ['v2']
-            else:
-                raise OsbsValidationException('v2 only platform in v1 only instance')
+            return ['v2']
 
     def get_source_registry_uri(self):
         return self._get_deprecated("source_registry_uri", self.conf_section,

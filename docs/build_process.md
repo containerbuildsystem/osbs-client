@@ -29,29 +29,24 @@ This document mentions several components that communicate with each other:
  10. atomic-reactor's `ImportImagePlugin` is run, which checks whether ImageStream for *IM* exists. If not, it creates it. Then, either way, it imports newly built *IM* into the `ImageStream`. If there are already some other images that use *IM* as their base image, they get rebuilt.
 
 
-### docker registry v1 API (current workflow)
+### docker registry v2 API (current workflow)
 
-You can choose if you want to push built image into:
+Since in v2 there is no file-like representation of an image, you can transport image only via registry protocol.
 
- * upstream docker registry — can be configured with `registry_uri` — you can suffix it with `/v1` to make reactor sure it's talking to `v1` registry:
+In order to create a v2 form, you need an instance of [distribution](https://github.com/docker/distribution) registry. Once you push the built image there, it's up to you, if you want to move the v2 image into pulp registry. That process is called sync.
 
-    ```ini
-    registry_uri = registry.example.com/v1
-    ```
+ * upstream docker registry — can be configured with `registry_uri`:
+
+```ini
+registry_uri = registry.example.com
+```
 
    if registry requires authentication, a dockercfg should be stored in the secret:
    ```ini
    registry_secret = dockercfg_secret
    ```
 
- * pulp registry — can be configured with `pulp_registry_name`, atomic-reactor will `upload` image (as archive) and copies it into required repository
-
-
-### docker registry v2 API
-
-Since in v2 there is no file-like representation of an image, you can transport image only via registry protocol.
-
-In order to create a v2 form, you need an instance of [distribution](https://github.com/docker/distribution) registry. Once you push the built image there, it's up to you, if you want to move the v2 image into pulp registry. That process is called sync. Configuration is same as for v1 except that you should suffix value of `registry_uri` with `/v2`, e.g.:
+ * for backwards compatibility reasons, it is possible to suffix `registry_uri` with `/v2`.
 
 ```ini
 registry_uri = registry.example.com/v2
@@ -70,13 +65,15 @@ pulp sync command (the way to get image from distribution to pulp) is requested 
 
 ### Parallel v1 and v2 builds
 
-It's possible to implement your workflow so your build emits images in multiple hybrid registries: pulp v1, pulp v2, v1 upstream registry, v2 upstream registry. Use configuration mentioned in the two sections above.
+While **v1-only registries are not supported**, it is possible to implement your workflow so your build emits images in multiple hybrid registries: pulp v1, pulp v2, v1 upstream registry, v2 upstream registry.
 
-This is how you can configure your workflow to make your image available via v1 and v2 crane API (crane is pulp component which provides registry API):
+In addition to the configuration mentioned in the section above, you can choose if you want to push the built image into pulp v1 registry. This can be configured with `pulp_registry_name`. atomic-reactor will `upload` the image (as archive) and copy it into the required repository.
+
+This is how you can configure your workflow to make your image available via v1 and v2 crane API (crane is the pulp component which provides registry API):
 
 ```ini
 # upstream docker registry -- distribution, which implements v2 API
-registry_uri = registry.example.com/v2
+registry_uri = registry.example.com
 # configuration for pulp where we sync from distribution
 pulp_sync_registry_name = stage-pulp
 pulp_sync_secret = stage-pulp-secret

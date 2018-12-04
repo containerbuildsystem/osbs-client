@@ -42,7 +42,7 @@ except ImportError:
     from calendar import timegm
 
 from dockerfile_parse import DockerfileParser
-from osbs.exceptions import OsbsException, OsbsResponseException
+from osbs.exceptions import OsbsException, OsbsResponseException, OsbsValidationException
 
 logger = logging.getLogger(__name__)
 
@@ -58,8 +58,11 @@ class RegistryURI(object):
     def __init__(self, uri):
         groups = self.versionre.match(uri).groups()
         self.docker_uri = groups[2]
-        self.version = groups[4] or 'v1'
+        self.version = groups[4] or 'v2'
         self.scheme = groups[1] or ''
+
+        if self.version == 'v1':
+            raise OsbsValidationException('Invalid API version requested in {}'.format(uri))
 
     @property
     def uri(self):

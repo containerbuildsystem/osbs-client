@@ -39,7 +39,7 @@ class TestRegistryURIsParam(object):
 
         assert p.value[0].uri == 'registry.example.com:5000'
         assert p.value[0].docker_uri == 'registry.example.com:5000'
-        assert p.value[0].version == 'v1'
+        assert p.value[0].version == 'v2'
 
     def test_registry_uris_param_v2(self):
         p = RegistryURIsParam()
@@ -48,6 +48,11 @@ class TestRegistryURIsParam(object):
         assert p.value[0].uri == 'registry.example.com:5000'
         assert p.value[0].docker_uri == 'registry.example.com:5000'
         assert p.value[0].version == 'v2'
+
+    def test_registry_uris_param_v1(self):
+        p = RegistryURIsParam()
+        with pytest.raises(OsbsValidationException):
+            p.value = ['registry.example.com:5000/v1']
 
 
 class TestBuildSpec(object):
