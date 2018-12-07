@@ -1573,12 +1573,8 @@ class TestArrangementV6(ArrangementBase):
         'worker',
     ])
     @pytest.mark.parametrize('scratch', [False, True])
-    @pytest.mark.parametrize('base_image, expect_plugin', [
-        ('koji/image-build', False),
-        ('foo', True),
-    ])
-    def test_pull_base_image(self, osbs, build_type, scratch,
-                             base_image, expect_plugin):
+    @pytest.mark.parametrize('base_image', ['koji/image-build', 'foo'])
+    def test_pull_base_image(self, osbs, build_type, scratch, base_image):
         phase = 'prebuild_plugins'
         plugin = 'pull_base_image'
         additional_params = {
@@ -1590,19 +1586,11 @@ class TestArrangementV6(ArrangementBase):
         params, build_json = self.get_build_request(build_type, osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
-        if not expect_plugin:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, phase, plugin)
-        else:
-            assert get_plugin(plugins, phase, plugin)
+        assert get_plugin(plugins, phase, plugin)
 
     @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
-    @pytest.mark.parametrize('base_image, expect_plugin', [
-        ('koji/image-build', True),
-        ('foo', False)
-    ])
-    def test_add_filesystem_in_worker(self, osbs, base_image, scratch,
-                                      expect_plugin):
+    @pytest.mark.parametrize('base_image', ['koji/image-build', 'foo'])
+    def test_add_filesystem_in_worker(self, osbs, base_image, scratch):
         additional_params = {
             'base_image': base_image,
             'yum_repourls': ['https://example.com/my.repo'],
@@ -1612,14 +1600,10 @@ class TestArrangementV6(ArrangementBase):
         params, build_json = self.get_worker_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
-        if not expect_plugin:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, 'prebuild_plugins', PLUGIN_ADD_FILESYSTEM_KEY)
-        else:
-            args = plugin_value_get(plugins, 'prebuild_plugins', PLUGIN_ADD_FILESYSTEM_KEY, 'args')
+        args = plugin_value_get(plugins, 'prebuild_plugins', PLUGIN_ADD_FILESYSTEM_KEY, 'args')
 
-            assert 'repos' in args.keys()
-            assert args['repos'] == params['yum_repourls']
+        assert 'repos' in args.keys()
+        assert args['repos'] == params['yum_repourls']
 
     def test_resolve_composes(self, osbs):  # noqa:F811
         koji_target = 'koji-target'
