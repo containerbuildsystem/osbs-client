@@ -10,7 +10,6 @@ from __future__ import print_function, absolute_import, unicode_literals
 import logging
 import os
 import json
-import re
 
 from osbs.constants import BUILD_TYPE_ORCHESTRATOR
 from osbs.exceptions import OsbsException
@@ -191,33 +190,6 @@ class PluginsConfiguration(object):
 
             for when, which in remove_plugins:
                 self.pt.remove_plugin(when, which, 'removed from isolated build request')
-
-    def is_custom_base_image(self):
-        return bool(re.match('^koji/image-build(:.*)?$',
-                             self.user_params.base_image.value or ''))
-
-    def adjust_for_custom_base_image(self):
-        """
-        Disable plugins to handle builds depending on whether
-        or not this is a build from a custom base image.
-        """
-        plugins = []
-        if self.is_custom_base_image():
-            # Plugins irrelevant to building base images.
-            plugins.append(("prebuild_plugins", "pull_base_image"))
-            plugins.append(("prebuild_plugins", "koji_parent"))
-            plugins.append(("prebuild_plugins", "inject_parent_image"))
-            plugins.append(("prebuild_plugins", "check_and_set_rebuild"))
-            plugins.append(("prebuild_plugins", "stop_autorebuild_if_disabled"))
-            msg = 'removed from custom image build request'
-
-        else:
-            # Plugins not needed for building non base images.
-            plugins.append(("prebuild_plugins", "add_filesystem"))
-            msg = 'removed from non custom image build request'
-
-        for when, which in plugins:
-            self.pt.remove_plugin(when, which, msg)
 
     def adjust_for_flatpak(self):
         """
@@ -523,7 +495,6 @@ class PluginsConfiguration(object):
 
         self.adjust_for_scratch()
         self.adjust_for_isolated()
-        self.adjust_for_custom_base_image()
         self.adjust_for_flatpak()
 
         # Set parameters on each plugin as needed

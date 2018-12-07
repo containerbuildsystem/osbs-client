@@ -551,8 +551,7 @@ class TestPluginsConfiguration(object):
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
 
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, 'prebuild_plugins', 'pull_base_image')
+        get_plugin(plugins, 'prebuild_plugins', 'pull_base_image')
 
         add_filesystem_args = plugin_value_get(
             plugins, 'prebuild_plugins', 'add_filesystem', 'args')
@@ -573,8 +572,7 @@ class TestPluginsConfiguration(object):
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
 
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, 'prebuild_plugins', 'pull_base_image')
+        get_plugin(plugins, 'prebuild_plugins', 'pull_base_image')
 
         add_filesystem_args = plugin_value_get(plugins, 'prebuild_plugins',
                                                'add_filesystem', 'args')
@@ -589,11 +587,9 @@ class TestPluginsConfiguration(object):
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
 
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, 'prebuild_plugins', 'add_filesystem')
+        get_plugin(plugins, 'prebuild_plugins', 'add_filesystem')
 
-        pull_base_image_plugin = get_plugin(
-            plugins, 'prebuild_plugins', 'pull_base_image')
+        pull_base_image_plugin = get_plugin(plugins, 'prebuild_plugins', 'pull_base_image')
         assert pull_base_image_plugin is not None
 
     def test_render_prod_custom_site_plugin_enable(self, tmpdir):
