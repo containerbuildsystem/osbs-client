@@ -9,9 +9,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 
 import sys
 import logging
-
-from osbs.exceptions import OsbsException
-from osbs.utils import run_command
+import subprocess
 
 
 logger = logging.getLogger(__name__)
@@ -24,8 +22,8 @@ def get_terminal_size():
     :return: tuple, (int, int)
     """
     try:
-        rows, columns = run_command(['stty', 'size']).split()
-    except OsbsException:
+        rows, columns = subprocess.check_output(['stty', 'size']).split()
+    except subprocess.CalledProcessError:
         # not attached to terminal
         logger.info("not attached to terminal")
         return 0, 0

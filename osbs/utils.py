@@ -200,17 +200,17 @@ def checkout_git_repo(git_uri, git_ref, git_branch=None):
                 args += ['-b', git_branch]
 
             args.append(repo_path)
-            run_command(args)
-        except OsbsException as ex:
+            subprocess.check_output(args)
+        except subprocess.CalledProcessError as ex:
             raise OsbsException("Unable to clone git repo '%s' "
                                 "branch '%s'" % (git_uri, git_branch),
                                 cause=ex, traceback=sys.exc_info()[2])
 
         # Find the specific ref we want
         try:
-            run_command(['git', 'reset', '--hard'], cwd=repo_path)
-            run_command(['git', 'checkout', git_ref], cwd=repo_path)
-        except OsbsException as ex:
+            subprocess.check_output(['git', 'reset', '--hard'], cwd=repo_path)
+            subprocess.check_output(['git', 'checkout', git_ref], cwd=repo_path)
+        except subprocess.CalledProcessError as ex:
             raise OsbsException("Unable to reset branch to '%s'" % git_ref,
                                 cause=ex, traceback=sys.exc_info()[2])
 
@@ -437,26 +437,6 @@ def wrap_name_from_git(prefix, suffix, *args, **kwargs):
 def get_instance_token_file_name(instance):
     """Return the token file name for the given instance."""
     return '{}/.osbs/{}.token'.format(os.path.expanduser('~'), instance)
-
-
-def run_command(*popenargs, **kwargs):
-    """
-    Run command with arguments and return its output as a byte string.
-
-    This is originally taken from subprocess.py of python 2.7
-    """
-    process = subprocess.Popen(stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                               *popenargs, **kwargs)
-    output, _ = process.communicate()
-    retcode = process.poll()
-    if retcode:
-        cmd = kwargs.get("args")
-        if cmd is None:
-            cmd = popenargs[0]
-        raise OsbsException(
-            message="Command %s returned %s\n\n%s" % (cmd, retcode, output)
-        )
-    return output
 
 
 def sanitize_version(version):
