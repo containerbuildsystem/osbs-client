@@ -112,3 +112,9 @@ ANNOTATION_INSECURE_REPO = 'openshift.io/image.insecureRepository'
 
 # optional key path for filtering existing build config results
 FILTER_KEY = 'spec.source.git.uri'
+
+# number of retries for git clone operations
+GIT_MAX_RETRIES = 3
+
+# backoff factor for git clone operations - exponential backoff in seconds
+GIT_BACKOFF_FACTOR = 60

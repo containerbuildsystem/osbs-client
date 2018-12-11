@@ -8,6 +8,7 @@ of the BSD license. See the LICENSE file for details.
 from flexmock import flexmock
 import os
 import os.path
+import subprocess
 import pytest
 import datetime
 import json
@@ -15,14 +16,18 @@ import re
 import sys
 from time import tzset
 from pkg_resources import parse_version
+from textwrap import dedent
 
+from osbs.constants import REPO_CONTAINER_CONFIG
+from osbs.repo_utils import RepoInfo
 from osbs.utils import (buildconfig_update,
                         get_imagestreamtag_from_image,
                         git_repo_humanish_part_from_uri, sanitize_strings_for_openshift,
                         get_time_from_rfc3339, strip_registry_from_image,
                         TarWriter, TarReader, make_name_from_git, wrap_name_from_git,
                         get_instance_token_file_name, Labels, sanitize_version,
-                        has_triggers, strip_registry_and_tag_from_image)
+                        has_triggers, strip_registry_and_tag_from_image,
+                        checkout_git_repo, get_repo_info)
 from osbs.exceptions import OsbsException
 import osbs.kerberos_ccache
 
@@ -510,6 +515,52 @@ def test_sanitize_version(version, valid):
 ])
 def test_strip_registry_and_tag_from_image(img, expected):
     assert strip_registry_and_tag_from_image(img) == expected
+
+
+def test_checkout_git_repo(tmpdir):
+    repo_path = tmpdir.mkdir("repo").strpath
+    initialize_git_repo(repo_path)
+    with checkout_git_repo(repo_path, 'HEAD') as repo:
+        assert os.path.isdir(repo)
+        assert os.path.isdir(os.path.join(repo, '.git'))
+        assert subprocess.check_output(['git', 'status'], cwd=repo)
+
+    another_repo_path = tmpdir.mkdir("another_repo").strpath
+    initialize_git_repo(another_repo_path)
+    with pytest.raises(OsbsException) as e:
+        with checkout_git_repo(another_repo_path, 'bogusref') as another_repo:
+            assert os.path.isdir(another_repo)
+    assert 'Unable to reset branch' in e.value.message
+
+    non_repo_path = tmpdir.mkdir("notarepo").strpath
+    with pytest.raises(OsbsException) as e:
+        with checkout_git_repo(non_repo_path, 'HEAD', backoff_factor=0) as non_repo:
+            assert os.path.isdir(non_repo)
+    assert 'Unable to clone git repo' in e.value.message
+
+
+def test_get_repo_info(tmpdir):
+    repo_path = tmpdir.mkdir("repo").strpath
+    with open(os.path.join(repo_path, REPO_CONTAINER_CONFIG), 'w') as f:
+        f.write(dedent("""\
+            compose:
+                modules:
+                - n:s:v
+            """))
+
+    initialize_git_repo(repo_path, files=[REPO_CONTAINER_CONFIG])
+    info = get_repo_info(repo_path, 'HEAD')
+    assert isinstance(info, RepoInfo)
+    assert info.configuration.container == {'compose': {'modules': ['n:s:v']}}
+
+
+def initialize_git_repo(rpath, files=[]):
+    subprocess.Popen(['git', 'init', rpath])
+    subprocess.Popen(['git', 'config', 'user.name', '"Gerald Host"'], cwd=rpath)
+    subprocess.Popen(['git', 'config', 'user.email', '"ghost@example.com"'], cwd=rpath)
+    for f in files:
+        subprocess.Popen(['git', 'add', f], cwd=rpath)
+    subprocess.Popen(['git', 'commit', '--allow-empty', '-m', 'code additions'], cwd=rpath)
 
 
 class JsonMatcher(object):

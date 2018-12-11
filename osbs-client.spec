@@ -53,6 +53,7 @@ Requires:       python3-osbs-client = %{version}-%{release}
 Requires:       python-osbs-client = %{version}-%{release}
 %endif
 
+BuildRequires:  git-core
 BuildRequires:  python2-devel
 BuildRequires:  python-setuptools
 %if 0%{?with_check}
@@ -98,6 +99,7 @@ Requires:       python-setuptools
 Requires:       python-six
 Requires:       krb5-workstation
 Requires:       PyYAML
+Requires:       git-core
 
 Provides:       python-osbs = %{version}-%{release}
 Obsoletes:      python-osbs < %{osbs_obsolete_vr}
@@ -121,6 +123,7 @@ Requires:       python3-setuptools
 Requires:       python3-six
 Requires:       krb5-workstation
 Requires:       python3-PyYAML
+Requires:       git-core
 
 Provides:       python3-osbs = %{version}-%{release}
 Obsoletes:      python3-osbs < %{osbs_obsolete_vr}
@@ -196,6 +199,9 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %endif # with_python3
 
 %changelog
+* Tue Dec 11 2018 Athos Ribeiro <athos@redhat.com>
+- Add git-core dependency
+
 * Tue Nov 27 2018 Athos Ribeiro <athos@redhat.com>
 - remove pytest-capturelog dependency
 
