@@ -26,7 +26,10 @@ from datetime import datetime
 from io import BytesIO
 from hashlib import sha256
 from osbs.repo_utils import RepoConfiguration, RepoInfo, AdditionalTagsConfig
-from osbs.constants import OS_CONFLICT_MAX_RETRIES, OS_CONFLICT_WAIT
+from osbs.constants import (OS_CONFLICT_MAX_RETRIES, OS_CONFLICT_WAIT,
+                            GIT_MAX_RETRIES, GIT_BACKOFF_FACTOR)
+
+
 from six.moves import http_client
 from six.moves.urllib.parse import urlparse
 
@@ -187,20 +190,55 @@ def buildconfig_update(orig, new, remove_nonexistent_keys=False):
                 orig[k] = v
 
 
+def subprocess_check_output_with_retry(args, max_retries=0, backoff_factor=0):
+    """
+    Call subprocess.check_output with args, retrying max_retries times.
+
+    :param args: list, arguments to be passed to subprocess.check_output
+    :param max_retries: int, maximum number of retries
+    :param backoff_factor: int, exponential backoff factor in seconds
+    :return: command output as byte string
+    """
+    for counter in range(max_retries + 1):
+        try:
+            return subprocess.check_output(args)
+        except subprocess.CalledProcessError as ex:
+            if counter < max_retries:
+                backoff = backoff_factor * (2 ** counter)
+                if backoff > 0:
+                    logger.info("retrying command '%s' in backoff seconds:\n '%s'", args, ex.output)
+                else:
+                    logger.info("retrying command '%s':\n '%s'", args, ex.output)
+                time.sleep(backoff)
+            else:
+                raise
+
+
 @contextlib.contextmanager
-def checkout_git_repo(git_uri, git_ref, git_branch=None):
+def checkout_git_repo(git_uri, git_ref, git_branch=None, max_retries=GIT_MAX_RETRIES,
+                      backoff_factor=GIT_BACKOFF_FACTOR):
+    """
+    Context manager to check out a git repository, yielding a string with the path
+    for the cloned repository.
+
+    :param git_uri: string, git repository URI
+    :param git_ref: string, target git reference
+    :param git_branch: string, target git branch
+    :param max_retries: int, maximum number of git clone retries
+    :param backoff_factor: int, exponential backoff factor for retries, in seconds
+    """
     tmpdir = tempfile.mkdtemp()
     repo_path = os.path.join(tmpdir, "repo")
+    # when you clone into an empty directory and cloning process fails
+    # git will remove the empty directory (why?!)
+    args = ['git', 'clone', git_uri]
+    if git_branch:
+        args += ['-b', git_branch]
+
+    args.append(repo_path)
     try:
         try:
-            # when you clone into an empty directory and cloning process fails
-            # git will remove the empty directory (why?!)
-            args = ['git', 'clone', git_uri]
-            if git_branch:
-                args += ['-b', git_branch]
-
-            args.append(repo_path)
-            subprocess.check_output(args)
+            subprocess_check_output_with_retry(args, max_retries, backoff_factor)
         except subprocess.CalledProcessError as ex:
             raise OsbsException("Unable to clone git repo '%s' "
                                 "branch '%s'" % (git_uri, git_branch),
