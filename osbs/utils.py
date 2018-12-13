@@ -206,7 +206,7 @@ def subprocess_check_output_with_retry(args, max_retries=0, backoff_factor=0):
             if counter < max_retries:
                 backoff = backoff_factor * (2 ** counter)
                 if backoff > 0:
-                    logger.info("retrying command '%s' in backoff seconds:\n '%s'", args, ex.output)
+                    logger.info("retrying command '%s' in %ss:\n '%s'", args, backoff, ex.output)
                 else:
                     logger.info("retrying command '%s':\n '%s'", args, ex.output)
                 time.sleep(backoff)
