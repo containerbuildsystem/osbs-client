@@ -158,12 +158,9 @@ class PluginsConfiguration(object):
                 ("prebuild_plugins", "koji_parent"),
                 ("postbuild_plugins", "compress"),  # required only to make an archive for Koji
                 ("postbuild_plugins", "pulp_pull"),  # required only to make an archive for Koji
-                ("postbuild_plugins", "koji_upload"),
-                ("postbuild_plugins", "fetch_worker_metadata"),
                 ("postbuild_plugins", "compare_components"),
                 ("postbuild_plugins", "import_image"),
                 ("exit_plugins", "koji_promote"),
-                ("exit_plugins", "koji_import"),
                 ("exit_plugins", "koji_tag_build"),
                 ("exit_plugins", "remove_worker_metadata"),
                 ("exit_plugins", "import_image"),
