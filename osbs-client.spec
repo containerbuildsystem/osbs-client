@@ -19,7 +19,7 @@
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 
 # set to 0 to create a normal release
-%global dev_release 1
+%global dev_release 0
 
 %if 0%{?dev_release}
 %global postrelease dev
@@ -199,6 +199,9 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %endif # with_python3
 
 %changelog
+* Tue Jan 08 2019 Robert Cerven <rcerven@redhat.com> - 0.53-1
+- new upstream release: 0.53
+
 * Tue Dec 11 2018 Athos Ribeiro <athos@redhat.com>
 - Add git-core dependency
 
