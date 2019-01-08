@@ -516,7 +516,12 @@ class OSBS(object):
 
     def _check_labels(self, repo_info):
         df_parser = repo_info.dockerfile_parser
-        labels = utils.Labels(df_parser.labels)
+        # DockerfileParse does not ensure a Dockerfile exists during initialization
+        try:
+            labels = utils.Labels(df_parser.labels)
+        except IOError as e:
+            raise RuntimeError('Could not parse Dockerfile in {}: {}'
+                               .format(df_parser.dockerfile_path, e))
 
         required_missing = False
         req_labels = {}

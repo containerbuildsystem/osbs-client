@@ -114,6 +114,16 @@ class MockDfParserBaseImage(object):
     baseimage = 'koji/image-build'
 
 
+class MockConfiguration(object):
+    def __init__(self, modules=['mod_name:mod_stream:mod_version']):
+        self.container = {'compose': {'modules': modules}}
+        safe_modules = modules or []
+        self.container_module_specs = [ModuleSpec.from_str(module) for module in safe_modules]
+
+    def is_autorebuild_enabled(self):
+        return False
+
+
 @pytest.mark.parametrize('version,warning,exception', (
     (5, "arrangement_version <= 5 is deprecated and will be removed in release 0.54", None),
     (6, None, None),
@@ -1827,23 +1837,10 @@ class TestOSBS(object):
         ['mod_name:mod_stream:mod_version', 'mod_name2:mod_stream2:mod_version2'],
     ))
     def test_create_build_flatpak(self, osbs, modules):
-        class MockConfiguration(object):
-            container = {
-                'compose': {
-                    'modules': modules
-                }
-            }
-
-            safe_modules = modules or []
-            container_module_specs = [ModuleSpec.from_str(module) for module in safe_modules]
-
-            def is_autorebuild_enabled(self):
-                return False
-
         (flexmock(utils)
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-            .and_return(self.mock_repo_info(mock_config=MockConfiguration())))
+            .and_return(self.mock_repo_info(mock_config=MockConfiguration(modules))))
 
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -2451,16 +2448,6 @@ class TestOSBS(object):
             'compose_ids': [1, 2],
         }
 
-        class MockConfiguration(object):
-            container = {
-                'compose': {
-                    'modules': ['mod_name:mod_stream:mod_version']
-                }
-            }
-
-            def is_autorebuild_enabled(self):
-                return False
-
         (flexmock(utils)
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
@@ -2951,3 +2938,36 @@ class TestOSBS(object):
                                        customize_conf=customize_conf,
                                        isolated=True)
         assert 'Base image build cannot be isolated' in str(exc)
+
+    @pytest.mark.parametrize(('flatpak'), (True, False))  # noqa
+    def test_do_create_prod_build_no_dockerfile(self, osbs, flatpak, tmpdir):
+        class MockDfParserNoDf(object):
+            dockerfile_path = tmpdir
+
+            @property
+            def labels(self):
+                raise IOError
+
+        (flexmock(utils)
+         .should_receive('get_repo_info')
+         .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+         .and_return(self.mock_repo_info(mock_df_parser=MockDfParserNoDf(),
+                                         mock_config=MockConfiguration())))
+
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': TEST_USER,
+            'inner_template': DEFAULT_INNER_TEMPLATE,
+            'outer_template': DEFAULT_OUTER_TEMPLATE,
+            'customize_conf': DEFAULT_CUSTOMIZE_CONF,
+        }
+        if not flatpak:
+            with pytest.raises(RuntimeError) as exc:
+                osbs._do_create_prod_build(**kwargs)
+            assert 'Could not parse Dockerfile in %s' % tmpdir in str(exc.value)
+        else:
+            kwargs['flatpak'] = True
+            response = osbs._do_create_prod_build(**kwargs)
+            assert isinstance(response, BuildResponse)
