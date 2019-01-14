@@ -7,7 +7,7 @@ Status](https://coveralls.io/repos/projectatomic/osbs-client/badge.svg?branch=ma
 
 Python module and command line client for OpenShift Build Service.
 
-It is able to query OpenShift v3 for various stuff related to building images. It can initiate builds, list builds, get info about builds, get build logs... All of this can be done from command line and from python.
+It is able to query OpenShift v3 for various stuff related to building images. It can initiate builds, list builds, get info about builds, get build logs and so on. All of this can be done by the OSBS site administrator from command line and from python. Regular users submitting builds can interact with this system using Koji, as described in the guide linked below.
 
 ## Getting Started
 
