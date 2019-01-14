@@ -724,8 +724,6 @@ class OSBS(object):
         build_request.set_repo_info(repo_info)
 
         if isolated:
-            if build_request.is_custom_base_image():
-                raise ValueError('Base image build cannot be isolated')
             if build_request.is_from_scratch_image():
                 raise ValueError('"FROM scratch" image build cannot be isolated')
 

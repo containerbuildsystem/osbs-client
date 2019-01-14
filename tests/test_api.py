@@ -2912,33 +2912,6 @@ class TestOSBS(object):
                                        isolated=True)
         assert '"FROM scratch" image build cannot be isolated' in str(exc)
 
-    def test_do_create_prod_build_isolated_base_image(self, osbs):  # noqa
-        (flexmock(utils)
-         .should_receive('get_repo_info')
-         .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-         .and_return(self.mock_repo_info(mock_df_parser=MockDfParserBaseImage())))
-
-        inner_template = DEFAULT_INNER_TEMPLATE
-        outer_template = DEFAULT_OUTER_TEMPLATE
-        customize_conf = DEFAULT_CUSTOMIZE_CONF
-
-        (flexmock(osbs)
-         .should_call('get_build_request')
-         .with_args(inner_template=inner_template,
-                    outer_template=outer_template,
-                    customize_conf=customize_conf,
-                    arrangement_version=None)
-         .once())
-
-        with pytest.raises(ValueError) as exc:
-            osbs._do_create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                       TEST_GIT_BRANCH, TEST_USER,
-                                       inner_template=inner_template,
-                                       outer_template=outer_template,
-                                       customize_conf=customize_conf,
-                                       isolated=True)
-        assert 'Base image build cannot be isolated' in str(exc)
-
     @pytest.mark.parametrize(('flatpak'), (True, False))  # noqa
     def test_do_create_prod_build_no_dockerfile(self, osbs, flatpak, tmpdir):
         class MockDfParserNoDf(object):
