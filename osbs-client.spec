@@ -15,7 +15,7 @@
 %global with_check 1
 %endif
 
-%global commit 5fa7fa287df56468146f13285c4ea42f557e154a
+%global commit cfcf69702c0f8e849c6d3624d119dbf0d4443498
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 
 # set to 0 to create a normal release
@@ -63,6 +63,7 @@ BuildRequires:  python-six
 BuildRequires:  python-dockerfile-parse
 BuildRequires:  python-requests
 BuildRequires:  python-requests-kerberos
+BuildRequires:  PyYAML
 %endif # with_check
 
 %if 0%{?with_python3}
@@ -76,6 +77,7 @@ BuildRequires:  python3-six
 BuildRequires:  python3-dockerfile-parse
 BuildRequires:  python3-requests
 BuildRequires:  python3-requests-kerberos
+BuildRequires:  python3-PyYAML
 %endif # with_check
 %endif # with_python3
 
@@ -184,6 +186,9 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %{python2_sitelib}/osbs*
 %dir %{_datadir}/osbs
 %{_datadir}/osbs/*.json
+%ghost %config(noreplace) %{_datadir}/osbs/orchestrator_customize.json
+%ghost %config(noreplace) %{_datadir}/osbs/prod_customize.json
+%ghost %config(noreplace) %{_datadir}/osbs/worker_customize.json
 
 
 %if 0%{?with_python3}
@@ -196,9 +201,16 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %{python3_sitelib}/osbs*
 %dir %{_datadir}/osbs
 %{_datadir}/osbs/*.json
+%ghost %config(noreplace) %{_datadir}/osbs/orchestrator_customize.json
+%ghost %config(noreplace) %{_datadir}/osbs/prod_customize.json
+%ghost %config(noreplace) %{_datadir}/osbs/worker_customize.json
 %endif # with_python3
 
 %changelog
+* Thu Jan 17 2019 Athos Ribeiro <athos@redhat.com>
+- ghost customization files
+- add PyYaML BRs
+
 * Tue Jan 15 2019 Robert Cerven <rcerven@redhat.com> - 0.53.1-1
 - new upstream release: 0.53.1
 
