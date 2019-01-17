@@ -14,7 +14,7 @@ import glob
 from setuptools import setup, find_packages
 
 data_files = {
-    "share/osbs": glob.glob("inputs/*.json"),
+    "share/osbs": [f for f in glob.glob("inputs/*.json") if 'customize' not in f],
 }
 
 def _get_requirements(path):
