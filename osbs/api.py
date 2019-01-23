@@ -719,6 +719,8 @@ class OSBS(object):
             compose_ids=compose_ids,
             osbs_api=self,
             parent_images_digests=parent_images_digests,
+            tags_from_yaml=repo_info.additional_tags.from_container_yaml,
+            additional_tags=repo_info.additional_tags.tags,
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         build_request.set_repo_info(repo_info)

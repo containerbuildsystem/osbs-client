@@ -13,7 +13,6 @@ import json
 
 from osbs.constants import BUILD_TYPE_ORCHESTRATOR
 from osbs.exceptions import OsbsException
-from osbs import utils
 
 logger = logging.getLogger(__name__)
 
@@ -455,24 +454,22 @@ class PluginsConfiguration(object):
         if not self.has_tag_suffixes_placeholder():
             return
 
-        repo_info = utils.get_repo_info(self.user_params.git_uri.value,
-                                        self.user_params.git_ref.value,
-                                        git_branch=self.user_params.git_branch.value)
-
         unique_tag = self.user_params.image_tag.value.split(':')[-1]
         tag_suffixes = {'unique': [unique_tag], 'primary': []}
 
         if self.user_params.build_type.value == BUILD_TYPE_ORCHESTRATOR:
+            additional_tags = self.user_params.additional_tags.value or set()
+
             if self.user_params.scratch.value:
                 pass
             elif self.user_params.isolated.value:
                 tag_suffixes['primary'].extend(['{version}-{release}'])
-            elif repo_info.additional_tags.from_container_yaml:
+            elif self.user_params.tags_from_yaml.value:
                 tag_suffixes['primary'].extend(['{version}-{release}'])
-                tag_suffixes['primary'].extend(repo_info.additional_tags.tags)
+                tag_suffixes['primary'].extend(additional_tags)
             else:
                 tag_suffixes['primary'].extend(['latest', '{version}', '{version}-{release}'])
-                tag_suffixes['primary'].extend(repo_info.additional_tags.tags)
+                tag_suffixes['primary'].extend(additional_tags)
 
         self.pt.set_plugin_arg(phase, plugin, 'tag_suffixes', tag_suffixes)
 
