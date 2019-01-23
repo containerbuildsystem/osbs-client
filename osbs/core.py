@@ -463,7 +463,7 @@ class Openshift(object):
             # NOTE1: If self._get causes ChunkedEncodingError, ConnectionError,
             # or IncompleteRead to be raised, they'll be wrapped in
             # OsbsNetworkException or OsbsException
-            # NOTE2: If decode_json or iter_lines causes ChunkedEncodingError, ConnectionError,
+            # NOTE2: If iter_lines causes ChunkedEncodingError
             # or IncompleteRead to be raised, it'll simply be silenced.
             # NOTE3: An exception may be raised from
             # check_response(). In this case, exception will be
