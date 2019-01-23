@@ -6,17 +6,16 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 import json
-import os
 from flexmock import flexmock
 
 from osbs.build.user_params import BuildUserParams
 from osbs.build.plugins_configuration import PluginsConfiguration
 from osbs.constants import (BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR,
-                            ADDITIONAL_TAGS_FILE, REACTOR_CONFIG_ARRANGEMENT_VERSION)
+                            REACTOR_CONFIG_ARRANGEMENT_VERSION)
 from osbs.exceptions import OsbsValidationException
 from osbs.conf import Configuration
 from osbs import utils
-from osbs.repo_utils import RepoInfo, AdditionalTagsConfig
+from osbs.repo_utils import RepoInfo
 
 import pytest
 
@@ -412,23 +411,12 @@ class TestPluginsConfiguration(object):
         expected_primary = set(primary_tags)
         exclude_for_override = set(['latest', '{version}'])
 
-        if extra_tags and not from_container_yaml:
-            with open(os.path.join(str(tmpdir), ADDITIONAL_TAGS_FILE), 'w') as f:
-                f.write('\n'.join(extra_tags))
-        kwargs.update(extra_args)
-
         if from_container_yaml:
-            if extra_tags:
-                expected_primary -= exclude_for_override
-            (flexmock(utils)
-                .should_receive('get_repo_info')
-                .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-                .and_return(RepoInfo(additional_tags=AdditionalTagsConfig(tags=extra_tags))))
-        else:
-            (flexmock(utils)
-                .should_receive('get_repo_info')
-                .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
-                .and_return(RepoInfo(additional_tags=AdditionalTagsConfig(dir_path=str(tmpdir)))))
+            expected_primary -= exclude_for_override
+
+        extra_args['tags_from_yaml'] = from_container_yaml
+        extra_args['additional_tags'] = extra_tags
+        kwargs.update(extra_args)
 
         user_params = BuildUserParams(INPUTS_PATH)
         user_params.set_params(**kwargs)
