@@ -190,6 +190,9 @@ class TestOpenshift(object):
             openshift.wait(12, None)
 
         with pytest.raises(OsbsException):
+            openshift.wait_for_build_to_get_scheduled(12)
+
+        with pytest.raises(OsbsException):
             openshift.wait_for_build_to_finish(12)
 
         for log in caplog.records:

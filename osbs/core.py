@@ -712,8 +712,8 @@ class Openshift(object):
                 return build_response
             except OsbsWatchBuildNotFound:
                 continue
-            raise OsbsException('Failed to schedule a build in {} attempts: {}'.format(WAIT_RETRY,
-                                                                                       build_id))
+        raise OsbsException('Failed to schedule a build in {} attempts: {}'.format(WAIT_RETRY,
+                                                                                   build_id))
 
     @staticmethod
     def _update_metadata_things(metadata, things, values):
