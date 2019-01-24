@@ -43,10 +43,11 @@ class RepoConfiguration(object):
         enabled = false
         """)
 
-    def __init__(self, dir_path='', file_name=REPO_CONFIG_FILE):
+    def __init__(self, dir_path='', file_name=REPO_CONFIG_FILE, depth=None):
 
         self._config_parser = ConfigParser()
         self.container = {}
+        self.depth = depth or 0
 
         # Set default options
         self._config_parser.readfp(StringIO(self.DEFAULT_CONFIG))

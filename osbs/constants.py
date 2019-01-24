@@ -118,3 +118,7 @@ GIT_MAX_RETRIES = 3
 
 # backoff factor for git clone operations - exponential backoff in seconds
 GIT_BACKOFF_FACTOR = 60
+
+# number of deepen operations to attempt if a requested commit is not
+# in the shallow depth of the original clone
+GIT_FETCH_RETRY = 9

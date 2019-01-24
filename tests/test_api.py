@@ -119,6 +119,7 @@ class MockConfiguration(object):
         self.container = {'compose': {'modules': modules}}
         safe_modules = modules or []
         self.container_module_specs = [ModuleSpec.from_str(module) for module in safe_modules]
+        self.depth = 0
 
     def is_autorebuild_enabled(self):
         return False
@@ -144,7 +145,8 @@ class TestOSBS(object):
 
     def mock_repo_info(self, mock_df_parser=None, mock_config=None):
         mock_df_parser = mock_df_parser or MockDfParser()
-        return RepoInfo(mock_df_parser, mock_config)
+        config = mock_config or MockConfiguration()
+        return RepoInfo(mock_df_parser, config)
 
     def test_osbsapi_wrapper(self):
         """
