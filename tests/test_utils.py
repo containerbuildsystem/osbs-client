@@ -14,6 +14,7 @@ import datetime
 import json
 import re
 import sys
+import requests
 from time import tzset
 from pkg_resources import parse_version
 from textwrap import dedent
@@ -27,13 +28,27 @@ from osbs.utils import (buildconfig_update,
                         TarWriter, TarReader, make_name_from_git, wrap_name_from_git,
                         get_instance_token_file_name, Labels, sanitize_version,
                         has_triggers, strip_registry_and_tag_from_image,
-                        checkout_git_repo, get_repo_info)
+                        clone_git_repo, get_repo_info)
 from osbs.exceptions import OsbsException
+from tests.constants import (TEST_DOCKERFILE_GIT, TEST_DOCKERFILE_SHA1, TEST_DOCKERFILE_INIT_SHA1,
+                             TEST_DOCKERFILE_BRANCH)
 import osbs.kerberos_ccache
 
 
 BC_NAME_REGEX = r'^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
 BC_LABEL_REGEX = r'^[a-z0-9]([-a-z0-9]*[a-z0-9])?([\/\.]*[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+
+
+def has_connection():
+    try:
+        requests.get("https://github.com/")
+        return True
+    except requests.ConnectionError:
+        return False
+
+
+# In case we run tests in an environment without internet connection.
+requires_internet = pytest.mark.skipif(not has_connection(), reason="requires internet connection")
 
 
 def test_buildconfig_update():
@@ -517,26 +532,46 @@ def test_strip_registry_and_tag_from_image(img, expected):
     assert strip_registry_and_tag_from_image(img) == expected
 
 
-def test_checkout_git_repo(tmpdir):
-    repo_path = tmpdir.mkdir("repo").strpath
-    initialize_git_repo(repo_path)
-    with checkout_git_repo(repo_path, 'HEAD') as repo:
-        assert os.path.isdir(repo)
-        assert os.path.isdir(os.path.join(repo, '.git'))
-        assert subprocess.check_output(['git', 'status'], cwd=repo)
+@pytest.mark.parametrize(('commit', 'branch', 'depth'), [
+    (None, None, None),
+    (TEST_DOCKERFILE_SHA1, None, None),
+    (TEST_DOCKERFILE_SHA1, TEST_DOCKERFILE_BRANCH, 1),
+    (TEST_DOCKERFILE_INIT_SHA1, TEST_DOCKERFILE_BRANCH, 1),
+    (TEST_DOCKERFILE_SHA1, None, 1),
+])
+@requires_internet
+def test_clone_git_repo(tmpdir, commit, branch, depth):
+    tmpdir_path = str(tmpdir.realpath())
+    repo_data = clone_git_repo(TEST_DOCKERFILE_GIT, tmpdir_path, commit=commit,
+                               branch=branch, depth=depth)
+    assert repo_data.commit_id is not None
+    assert tmpdir_path == repo_data.repo_path
+    if commit:
+        assert commit == repo_data.commit_id
+    assert len(repo_data.commit_id) == 40  # current git hashes are this long
+    assert os.path.isdir(os.path.join(tmpdir_path, '.git'))
 
-    another_repo_path = tmpdir.mkdir("another_repo").strpath
-    initialize_git_repo(another_repo_path)
-    with pytest.raises(OsbsException) as e:
-        with checkout_git_repo(another_repo_path, 'bogusref') as another_repo:
-            assert os.path.isdir(another_repo)
-    assert 'Unable to reset branch' in e.value.message
 
-    non_repo_path = tmpdir.mkdir("notarepo").strpath
-    with pytest.raises(OsbsException) as e:
-        with checkout_git_repo(non_repo_path, 'HEAD', backoff_factor=0) as non_repo:
-            assert os.path.isdir(non_repo)
-    assert 'Unable to clone git repo' in e.value.message
+@pytest.mark.parametrize(('commit', 'branch', 'depth'), [
+    ("bad", None, None),
+    ("bad", TEST_DOCKERFILE_BRANCH, 1),
+    ("bad", TEST_DOCKERFILE_BRANCH, 1),
+    ("bad", None, 1),
+])
+@requires_internet
+def test_clone_git_repo_commit_failure(tmpdir, commit, branch, depth):
+    tmpdir_path = str(tmpdir.realpath())
+    with pytest.raises(OsbsException) as exc:
+        clone_git_repo(TEST_DOCKERFILE_GIT, tmpdir_path, commit=commit, retry_times=1,
+                       branch=branch, depth=depth)
+    assert 'cannot find commit' in exc.value.message
+
+
+def test_clone_git_repo_total_failure(tmpdir):
+    tmpdir_path = str(tmpdir.realpath())
+    with pytest.raises(OsbsException) as exc:
+        clone_git_repo(tmpdir_path + 'failure', tmpdir_path, retry_times=1)
+    assert 'Unable to clone git repo' in exc.value.message
 
 
 def test_get_repo_info(tmpdir):
@@ -558,9 +593,16 @@ def initialize_git_repo(rpath, files=[]):
     subprocess.Popen(['git', 'init', rpath])
     subprocess.Popen(['git', 'config', 'user.name', '"Gerald Host"'], cwd=rpath)
     subprocess.Popen(['git', 'config', 'user.email', '"ghost@example.com"'], cwd=rpath)
+    first_commit_ref = None
     for f in files:
+        subprocess.Popen(['touch', f], cwd=rpath)
         subprocess.Popen(['git', 'add', f], cwd=rpath)
+        subprocess.Popen(['git', 'commit', '-m', 'new file {0}'.format(f)], cwd=rpath)
+        if not first_commit_ref:
+            first_commit_ref = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=rpath)
+            first_commit_ref = first_commit_ref.strip()
     subprocess.Popen(['git', 'commit', '--allow-empty', '-m', 'code additions'], cwd=rpath)
+    return first_commit_ref
 
 
 class JsonMatcher(object):

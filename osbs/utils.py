@@ -27,7 +27,8 @@ from io import BytesIO
 from hashlib import sha256
 from osbs.repo_utils import RepoConfiguration, RepoInfo, AdditionalTagsConfig
 from osbs.constants import (OS_CONFLICT_MAX_RETRIES, OS_CONFLICT_WAIT,
-                            GIT_MAX_RETRIES, GIT_BACKOFF_FACTOR)
+                            GIT_MAX_RETRIES, GIT_BACKOFF_FACTOR,
+                            GIT_FETCH_RETRY)
 
 
 from six.moves import http_client
@@ -48,6 +49,7 @@ from dockerfile_parse import DockerfileParser
 from osbs.exceptions import OsbsException, OsbsResponseException, OsbsValidationException
 
 logger = logging.getLogger(__name__)
+ClonedRepoData = namedtuple('ClonedRepoData', ['repo_path', 'commit_id', 'commit_depth'])
 
 
 class RegistryURI(object):
@@ -190,72 +192,122 @@ def buildconfig_update(orig, new, remove_nonexistent_keys=False):
                 orig[k] = v
 
 
-def subprocess_check_output_with_retry(args, max_retries=0, backoff_factor=0):
-    """
-    Call subprocess.check_output with args, retrying max_retries times.
-
-    :param args: list, arguments to be passed to subprocess.check_output
-    :param max_retries: int, maximum number of retries
-    :param backoff_factor: int, exponential backoff factor in seconds
-    :return: command output as byte string
-    """
-    for counter in range(max_retries + 1):
-        try:
-            return subprocess.check_output(args)
-        except subprocess.CalledProcessError as ex:
-            if counter < max_retries:
-                backoff = backoff_factor * (2 ** counter)
-                if backoff > 0:
-                    logger.info("retrying command '%s' in %ss:\n '%s'", args, backoff, ex.output)
-                else:
-                    logger.info("retrying command '%s':\n '%s'", args, ex.output)
-                time.sleep(backoff)
-            else:
-                raise
-
-
 @contextlib.contextmanager
-def checkout_git_repo(git_uri, git_ref, git_branch=None, max_retries=GIT_MAX_RETRIES,
-                      backoff_factor=GIT_BACKOFF_FACTOR):
+def checkout_git_repo(git_url, target_dir=None, commit=None, retry_times=GIT_MAX_RETRIES,
+                      branch=None, depth=None):
     """
-    Context manager to check out a git repository, yielding a string with the path
-    for the cloned repository.
+    clone provided git repo to target_dir, optionally checkout provided commit
+    yield the ClonedRepoData and delete the repo when finished
 
-    :param git_uri: string, git repository URI
-    :param git_ref: string, target git reference
-    :param git_branch: string, target git branch
-    :param max_retries: int, maximum number of git clone retries
-    :param backoff_factor: int, exponential backoff factor for retries, in seconds
+    :param git_url: str, git repo to clone
+    :param target_dir: str, filesystem path where the repo should be cloned
+    :param commit: str, commit to checkout, SHA-1 or ref
+    :param retry_times: int, number of retries for git clone
+    :param branch: str, optional branch of the commit, required if depth is provided
+    :param depth: int, optional expected depth
+    :return: str, int, commit ID of HEAD
     """
     tmpdir = tempfile.mkdtemp()
-    repo_path = os.path.join(tmpdir, "repo")
-    # when you clone into an empty directory and cloning process fails
-    # git will remove the empty directory (why?!)
-    args = ['git', 'clone', git_uri]
-    if git_branch:
-        args += ['-b', git_branch]
-
-    args.append(repo_path)
+    target_dir = target_dir or os.path.join(tmpdir, "repo")
     try:
-        try:
-            subprocess_check_output_with_retry(args, max_retries, backoff_factor)
-        except subprocess.CalledProcessError as ex:
-            raise OsbsException("Unable to clone git repo '%s' "
-                                "branch '%s'" % (git_uri, git_branch),
-                                cause=ex, traceback=sys.exc_info()[2])
-
-        # Find the specific ref we want
-        try:
-            subprocess.check_output(['git', 'reset', '--hard'], cwd=repo_path)
-            subprocess.check_output(['git', 'checkout', git_ref], cwd=repo_path)
-        except subprocess.CalledProcessError as ex:
-            raise OsbsException("Unable to reset branch to '%s'" % git_ref,
-                                cause=ex, traceback=sys.exc_info()[2])
-
-        yield repo_path
-
+        yield clone_git_repo(git_url, target_dir, commit, retry_times, branch, depth)
     finally:
         shutil.rmtree(tmpdir)
+
+
+def clone_git_repo(git_url, target_dir=None, commit=None, retry_times=GIT_MAX_RETRIES, branch=None,
+                   depth=None):
+    """
+    clone provided git repo to target_dir, optionally checkout provided commit
+
+    :param git_url: str, git repo to clone
+    :param target_dir: str, filesystem path where the repo should be cloned
+    :param commit: str, commit to checkout, SHA-1 or ref
+    :param retry_times: int, number of retries for git clone
+    :param branch: str, optional branch of the commit, required if depth is provided
+    :param depth: int, optional expected depth
+    :return: str, int, commit ID of HEAD
+    """
+    retry_delay = GIT_BACKOFF_FACTOR
+    target_dir = target_dir or os.path.join(tempfile.mkdtemp(), "repo")
+    commit = commit or "master"
+    logger.info("cloning git repo '%s'", git_url)
+    logger.debug("url = '%s', dir = '%s', commit = '%s'",
+                 git_url, target_dir, commit)
+
+    cmd = ["git", "clone"]
+    if branch:
+        cmd += ["-b", branch, "--single-branch"]
+        if depth:
+            cmd += ["--depth", str(depth)]
+    elif depth:
+        logger.warning("branch not provided for %s, depth setting ignored", git_url)
+        depth = None
+
+    cmd += [git_url, target_dir]
+
+    logger.debug("cloning '%s'", cmd)
+    repo_commit = ''
+    repo_depth = None
+    for counter in range(retry_times + 1):
+        try:
+            # we are using check_output, even though we aren't using
+            # the return value, but we will get 'output' in exception
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+            repo_commit, repo_depth = reset_git_repo(target_dir, commit, depth)
+            break
+        except subprocess.CalledProcessError as exc:
+            if counter != retry_times:
+                logger.info("retrying command '%s':\n '%s'", cmd, exc.output)
+                time.sleep(retry_delay * (2 ** counter))
+            else:
+                raise OsbsException("Unable to clone git repo '%s' "
+                                    "branch '%s'" % (git_url, branch),
+                                    cause=exc, traceback=sys.exc_info()[2])
+
+    return ClonedRepoData(target_dir, repo_commit, repo_depth)
+
+
+def reset_git_repo(target_dir, git_reference, retry_depth=None):
+    """
+    hard reset git clone in target_dir to given git_reference
+
+    :param target_dir: str, filesystem path where the repo is cloned
+    :param git_reference: str, any valid git reference
+    :param retry_depth: int, if the repo was cloned with --shallow, this is the expected
+                        depth of the commit
+    :return: str and int, commit ID of HEAD and commit depth of git_reference
+    """
+    deepen = retry_depth or 0
+    commit_depth = None
+    for _ in range(GIT_FETCH_RETRY):
+        try:
+            if not deepen:
+                cmd = ['git', 'rev-list', '--count', git_reference]
+                commit_depth = int(subprocess.check_output(cmd, cwd=target_dir))
+            cmd = ["git", "reset", "--hard", git_reference]
+            logger.debug("Resetting current HEAD: '%s'", cmd)
+            subprocess.check_call(cmd, cwd=target_dir)
+            break
+        except subprocess.CalledProcessError:
+            if not deepen:
+                raise OsbsException('cannot find commit %s in repo %s' %
+                                    (git_reference, target_dir))
+            deepen *= 2
+            cmd = ["git", "fetch", "--depth", str(deepen)]
+            subprocess.check_call(cmd, cwd=target_dir)
+            logger.debug("Couldn't find commit %s, increasing depth with '%s'", git_reference,
+                         cmd)
+    else:
+        raise OsbsException('cannot find commit %s in repo %s' % (git_reference, target_dir))
+
+    cmd = ["git", "rev-parse", "HEAD"]
+    logger.debug("getting SHA-1 of provided ref '%s'", git_reference)
+    commit_id = subprocess.check_output(cmd, cwd=target_dir, universal_newlines=True)
+    commit_id = commit_id.strip()
+    logger.info("commit ID = %s", commit_id)
+
+    return commit_id, commit_depth
 
 
 @contextlib.contextmanager
@@ -285,10 +337,13 @@ def looks_like_git_hash(git_ref):
     return all(ch in string.hexdigits for ch in git_ref) and len(git_ref) == 40
 
 
-def get_repo_info(git_uri, git_ref, git_branch=None):
-    with checkout_git_repo(git_uri, git_ref, git_branch) as code_dir:
+def get_repo_info(git_uri, git_ref, git_branch=None, depth=None):
+    with checkout_git_repo(git_uri, commit=git_ref, branch=git_branch,
+                           depth=depth) as code_dir_info:
+        code_dir = code_dir_info.repo_path
+        depth = code_dir_info.commit_depth
         dfp = DockerfileParser(os.path.join(code_dir), cache_content=True)
-        config = RepoConfiguration(dir_path=code_dir)
+        config = RepoConfiguration(dir_path=code_dir, depth=depth)
         tags_config = AdditionalTagsConfig(dir_path=code_dir,
                                            tags=config.container.get('tags', set()))
     return RepoInfo(dfp, config, tags_config)

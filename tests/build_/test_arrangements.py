@@ -96,6 +96,7 @@ class ArrangementBase(object):
 
             module = container['compose']['modules'][0]
             container_module_specs = [ModuleSpec.from_str(module)]
+            depth = 0
 
             def is_autorebuild_enabled(self):
                 return False
