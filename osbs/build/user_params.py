@@ -154,7 +154,11 @@ class BuildUserParams(BuildCommon):
     def from_json(self, user_params_json):
         if not user_params_json:
             return
-        json_dict = json.loads(user_params_json)
+        try:
+            json_dict = json.loads(user_params_json)
+        except ValueError:
+            logger.debug('failed to convert %s', user_params_json)
+            raise
         for key, value in json_dict.items():
             try:
                 self.convert_dict[key].value = value

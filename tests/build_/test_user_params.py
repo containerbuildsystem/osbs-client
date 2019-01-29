@@ -253,3 +253,9 @@ class TestBuildUserParams(object):
         spec2 = BuildUserParams()
         spec2.from_json(spec.to_json())
         assert spec2.to_json() == json.dumps(expected_json, sort_keys=True)
+
+    def test_from_json_failure(self, caplog):
+        spec = BuildUserParams()
+        with pytest.raises(ValueError):
+            spec.from_json('{"this is not valid json": }')
+        assert 'failed to convert {"this is not valid json": }' in caplog.text
