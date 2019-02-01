@@ -103,7 +103,7 @@ class ArrangementBase(object):
 
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(RepoInfo(MockParser(), MockConfiguration())))
 
         # Trick create_orchestrator_build into return the *request* JSON

@@ -55,6 +55,7 @@ class BuildUserParams(BuildCommon):
         self.yum_repourls = BuildParam("yum_repourls")
         self.tags_from_yaml = BuildParam('tags_from_yaml', allow_none=True)
         self.additional_tags = BuildParam('additional_tags', allow_none=True)
+        self.git_commit_depth = BuildParam('git_commit_depth', allow_none=True)
 
         self.required_params = [
             self.build_json_dir,
@@ -84,10 +85,12 @@ class BuildUserParams(BuildCommon):
                    yum_repourls=None, signing_intent=None, compose_ids=None,
                    isolated=None, scratch=None, parent_images_digests=None,
                    tags_from_yaml=None, additional_tags=None,
+                   git_commit_depth=None,
                    **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
         self.git_branch.value = git_branch
+        self.git_commit_depth.value = git_commit_depth
         self.tags_from_yaml.value = tags_from_yaml
         self.additional_tags.value = additional_tags or set()
 

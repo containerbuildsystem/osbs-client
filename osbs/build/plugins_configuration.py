@@ -392,7 +392,7 @@ class PluginsConfiguration(object):
             'component', 'git_branch', 'git_ref', 'git_uri', 'koji_task_id',
             'filesystem_koji_task_id', 'scratch', 'koji_target', 'user', 'yum_repourls',
             'arrangement_version', 'koji_parent_build', 'isolated', 'reactor_config_map',
-            'reactor_config_override'
+            'reactor_config_override', 'git_commit_depth',
         ]
 
         build_kwargs = self.user_params.to_dict(worker_params)
