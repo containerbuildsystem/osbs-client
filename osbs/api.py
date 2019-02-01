@@ -613,6 +613,7 @@ class OSBS(object):
                               compose_ids=None,
                               reactor_config_override=None,
                               parent_images_digests=None,
+                              git_commit_depth=None,
                               **kwargs):
 
         if flatpak:
@@ -623,7 +624,8 @@ class OSBS(object):
                 # fix for module requires will have to be determined from experience.
                 raise ValueError("Flatpak build cannot be isolated")
 
-        repo_info = utils.get_repo_info(git_uri, git_ref, git_branch=git_branch)
+        repo_info = utils.get_repo_info(git_uri, git_ref, git_branch=git_branch,
+                                        depth=git_commit_depth)
         build_request = self.get_build_request(inner_template=inner_template,
                                                outer_template=outer_template,
                                                customize_conf=customize_conf,
@@ -721,6 +723,7 @@ class OSBS(object):
             parent_images_digests=parent_images_digests,
             tags_from_yaml=repo_info.additional_tags.from_container_yaml,
             additional_tags=repo_info.additional_tags.tags,
+            git_commit_depth=repo_info.configuration.depth,
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         build_request.set_repo_info(repo_info)

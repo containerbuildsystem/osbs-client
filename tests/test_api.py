@@ -198,7 +198,7 @@ class TestOSBS(object):
     def test_create_build_with_deprecated_params(self, osbs):  # noqa
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
 
         kwargs = {
@@ -233,7 +233,7 @@ class TestOSBS(object):
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
         response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
                                           TEST_GIT_BRANCH, TEST_USER,
@@ -252,7 +252,7 @@ class TestOSBS(object):
                                              outer_template, customize_conf, version):
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
 
         (flexmock(osbs)
@@ -322,7 +322,7 @@ class TestOSBS(object):
 
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
 
         (flexmock(osbs_obj.os)
@@ -365,7 +365,7 @@ class TestOSBS(object):
                                                raises_exception):
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
 
         kwargs = {
@@ -508,7 +508,7 @@ class TestOSBS(object):
         """
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
 
         invalid_version = INVALID_ARRANGEMENT_VERSION
@@ -548,7 +548,7 @@ class TestOSBS(object):
         """
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_raise(IOError))
 
         with pytest.raises(OsbsException) as ex:
@@ -647,7 +647,7 @@ class TestOSBS(object):
         """
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
 
         with pytest.raises(OsbsOrchestratorNotEnabled) as ex:
@@ -669,7 +669,7 @@ class TestOSBS(object):
         """
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
 
         invalid_version = INVALID_ARRANGEMENT_VERSION
@@ -708,7 +708,7 @@ class TestOSBS(object):
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info(MockParser())))
         with pytest.raises(OsbsValidationException):
             osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
@@ -728,7 +728,7 @@ class TestOSBS(object):
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info(MockParser())))
         with pytest.raises(OsbsValidationException):
             osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
@@ -754,7 +754,7 @@ class TestOSBS(object):
             baseimage = 'fedora:25'
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info(MockParser())))
         create_build_args = {
             'git_uri': TEST_GIT_URI,
@@ -796,7 +796,7 @@ class TestOSBS(object):
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
         req = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
@@ -809,7 +809,7 @@ class TestOSBS(object):
     def test_missing_component_argument_doesnt_break_build(self, osbs):  # noqa
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
         response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
                                           TEST_GIT_BRANCH, TEST_USER)
@@ -819,7 +819,7 @@ class TestOSBS(object):
     def test_create_prod_build_set_required_version(self, osbs106):  # noqa
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
         (flexmock(BuildRequest)
             .should_receive('set_openshift_required_version')
@@ -1210,7 +1210,7 @@ class TestOSBS(object):
 
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
 
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
@@ -1278,7 +1278,7 @@ class TestOSBS(object):
 
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
 
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
@@ -1841,7 +1841,7 @@ class TestOSBS(object):
     def test_create_build_flatpak(self, osbs, modules):
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info(mock_config=MockConfiguration(modules))))
 
         kwargs = {
@@ -2013,7 +2013,7 @@ class TestOSBS(object):
 
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
 
         (flexmock(osbs_obj)
@@ -2065,7 +2065,7 @@ class TestOSBS(object):
 
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
 
         if use_build:
@@ -2287,7 +2287,7 @@ class TestOSBS(object):
 
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
 
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
@@ -2452,7 +2452,7 @@ class TestOSBS(object):
 
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info(mock_config=MockConfiguration())))
 
         args = MockArgs(isolated)
@@ -2486,7 +2486,7 @@ class TestOSBS(object):
     def test_do_create_prod_build_branch_required(self, osbs, branch_name):
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=branch_name)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=branch_name, depth=None)
             .and_return(self.mock_repo_info()))
 
         inner_template = DEFAULT_INNER_TEMPLATE
@@ -2870,7 +2870,7 @@ class TestOSBS(object):
 
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info(mock_df_parser=mocked_df_parser)))
 
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
@@ -2890,7 +2890,7 @@ class TestOSBS(object):
     def test_do_create_prod_build_isolated_from_scratch(self, osbs):  # noqa
         (flexmock(utils)
          .should_receive('get_repo_info')
-         .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+         .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
          .and_return(self.mock_repo_info(mock_df_parser=MockDfParserFromScratch())))
 
         inner_template = DEFAULT_INNER_TEMPLATE
@@ -2925,7 +2925,7 @@ class TestOSBS(object):
 
         (flexmock(utils)
          .should_receive('get_repo_info')
-         .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
+         .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
          .and_return(self.mock_repo_info(mock_df_parser=MockDfParserNoDf(),
                                          mock_config=MockConfiguration())))
 
