@@ -75,7 +75,7 @@ if [[ $PYTHON_VERSION -gt 2 ]]; then $RUN $PIP install -r requirements-py3.txt; 
 
 case ${ACTION} in
 "test")
-  TEST_CMD="py.test --cov osbs --cov-report html -vv tests"
+  TEST_CMD="py.test --cov osbs --cov-report html tests"
   ;;
 "pylint")
   # This can run only at fedora because pylint is not packaged in centos
