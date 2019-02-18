@@ -118,7 +118,7 @@ class TestBuildUserParams(object):
     @pytest.mark.parametrize(('signing_intent', 'compose_ids', 'yum_repourls', 'exc'), (
         ('release', [1, 2], ['http://example.com/my.repo'], OsbsValidationException),
         ('release', [1, 2], None, OsbsValidationException),
-        (None, [1, 2], ['http://example.com/my.repo'], OsbsValidationException),
+        (None, [1, 2], ['http://example.com/my.repo'], None),
         ('release', None, ['http://example.com/my.repo'], None),
         ('release', None, None, None),
         (None, [1, 2], None, None),

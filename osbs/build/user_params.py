@@ -138,9 +138,6 @@ class BuildUserParams(BuildCommon):
         if signing_intent and compose_ids:
             raise OsbsValidationException(
                 'Please only define signing_intent -OR- compose_ids, not both')
-        if compose_ids and yum_repourls:
-            raise OsbsValidationException(
-                'Please only define yum_repourls -OR- compose_ids, not both')
         if not (compose_ids is None or isinstance(compose_ids, list)):
             raise OsbsValidationException("compose_ids must be a list")
         if not (yum_repourls is None or isinstance(yum_repourls, list)):
