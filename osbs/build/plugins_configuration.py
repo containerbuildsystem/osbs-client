@@ -420,10 +420,6 @@ class PluginsConfiguration(object):
         if not self.pt.has_plugin_conf(phase, plugin):
             return
 
-        if self.user_params.yum_repourls.value:
-            self.pt.remove_plugin(phase, plugin, 'yum repourls specified in user parameters')
-            return
-
         self.pt.set_plugin_arg_valid(phase, plugin, 'compose_ids',
                                      self.user_params.compose_ids.value)
 
@@ -432,6 +428,9 @@ class PluginsConfiguration(object):
 
         self.pt.set_plugin_arg_valid(phase, plugin, 'koji_target',
                                      self.user_params.koji_target.value)
+
+        self.pt.set_plugin_arg_valid(phase, plugin, 'repourls',
+                                     self.user_params.yum_repourls.value)
 
     def render_resolve_module_compose(self):
         phase = 'prebuild_plugins'

@@ -755,6 +755,8 @@ class TestPluginsConfiguration(object):
         {'compose_ids': [1, ]},
         {'compose_ids': [1, 2]},
         {'koji_target': 'koji_target'},
+        {'repourls': ["http://example.com/my.repo", ]},
+        {'repourls': ["http://example.com/my.repo", "http://example.com/other.repo"]},
     ))
     def test_render_resolve_composes(self, additional_params):
         plugin_type = 'prebuild_plugins'
@@ -767,30 +769,6 @@ class TestPluginsConfiguration(object):
 
         assert get_plugin(plugins, plugin_type, plugin_name)
         assert plugin_value_get(plugins, plugin_type, plugin_name, 'args')
-
-    @pytest.mark.parametrize('yum_repos', [
-        None,
-        [],
-        ["http://example.com/my.repo"],
-    ])
-    def test_remove_resolve_composes(self, yum_repos):
-        plugin_type = 'prebuild_plugins'
-        plugin_name = 'resolve_composes'
-
-        additional_params = {
-            'yum_repourls': yum_repos
-        }
-
-        self.mock_repo_info()
-        user_params = get_sample_user_params(additional_params)
-        build_json = PluginsConfiguration(user_params).render()
-        plugins = get_plugins_from_build_json(build_json)
-
-        if yum_repos:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, plugin_type, plugin_name)
-        else:
-            assert get_plugin(plugins, plugin_type, plugin_name)
 
     def test_render_isolated(self):
         additional_params = {
