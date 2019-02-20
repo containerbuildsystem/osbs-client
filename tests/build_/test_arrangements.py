@@ -64,6 +64,7 @@ PLUGIN_CHECK_AND_SET_PLATFORMS_KEY = 'check_and_set_platforms'
 PLUGIN_REMOVE_WORKER_METADATA_KEY = 'remove_worker_metadata'
 PLUGIN_RESOLVE_COMPOSES_KEY = 'resolve_composes'
 PLUGIN_VERIFY_MEDIA_KEY = 'verify_media'
+PLUGIN_EXPORT_OPERATOR_MANIFESTS_KEY = 'export_operator_manifests'
 
 OSBS_WITH_PULP_PARAMS = {
     'platform_descriptors': None,
@@ -1509,6 +1510,7 @@ class TestArrangementV6(ArrangementBase):
                 'tag_from_config',
                 'tag_and_push',
                 PLUGIN_PULP_PUSH_KEY,
+                PLUGIN_EXPORT_OPERATOR_MANIFESTS_KEY,
                 'compress',
                 PLUGIN_KOJI_UPLOAD_PLUGIN_KEY,
             ],
@@ -1656,3 +1658,16 @@ class TestArrangementV6(ArrangementBase):
                                 PLUGIN_BUILD_ORCHESTRATE_KEY, 'args')
 
         assert 'platforms' not in args
+
+    @pytest.mark.parametrize('extract_platform', ['x86_64', None])  # noqa:F811
+    def test_export_operator_manifests(self, osbs, extract_platform):
+        additional_params = {'base_image': 'fedora:latest'}
+        match_args = {'platform': 'x86_64'}
+        if extract_platform:
+            additional_params['operator_manifests_extract_platform'] = extract_platform
+            match_args['operator_manifests_extract_platform'] = extract_platform
+
+        _, build_json = self.get_worker_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+        args = plugin_value_get(plugins, 'postbuild_plugins', 'export_operator_manifests', 'args')
+        assert match_args == args

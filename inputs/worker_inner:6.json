@@ -84,6 +84,9 @@
       }
     },
     {
+      "name": "export_operator_manifests"
+    },
+    {
       "name": "compress",
       "args": {
         "load_exported_image": true,

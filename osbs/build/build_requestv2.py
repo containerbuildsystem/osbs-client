@@ -77,6 +77,8 @@ class BuildRequestV2(BuildRequest):
         :param explicit_build_node_selector: dict, a nodeselector for explicit builds
         :param auto_build_node_selector: dict, a nodeselector for auto builds
         :param isolated_build_node_selector: dict, a nodeselector for isolated builds
+        :param operator_manifests_extract_platform: str, indicates which platform should upload
+                                                    operator manifests to koji
         :param parent_images_digests: dict, mapping image digests to names and platforms
         """
 

@@ -583,6 +583,7 @@ class Labels(object):
     - LABEL_TYPE_RUN: command to run the image
     - LABEL_TYPE_INSTALL: command to install the image
     - LABEL_TYPE_UNINSTALL: command to uninstall the image
+    - LABEL_TYPE_OPERATOR_MANIFESTS: flags the presence of operators metadata
     """
     LABEL_TYPE_NAME = object()
     LABEL_TYPE_VERSION = object()
@@ -595,6 +596,7 @@ class Labels(object):
     LABEL_TYPE_RUN = object()
     LABEL_TYPE_INSTALL = object()
     LABEL_TYPE_UNINSTALL = object()
+    LABEL_TYPE_OPERATOR_MANIFESTS = object()
     LABEL_NAMES = {
         LABEL_TYPE_NAME: ('name', 'Name'),
         LABEL_TYPE_VERSION: ('version', 'Version'),
@@ -606,7 +608,8 @@ class Labels(object):
         LABEL_TYPE_HOST: ('com.redhat.build-host', 'Build_Host'),
         LABEL_TYPE_RUN: ('run', 'RUN'),
         LABEL_TYPE_INSTALL: ('install', 'INSTALL'),
-        LABEL_TYPE_UNINSTALL: ('uninstall', 'UNINSTALL')
+        LABEL_TYPE_UNINSTALL: ('uninstall', 'UNINSTALL'),
+        LABEL_TYPE_OPERATOR_MANIFESTS: ('com.redhat.delivery.appregistry',)
     }
 
     def __init__(self, df_labels):

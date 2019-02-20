@@ -614,6 +614,7 @@ class OSBS(object):
                               reactor_config_override=None,
                               parent_images_digests=None,
                               git_commit_depth=None,
+                              operator_manifests_extract_platform=None,
                               **kwargs):
 
         if flatpak:
@@ -724,6 +725,7 @@ class OSBS(object):
             tags_from_yaml=repo_info.additional_tags.from_container_yaml,
             additional_tags=repo_info.additional_tags.tags,
             git_commit_depth=repo_info.configuration.depth,
+            operator_manifests_extract_platform=operator_manifests_extract_platform,
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         build_request.set_repo_info(repo_info)
