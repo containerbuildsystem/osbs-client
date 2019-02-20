@@ -369,6 +369,17 @@ class PluginsConfiguration(object):
         set_arg('platform', self.user_params.platform.value)
         set_arg('report_multiple_digests', True)
 
+    def render_export_operator_manifests(self):
+        phase = 'postbuild_plugins'
+        name = 'export_operator_manifests'
+        if not self.pt.has_plugin_conf(phase, name):
+            return
+
+        self.pt.set_plugin_arg(phase, name, 'platform', self.user_params.platform.value)
+        if self.user_params.operator_manifests_extract_platform.value:
+            self.pt.set_plugin_arg(phase, name, 'operator_manifests_extract_platform',
+                                   self.user_params.operator_manifests_extract_platform.value)
+
     def render_koji_tag_build(self):
         phase = 'exit_plugins'
         plugin = 'koji_tag_build'
@@ -503,6 +514,7 @@ class PluginsConfiguration(object):
         self.render_koji()
         self.render_koji_tag_build()
         self.render_koji_upload()
+        self.render_export_operator_manifests()
         self.render_orchestrate_build()
         self.render_pull_base_image()
         self.render_resolve_composes()

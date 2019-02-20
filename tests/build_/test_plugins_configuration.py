@@ -738,6 +738,28 @@ class TestPluginsConfiguration(object):
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, plugin_type, plugin_name)
 
+    @pytest.mark.parametrize('extract_platform', ('x86_64', 'aarch64'))
+    @pytest.mark.parametrize('build_type', (BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR))
+    def test_render_export_operator_manifests(self, extract_platform, build_type):
+        plugin_type = "postbuild_plugins"
+        plugin_name = "export_operator_manifests"
+
+        extra_args = {
+            'operator_manifests_extract_platform': extract_platform,
+        }
+
+        self.mock_repo_info()
+        user_params = get_sample_user_params(extra_args, build_type)
+        build_json = PluginsConfiguration(user_params).render()
+        plugins = get_plugins_from_build_json(build_json)
+        if build_type == BUILD_TYPE_WORKER:
+            assert get_plugin(plugins, plugin_type, plugin_name)
+            assert plugin_value_get(plugins, plugin_type, plugin_name, 'args',
+                                    'operator_manifests_extract_platform') == extract_platform
+        else:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, plugin_type, plugin_name)
+
     @pytest.mark.parametrize('additional_params', (
         {'signing_intent': 'release'},
         {'compose_ids': [1, ]},
