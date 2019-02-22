@@ -552,6 +552,16 @@ def test_clone_git_repo(tmpdir, commit, branch, depth):
     assert os.path.isdir(os.path.join(tmpdir_path, '.git'))
 
 
+@requires_internet
+def test_calc_depth_git_repo(tmpdir):
+    tmpdir_path = str(tmpdir.realpath())
+    repo_data = clone_git_repo(TEST_DOCKERFILE_GIT, tmpdir_path, commit='HEAD',
+                               branch='master', depth=None)
+    assert repo_data.commit_id is not None
+    assert tmpdir_path == repo_data.repo_path
+    assert repo_data.commit_depth == 1
+
+
 @pytest.mark.parametrize(('commit', 'branch', 'depth'), [
     ("bad", None, None),
     ("bad", TEST_DOCKERFILE_BRANCH, 1),
