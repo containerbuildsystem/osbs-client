@@ -279,12 +279,12 @@ def reset_git_repo(target_dir, git_reference, retry_depth=None):
     :return: str and int, commit ID of HEAD and commit depth of git_reference
     """
     deepen = retry_depth or 0
-    commit_depth = None
+    base_commit_depth = 0
     for _ in range(GIT_FETCH_RETRY):
         try:
             if not deepen:
                 cmd = ['git', 'rev-list', '--count', git_reference]
-                commit_depth = int(subprocess.check_output(cmd, cwd=target_dir))
+                base_commit_depth = int(subprocess.check_output(cmd, cwd=target_dir)) - 1
             cmd = ["git", "reset", "--hard", git_reference]
             logger.debug("Resetting current HEAD: '%s'", cmd)
             subprocess.check_call(cmd, cwd=target_dir)
@@ -307,7 +307,12 @@ def reset_git_repo(target_dir, git_reference, retry_depth=None):
     commit_id = commit_id.strip()
     logger.info("commit ID = %s", commit_id)
 
-    return commit_id, commit_depth
+    final_commit_depth = None
+    if not deepen:
+        cmd = ['git', 'rev-list', '--count', 'HEAD']
+        final_commit_depth = int(subprocess.check_output(cmd, cwd=target_dir)) - base_commit_depth
+
+    return commit_id, final_commit_depth
 
 
 @contextlib.contextmanager
