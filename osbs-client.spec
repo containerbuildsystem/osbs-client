@@ -19,7 +19,7 @@
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 
 # set to 0 to create a normal release
-%global dev_release 1
+%global dev_release 0
 
 %if 0%{?dev_release}
 %global postrelease dev
@@ -207,6 +207,9 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %endif # with_python3
 
 %changelog
+* Wed Mar 06 2019 Robert Cerven <rcerven@redhat.com> - 0.54-1
+- new upstream release: 0.54
+
 * Thu Jan 17 2019 Athos Ribeiro <athos@redhat.com>
 - ghost customization files
 - add PyYaML BRs
