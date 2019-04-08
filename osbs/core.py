@@ -226,7 +226,6 @@ class Openshift(object):
             return ""
         parsed_url = urlparse(redir_url)
         fragment = parsed_url.fragment
-        logger.debug("fragment is '%s'", fragment)
         parsed_fragment = parse_qs(fragment)
         self.token = parsed_fragment['access_token'][0]
         return self.token
