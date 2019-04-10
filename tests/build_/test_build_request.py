@@ -966,7 +966,8 @@ class TestBuildRequest(object):
         ['v2'],
     ])
     @pytest.mark.parametrize('platform', [None, 'x86_64'])
-    @pytest.mark.parametrize('arrangement_version', range(3, TEST_ARRANGEMENT_VERSION + 1))
+    @pytest.mark.parametrize('arrangement_version',
+                             list(range(3, TEST_ARRANGEMENT_VERSION + 1)))
     @pytest.mark.parametrize('scratch', [False, True])
     def test_render_prod_request_v1_v2(self, registry_api_versions, platform, arrangement_version,
                                        scratch):
@@ -1628,7 +1629,7 @@ class TestBuildRequest(object):
         (None, None, True),
     ))
     @pytest.mark.parametrize('arrangement_version',
-                             range(3, TEST_ARRANGEMENT_VERSION + 1))
+                             list(range(3, TEST_ARRANGEMENT_VERSION + 1)))
     @pytest.mark.parametrize(('build_from', 'build_image', 'build_imagestream',
                               'worker_build_image', 'valid'), (
 
