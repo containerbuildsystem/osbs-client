@@ -6,6 +6,8 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 
+from __future__ import absolute_import
+
 from flexmock import flexmock
 from osbs.constants import REPO_CONFIG_FILE, ADDITIONAL_TAGS_FILE, REPO_CONTAINER_CONFIG
 from osbs.repo_utils import RepoInfo, RepoConfiguration, AdditionalTagsConfig, ModuleSpec

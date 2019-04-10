@@ -7,6 +7,8 @@ of the BSD license. See the LICENSE file for details.
 """
 
 
+from __future__ import absolute_import
+
 from osbs.constants import REPO_CONFIG_FILE, ADDITIONAL_TAGS_FILE, REPO_CONTAINER_CONFIG
 from six import StringIO
 from six.moves.configparser import ConfigParser
