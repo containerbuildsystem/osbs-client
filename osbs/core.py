@@ -5,7 +5,7 @@ All rights reserved.
 This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
-from __future__ import print_function, unicode_literals, absolute_import
+from __future__ import print_function, unicode_literals, absolute_import, division
 import json
 import os
 import numbers
@@ -40,10 +40,10 @@ logger = logging.getLogger(__name__)
 # Retry each connection attempt after 30 seconds, for a maximum of 10 times
 WATCH_RETRY_SECS = 30
 WATCH_RETRY = 10
-MAX_BAD_RESPONSES = int(WATCH_RETRY / 3)
+MAX_BAD_RESPONSES = WATCH_RETRY // 3
 # Give up after 12 hours
 WAIT_RETRY_HOURS = 12
-WAIT_RETRY = int(WAIT_RETRY_HOURS * 3600 / (WATCH_RETRY_SECS * WATCH_RETRY))
+WAIT_RETRY = WAIT_RETRY_HOURS * 3600 // (WATCH_RETRY_SECS * WATCH_RETRY)
 
 
 def check_response(response, log_level=logging.ERROR):
