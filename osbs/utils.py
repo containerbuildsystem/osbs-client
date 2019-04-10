@@ -115,16 +115,15 @@ class TarReader(object):
         return self
 
     def __next__(self):
-        return self.next()
-
-    def next(self):
-        ti = self.tarfile.next()
+        ti = self.tarfile.next()    # pylint: disable=next-method-called
 
         if ti is None:
             self.close()
             raise StopIteration()
 
         return self.TarFile(ti.name, self.tarfile.extractfile(ti))
+
+    next = __next__     # py2 compatibility
 
     def close(self):
         self.tarfile.close()
