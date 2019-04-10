@@ -867,14 +867,13 @@ def main():
             raise
         else:
             logger.error("Network error at %s (%d): %s",
-                         ex.url, ex.status_code, ex.message)
+                         ex.url, ex.status_code, ex)
             return -1
     except OsbsAuthException as ex:
         if is_verbose:
             raise
         else:
-            logger.error("Authentication failure: %s",
-                         ex.message)
+            logger.error("Authentication failure: %s", ex)
             return -1
     except OsbsResponseException as ex:
         if is_verbose:
@@ -883,7 +882,7 @@ def main():
             if isinstance(ex.json, dict) and 'message' in ex.json:
                 msg = ex.json['message']
             else:
-                msg = ex.message
+                msg = str(ex)
             logger.error("Server returned error %s: %s", ex.status_code, msg)
             return -1
     except Exception as ex:  # pylint: disable=broad-except
