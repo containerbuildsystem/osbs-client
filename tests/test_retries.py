@@ -8,6 +8,8 @@ of the BSD license. See the LICENSE file for details.
 
 These tests are moved to a separate file due to https://github.com/bkabrda/flexmock/issues/13
 """
+from __future__ import absolute_import
+
 import logging
 
 from flexmock import flexmock
