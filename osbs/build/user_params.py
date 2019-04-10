@@ -189,5 +189,5 @@ class BuildUserParams(BuildCommon):
         return retdict
 
     def to_json(self):
-        json_dict = self.to_dict(self.convert_dict.keys())
+        json_dict = self.to_dict(list(self.convert_dict))
         return json.dumps(json_dict, sort_keys=True)
