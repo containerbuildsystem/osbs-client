@@ -115,6 +115,8 @@ class ModuleSpec(object):
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
+    __hash__ = None     # py2 compatibility
+
     @classmethod
     def from_str(cls, text):
         profile = None
