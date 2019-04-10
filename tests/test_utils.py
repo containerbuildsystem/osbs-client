@@ -630,3 +630,5 @@ class JsonMatcher(object):
         # Assert to provide a more meaningful error
         assert self.expected == json.loads(json_str)
         return self.expected == json.loads(json_str)
+
+    __hash__ = None     # py2 compatibility
