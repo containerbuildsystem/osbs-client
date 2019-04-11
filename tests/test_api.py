@@ -300,7 +300,7 @@ class TestOSBS(object):
         def inspect_build_request(name, br):
             assert 'koji-task-id' not in json.loads(br)['metadata']['labels']
 
-            class Response:
+            class Response(object):
                 def __init__(self, br):
                     self.br = br
 
@@ -311,7 +311,7 @@ class TestOSBS(object):
 
         def mock_start_build(name):
 
-            class Response:
+            class Response(object):
                 def json(self):
                     return ''
 
@@ -969,7 +969,7 @@ class TestOSBS(object):
             .with_args(osbs.os_conf.conf_section)
             .and_return(token_file_path))
 
-        class TestResponse:
+        class TestResponse(object):
             status_code = http_client.UNAUTHORIZED
 
         if not token:

@@ -105,7 +105,7 @@ class TestBuildResponse(object):
          "Error in pod: OSBS unavailable; Pod related errors cannot be retrieved"),
     ])
     def test_error_message(self, osbs, pod, plugin, message, expected_error_message):
-        class MockOsbsPod:
+        class MockOsbsPod(object):
             def __init__(self, error):
                 self.error = error
 
