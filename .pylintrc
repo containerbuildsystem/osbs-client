@@ -39,12 +39,8 @@ disable=I,
         exception-escape, # throws false positives on 1.9.0 (Fedora 29)
         dangerous-default-value,  # should be enabled
         deprecated-method,  # should be enabled
-        dict-keys-not-iterating,  # py2/3 compatibility
-        eq-without-hash,  # py2/3 compatibility
         empty-docstring,  # should be enabled
-        exception-message-attribute,  # py2/3 compatibility
         fixme,
-        input-builtin,  # py2/3 compatibility
         invalid-name,
         keyword-arg-before-vararg,  # nice to have
         len-as-condition,  # nice to have
@@ -53,18 +49,10 @@ disable=I,
         logging-not-lazy,  # should be enabled
         missing-docstring,
         misplaced-comparison-constant,
-        next-method-called,  # py2/3 compatibility
-        next-method-defined,  # py2/3 compatibility
-        no-absolute-import,  # py2/3 compatibility
         no-init,
-        old-division,  # py2/3 compatibility
-        old-style-class,  # py2/3 compatibility
         pointless-statement,  # should be enabled
-        print-statement,  # py2/3 compatibility
         protected-access,
         raising-format-tuple,  # should be enabled
-        range-builtin-not-iterating,  # py2/3 compatibility
-        raw_input-builtin,  # py2/3 compatibility
         redefined-builtin,  # should be enabled
         redefined-outer-name,  # nice to have
         relative-import,  # nice to have
