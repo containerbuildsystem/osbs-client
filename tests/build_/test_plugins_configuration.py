@@ -817,7 +817,6 @@ class TestPluginsConfiguration(object):
             ("postbuild_plugins", "import_image"),
             ("exit_plugins", "koji_promote"),
             ("exit_plugins", "koji_tag_build"),
-            ("exit_plugins", "remove_worker_metadata"),
             ("exit_plugins", "import_image"),
             ("prebuild_plugins", "check_and_set_rebuild"),
             ("prebuild_plugins", "stop_autorebuild_if_disabled")
