@@ -43,7 +43,7 @@ from osbs import utils
 from osbs.utils import (retry_on_conflict, graceful_chain_get, RegistryURI,
                         strip_registry_and_tag_from_image)
 
-from six.moves import http_client
+from six.moves import http_client, input
 
 
 # Decorator for API methods.
@@ -1068,10 +1068,7 @@ class OSBS(object):
             if username:
                 self.os.username = username
             else:
-                try:
-                    self.os.username = raw_input("Username: ")
-                except NameError:
-                    self.os.username = input("Username: ")
+                self.os.username = input("Username: ")
 
             if password:
                 self.os.password = password
