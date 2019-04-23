@@ -1487,6 +1487,7 @@ class TestArrangementV6(ArrangementBase):
                 'pull_base_image',
                 'add_labels_in_dockerfile',
                 'change_from_in_dockerfile',
+                'hide_files',
                 'add_help',
                 'add_dockerfile',
                 'distgit_fetch_artefacts',
