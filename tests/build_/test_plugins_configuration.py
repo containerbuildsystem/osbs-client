@@ -382,39 +382,43 @@ class TestPluginsConfiguration(object):
             assert plugin['args'].get('append', False) == flatpak
 
     @pytest.mark.parametrize('from_container_yaml', (True, False))
-    @pytest.mark.parametrize(('extra_args', 'has_platform_tag', 'extra_tags', 'primary_tags'), (
+    @pytest.mark.parametrize(('extra_args', 'has_platform_tag', 'extra_tags', 'primary_tags',
+                              'floating_tags'), (
         # Worker build cases
-        ({'build_type': BUILD_TYPE_WORKER, 'platform': 'x86_64'}, True, (), ()),
-        ({'build_type': BUILD_TYPE_WORKER, 'platform': 'x86_64'}, True, ('tag1', 'tag2'), ()),
-        ({'build_type': BUILD_TYPE_WORKER, 'platform': 'x86_64', 'scratch': True}, True, (), ()),
+        ({'build_type': BUILD_TYPE_WORKER, 'platform': 'x86_64'}, True, (), (), ()),
+        ({'build_type': BUILD_TYPE_WORKER, 'platform': 'x86_64'}, True, ('tag1', 'tag2'), (), ()),
+        ({'build_type': BUILD_TYPE_WORKER, 'platform': 'x86_64', 'scratch': True}, True,
+         (), (), ()),
         ({'build_type': BUILD_TYPE_WORKER, 'platform': 'x86_64',
-          'isolated': True, 'release': '1.1'}, True, (), ()),
+          'isolated': True, 'release': '1.1'}, True, (), (), ()),
         # Orchestrator build cases
         ({'build_type': BUILD_TYPE_ORCHESTRATOR, 'platforms': ['x86_64']},
-         False, ('tag1', 'tag2'), ('latest', '{version}', '{version}-{release}', 'tag1', 'tag2')),
+         False, ('tag1', 'tag2'), ('{version}-{release}',),
+         ('latest', '{version}', 'tag1', 'tag2')),
         ({'build_type': BUILD_TYPE_ORCHESTRATOR, 'platforms': ['x86_64']},
-         False, (), ('latest', '{version}', '{version}-{release}')),
+         False, (), ('{version}-{release}',), ('latest', '{version}')),
         ({'build_type': BUILD_TYPE_ORCHESTRATOR, 'platforms': ['x86_64'], 'scratch': True},
-         False, ('tag1', 'tag2'), ()),
+         False, ('tag1', 'tag2'), (), ()),
         ({'build_type': BUILD_TYPE_ORCHESTRATOR, 'platforms': ['x86_64'], 'isolated': True,
           'release': '1.1'},
-         False, ('tag1', 'tag2'), ('{version}-{release}',)),
+         False, ('tag1', 'tag2'), ('{version}-{release}',), ()),
         # When build_type is not specified, no primary tags are set
-        ({}, False, (), ()),
-        ({}, False, ('tag1', 'tag2'), ()),
-        ({'scratch': True}, False, (), ()),
-        ({'isolated': True, 'release': '1.1'}, False, (), ()),
+        ({}, False, (), (), ()),
+        ({}, False, ('tag1', 'tag2'), (), ()),
+        ({'scratch': True}, False, (), (), ()),
+        ({'isolated': True, 'release': '1.1'}, False, (), (), ()),
     ))
     def test_render_tag_from_config(self, tmpdir, from_container_yaml, extra_args,
-                                    has_platform_tag, extra_tags, primary_tags):
+                                    has_platform_tag, extra_tags, primary_tags, floating_tags):
         kwargs = get_sample_prod_params(BUILD_TYPE_WORKER)
         kwargs.pop('platforms', None)
         kwargs.pop('platform', None)
         expected_primary = set(primary_tags)
+        expected_floating = set(floating_tags)
         exclude_for_override = set(['latest', '{version}'])
 
         if from_container_yaml:
-            expected_primary -= exclude_for_override
+            expected_floating -= exclude_for_override
 
         extra_args['tags_from_yaml'] = from_container_yaml
         extra_args['additional_tags'] = extra_tags
@@ -435,6 +439,8 @@ class TestPluginsConfiguration(object):
             assert unique_tag_suffix.endswith('-x86_64') == has_platform_tag
         assert len(tag_suffixes['primary']) == len(expected_primary)
         assert set(tag_suffixes['primary']) == expected_primary
+        assert len(tag_suffixes['floating']) == len(expected_floating)
+        assert set(tag_suffixes['floating']) == expected_floating
 
     @pytest.mark.parametrize(('platforms'), (
         (['x86_64', 'ppc64le']),

@@ -464,7 +464,7 @@ class PluginsConfiguration(object):
             return
 
         unique_tag = self.user_params.image_tag.value.split(':')[-1]
-        tag_suffixes = {'unique': [unique_tag], 'primary': []}
+        tag_suffixes = {'unique': [unique_tag], 'primary': [], 'floating': []}
 
         if self.user_params.build_type.value == BUILD_TYPE_ORCHESTRATOR:
             additional_tags = self.user_params.additional_tags.value or set()
@@ -475,10 +475,11 @@ class PluginsConfiguration(object):
                 tag_suffixes['primary'].extend(['{version}-{release}'])
             elif self.user_params.tags_from_yaml.value:
                 tag_suffixes['primary'].extend(['{version}-{release}'])
-                tag_suffixes['primary'].extend(additional_tags)
+                tag_suffixes['floating'].extend(additional_tags)
             else:
-                tag_suffixes['primary'].extend(['latest', '{version}', '{version}-{release}'])
-                tag_suffixes['primary'].extend(additional_tags)
+                tag_suffixes['primary'].extend(['{version}-{release}'])
+                tag_suffixes['floating'].extend(['latest', '{version}'])
+                tag_suffixes['floating'].extend(additional_tags)
 
         self.pt.set_plugin_arg(phase, plugin, 'tag_suffixes', tag_suffixes)
 
