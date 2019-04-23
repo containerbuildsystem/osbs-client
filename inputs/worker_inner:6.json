@@ -28,6 +28,9 @@
       "name": "change_from_in_dockerfile"
     },
     {
+      "name": "hide_files"
+    },
+    {
       "name": "add_help"
     },
     {
