@@ -32,7 +32,7 @@
 %global osbs_obsolete_vr 0.14-2
 
 Name:           osbs-client
-Version:        0.54
+Version:        0.54.1
 %if "x%{postrelease}" != "x0"
 Release:        %{release}.%{postrelease}.git.%{shortcommit}%{?dist}
 %else
@@ -207,6 +207,9 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %endif # with_python3
 
 %changelog
+* Wed Apr 24 2019 Robert Cerven <rcerven@redhat.com> - 0.54.1-1
+- new upstream release: 0.54.1
+
 * Wed Mar 06 2019 Robert Cerven <rcerven@redhat.com> - 0.54-1
 - new upstream release: 0.54
 
