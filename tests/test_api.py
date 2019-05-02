@@ -131,7 +131,7 @@ class MockConfiguration(object):
 
 
 @pytest.mark.parametrize('version,warning,exception', (
-    (5, "arrangement_version <= 5 is deprecated and will be removed in release 0.54", None),
+    (5, None, ValueError),
     (6, None, None),
 ))
 def test_validate_arrangement_version(caplog, version, warning, exception):

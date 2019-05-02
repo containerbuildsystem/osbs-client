@@ -92,9 +92,7 @@ def validate_arrangement_version(arrangement_version):
         return
 
     if arrangement_version <= 5:
-        # TODO: raise as ValueError in release 0.54+
-        logger.warning("arrangement_version <= 5 is deprecated and will be removed"
-                       " in release 0.54")
+        raise ValueError('arrangement_version <= 5 is no longer supported')
 
 
 class OSBS(object):
