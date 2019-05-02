@@ -303,10 +303,8 @@ def cmd_cancel_build(args, osbs):
 def cmd_build(args, osbs):
     if args.worker:
         create_func = osbs.create_worker_build
-    elif args.orchestrator:
-        create_func = osbs.create_orchestrator_build
     else:
-        create_func = osbs.create_prod_build
+        create_func = osbs.create_orchestrator_build
 
     build_kwargs = {
         'git_uri': osbs.build_conf.get_git_uri(),
@@ -719,9 +717,7 @@ def cli():
     build_type_group.add_argument("--worker", action="store_true", required=False,
                                   default=False, help="create worker build")
     build_type_group.add_argument("--orchestrator", action="store_true", required=False,
-                                  default=False, help="create orchestrator build")
-    build_type_group.add_argument("--prod", action="store_true", required=False,
-                                  default=True, help="create prod build")
+                                  default=True, help="create orchestrator build")
 
     group = build_parser.add_mutually_exclusive_group()
     group.add_argument("--build-from", action='store', required=False,
