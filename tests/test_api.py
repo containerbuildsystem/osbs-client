@@ -75,6 +75,13 @@ WORKER_LOGS = [u'2017-06-23 17:18:41,400 atomic_reactor.foo -  '
 
                u'"ContainersPaused": 0,']
 
+REQUIRED_BUILD_ARGS = {
+    'git_uri': TEST_GIT_URI,
+    'git_ref': TEST_GIT_REF,
+    'git_branch': TEST_GIT_BRANCH,
+    'user': TEST_USER,
+}
+
 
 def request_as_response(request):
     """
@@ -252,7 +259,7 @@ class TestOSBS(object):
 
     # osbs is a fixture here
     @pytest.mark.parametrize('name_label_name', ['Name', 'name'])  # noqa
-    def test_create_prod_build(self, osbs, name_label_name):
+    def test_create_build(self, osbs, name_label_name):
         # TODO: test situation when a buildconfig already exists
         class MockParser(object):
             labels = {
@@ -265,9 +272,9 @@ class TestOSBS(object):
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
-        response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                          TEST_GIT_BRANCH, TEST_USER,
-                                          TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
+        response = osbs.create_build(target=TEST_TARGET,
+                                     architecture=TEST_ARCH,
+                                     **REQUIRED_BUILD_ARGS)
         assert isinstance(response, BuildResponse)
 
     # osbs is a fixture here
@@ -278,8 +285,8 @@ class TestOSBS(object):
             arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
          WORKER_OUTER_TEMPLATE, WORKER_CUSTOMIZE_CONF, DEFAULT_ARRANGEMENT_VERSION),
     ))
-    def test_create_prod_build_build_request(self, osbs, inner_template,
-                                             outer_template, customize_conf, version):
+    def test_create_build_build_request(self, osbs, inner_template,
+                                        outer_template, customize_conf, version):
         (flexmock(utils)
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
@@ -294,22 +301,20 @@ class TestOSBS(object):
             .once())
 
         if version < REACTOR_CONFIG_ARRANGEMENT_VERSION:
-            response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                              TEST_GIT_BRANCH, TEST_USER,
-                                              inner_template=inner_template,
-                                              outer_template=outer_template,
-                                              customize_conf=customize_conf)
+            response = osbs.create_build(inner_template=inner_template,
+                                         outer_template=outer_template,
+                                         customize_conf=customize_conf,
+                                         **REQUIRED_BUILD_ARGS)
             assert isinstance(response, BuildResponse)
         else:
             with pytest.raises(OsbsException):
-                response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                                  TEST_GIT_BRANCH, TEST_USER,
-                                                  inner_template=inner_template,
-                                                  outer_template=outer_template,
-                                                  customize_conf=customize_conf)
+                response = osbs.create_build(inner_template=inner_template,
+                                             outer_template=outer_template,
+                                             customize_conf=customize_conf,
+                                             **REQUIRED_BUILD_ARGS)
 
     @pytest.mark.parametrize('has_task_id', [True, False])
-    def test_create_prod_build_remove_koji_task_id(self, has_task_id):
+    def test_create_build_remove_koji_task_id(self, has_task_id):
 
         build_config = {
             'metadata': {
@@ -375,11 +380,10 @@ class TestOSBS(object):
             .should_receive('start_build')
             .replace_with(mock_start_build))
 
-        osbs_obj.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                   TEST_GIT_BRANCH, TEST_USER,
-                                   inner_template=DEFAULT_INNER_TEMPLATE,
-                                   outer_template=DEFAULT_OUTER_TEMPLATE,
-                                   customize_conf=DEFAULT_CUSTOMIZE_CONF)
+        osbs_obj.create_build(inner_template=DEFAULT_INNER_TEMPLATE,
+                              outer_template=DEFAULT_OUTER_TEMPLATE,
+                              customize_conf=DEFAULT_CUSTOMIZE_CONF,
+                              **REQUIRED_BUILD_ARGS)
 
     # osbs is a fixture here
     @pytest.mark.parametrize(('platform', 'release', 'arrangement_version', 'raises_exception'), [  # noqa
@@ -732,7 +736,7 @@ class TestOSBS(object):
             assert 'inner:{}'.format(invalid_version) in ex.value.message
 
     # osbs is a fixture here
-    def test_create_prod_build_missing_name_label(self, osbs):  # noqa
+    def test_create_build_missing_name_label(self, osbs):  # noqa
         class MockParser(object):
             labels = {}
             baseimage = 'fedora23/python'
@@ -741,9 +745,9 @@ class TestOSBS(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info(MockParser())))
         with pytest.raises(OsbsValidationException):
-            osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                   TEST_GIT_BRANCH, TEST_USER,
-                                   TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
+            osbs.create_build(target=TEST_TARGET,
+                              architecture=TEST_ARCH,
+                              **REQUIRED_BUILD_ARGS)
 
     # osbs is a fixture here
     @pytest.mark.parametrize('label_name', ['BZComponent', 'com.redhat.component', 'Name', 'name'])  # noqa
@@ -761,9 +765,9 @@ class TestOSBS(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info(MockParser())))
         with pytest.raises(OsbsValidationException):
-            osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                   TEST_GIT_BRANCH, TEST_USER,
-                                   TEST_COMPONENT, TEST_TARGET, TEST_ARCH)
+            osbs.create_build(target=TEST_TARGET,
+                              architecture=TEST_ARCH,
+                              **REQUIRED_BUILD_ARGS)
 
     # osbs is a fixture here
     @pytest.mark.parametrize('name,should_succeed', [  # noqa:F811
@@ -796,10 +800,10 @@ class TestOSBS(object):
             'architecture': TEST_ARCH,
         }
         if should_succeed:
-            osbs.create_prod_build(**create_build_args)
+            osbs.create_build(**create_build_args)
         else:
             with pytest.raises(OsbsValidationException):
-                osbs.create_prod_build(**create_build_args)
+                osbs.create_build(**create_build_args)
 
         del create_build_args['architecture']
         create_build_args['platforms'] = [TEST_ARCH]
@@ -813,27 +817,28 @@ class TestOSBS(object):
     @pytest.mark.parametrize('component_label_name', ['com.redhat.component', 'BZComponent'])  # noqa
     def test_component_is_changed_from_label(self, osbs, component_label_name):
         """
-        tests if component is changed in create_prod_build
+        tests if component is changed in create_build
         with value from component label
         """
+        component_override = 'different_{}'.format(TEST_COMPONENT)
 
         class MockParser(object):
             labels = {
                 'name': 'fedora23/something',
-                component_label_name: TEST_COMPONENT,
+                component_label_name: component_override,
                 'version': TEST_VERSION,
             }
             baseimage = 'fedora23/python'
         (flexmock(utils)
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
-            .and_return(self.mock_repo_info()))
+            .and_return(self.mock_repo_info(mock_df_parser=MockParser())))
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
-        req = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                     TEST_GIT_BRANCH, TEST_USER,
-                                     TEST_COMPONENT, TEST_TARGET,
-                                     TEST_ARCH)
-        assert req.spec.component.value == TEST_COMPONENT
+        req = osbs.create_build(component=TEST_COMPONENT,
+                                target=TEST_TARGET,
+                                architecture=TEST_ARCH,
+                                **REQUIRED_BUILD_ARGS)
+        assert req.spec.component.value == component_override
 
     # osbs is a fixture here
     def test_missing_component_argument_doesnt_break_build(self, osbs):  # noqa
@@ -841,12 +846,11 @@ class TestOSBS(object):
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
-        response = osbs.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                          TEST_GIT_BRANCH, TEST_USER)
+        response = osbs.create_build(**REQUIRED_BUILD_ARGS)
         assert isinstance(response, BuildResponse)
 
     # osbs is a fixture here
-    def test_create_prod_build_set_required_version(self, osbs106):  # noqa
+    def test_create_build_set_required_version(self, osbs106):  # noqa
         (flexmock(utils)
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
@@ -855,10 +859,9 @@ class TestOSBS(object):
             .should_receive('set_openshift_required_version')
             .with_args(parse_version('1.0.6'))
             .once())
-        osbs106.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                  TEST_GIT_BRANCH, TEST_USER,
-                                  TEST_COMPONENT, TEST_TARGET,
-                                  TEST_ARCH)
+        osbs106.create_build(target=TEST_TARGET,
+                             architecture=TEST_ARCH,
+                             **REQUIRED_BUILD_ARGS)
 
     # osbs is a fixture here
     def test_wait_for_build_to_finish(self, osbs):  # noqa
@@ -1239,16 +1242,14 @@ class TestOSBS(object):
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
 
         if valid:
-            req = osbs_obj.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                             TEST_GIT_BRANCH, TEST_USER,
-                                             TEST_COMPONENT, TEST_TARGET,
-                                             TEST_ARCH)
+            req = osbs_obj.create_build(target=TEST_TARGET,
+                                        architecture=TEST_ARCH,
+                                        **REQUIRED_BUILD_ARGS)
         else:
             with pytest.raises(OsbsValidationException):
-                req = osbs_obj.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                                 TEST_GIT_BRANCH, TEST_USER,
-                                                 TEST_COMPONENT, TEST_TARGET,
-                                                 TEST_ARCH)
+                req = osbs_obj.create_build(target=TEST_TARGET,
+                                            architecture=TEST_ARCH,
+                                            **REQUIRED_BUILD_ARGS)
             return
 
         img = req.json['spec']['strategy']['customStrategy']['from']['name']
@@ -2315,10 +2316,9 @@ class TestOSBS(object):
 
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
 
-        req = osbs_obj.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                         TEST_GIT_BRANCH, TEST_USER,
-                                         TEST_COMPONENT, TEST_TARGET,
-                                         TEST_ARCH)
+        req = osbs_obj.create_build(target=TEST_TARGET,
+                                    architecture=TEST_ARCH,
+                                    **REQUIRED_BUILD_ARGS)
         secrets = req.json['spec']['strategy']['customStrategy']['secrets']
         expected_secret = {
             'mountPath': '/var/run/secrets/atomic-reactor/mysecret',
@@ -2328,33 +2328,27 @@ class TestOSBS(object):
         }
         assert expected_secret in secrets
 
-    @pytest.mark.parametrize(('platform', 'release', 'platforms',  # noqa
-                              'worker', 'orchestrator',
+    @pytest.mark.parametrize(('platform', 'release', 'platforms', 'worker',  # noqa
                               'arrangement_version', 'raises_exception'), [
         # worker build
-        ("plat", 'rel', None, True, False, 1, False),
-        ("plat", 'rel', None, True, False, None, True),
+        ("plat", 'rel', None, True, 1, False),
+        ("plat", 'rel', None, True, None, True),
         # orchestrator build
-        (None, None, 'platforms', False, True, 1, False),
-        (None, None, 'platforms', False, True, None, False),
-        # prod build
-        (None, None, None, False, False, 1, False),
-        (None, None, None, False, False, None, False),
+        (None, None, 'platforms', False, 1, False),
+        (None, None, 'platforms', False, None, False),
     ])
     def test_arrangement_version(self, caplog, osbs, platform, release, platforms,
-                                 worker, orchestrator,
-                                 arrangement_version, raises_exception):
+                                 worker, arrangement_version, raises_exception):
         koji_upload_dir = 'upload' if worker else None
 
         class MockArgs(object):
-            def __init__(self, platform, release, platforms, arrangement_version,
-                         worker, orchestrator):
+            def __init__(self, platform, release, platforms, arrangement_version, worker):
                 self.platform = platform
                 self.release = release
                 self.platforms = platforms
                 self.arrangement_version = arrangement_version
                 self.worker = worker
-                self.orchestrator = orchestrator
+                self.orchestrator = not worker
                 self.scratch = None
                 self.isolated = None
                 self.koji_upload_dir = koji_upload_dir
@@ -2404,31 +2398,27 @@ class TestOSBS(object):
                     .once()
                     .with_args(**expected_kwargs)
                     .and_raise(CustomTestException))
-
-            if orchestrator:
+            else:
                 (flexmock(osbs)
                     .should_receive("create_orchestrator_build")
                     .once()
                     .with_args(**expected_kwargs)
                     .and_raise(CustomTestException))
 
-            if not worker and not orchestrator:
-                (flexmock(osbs)
-                    .should_receive("create_prod_build")
-                    .once()
-                    .with_args(**expected_kwargs)
-                    .and_raise(CustomTestException))
-
         if raises_exception:
             with pytest.raises(OsbsException) as exc_info:
-                cmd_build(MockArgs(platform, release, platforms, arrangement_version,
-                          worker, orchestrator), osbs)
+                cmd_build(
+                    MockArgs(platform, release, platforms, arrangement_version, worker),
+                    osbs
+                )
             assert isinstance(exc_info.value.cause, ValueError)
             assert "Worker build missing required parameters" in exc_info.value.message
         else:
             with pytest.raises(CustomTestException):
-                cmd_build(MockArgs(platform, release, platforms, arrangement_version,
-                                   worker, orchestrator), osbs)
+                cmd_build(
+                    MockArgs(platform, release, platforms, arrangement_version, worker),
+                    osbs
+                )
 
     # osbs is a fixture here
     @pytest.mark.parametrize('isolated', [True, False])  # noqa
@@ -2900,15 +2890,13 @@ class TestOSBS(object):
 
         if exc:
             with pytest.raises(exc):
-                osbs_obj.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                           TEST_GIT_BRANCH, TEST_USER,
-                                           TEST_COMPONENT, TEST_TARGET,
-                                           TEST_ARCH)
+                osbs_obj.create_build(target=TEST_TARGET,
+                                      architecture=TEST_ARCH,
+                                      **REQUIRED_BUILD_ARGS)
         else:
-            osbs_obj.create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                       TEST_GIT_BRANCH, TEST_USER,
-                                       TEST_COMPONENT, TEST_TARGET,
-                                       TEST_ARCH)
+            osbs_obj.create_build(target=TEST_TARGET,
+                                  architecture=TEST_ARCH,
+                                  **REQUIRED_BUILD_ARGS)
 
     def test_do_create_prod_build_isolated_from_scratch(self, osbs):  # noqa
         (flexmock(utils)
