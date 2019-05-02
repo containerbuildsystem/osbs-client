@@ -72,6 +72,30 @@ OSBS_WITH_PULP_PARAMS = {
     'kwargs': {'registry_uri': 'registry.example.com/v2'}}
 
 
+def unsupported_arrangement_version(version_test_class):
+    """
+    Mark a test class as unsupported to disable version validation.
+    Does not disable validation for classes that inherit from said class.
+    """
+    from osbs.api import validate_arrangement_version
+
+    def setup_class(cls):
+        import osbs.api
+        osbs.api.validate_arrangement_version = lambda version: None
+
+    def teardown_class(cls):
+        import osbs.api
+        # restore original validation logic
+        osbs.api.validate_arrangement_version = validate_arrangement_version
+        # prevent setup and teardown of child classes
+        del cls.setup_class, cls.teardown_class
+
+    version_test_class.setup_class = classmethod(setup_class)
+    version_test_class.teardown_class = classmethod(teardown_class)
+
+    return version_test_class
+
+
 class ArrangementBase(object):
     ARRANGEMENT_VERSION = None
     COMMON_PARAMS = {}
@@ -181,10 +205,10 @@ class ArrangementBase(object):
                 return registry.docker_uri
 
 
+@unsupported_arrangement_version    # TODO: move relevant tests to version 6
 class TestArrangementV1(ArrangementBase):
     """
-    This class tests support for the oldest supported arrangement
-    version, 1.
+    This arrangement version is no longer supported.
 
     NOTE! When removing this test class, *make sure* that any methods
     it provides for the test class for the next oldest supported
@@ -375,8 +399,11 @@ class TestArrangementV1(ArrangementBase):
             assert args['repos'] == params['yum_repourls']
 
 
+@unsupported_arrangement_version    # TODO: move relevant tests to version 6
 class TestArrangementV2(TestArrangementV1):
     """
+    This arrangement version is no longer supported.
+
     Differences from arrangement version 1:
     - add_filesystem runs with different parameters
     - add_filesystem also runs in orchestrator build
@@ -563,8 +590,11 @@ class TestArrangementV2(TestArrangementV1):
             assert 'koji_hub' in args
 
 
+@unsupported_arrangement_version    # TODO: move relevant tests to version 6
 class TestArrangementV3(TestArrangementV2):
     """
+    This arrangement version is no longer supported.
+
     Differences from arrangement version 2:
     - fetch_worker_metadata, koji_import, koji_tag_build, sendmail,
       check_and_set_rebuild, run in the orchestrator build
@@ -794,8 +824,11 @@ class TestArrangementV3(TestArrangementV2):
         assert match_args == args
 
 
+@unsupported_arrangement_version    # TODO: move relevant tests to version 6
 class TestArrangementV4(TestArrangementV3):
     """
+    This arrangement version is no longer supported.
+
     Orchestrator build differences from arrangement version 3:
     - tag_from_config enabled
     - pulp_tag enabled
@@ -1236,8 +1269,11 @@ class TestArrangementV4(TestArrangementV3):
             get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
 
 
+@unsupported_arrangement_version    # TODO: move relevant tests to version 6
 class TestArrangementV5(TestArrangementV4):
     """
+    This arrangement version is no longer supported.
+
     Orchestrator build differences from arrangement version 4:
     - resolve_composes enabled
 
@@ -1391,6 +1427,13 @@ class TestArrangementV5(TestArrangementV4):
 
 class TestArrangementV6(ArrangementBase):
     """
+    This class tests support for the oldest supported arrangement
+    version, 6.
+
+    NOTE! When removing this test class, *make sure* that any methods
+    it provides for the test class for the next oldest supported
+    arrangement version are copied across to that test class.
+
     No change to parameters, but use UserParams, BuildRequestV2, and PluginsConfiguration
     instead of Spec and BuildRequest. Most plugin arguments are not populated by
     osbs-client but are pulled from the REACTOR_CONFIG environment variable in
