@@ -46,9 +46,10 @@ from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             ORCHESTRATOR_CUSTOMIZE_CONF,
                             BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR,
                             OS_CONFLICT_MAX_RETRIES,
-                            ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO)
+                            ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO,
+                            REPO_CONTAINER_CONFIG)
 from osbs import utils
-from osbs.repo_utils import RepoInfo, ModuleSpec
+from osbs.repo_utils import RepoInfo, RepoConfiguration, ModuleSpec
 
 from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
                              TEST_GIT_URI, TEST_TARGET, TEST_USER, INPUTS_PATH,
@@ -223,6 +224,37 @@ class TestOSBS(object):
 
         response = osbs.create_build(**kwargs)
         assert isinstance(response, BuildResponse)
+
+    # osbs is a fixture here
+    def test_create_build_invalid_yaml(self, osbs, tmpdir, monkeypatch):  # noqa
+        """Test that errors caused by invalid yaml have a useful error message"""
+        repo_config = tmpdir.join(REPO_CONTAINER_CONFIG)
+        repo_config.write('\n'.join(['hallo: 1', 'bye']))
+
+        def get_repo_info(*args, **kwargs):
+            # will fail because of invalid yaml
+            return RepoConfiguration(dir_path=str(tmpdir))
+
+        monkeypatch.setattr(utils, 'get_repo_info', get_repo_info)
+
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': TEST_USER
+        }
+
+        with pytest.raises(Exception) as exc_info:
+            osbs.create_build(**kwargs)
+
+        err_msg = (
+            'while scanning a simple key\n'
+            '  in "{file}", line 2, column 1\n'
+            "could not find expected ':'\n"
+            '  in "{file}", line 2, column 4'
+        ).format(file=repo_config)
+
+        assert err_msg in str(exc_info.value)
 
     # osbs is a fixture here
     @pytest.mark.parametrize('name_label_name', ['Name', 'name'])  # noqa
