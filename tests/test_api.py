@@ -244,16 +244,10 @@ class TestOSBS(object):
             'user': TEST_USER
         }
 
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(OsbsException) as exc_info:
             osbs.create_build(**kwargs)
 
-        err_msg = (
-            'while scanning a simple key\n'
-            '  in "{file}", line 2, column 1\n'
-            "could not find expected ':'\n"
-            '  in "{file}", line 2, column 4'
-        ).format(file=repo_config)
-
+        err_msg = 'Failed to parse YAML file "{file}"'.format(file=REPO_CONTAINER_CONFIG)
         assert err_msg in str(exc_info.value)
 
     # osbs is a fixture here

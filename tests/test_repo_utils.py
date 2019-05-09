@@ -9,6 +9,7 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import absolute_import
 
 from flexmock import flexmock
+from osbs.exceptions import OsbsException
 from osbs.constants import REPO_CONFIG_FILE, ADDITIONAL_TAGS_FILE, REPO_CONTAINER_CONFIG
 from osbs.repo_utils import RepoInfo, RepoConfiguration, AdditionalTagsConfig, ModuleSpec
 from textwrap import dedent
@@ -41,6 +42,22 @@ class TestRepoConfiguration(object):
     def test_default_values(self):
         conf = RepoConfiguration()
         assert conf.is_autorebuild_enabled() is False
+
+    def test_invalid_yaml(self, tmpdir):
+        yaml_file = tmpdir.join(REPO_CONTAINER_CONFIG)
+        yaml_file.write('\n'.join(['hallo: 1', 'bye']))
+
+        with pytest.raises(OsbsException) as exc_info:
+            RepoConfiguration(dir_path=str(tmpdir))
+
+        err_msg = (
+            'Failed to parse YAML file "{file_basename}": while scanning a simple key\n'
+            '  in "{file}", line 2, column 1\n'
+            "could not find expected ':'\n"
+            '  in "{file}", line 2, column 4'
+        ).format(file=yaml_file, file_basename=REPO_CONTAINER_CONFIG)
+
+        assert str(exc_info.value) == err_msg
 
     @pytest.mark.parametrize(('config_value', 'expected_value'), (
         (None, False),

@@ -9,6 +9,7 @@ of the BSD license. See the LICENSE file for details.
 
 from __future__ import absolute_import
 
+from osbs.exceptions import OsbsException
 from osbs.constants import REPO_CONFIG_FILE, ADDITIONAL_TAGS_FILE, REPO_CONTAINER_CONFIG
 from six import StringIO
 from six.moves.configparser import ConfigParser
@@ -61,7 +62,12 @@ class RepoConfiguration(object):
         file_path = os.path.join(dir_path, REPO_CONTAINER_CONFIG)
         if os.path.exists(file_path):
             with open(file_path) as f:
-                self.container = (yaml.load(f) or {})
+                try:
+                    self.container = yaml.load(f) or {}
+                except yaml.scanner.ScannerError as e:
+                    msg = ('Failed to parse YAML file "{file}": {reason}'
+                           .format(file=REPO_CONTAINER_CONFIG, reason=e))
+                    raise OsbsException(msg)
 
         # container values may be set to None
         container_compose = self.container.get('compose') or {}
