@@ -19,7 +19,7 @@ from traceback import format_tb
 class OsbsException(Exception):
     def __init__(self, message=None, cause=None, traceback=None):
         if message is None and cause is not None:
-            message = repr(cause)
+            message = str(cause)
 
         super(OsbsException, self).__init__(message)
         self.message = message
