@@ -297,22 +297,13 @@ class Configuration(object):
 
     def get_registry_api_versions(self, platform=None):
         value = self._get_deprecated("registry_api_versions", self.conf_section,
-                                     "registry_api_versions", default='v1,v2')
+                                     "registry_api_versions", default='v2')
         versions = [x.strip() for x in value.split(',')]
 
         if 'v2' not in versions:
             raise OsbsValidationException('v2 must be present in registry_api_versions')
 
-        if platform is None:
-            return versions
-
-        section = 'platform:{}'.format(platform)
-        enable_v1 = self._get_deprecated("enable_v1", section, "enable_v1",
-                                         default=False, is_bool_val=True)
-        if enable_v1:
-            return versions
-        else:
-            return ['v2']
+        return ['v2']
 
     def get_source_registry_uri(self):
         return self._get_deprecated("source_registry_uri", self.conf_section,
@@ -611,7 +602,6 @@ class Configuration(object):
         return self.generate_nodeselector_dict(nodeselector_str)
 
     def get_platform_descriptors(self):
-        has_v1 = []
         platform_descriptors = {}
         for section in self.scp.sections():
             if "platform:" not in section:
@@ -624,17 +614,8 @@ class Configuration(object):
             logger.warning("it has been deprecated in favor of the value in the reactor_config_map")
 
             arch = self._get_value("architecture", section, "architecture") or platform
-            enable_v1 = self._get_value("enable_v1", section, "enable_v1",
-                                        default=False, is_bool_val=True)
-            if enable_v1:
-                has_v1.append(platform)
             platform_descriptor["architecture"] = arch
-            platform_descriptor["enable_v1"] = enable_v1
             platform_descriptors[platform] = platform_descriptor
-
-        if len(has_v1) > 1:
-            msg = "multiple platforms enable API v1: {}".format(has_v1)
-            raise OsbsValidationException(msg)
 
         return platform_descriptors
 

@@ -30,7 +30,7 @@ registry_uri = https://distribution.example.com/v2
 
 Note that currently there is no support for pushing to Distribution registry instances that require authentication.
 
-## V1+V2 output using Pulp and Koji
+## V2 output using Pulp and Koji
 
 Assumptions:
 
@@ -48,7 +48,7 @@ For Pulp, with the dockpulp client there is an additional configuration file to 
 prodpulp = https://pulp.example.com/
 
 [registries]
-prodpulp = https://pulp.example.com/v1/repositories
+prodpulp = https://crane.example.com/
 
 [filers]
 prodpulp = https://pulp.example.com/
@@ -66,7 +66,6 @@ Here is how `/etc/osbs.conf` might look:
 build_host = osbs.example.com
 openshift_url = https://osbs.example.com:8443/
 authoritative_registry = crane.example.com
-registry_api_versions = v1,v2
 vendor = Example, Inc
 distribution_scope = public
 koji_root = http://koji.example.com/koji

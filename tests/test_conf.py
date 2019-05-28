@@ -451,21 +451,19 @@ class TestConfiguration(object):
 
     @pytest.mark.parametrize(('config', 'expected', 'valid'), [
         ({}, {}, True),
-        ({'platform:ham': {}}, {'ham': {'architecture': 'ham', 'enable_v1': False}}, True),
+        ({'platform:ham': {}}, {'ham': {'architecture': 'ham'}}, True),
         ({'platform:ham': {}, 'platform:eggs': {}},
-         {'ham': {'architecture': 'ham', 'enable_v1': False},
-          'eggs': {'architecture': 'eggs', 'enable_v1': False}}, True),
+         {'ham': {'architecture': 'ham'},
+          'eggs': {'architecture': 'eggs'}}, True),
         ({'platform:ham': {}, 'platform:eggs': {}, 'fedora': {}},
-         {'ham': {'architecture': 'ham', 'enable_v1': False},
-          'eggs': {'architecture': 'eggs', 'enable_v1': False}}, True),
-        ({'platform:ham': {'architecture': 'bacon', 'enable_v1': 'true'}},
-         {'ham': {'architecture': 'bacon', 'enable_v1': True}}, True),
+         {'ham': {'architecture': 'ham'},
+          'eggs': {'architecture': 'eggs'}}, True),
+        ({'platform:ham': {'architecture': 'bacon'}},
+         {'ham': {'architecture': 'bacon'}}, True),
         ({'platform:ham': {'architecture': 'bacon'},
-          'platform:eggs': {'enable_v1': 'true'}, 'fedora': {}},
-         {'ham': {'architecture': 'bacon', 'enable_v1': False},
-          'eggs': {'architecture': 'eggs', 'enable_v1': True}}, True),
-        ({'platform:ham': {'enable_v1': 'true'}, 'platform:eggs': {'enable_v1': 'true'}},
-         {}, False),
+          'platform:eggs': {}, 'fedora': {}},
+         {'ham': {'architecture': 'bacon'},
+          'eggs': {'architecture': 'eggs'}}, True),
     ])
     def test_get_platform_descriptors(self, config, expected, valid):
         with self.config_file(config) as config_file:
@@ -477,17 +475,16 @@ class TestConfiguration(object):
                     conf.get_platform_descriptors()
 
     @pytest.mark.parametrize(('platform', 'config', 'expected', 'valid'), [
-        (None, {}, ['v1', 'v2'], True),
-        (None, {'default': {'registry_api_versions': 'v1'}}, ['v1'], False),
+        (None, {}, ['v2'], True),
+        (None, {'default': {'registry_api_versions': 'v1'}}, ['v2'], False),
         (None, {'default': {'registry_api_versions': 'v2'}}, ['v2'], True),
-        (None, {'default': {'registry_api_versions': 'v1,v2'}}, ['v1', 'v2'], True),
-        (None, {'default': {'registry_api_versions': '  v1,   v2  '}}, ['v1', 'v2'], True),
+        (None, {'default': {'registry_api_versions': 'v1,v2'}}, ['v2'], True),
+        (None, {'default': {'registry_api_versions': '  v1,   v2  '}}, ['v2'], True),
         ('ham', {'default': {'registry_api_versions': 'v1,v2'}}, ['v2'], True),
-        (None, {'platform:ham': {}}, ['v1', 'v2'], True),
+        (None, {'platform:ham': {}}, ['v2'], True),
         ('ham', {'platform:ham': {}}, ['v2'], True),
-        ('ham', {'platform:ham': {'enable_v1': 'true'}}, ['v1', 'v2'], True),
         ('ham', {'default': {'registry_api_versions': 'v1'},
-                 'platform:ham': {}}, ['v1', 'v2'], False),
+                 'platform:ham': {}}, ['v2'], False),
     ])
     def test_get_registry_api_versions(self, platform, config, expected, valid):
         with self.config_file(config) as config_file:
