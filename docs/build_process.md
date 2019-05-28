@@ -63,27 +63,9 @@ If this is not specified, value of `pulp_registry_name` is used.
 pulp sync command (the way to get image from distribution to pulp) is requested when `v2` is in `registry_api_versions`.
 
 
-### Parallel v1 and v2 builds
+### About v1 builds
 
-While **v1-only registries are not supported**, it is possible to implement your workflow so your build emits images in multiple hybrid registries: pulp v1, pulp v2, v1 upstream registry, v2 upstream registry.
-
-In addition to the configuration mentioned in the section above, you can choose if you want to push the built image into pulp v1 registry. This can be configured with `pulp_registry_name`. atomic-reactor will `upload` the image (as archive) and copy it into the required repository.
-
-This is how you can configure your workflow to make your image available via v1 and v2 crane API (crane is the pulp component which provides registry API):
-
-```ini
-# upstream docker registry -- distribution, which implements v2 API
-registry_uri = registry.example.com
-# configuration for pulp where we sync from distribution
-pulp_sync_registry_name = stage-pulp
-pulp_sync_secret = stage-pulp-secret
-# configuration for pulp where we upload v1 image directly
-pulp_registry_name = stage-pulp2
-pulp_secret = stage-pulp2-secret
-# we want to do v1 and v2 "pushes" to pulp
-registry_api_versions = v1,v2
-```
-
+OSBS no longer supports parallel v1 and v2 builds.
 
 ## OSBS Repo Configuration File
 

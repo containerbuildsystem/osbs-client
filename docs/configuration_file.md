@@ -91,7 +91,7 @@ Some options are also mandatory.
 
 * `registry_uri` (*optional*, `string`) — docker registry URI to use for pulling and pushing images. More than one can be specified by separating them with commas. While it is possible to affix '/v2' onto the end of the registry URI for historical reasons, the `/v1` suffix is not supported. `v2` is assumed if no version suffix is provided.
 
-* `registry_api_versions` (*optional*, `string`) — comma-separated list of docker registry HTTP API versions to support, defaults to `v1,v2`. `v1` only registries are no longer supported, i.e., `v2` must be present if this option is declared
+* `registry_api_versions` (*optional*, `string`) — comma-separated list of docker registry HTTP API versions to support, defaults to `v2`. `v1` registries are no longer supported; if 'v1' is listed, it will be ignored.
 
 * `source_registry_uri` (*optional*, `string`) — URI of docker registry from which image is pulled
 
@@ -176,8 +176,6 @@ Some options are also mandatory.
 ### `[platform:ARCH]` options
 
 * `architecture` (*optional*, `string`) — platform's GOARCH (Go language platform name). If not declared, this option assumes the name of the platform being defined.
-
-* `enable_v1` (*optional*, `boolean`) — enable support for Docker Registry HTTP API v1 for a given platform. Only one platform should have this option enabled. Defaults to false.
 
 ## Build JSON Templates
 

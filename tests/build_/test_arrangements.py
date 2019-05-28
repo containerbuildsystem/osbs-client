@@ -980,22 +980,10 @@ class TestArrangementV4(TestArrangementV3):
         _, build_json = self.get_worker_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
-        args = plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_PULP_PUSH_KEY, 'args')
-
-        build_conf = osbs.build_conf
-        # Use first docker registry and strip off /v2
-        pulp_registry_name = build_conf.get_pulp_registry()
-        pulp_secret_path = '/'.join([SECRETS_PATH, build_conf.get_pulp_secret()])
-
-        expected_args = {
-            'pulp_registry_name': pulp_registry_name,
-            'pulp_secret_path': pulp_secret_path,
-            'load_exported_image': True,
-            'dockpulp_loglevel': 'INFO',
-            'publish': False
-        }
-
-        assert args == expected_args
+        # OSBS no longer supports pushing v1 content
+        # TODO: remove this test after the pulp push plugin is removed
+        with pytest.raises(NoSuchPluginException):
+            plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_PULP_PUSH_KEY, 'args')
 
     @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
     @pytest.mark.parametrize('osbs, use_pulp', [
