@@ -509,7 +509,7 @@ def openshift(request):
 @pytest.fixture(params=[{'kwargs': None, 'additional_config': None, 'platform_descriptors': None}])
 def osbs(request, openshift):
     kwargs = request.param['kwargs'] or {}
-    platform_descriptors = request.param['platform_descriptors'] or {}
+    platform_descriptors = request.param.get('platform_descriptors') or {}
 
     kwargs.setdefault('build_json_dir', 'inputs')
     kwargs.setdefault('registry_uri', 'registry.example.com')
