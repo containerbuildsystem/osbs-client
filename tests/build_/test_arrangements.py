@@ -14,7 +14,6 @@ from osbs.api import OSBS
 from osbs.constants import (DEFAULT_ARRANGEMENT_VERSION,
                             ORCHESTRATOR_INNER_TEMPLATE,
                             WORKER_INNER_TEMPLATE,
-                            SECRETS_PATH,
                             ORCHESTRATOR_OUTER_TEMPLATE)
 from osbs import utils
 from osbs.repo_utils import RepoInfo, ModuleSpec
@@ -25,14 +24,9 @@ from tests.constants import (TEST_GIT_URI,
                              TEST_GIT_BRANCH,
                              TEST_COMPONENT,
                              TEST_VERSION,
-                             TEST_FILESYSTEM_KOJI_TASK_ID,
                              INPUTS_PATH)
 from tests.fake_api import openshift, osbs, get_pulp_additional_config  # noqa:F401
 from tests.test_api import request_as_response
-from tests.build_.test_build_request import (get_plugins_from_build_json,
-                                             get_plugin,
-                                             plugin_value_get,
-                                             NoSuchPluginException)
 from flexmock import flexmock
 import pytest
 
@@ -70,6 +64,39 @@ OSBS_WITH_PULP_PARAMS = {
     'platform_descriptors': None,
     'additional_config': get_pulp_additional_config(),
     'kwargs': {'registry_uri': 'registry.example.com/v2'}}
+
+
+class NoSuchPluginException(Exception):
+    pass
+
+
+def get_plugins_from_build_json(build_json):
+    env_vars = build_json['spec']['strategy']['customStrategy']['env']
+    plugins = None
+
+    for d in env_vars:
+        if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
+            plugins = json.loads(d['value'])
+            break
+
+    assert plugins is not None
+    return plugins
+
+
+def get_plugin(plugins, plugin_type, plugin_name):
+    plugins = plugins[plugin_type]
+    for plugin in plugins:
+        if plugin["name"] == plugin_name:
+            return plugin
+    else:
+        raise NoSuchPluginException()
+
+
+def plugin_value_get(plugins, plugin_type, plugin_name, *args):
+    result = get_plugin(plugins, plugin_type, plugin_name)
+    for arg in args:
+        result = result[arg]
+    return result
 
 
 def unsupported_arrangement_version(version_test_class):
@@ -1618,7 +1645,7 @@ class TestArrangementV6(ArrangementBase):
         if scratch:
             additional_params['scratch'] = True
 
-        params, build_json = self.get_build_request(build_type, osbs, additional_params)
+        _, build_json = self.get_build_request(build_type, osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
         assert get_plugin(plugins, phase, plugin)
@@ -1670,8 +1697,7 @@ class TestArrangementV6(ArrangementBase):
                 get_plugin(plugins, "exit_plugins", "import_image")
             return
 
-        args = plugin_value_get(plugins, 'exit_plugins',
-                                'import_image', 'args')
+        args = plugin_value_get(plugins, 'exit_plugins', 'import_image', 'args')
 
         match_args = {
             "imagestream": "fedora23-something",
@@ -1703,3 +1729,315 @@ class TestArrangementV6(ArrangementBase):
         plugins = get_plugins_from_build_json(build_json)
         args = plugin_value_get(plugins, 'postbuild_plugins', 'export_operator_manifests', 'args')
         assert match_args == args
+
+    @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
+    @pytest.mark.parametrize('base_image', ['koji/image-build', 'foo'])
+    def test_koji_parent_in_orchestrator(self, osbs, base_image, scratch):
+        additional_params = {
+            'base_image': base_image,
+        }
+        if scratch:
+            additional_params['scratch'] = True
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        if scratch:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, 'prebuild_plugins', PLUGIN_KOJI_PARENT_KEY)
+        else:
+            get_plugin(plugins, 'prebuild_plugins', PLUGIN_KOJI_PARENT_KEY)
+            with pytest.raises(KeyError):
+                plugin_value_get(plugins, 'prebuild_plugins', PLUGIN_KOJI_PARENT_KEY, 'args')
+
+    @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
+    def test_koji_upload(self, scratch, osbs):
+        additional_params = {
+            'base_image': 'fedora:latest',
+            'koji_upload_dir': 'upload',
+        }
+        if scratch:
+            additional_params['scratch'] = True
+        _, build_json = self.get_worker_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        args = plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_KOJI_UPLOAD_PLUGIN_KEY, 'args')
+        expected_args = {
+            'blocksize': 10485760,
+            'koji_upload_dir': 'upload',
+            'platform': 'x86_64',
+            'report_multiple_digests': True
+        }
+        assert args == expected_args
+
+    def test_koji_import(self, osbs):  # noqa:F811
+        additional_params = {
+            'base_image': 'fedora:latest',
+            'koji_upload_dir': 'upload',
+        }
+        params, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, 'postbuild_plugins', PLUGIN_KOJI_UPLOAD_PLUGIN_KEY)
+
+        get_plugin(plugins, 'exit_plugins', PLUGIN_KOJI_IMPORT_PLUGIN_KEY)
+        with pytest.raises(KeyError):
+            plugin_value_get(plugins, 'exit_plugins', PLUGIN_KOJI_IMPORT_PLUGIN_KEY, 'args')
+
+    @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
+    def test_fetch_worker_metadata(self, osbs, scratch):
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        if scratch:
+            additional_params['scratch'] = True
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        get_plugin(plugins, 'postbuild_plugins', PLUGIN_FETCH_WORKER_METADATA_KEY)
+        with pytest.raises(KeyError):
+            plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_FETCH_WORKER_METADATA_KEY, 'args')
+
+    @pytest.mark.parametrize('triggers', [False, True])  # noqa:F811
+    @pytest.mark.parametrize('scratch', [False, True])
+    def test_check_and_set_rebuild(self, tmpdir, osbs, triggers, scratch):
+        imagechange = [
+            {
+                "type": "ImageChange",
+                "imageChange": {
+                    "from": {
+                        "kind": "ImageStreamTag",
+                        "name": "{{BASE_IMAGE_STREAM}}",
+                    }
+                }
+            }
+        ]
+
+        if triggers:
+            orch_outer_temp = ORCHESTRATOR_INNER_TEMPLATE.format(
+                arrangement_version=self.ARRANGEMENT_VERSION
+            )
+            for basename in [ORCHESTRATOR_OUTER_TEMPLATE, orch_outer_temp]:
+                shutil.copy(os.path.join(INPUTS_PATH, basename),
+                            os.path.join(str(tmpdir), basename))
+
+            with open(os.path.join(str(tmpdir), ORCHESTRATOR_OUTER_TEMPLATE), 'r+') as orch_json:
+                build_json = json.load(orch_json)
+                build_json['spec']['triggers'] = imagechange
+
+                orch_json.seek(0)
+                json.dump(build_json, orch_json)
+                orch_json.truncate()
+
+            flexmock(osbs.os_conf, get_build_json_store=lambda: str(tmpdir))
+            (flexmock(BuildRequest)
+                .should_receive('adjust_for_repo_info')
+                .and_return(True))
+
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        if scratch:
+            additional_params['scratch'] = True
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        if scratch:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, 'prebuild_plugins', 'check_and_set_rebuild')
+            return
+
+        args = plugin_value_get(plugins, 'prebuild_plugins', 'check_and_set_rebuild', 'args')
+
+        match_args = {
+            "label_key": "is_autorebuild",
+            "label_value": "true",
+        }
+        assert match_args == args
+
+    @pytest.mark.parametrize(('params', 'build_type', 'has_plat_tag',  # noqa:F811
+                              'has_primary_tag'), (
+        ({}, 'orchestrator', False, True),
+        ({'scratch': True}, 'orchestrator', False, False),
+        ({'platform': 'x86_64'}, 'worker', True, False),
+        ({'platform': 'x86_64', 'scratch': True}, 'worker', True, False),
+    ))
+    def test_tag_from_config(self, osbs, params, build_type, has_plat_tag, has_primary_tag):
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        additional_params.update(params)
+        _, build_json = self.get_build_request(build_type, osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        args = plugin_value_get(plugins, 'postbuild_plugins', 'tag_from_config', 'args')
+
+        assert set(args.keys()) == set(['tag_suffixes'])
+        assert set(args['tag_suffixes'].keys()) == set(['unique', 'primary', 'floating'])
+
+        unique_tags = args['tag_suffixes']['unique']
+        assert len(unique_tags) == 1
+        unique_tag_suffix = ''
+        if has_plat_tag:
+            unique_tag_suffix = '-' + additional_params.get('platform')
+        assert unique_tags[0].endswith(unique_tag_suffix)
+
+        primary_tags = args['tag_suffixes']['primary']
+        if has_primary_tag:
+            assert set(primary_tags) == set(['{version}-{release}'])
+            floating_tags = args['tag_suffixes']['floating']
+            assert set(floating_tags) == set(['latest', '{version}'])
+
+    @pytest.mark.parametrize('osbs', [  # noqa:F811
+        {
+            'additional_config': get_pulp_additional_config(),
+            'kwargs': {'registry_uri': 'registry.example.com/v2'},
+        }
+    ], indirect=True)
+    def test_pulp_push(self, osbs):
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        _, build_json = self.get_worker_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        args = plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_PULP_PUSH_KEY, 'args')
+
+        expected_args = {
+            'load_exported_image': True,
+            'publish': False,
+        }
+
+        assert args == expected_args
+
+    @pytest.mark.parametrize('osbs', [OSBS_WITH_PULP_PARAMS], indirect=True)  # noqa:F811
+    def test_pulp_tag(self, osbs):
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        get_plugin(plugins, 'postbuild_plugins', PLUGIN_PULP_TAG_KEY)
+        with pytest.raises(KeyError):
+            plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_PULP_TAG_KEY, 'args')
+
+    @pytest.mark.parametrize('osbs', [OSBS_WITH_PULP_PARAMS], indirect=True)  # noqa:F811
+    def test_pulp_sync(self, osbs):
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        args = plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_PULP_SYNC_KEY, 'args')
+        expected_args = {
+            'publish': False,
+        }
+
+        assert args == expected_args
+
+    def test_pulp_publish(self, osbs):  # noqa:F811
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, 'postbuild_plugins', PLUGIN_PULP_PUBLISH_KEY)
+        get_plugin(plugins, 'exit_plugins', PLUGIN_PULP_PUBLISH_KEY)
+
+    def test_pulp_pull(self, osbs):
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        args = plugin_value_get(plugins, 'exit_plugins', PLUGIN_PULP_PULL_KEY, 'args')
+        expected_args = {'insecure': True}
+        assert args == expected_args
+
+    def test_group_manifests(self, osbs):  # noqa:F811
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+        with pytest.raises(KeyError):
+            plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_GROUP_MANIFESTS_KEY, 'args')
+
+    @pytest.mark.parametrize('build_type', ['orchestrator', 'worker'])  # noqa:F811
+    def test_inject_parent_image(self, osbs, build_type):
+        additional_params = {
+            'base_image': 'foo',
+            'koji_parent_build': 'fedora-26-9',
+        }
+        _, build_json = self.get_build_request(build_type, osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        args = plugin_value_get(plugins, 'prebuild_plugins', 'inject_parent_image', 'args')
+        expected_args = {
+            'koji_parent_build': 'fedora-26-9',
+        }
+        assert args == expected_args
+
+    @pytest.mark.parametrize('worker', [False, True])  # noqa:F811
+    @pytest.mark.parametrize('scratch', [False, True])
+    def test_flatpak(self, osbs, worker, scratch):
+        additional_params = {
+            'flatpak': True,
+            'reactor_config_override': {'flatpak': {'base_image': 'koji-target'}},
+            'target': 'koji-target',
+        }
+        if scratch:
+            additional_params['scratch'] = True
+        if worker:
+            additional_params['compose_ids'] = [42]
+            _, build_json = self.get_worker_build_request(osbs, additional_params)
+        else:
+            _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        if worker:
+            args = plugin_value_get(plugins, 'prebuild_plugins', 'resolve_module_compose', 'args')
+            match_args = {'compose_ids': [42]}
+            assert match_args == args
+
+            plugin = get_plugin(plugins, "prebuild_plugins", "koji")
+            assert plugin
+
+            args = plugin['args']
+            assert args['target'] == "koji-target"
+        else:
+            args = plugin_value_get(plugins, 'buildstep_plugins', PLUGIN_BUILD_ORCHESTRATE_KEY,
+                                    'args')
+            build_kwargs = args['build_kwargs']
+            assert build_kwargs['flatpak'] is True
+
+        with pytest.raises(KeyError):
+            plugin_value_get(plugins, 'prebuild_plugins', 'flatpak_create_dockerfile', 'args')
+
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "postbuild_plugins", "import_image")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "exit_plugins", "import_image")
+
+    @pytest.mark.parametrize('worker', [True, False])  # noqa:F811
+    def test_not_flatpak(self, osbs, worker):
+        additional_params = {
+            'base_image': 'fedora:latest',
+        }
+        if worker:
+            params, build_json = self.get_worker_build_request(osbs, additional_params)
+        else:
+            params, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins", "resolve_module_compose")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
