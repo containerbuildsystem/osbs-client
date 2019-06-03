@@ -17,7 +17,7 @@ from osbs.constants import (DEFAULT_ARRANGEMENT_VERSION,
                             ORCHESTRATOR_OUTER_TEMPLATE)
 from osbs import utils
 from osbs.repo_utils import RepoInfo, ModuleSpec
-from osbs.build.build_request import BuildRequest
+from osbs.build.build_requestv2 import BuildRequestV2
 from osbs.build.plugins_configuration import PluginsConfiguration
 from tests.constants import (TEST_GIT_URI,
                              TEST_GIT_REF,
@@ -130,7 +130,7 @@ class ArrangementBase(object):
     ORCHESTRATOR_ADD_PARAMS = {}
     WORKER_ADD_PARAMS = {}
 
-    def mock_env(self, base_image='fedora23/python'):
+    def mock_env(self, base_image='fedora23/python', additional_tags=None):
         class MockParser(object):
             labels = {
                 'name': 'fedora23/something',
@@ -141,6 +141,7 @@ class ArrangementBase(object):
 
         class MockConfiguration(object):
             container = {
+                'tags': additional_tags or [],
                 'compose': {
                     'modules': ['mod_name:mod_stream:mod_version']
                 }
@@ -197,7 +198,8 @@ class ArrangementBase(object):
 
     def get_build_request(self, build_type, osbs,  # noqa:F811
                           additional_params=None):
-        self.mock_env(base_image=additional_params.get('base_image'))
+        self.mock_env(base_image=additional_params.get('base_image'),
+                      additional_tags=additional_params.get('additional_tags'))
         params = self.COMMON_PARAMS.copy()
         assert build_type in ('orchestrator', 'worker')
         if build_type == 'orchestrator':
@@ -622,7 +624,7 @@ class TestArrangementV6(ArrangementBase):
                 orch_json.truncate()
 
             flexmock(osbs.os_conf, get_build_json_store=lambda: str(tmpdir))
-            (flexmock(BuildRequest)
+            (flexmock(BuildRequestV2)
                 .should_receive('adjust_for_repo_info')
                 .and_return(True))
 
@@ -833,3 +835,44 @@ class TestArrangementV6(ArrangementBase):
             get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
+
+    def test_render_tag_from_container_yaml(self, osbs):  # noqa:F811
+        expected_primary = set(['{version}-{release}'])
+        tags = set(['spam', 'bacon', 'eggs'])
+
+        additional_params = {
+            'platforms': ['x86_64', 'ppc64le'],
+            'base_image': 'fedora:latest_is_the_best',
+            'additional_tags': tags,
+        }
+
+        _, build_json = self.get_build_request('orchestrator', osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        tag_suffixes = plugin_value_get(plugins, 'postbuild_plugins', 'tag_from_config',
+                                        'args', 'tag_suffixes')
+        assert len(tag_suffixes['primary']) == len(expected_primary)
+        assert set(tag_suffixes['primary']) == expected_primary
+        assert len(tag_suffixes['floating']) == len(tags)
+        assert set(tag_suffixes['floating']) == tags
+
+    def test_render_tag_from_container_yaml_contains_bad_tag(self, osbs):  # noqa:F811
+        expected_floating = set(['bacon', 'eggs'])
+        expected_primary = set(['{version}-{release}'])
+        tags = set(['!!not a tag spam', 'bacon', 'eggs'])
+        additional_params = {
+            'platforms': ['x86_64', 'ppc64le'],
+            'additional_tags': tags,
+            'base_image': 'fedora:latest',
+
+        }
+
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        plugins = get_plugins_from_build_json(build_json)
+
+        tag_suffixes = plugin_value_get(plugins, 'postbuild_plugins', 'tag_from_config',
+                                        'args', 'tag_suffixes')
+        assert len(tag_suffixes['primary']) == len(expected_primary)
+        assert set(tag_suffixes['primary']) == expected_primary
+        assert len(tag_suffixes['floating']) == len(expected_floating)
+        assert set(tag_suffixes['floating']) == expected_floating
