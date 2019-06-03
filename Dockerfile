@@ -2,8 +2,8 @@ FROM fedora:24
 
 ARG REACTOR_SOURCE="distribution"
 ARG REACTOR_SOURCE_BRANCH="master"
-ARG REACTOR_SOURCE_REPOSITORY="https://github.com/projectatomic/atomic-reactor"
-ARG OSBS_CLIENT_SOURCE_REPOSITORY="https://github.com/projectatomic/osbs-client"
+ARG REACTOR_SOURCE_REPOSITORY="https://github.com/containerbuildsystem/atomic-reactor"
+ARG OSBS_CLIENT_SOURCE_REPOSITORY="https://github.com/containerbuildsystem/osbs-client"
 ARG OSBS_CLIENT_SOURCE_BRANCH="master"
 
 RUN set -ex ; \

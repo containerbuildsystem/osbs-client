@@ -23,7 +23,7 @@ Please read the [review checklist](https://osbs.readthedocs.io/en/latest/contrib
 Licensing
 ---------
 
-This project is licensed using the [BSD-3-Clause license](https://github.com/projectatomic/osbs-client/blob/master/LICENSE). When submitting pull requests please make sure your commit messages include a signed-off-by line to certify the below text:
+This project is licensed using the [BSD-3-Clause license](https://github.com/containerbuildsystem/osbs-client/blob/master/LICENSE). When submitting pull requests please make sure your commit messages include a signed-off-by line to certify the below text:
 
 ```
 Developer's Certificate of Origin 1.1

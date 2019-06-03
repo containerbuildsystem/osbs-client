@@ -5,7 +5,7 @@ OSBS consists of several components, namely:
  * operating system - RHEL 7, Centos 7 or Fedora (latest greatest) should work out of the box
  * [Docker](https://www.docker.com/)
  * [OpenShift 3](https://www.openshift.org/) - Enterprise and Origin both work
- * [atomic-reactor](https://github.com/projectatomic/atomic-reactor)
+ * [atomic-reactor](https://github.com/containerbuildsystem/atomic-reactor)
  * (optional) authenticating proxy based on Apache httpd
  * (optional) docker registry where built images are going to be pushed
 
@@ -316,7 +316,7 @@ $ oadm policy add-role-to-group edit system:authenticated
 
 In order to build images, you need to have a build image. It is the image used
 by OpenShift to perform builds. The image has installed component called
-[atomic-reactor](https://github.com/projectatomic/atomic-reactor), which
+[atomic-reactor](https://github.com/containerbuildsystem/atomic-reactor), which
 performs the build itself.
 
 Please see the project's documentation for more complete information. There's
@@ -343,7 +343,7 @@ You can also build the image yourself using Dockerfile from root of this reposit
 *Optional packages*
 
  * **osbs-client** — if you would like to submit results back to OpenShift (requires `atomic-reactor-metadata`)
- * **atomic-reactor-koji** — [atomic-reactor plugin](https://github.com/projectatomic/atomic-reactor/blob/master/atomic_reactor/plugins/pre_koji.py) for getting packages from koji targets
+ * **atomic-reactor-koji** — [atomic-reactor plugin](https://github.com/containerbuildsystem/atomic-reactor/blob/master/atomic_reactor/plugins/pre_koji.py) for getting packages from koji targets
  * **fedpkg** — atomic-reactor can fetch artifacts from lookaside cache of dist-git
 
 
