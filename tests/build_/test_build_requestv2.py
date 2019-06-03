@@ -555,6 +555,45 @@ class TestBuildRequestV2(object):
 
         assert build_request.is_custom_base_image() == is_custom
 
+    @pytest.mark.parametrize(('base_image', 'is_from_scratch'), [
+        ('fedora', False),
+        ('fedora:latest', False),
+        ('koji/image-build', False),
+        ('koji/image-build:spam.conf', False),
+        ('scratch', True),
+    ])
+    def test_prod_is_from_scratch_image(self, base_image, is_from_scratch):
+        build_request = BuildRequestV2(INPUTS_PATH)
+        # Safe to call prior to build image being set
+        assert build_request.is_from_scratch_image() is False
+
+        kwargs = get_sample_prod_params()
+        kwargs['base_image'] = base_image
+        build_request.set_params(**kwargs)
+        build_request.render()  # noqa
+
+        assert build_request.is_from_scratch_image() == is_from_scratch
+
+    @pytest.mark.parametrize('base_image, msg, keep_triggers', (
+        ('fedora', None, True),
+        ('scratch', 'from request because FROM scratch image', False),
+        ('koji/image-build', 'from request because custom base image', False),
+    ))
+    def test_adjust_for_triggers_base_builds(self, tmpdir, caplog, base_image, msg, keep_triggers):
+        """Test if triggers are properly adjusted for base and FROM scratch builds"""
+        self.create_image_change_trigger_json(str(tmpdir))
+        build_request = BuildRequestV2(str(tmpdir))
+
+        kwargs = get_sample_prod_params()
+        kwargs['base_image'] = base_image
+        build_request.set_params(**kwargs)
+        build_request.render()  # triggers are adjusted in render method
+
+        assert bool(build_request.template['spec'].get('triggers', [])) == keep_triggers
+
+        if msg is not None:
+            assert msg in caplog.text
+
     @pytest.mark.parametrize(('platform', 'platforms', 'is_auto', 'scratch',
                               'isolated', 'expected'), [
         (None, None, False, False, False, {'explicit1': 'yes',
