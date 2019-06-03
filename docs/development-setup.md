@@ -29,7 +29,7 @@ We'll use the `oc cluster up` method, since it's very easy to use:
 For local development, we advise to clone this git repo:
 
 ```
-$ git clone git@github.com:projectatomic/osbs-client.git
+$ git clone git@github.com:containerbuildsystem/osbs-client.git
 $ cd osbs-client
 $ pip2 install -r ./requirements.txt
 $ python2 ./setup.py develop

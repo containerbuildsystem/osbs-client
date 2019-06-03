@@ -37,7 +37,7 @@ setup(
     version="0.56.dev",
     author='Red Hat, Inc.',
     author_email='atomic-devel@projectatomic.io',
-    url='https://github.com/projectatomic/osbs-client',
+    url='https://github.com/containerbuildsystem/osbs-client',
     license="BSD",
     packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     entry_points={

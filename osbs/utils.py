@@ -174,7 +174,7 @@ def buildconfig_update(orig, new, remove_nonexistent_keys=False):
     - replaces values in `orig` for keys that are in both
     - removes key/value pairs from `orig` for keys that are not in `new`,
       but only in dicts nested inside `strategy` key
-      (see https://github.com/projectatomic/osbs-client/pull/273#issuecomment-148038314)
+      (see https://github.com/containerbuildsystem/osbs-client/pull/273#issuecomment-148038314)
     """
     if isinstance(orig, dict) and isinstance(new, dict):
         clean_triggers(orig, new)

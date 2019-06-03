@@ -55,9 +55,9 @@ Some options are also mandatory.
 
 * `koji_certs_secret` (*optional*, `string`) — name of [kubernetes secret](https://github.com/kubernetes/kubernetes/blob/master/docs/design/secrets.md) to use for koji authentication
 
-* `koji_use_kerberos` (*optional*, `boolean`) — will set [atomic-reactor](https://github.com/projectatomic/atomic-reactor) plugins to use kerberos to authenticate to koji.
+* `koji_use_kerberos` (*optional*, `boolean`) — will set [atomic-reactor](https://github.com/containerbuildsystem/atomic-reactor) plugins to use kerberos to authenticate to koji.
 
-* `koji_kerberos_keytab` (*optional*, `string`) - location of the keytab that will be used to initialize kerberos credentials for [atomic-reactor](https://github.com/projectatomic/atomic-reactor) plugins - usually in the form `FILE:<absolute_path>`, see [kerberos documentation](http://web.mit.edu/Kerberos/krb5-latest/doc/basic/keytab_def.html) for other possible values
+* `koji_kerberos_keytab` (*optional*, `string`) - location of the keytab that will be used to initialize kerberos credentials for [atomic-reactor](https://github.com/containerbuildsystem/atomic-reactor) plugins - usually in the form `FILE:<absolute_path>`, see [kerberos documentation](http://web.mit.edu/Kerberos/krb5-latest/doc/basic/keytab_def.html) for other possible values
 
 * `koji_kerberos_principal` (*optional*, `string`) - kerberos principal for the keytab provided in `koji_kerberos_keytab`
 
@@ -133,15 +133,15 @@ Some options are also mandatory.
 
 * `smtp_to_pkgowner` (*optional*, `boolean`) - whether Atomic Reactor should send a notification to koji package owner
 
-* `cpu_limit` (*optional*, `string`) — CPU limit to apply to build (for more info, see [documentation for resources](https://github.com/projectatomic/osbs-client/blob/master/docs/resource.md)
+* `cpu_limit` (*optional*, `string`) — CPU limit to apply to build (for more info, see [documentation for resources](https://github.com/containerbuildsystem/osbs-client/blob/master/docs/resource.md)
 
-* `memory_limit` (*optional*, `string`) — memory limit to apply to build (for more info, see [documentation for resources](https://github.com/projectatomic/osbs-client/blob/master/docs/resource.md)
+* `memory_limit` (*optional*, `string`) — memory limit to apply to build (for more info, see [documentation for resources](https://github.com/containerbuildsystem/osbs-client/blob/master/docs/resource.md)
 
-* `storage_limit` (*optional*, `string`) — storage limit to apply to build (for more info, see [documentation for resources](https://github.com/projectatomic/osbs-client/blob/master/docs/resource.md)
+* `storage_limit` (*optional*, `string`) — storage limit to apply to build (for more info, see [documentation for resources](https://github.com/containerbuildsystem/osbs-client/blob/master/docs/resource.md)
 
-* `reactor_config_secret` (*optional*, `string`) — name of Kubernetes secret holding [atomic-reactor configuration file](https://github.com/projectatomic/atomic-reactor/blob/master/docs/config.md)
+* `reactor_config_secret` (*optional*, `string`) — name of Kubernetes secret holding [atomic-reactor configuration file](https://github.com/containerbuildsystem/atomic-reactor/blob/master/docs/config.md)
 
-* `reactor_config_map` (*optional*, `string`) — name of Kubernetes ConfigMap holding [atomic-reactor configuration file](https://github.com/projectatomic/atomic-reactor/blob/master/docs/config.md)
+* `reactor_config_map` (*optional*, `string`) — name of Kubernetes ConfigMap holding [atomic-reactor configuration file](https://github.com/containerbuildsystem/atomic-reactor/blob/master/docs/config.md)
 
 * `client_config_secret` (*optional*, `string`) — name of Kubernetes secret holding osbs.conf to be used by atomic-reactor in the builder image (this is provided to the orchestrate_build plugin if present)
 
@@ -182,7 +182,7 @@ Some options are also mandatory.
 In the `build_json_dir` there must be `prod.json` and `prod_inner.json` which
 defines the [OpenShift Build](https://docs.openshift.org/latest/dev_guide/builds.html)
 specification that will be used to enable the specific
-[atomic-reactor](https://github.com/projectatomic/atomic-reactor) plugins that
+[atomic-reactor](https://github.com/containerbuildsystem/atomic-reactor) plugins that
 should be enabled and the config values for each.
 
 There is also a third file that is optional that can exist along side the

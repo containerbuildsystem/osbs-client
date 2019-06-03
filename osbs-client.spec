@@ -42,8 +42,8 @@ Release:        %{release}%{?dist}
 Summary:        Python command line client for OpenShift Build Service
 Group:          Development/Tools
 License:        BSD
-URL:            https://github.com/projectatomic/osbs-client
-Source0:        https://github.com/projectatomic/osbs-client/archive/%{commit}/osbs-client-%{commit}.tar.gz
+URL:            https://github.com/containerbuildsystem/osbs-client
+Source0:        https://github.com/containerbuildsystem/osbs-client/archive/%{commit}/osbs-client-%{commit}.tar.gz
 
 BuildArch:      noarch
 

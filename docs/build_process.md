@@ -6,9 +6,9 @@ This document describes the process used to build images using OSBS. It sums up 
 
 This document mentions several components that communicate with each other:
 
- * [osbs-client](https://github.com/projectatomic/osbs-client)
+ * [osbs-client](https://github.com/containerbuildsystem/osbs-client)
  * [Openshift v3](https://github.com/openshift/origin/)
- * [atomic-reactor](https://github.com/projectatomic/atomic-reactor)
+ * [atomic-reactor](https://github.com/containerbuildsystem/atomic-reactor)
 
 ## The Process
 
