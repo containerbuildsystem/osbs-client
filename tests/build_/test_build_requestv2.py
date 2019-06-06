@@ -76,17 +76,17 @@ class TestBuildRequestV2(object):
     def test_inner_template(self):
         br = BuildRequestV2('something')
         with pytest.raises(RuntimeError):
-            br.inner_template
+            br.inner_template   # pylint: disable=pointless-statement; is a property
 
     def test_customize_conf(self):
         br = BuildRequestV2('something')
         with pytest.raises(RuntimeError):
-            br.customize_conf
+            br.customize_conf   # pylint: disable=pointless-statement; is a property
 
     def test_dock_json(self):
         br = BuildRequestV2('something')
         with pytest.raises(RuntimeError):
-            br.dj
+            br.dj   # pylint: disable=pointless-statement; is a property
 
     def test_build_request_has_ist_trigger(self):
         build_json = copy.deepcopy(TEST_BUILD_JSON)

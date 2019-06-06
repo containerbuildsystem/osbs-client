@@ -45,7 +45,6 @@ disable=I,
         missing-docstring,
         misplaced-comparison-constant,
         no-init,
-        pointless-statement,  # should be enabled
         protected-access,
         redefined-builtin,  # should be enabled
         redefined-outer-name,  # nice to have

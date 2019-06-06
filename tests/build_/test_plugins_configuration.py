@@ -523,9 +523,8 @@ class TestPluginsConfiguration(object):
 
         worker_config = Configuration(conf_file=None, **worker_config_kwargs)
 
-        if isinstance(worker_build_image, type):
-            with pytest.raises(worker_build_image):
-                worker_config_kwargs['build_image']
+        if worker_build_image is KeyError:
+            assert 'build_image' not in worker_config_kwargs
             assert not worker_config.get_build_image()
         else:
             assert worker_config_kwargs['build_image'] == worker_build_image
