@@ -53,7 +53,7 @@ class RepoConfiguration(object):
         self.depth = depth or 0
 
         # Set default options
-        self._config_parser.readfp(StringIO(self.DEFAULT_CONFIG))
+        self._config_parser.readfp(StringIO(self.DEFAULT_CONFIG))   # pylint: disable=W1505; py2
 
         config_path = os.path.join(dir_path, file_name)
         if os.path.exists(config_path):

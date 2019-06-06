@@ -35,7 +35,6 @@ disable=I,
         broad-except,
         comprehension-escape, # throws false positives on 1.9.0 (Fedora 29)
         exception-escape, # throws false positives on 1.9.0 (Fedora 29)
-        deprecated-method,  # should be enabled
         empty-docstring,  # should be enabled
         fixme,
         invalid-name,
