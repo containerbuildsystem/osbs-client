@@ -604,12 +604,12 @@ def test_get_repo_info(tmpdir):
     assert info.configuration.container == {'compose': {'modules': ['n:s:v']}}
 
 
-def initialize_git_repo(rpath, files=[]):
+def initialize_git_repo(rpath, files=None):
     subprocess.Popen(['git', 'init', rpath])
     subprocess.Popen(['git', 'config', 'user.name', '"Gerald Host"'], cwd=rpath)
     subprocess.Popen(['git', 'config', 'user.email', '"ghost@example.com"'], cwd=rpath)
     first_commit_ref = None
-    for f in files:
+    for f in files or []:
         subprocess.Popen(['touch', f], cwd=rpath)
         subprocess.Popen(['git', 'add', f], cwd=rpath)
         subprocess.Popen(['git', 'commit', '-m', 'new file {0}'.format(f)], cwd=rpath)
