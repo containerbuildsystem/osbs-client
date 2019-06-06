@@ -197,10 +197,7 @@ class TestOpenshift(object):
         with pytest.raises(OsbsException):
             openshift.wait_for_build_to_finish(12)
 
-        for log in caplog.records:
-            if 'Retry #143' in log.getMessage():
-                break
-        assert 'Retry #143' in log.getMessage()
+        assert any('Retry #143' in log.getMessage() for log in caplog.records)
 
     @pytest.mark.parametrize('fail', (True, False))  # noqa:F811
     def test_watch_response_hiccup(self, fail, openshift):
