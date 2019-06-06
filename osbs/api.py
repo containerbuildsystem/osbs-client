@@ -187,8 +187,7 @@ class OSBS(object):
         if not pod_list:
             raise OsbsException("No pod for build")
         elif len(pod_list) != 1:
-            raise OsbsException("Only one pod expected but %d returned",
-                                len(pod_list))
+            raise OsbsException("Only one pod expected but %d returned" % len(pod_list))
         return pod_list[0]
 
     @osbsapi

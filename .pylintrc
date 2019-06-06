@@ -51,7 +51,6 @@ disable=I,
         no-init,
         pointless-statement,  # should be enabled
         protected-access,
-        raising-format-tuple,  # should be enabled
         redefined-builtin,  # should be enabled
         redefined-outer-name,  # nice to have
         relative-import,  # nice to have
