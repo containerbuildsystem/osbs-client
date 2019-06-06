@@ -32,7 +32,6 @@ disable=I,
         arguments-differ,  # nice to have
         attribute-defined-outside-init,  # should be enabled
         bad-continuation,  # pep8
-        bad-indentation,  # pep8, should be enabled
         bad-whitespace,  # pep8, nice to have
         broad-except,
         comprehension-escape, # throws false positives on 1.9.0 (Fedora 29)

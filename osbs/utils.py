@@ -547,11 +547,11 @@ def sanitize_version(version):
         else:
             parts = []
     else:
-            parts = []
-            for part in version:
-                if part.startswith('*'):
-                    break
-                parts.append(part)
+        parts = []
+        for part in version:
+            if part.startswith('*'):
+                break
+            parts.append(part)
     parts = [int(p) for p in parts]
 
     if len(parts) < 3:
