@@ -559,19 +559,6 @@ def osbs(request, openshift):
     return osbs
 
 
-def get_pulp_additional_config(with_group=False):
-    if with_group:
-        conf = dedent("""\
-            pulp_registry_name = pulp
-            pulp_secret = secret
-            group_manifests = true""")
-    else:
-        conf = dedent("""\
-            pulp_registry_name = pulp
-            pulp_secret = secret""")
-    return conf
-
-
 @pytest.fixture
 def osbs_cant_orchestrate(openshift):
     with NamedTemporaryFile(mode="wt") as fp:

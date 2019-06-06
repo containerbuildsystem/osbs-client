@@ -10,6 +10,7 @@ from __future__ import unicode_literals, absolute_import
 import shutil
 import os
 import json
+from textwrap import dedent
 from osbs.api import OSBS
 from osbs.constants import (DEFAULT_ARRANGEMENT_VERSION,
                             ORCHESTRATOR_INNER_TEMPLATE,
@@ -25,7 +26,6 @@ from tests.constants import (TEST_GIT_URI,
                              TEST_COMPONENT,
                              TEST_VERSION,
                              INPUTS_PATH)
-from tests.conftest import get_pulp_additional_config
 from tests.test_api import request_as_response
 from flexmock import flexmock
 import pytest
@@ -59,6 +59,20 @@ PLUGIN_REMOVE_WORKER_METADATA_KEY = 'remove_worker_metadata'
 PLUGIN_RESOLVE_COMPOSES_KEY = 'resolve_composes'
 PLUGIN_VERIFY_MEDIA_KEY = 'verify_media'
 PLUGIN_EXPORT_OPERATOR_MANIFESTS_KEY = 'export_operator_manifests'
+
+
+def get_pulp_additional_config(with_group=False):
+    if with_group:
+        conf = dedent("""\
+            pulp_registry_name = pulp
+            pulp_secret = secret
+            group_manifests = true""")
+    else:
+        conf = dedent("""\
+            pulp_registry_name = pulp
+            pulp_secret = secret""")
+    return conf
+
 
 OSBS_WITH_PULP_PARAMS = {
     'platform_descriptors': None,
