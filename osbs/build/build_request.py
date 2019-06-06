@@ -1176,8 +1176,10 @@ class BuildRequest(object):
                                               "but no auth config")
 
             source_registry = self.spec.source_registry_uri.value
-            perform_delete = (source_registry is None or
-                              source_registry.docker_uri != registry.docker_uri)
+            perform_delete = (
+                source_registry is None or
+                source_registry.docker_uri != registry.docker_uri   # pylint: disable=W0631
+            )
             if perform_delete:
                 push_conf = self.dj.dock_json_get_plugin_conf('exit_plugins',
                                                               'delete_from_registry')

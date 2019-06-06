@@ -54,7 +54,6 @@ disable=I,
         signature-differs,  # nice to have
         superfluous-parens,  # nice to have
         too-many-lines,
-        undefined-loop-variable,  # should be enabled
         ungrouped-imports,
         unused-argument,  # nice to have
         unused-import,  # should be enabled
