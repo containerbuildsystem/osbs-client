@@ -47,6 +47,7 @@ class BuildRequest(object):
         self._inner_template_path = inner_template or DEFAULT_INNER_TEMPLATE
         self._outer_template_path = outer_template or DEFAULT_OUTER_TEMPLATE
         self._customize_conf_path = customize_conf or DEFAULT_CUSTOMIZE_CONF
+        self.osbs_api = None
         self.build_json = None       # rendered template
         self._template = None        # template loaded from filesystem
         self._inner_template = None  # dock json
