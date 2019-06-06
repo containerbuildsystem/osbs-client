@@ -568,7 +568,7 @@ class TestArrangementV6(ArrangementBase):
             'base_image': 'fedora:latest',
             'koji_upload_dir': 'upload',
         }
-        params, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
         with pytest.raises(NoSuchPluginException):
@@ -824,9 +824,9 @@ class TestArrangementV6(ArrangementBase):
             'base_image': 'fedora:latest',
         }
         if worker:
-            params, build_json = self.get_worker_build_request(osbs, additional_params)
+            _, build_json = self.get_worker_build_request(osbs, additional_params)
         else:
-            params, build_json = self.get_orchestrator_build_request(osbs, additional_params)
+            _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
         with pytest.raises(NoSuchPluginException):

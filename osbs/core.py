@@ -611,7 +611,7 @@ class Openshift(object):
         url = self._build_url(path, _prepend_namespace=False, **request_args)
 
         bad_responses = 0
-        for retry in range(WATCH_RETRY):
+        for _ in range(WATCH_RETRY):
             try:
                 response = self._get(url, stream=True, headers={'Connection': 'close'})
                 check_response(response)
@@ -705,7 +705,7 @@ class Openshift(object):
         raise OsbsException("Failed to wait for a build: %s" % build_id)
 
     def wait_for_build_to_get_scheduled(self, build_id):
-        for retry in range(WAIT_RETRY):
+        for _ in range(WAIT_RETRY):
             try:
                 build_response = self.wait(build_id, BUILD_FINISHED_STATES + BUILD_RUNNING_STATES)
                 return build_response

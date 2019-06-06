@@ -184,7 +184,7 @@ class TestOpenshift(object):
         mock_reponse = MockResponse()
         flexmock(openshift).should_receive('_get').and_return(mock_reponse)
         flexmock(time).should_receive('sleep').and_return(None)
-        for changetype, obj in openshift.watch_resource("builds", 12):
+        for _ in openshift.watch_resource("builds", 12):
             # watch_resource failed and never yielded, so we shouldn't hit the assert
             assert False
 
