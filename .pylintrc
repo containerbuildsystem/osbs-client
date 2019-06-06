@@ -62,7 +62,6 @@ disable=I,
         ungrouped-imports,
         unused-argument,  # nice to have
         unused-import,  # should be enabled
-        unused-variable,  # should be enabled
         useless-else-on-loop,
         wrong-import-order,
         wrong-import-position

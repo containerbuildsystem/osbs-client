@@ -2318,7 +2318,7 @@ class TestBuildRequest(object):
         kwargs = get_sample_prod_params()
         kwargs['base_image'] = base_image
         build_request.set_params(**kwargs)
-        build_json = build_request.render()  # noqa
+        build_request.render()
 
         assert build_request.is_custom_base_image() == is_custom
 
@@ -2337,7 +2337,7 @@ class TestBuildRequest(object):
         kwargs = get_sample_prod_params()
         kwargs['base_image'] = base_image
         build_request.set_params(**kwargs)
-        build_json = build_request.render()  # noqa
+        build_request.render()
 
         assert build_request.is_from_scratch_image() == is_from_scratch
 

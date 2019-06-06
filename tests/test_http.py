@@ -270,7 +270,7 @@ class TestHttpSession(object):
         response_multi = s.get("https://httpbin.org/stream/3", stream=True)
         with response_multi as r:
             with pytest.raises(requests.exceptions.ConnectionError):
-                for line in r.iter_lines():
+                for _ in r.iter_lines():
                     # Should have raised an error and never get here
                     assert False
 

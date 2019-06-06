@@ -271,7 +271,7 @@ class TestOSBS(object):
         (flexmock(utils)
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
-            .and_return(self.mock_repo_info()))
+            .and_return(self.mock_repo_info(mock_df_parser=MockParser())))
         response = osbs.create_build(target=TEST_TARGET,
                                      architecture=TEST_ARCH,
                                      **REQUIRED_BUILD_ARGS)
@@ -999,9 +999,6 @@ class TestOSBS(object):
             .should_receive('get_instance_token_file_name')
             .with_args(osbs.os_conf.conf_section)
             .and_return(token_file_path))
-
-        class TestResponse(object):
-            status_code = http_client.UNAUTHORIZED
 
         if not token:
             (flexmock(Openshift)
@@ -2670,13 +2667,13 @@ class TestOSBS(object):
                         .times(get_existing_count))
 
         if existing_bc:
-            for counter in range(OS_CONFLICT_MAX_RETRIES + 2):
+            for _ in range(OS_CONFLICT_MAX_RETRIES + 2):
                 get_existing = get_existing.and_return(build_config_json)
         else:
             get_existing = get_existing.and_return(None)
 
             if triggers:
-                for counter in range(OS_CONFLICT_MAX_RETRIES + 1):
+                for _ in range(OS_CONFLICT_MAX_RETRIES + 1):
                     get_existing = get_existing.and_return(build_config_json)
 
         def mock_get_image_stream(*args, **kwargs):
@@ -2824,10 +2821,6 @@ class TestOSBS(object):
         (flexmock(time)
             .should_receive('sleep')
             .and_return(None))
-
-        def mock_update_build_config(*args, **kwargs):
-            raise OsbsResponseException('BuildConfig update conflict',
-                                        status_code=409)
 
         update_config = (flexmock(osbs_obj.os)
                          .should_receive('update_build_config')

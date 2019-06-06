@@ -19,7 +19,7 @@ logger = logging.getLogger("osbs.tests")
 
 
 def test_missing_config():
-    os_conf = Configuration(conf_file="/nonexistent/path", conf_section="default")  # noqa
+    Configuration(conf_file="/nonexistent/path", conf_section="default")
 
 
 def test_no_config():
@@ -29,7 +29,7 @@ def test_no_config():
 
 def test_missing_section():
     with NamedTemporaryFile() as f:
-        os_conf = Configuration(conf_file=f.name, conf_section="missing")  # noqa
+        Configuration(conf_file=f.name, conf_section="missing")
 
 
 def test_no_build_image():
