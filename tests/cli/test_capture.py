@@ -14,7 +14,6 @@ import pytest
 
 from osbs.constants import DEFAULT_NAMESPACE
 from osbs.cli.capture import setup_json_capture
-from tests.fake_api import openshift, osbs  # noqa
 from tests.constants import TEST_BUILD
 from osbs.conf import Configuration
 

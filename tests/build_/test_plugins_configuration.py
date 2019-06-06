@@ -26,8 +26,6 @@ from tests.constants import (INPUTS_PATH, TEST_BUILD_CONFIG,
                              TEST_GIT_BRANCH, TEST_GIT_REF, TEST_GIT_URI,
                              TEST_FILESYSTEM_KOJI_TASK_ID, TEST_SCRATCH_BUILD_NAME,
                              TEST_ISOLATED_BUILD_NAME, TEST_USER)
-# These are used as fixtures
-from tests.fake_api import openshift, osbs  # noqa
 
 
 USE_DEFAULT_TRIGGERS = object()

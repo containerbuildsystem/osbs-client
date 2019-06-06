@@ -58,8 +58,6 @@ from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRA
 from osbs.core import Openshift
 # needed for mocking input() (because it is imported from six)
 from osbs import api as _osbs_api
-# These are used as fixtures
-from tests.fake_api import openshift, osbs, osbs106, osbs_cant_orchestrate  # noqa
 from six.moves import http_client
 
 

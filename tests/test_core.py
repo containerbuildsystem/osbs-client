@@ -31,7 +31,7 @@ from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
                              TEST_LABEL_VALUE, TEST_IMAGESTREAM, TEST_IMAGESTREAM_NO_TAGS,
                              TEST_IMAGESTREAM_WITH_ANNOTATION,
                              TEST_IMAGESTREAM_WITHOUT_IMAGEREPOSITORY)
-from tests.fake_api import openshift, OAPI_PREFIX, API_VER  # noqa
+from tests.conftest import OAPI_PREFIX, API_VER
 from tests.test_utils import JsonMatcher
 from requests.exceptions import ConnectionError
 import pytest
