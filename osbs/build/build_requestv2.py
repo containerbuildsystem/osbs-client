@@ -37,6 +37,8 @@ class BuildRequestV2(BuildRequest):
         self.spec = None
         self.user_params = BuildUserParams(build_json_store, customize_conf)
         self.osbs_api = None
+        self.source_registry = None
+        self.organization = None
 
     # Override
     def set_params(self, **kwargs):
@@ -104,9 +106,6 @@ class BuildRequestV2(BuildRequest):
 
         logger.debug("now setting params '%s' for user_params", kwargs)
         self.user_params.set_params(**kwargs)
-
-        self.source_registry = None
-        self.organization = None
 
     # Override
     @property
