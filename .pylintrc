@@ -28,7 +28,6 @@ enable=all,
        python3
 disable=I,
         R,  # refactoring checks
-        anomalous-backslash-in-string,  # should be enabled
         arguments-differ,  # nice to have
         bad-continuation,  # pep8
         bad-whitespace,  # pep8, nice to have
