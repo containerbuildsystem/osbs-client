@@ -738,7 +738,7 @@ class OSBS(object):
 
         builds_count = len(builds_for_koji_task)
         if builds_count == 1:
-            logger.info("found running build for koji task: %s" %
+            logger.info("found running build for koji task: %s",
                         builds_for_koji_task[0].get_build_name())
             response =\
                 BuildResponse(self.os.get_build(builds_for_koji_task[0].get_build_name()).json(),
