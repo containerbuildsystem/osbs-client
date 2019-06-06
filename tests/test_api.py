@@ -82,6 +82,8 @@ REQUIRED_BUILD_ARGS = {
     'user': TEST_USER,
 }
 
+TEST_MODULES = ['mod_name:mod_stream:mod_version']
+
 
 def request_as_response(request):
     """
@@ -127,7 +129,7 @@ class MockDfParserBaseImage(object):
 
 
 class MockConfiguration(object):
-    def __init__(self, modules=['mod_name:mod_stream:mod_version']):
+    def __init__(self, modules=None):
         self.container = {'compose': {'modules': modules}}
         safe_modules = modules or []
         self.container_module_specs = [ModuleSpec.from_str(module) for module in safe_modules]
@@ -2463,7 +2465,7 @@ class TestOSBS(object):
         (flexmock(utils)
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
-            .and_return(self.mock_repo_info(mock_config=MockConfiguration())))
+            .and_return(self.mock_repo_info(mock_config=MockConfiguration(TEST_MODULES))))
 
         args = MockArgs(isolated)
         # Some of the command line arguments are pulled through the config
@@ -2931,7 +2933,7 @@ class TestOSBS(object):
          .should_receive('get_repo_info')
          .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
          .and_return(self.mock_repo_info(mock_df_parser=MockDfParserNoDf(),
-                                         mock_config=MockConfiguration())))
+                                         mock_config=MockConfiguration(TEST_MODULES))))
 
         kwargs = {
             'git_uri': TEST_GIT_URI,

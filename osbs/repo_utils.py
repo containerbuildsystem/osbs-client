@@ -148,7 +148,8 @@ class AdditionalTagsConfig(object):
 
     VALID_TAG_REGEX = re.compile(r'^[\w.]{0,127}$')
 
-    def __init__(self, dir_path='', file_name=ADDITIONAL_TAGS_FILE, tags=set()):
+    def __init__(self, dir_path='', file_name=ADDITIONAL_TAGS_FILE, tags=None):
+        tags = tags or set()
         self._tags = set([x for x in tags if self._is_tag_valid(x)])
         self._from_container_yaml = True if tags else False
         self._file_path = os.path.join(dir_path, file_name)
