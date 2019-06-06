@@ -44,7 +44,6 @@ disable=I,
         keyword-arg-before-vararg,  # nice to have
         len-as-condition,  # nice to have
         line-too-long,  # pep8, should be enabled
-        logging-format-interpolation,  # should be enabled
         missing-docstring,
         misplaced-comparison-constant,
         no-init,

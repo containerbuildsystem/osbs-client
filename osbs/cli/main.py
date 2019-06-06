@@ -478,7 +478,8 @@ def cmd_backup(args, osbs):
                 except Exception as e:
                     if args.continue_on_error:
                         logger.warning(
-                            "Error during {} backup".format(resource_type), exc_info=True)
+                            "Error during %s backup", resource_type, exc_info=True
+                        )
                     else:
                         raise e
 

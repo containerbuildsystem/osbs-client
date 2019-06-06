@@ -1342,7 +1342,7 @@ class BuildRequest(object):
             self.dj.dock_json_set_arg(phase, plugin, "command",
                                       self.spec.sources_command.value)
         else:
-            logger.info('removing {}, no sources_command was provided'.format(plugin))
+            logger.info('removing %s, no sources_command was provided', plugin)
             self.dj.remove_plugin(phase, plugin)
 
     def render_pull_base_image(self):
@@ -1388,10 +1388,9 @@ class BuildRequest(object):
                         plugin_dict['plugin_name']
                     )
                     logger.debug(
-                        "site-specific plugin disabled -> Type:{} Name:{}".format(
-                            plugin_dict['plugin_type'],
-                            plugin_dict['plugin_name']
-                        )
+                        "site-specific plugin disabled -> Type:%s Name:%s",
+                        plugin_dict['plugin_type'],
+                        plugin_dict['plugin_name']
                     )
                 except KeyError:
                     # Malformed config
@@ -1409,11 +1408,10 @@ class BuildRequest(object):
                         plugin_dict['plugin_args']
                     )
                     logger.debug(
-                        "site-specific plugin enabled -> Type:{} Name:{} Args: {}".format(
-                            plugin_dict['plugin_type'],
-                            plugin_dict['plugin_name'],
-                            plugin_dict['plugin_args']
-                        )
+                        "site-specific plugin enabled -> Type:%s Name:%s Args: %s",
+                        plugin_dict['plugin_type'],
+                        plugin_dict['plugin_name'],
+                        plugin_dict['plugin_args']
                     )
                 except KeyError:
                     # Malformed config

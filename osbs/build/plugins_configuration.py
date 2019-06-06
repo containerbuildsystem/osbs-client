@@ -60,7 +60,7 @@ class PluginsTemplate(object):
             if p.get('name') == name:
                 self.template[phase].remove(p)
                 if reason:
-                    logger.info('Removing {}:{}, {}'.format(phase, name, reason))
+                    logger.info('Removing %s:%s, %s', phase, name, reason)
                 break
 
     def add_plugin(self, phase, name, args, reason=None):
@@ -77,7 +77,7 @@ class PluginsTemplate(object):
         if not plugin_modified:
             self.template[phase].append({"name": name, "args": args})
             if reason:
-                logger.info('{}:{} with args {}, {}'.format(phase, name, args, reason))
+                logger.info('%s:%s with args %s, %s', phase, name, args, reason)
 
     def get_plugin_conf(self, phase, name):
         """
