@@ -25,7 +25,7 @@ from tests.constants import (TEST_GIT_URI,
                              TEST_COMPONENT,
                              TEST_VERSION,
                              INPUTS_PATH)
-from tests.fake_api import openshift, osbs, get_pulp_additional_config  # noqa:F401
+from tests.conftest import get_pulp_additional_config
 from tests.test_api import request_as_response
 from flexmock import flexmock
 import pytest
