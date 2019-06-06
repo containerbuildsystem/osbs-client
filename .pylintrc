@@ -46,7 +46,6 @@ disable=I,
         misplaced-comparison-constant,
         no-init,
         protected-access,
-        redefined-builtin,  # should be enabled
         redefined-outer-name,  # nice to have
         relative-import,  # nice to have
         signature-differs,  # nice to have

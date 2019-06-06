@@ -33,7 +33,8 @@ from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
                              TEST_IMAGESTREAM_WITHOUT_IMAGEREPOSITORY)
 from tests.conftest import OAPI_PREFIX, API_VER
 from tests.test_utils import JsonMatcher
-from requests.exceptions import ConnectionError
+
+import requests
 import pytest
 
 from six.moves import http_client
@@ -115,7 +116,7 @@ class TestOpenshift(object):
         assert labels.json() is not None
 
     @pytest.mark.parametrize('exc', [  # noqa
-        ConnectionError('Connection aborted.', http_client.BadStatusLine("''",)),
+        requests.ConnectionError('Connection aborted.', http_client.BadStatusLine("''",)),
     ])
     def test_stream_logs_bad_initial_connection(self, openshift, exc):
         response = flexmock(status_code=http_client.OK)

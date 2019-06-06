@@ -24,9 +24,9 @@ from osbs.exceptions import (OsbsResponseException, OsbsException,
                              OsbsWatchBuildNotFound, OsbsAuthException,
                              ImportImageFailed, ImportImageFailedServerError)
 from osbs.utils import graceful_chain_get, retry_on_conflict, retry_on_exception
-from requests.exceptions import ConnectionError
+
+import requests
 from requests.utils import guess_json_utf
-from requests import codes
 
 from six.moves import http_client
 from six.moves.urllib.parse import urljoin, urlencode, urlparse, parse_qs
@@ -469,7 +469,7 @@ class Openshift(object):
             # wrapped in OsbsException or OsbsNetworkException,
             # inspect cause to detect ConnectionError.
             except OsbsException as exc:
-                if not isinstance(exc.cause, ConnectionError):
+                if not isinstance(exc.cause, requests.ConnectionError):
                     raise
 
             idle = time.time() - last_activity
@@ -996,7 +996,7 @@ class Openshift(object):
                 continue
             logger.error('Error importing image %s: %r', image['tag'], image)
             failed_images.append(image)
-            if image['status']['code'] == codes.server_error:
+            if image['status']['code'] == requests.codes.server_error:
                 failed_images_server_error = True
 
         if failed_images:
