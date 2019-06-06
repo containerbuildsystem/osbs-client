@@ -354,7 +354,7 @@ class TestOpenshift(object):
             .and_return(make_json_response(mock_response)))
 
         with pytest.raises(OsbsException) as exc:
-                openshift.get_build_config_by_labels(label_selectors)
+            openshift.get_build_config_by_labels(label_selectors)
         assert str(exc.value).startswith('More than one build config found')
 
     @pytest.mark.parametrize(('items', 'filter_value', 'error'), [  # noqa:F811
@@ -596,7 +596,7 @@ class TestOpenshift(object):
 
             if expected_insecure != bool(existing_insecure) or \
                expected_scheduled != bool(existing_scheduled):
-                    expected_change = True
+                expected_change = True
 
             expectation.and_return(make_json_response(mock_response))
 
@@ -813,7 +813,7 @@ class TestOpenshift(object):
 
         modified_resource_json = deepcopy(template_resource_json)
         for annotation in ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO:
-                modified_resource_json['metadata']['annotations'].pop(annotation, None)
+            modified_resource_json['metadata']['annotations'].pop(annotation, None)
         source_repo = modified_resource_json['spec'].pop('dockerImageRepository')
         if remove_tags:
             modified_resource_json['spec']['tags'] = []
