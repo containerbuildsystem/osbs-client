@@ -1,5 +1,5 @@
 """
-Copyright (c) 2015, 2016, 2017 Red Hat, Inc
+Copyright (c) 2015, 2016, 2017, 2019 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -485,21 +485,6 @@ class BuildRequest(object):
             self.dj.dock_json_set_arg(phase, plugin, 'koji_principal', krb_principal)
             self.dj.dock_json_set_arg(phase, plugin, 'koji_keytab', krb_keytab)
 
-    @staticmethod
-    def remove_tag_and_push_registries(tag_and_push_registries, version):
-        """
-        Remove matching entries from tag_and_push_registries (in-place)
-
-        :param tag_and_push_registries: dict, uri -> dict
-        :param version: str, 'version' to match against
-        """
-        registries = [uri
-                      for uri, regdict in tag_and_push_registries.items()
-                      if regdict['version'] == version]
-        for registry in registries:
-            logger.info("removing %s registry: %s", version, registry)
-            del tag_and_push_registries[registry]
-
     def is_custom_base_image(self):
         """
         Returns whether or not this is a build from a custom base image
@@ -528,15 +513,6 @@ class BuildRequest(object):
             tag_and_push_registries = push_conf['args']['registries']
         except (KeyError, IndexError):
             tag_and_push_registries = {}
-
-        if 'v1' not in versions:
-            # Remove v1-only plugins
-            for phase, name in [('postbuild_plugins', 'pulp_push')]:
-                logger.info("removing v1-only plugin: %s", name)
-                self.dj.remove_plugin(phase, name)
-
-            # remove extra tag_and_push config
-            self.remove_tag_and_push_registries(tag_and_push_registries, 'v1')
 
         # Remove 'version' from tag_and_push plugin config as it's no
         # longer needed
@@ -1105,33 +1081,6 @@ class BuildRequest(object):
                                           'expect_v2schema2',
                                           not self.spec.prefer_schema1_digest.value)
 
-    def render_pulp_push(self):
-        """
-        If a pulp registry is specified, use the pulp plugin
-        """
-        if not self.dj.dock_json_has_plugin_conf('postbuild_plugins',
-                                                 'pulp_push'):
-            return
-
-        pulp_registry = self.spec.pulp_registry.value
-        if pulp_registry:
-            self.dj.dock_json_set_arg('postbuild_plugins', 'pulp_push',
-                                      'pulp_registry_name', pulp_registry)
-
-            # Verify we have either a secret or username/password
-            if self.spec.pulp_secret.value is None:
-                conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins',
-                                                         'pulp_push')
-                args = conf.get('args', {})
-                if 'username' not in args:
-                    raise OsbsValidationException("Pulp registry specified "
-                                                  "but no auth config")
-        else:
-            # If no pulp registry is specified, don't run the pulp plugin
-            logger.info("removing pulp_push from request, "
-                        "requires pulp_registry")
-            self.dj.remove_plugin("postbuild_plugins", "pulp_push")
-
     def render_pulp_sync(self):
         """
         If a pulp registry is specified, use the pulp plugin as well as the
@@ -1532,11 +1481,6 @@ class BuildRequest(object):
                           self.spec.reactor_config_secret.value,
 
                           ('postbuild_plugins',
-                           'pulp_push',
-                           'pulp_secret_path'):
-                          self.spec.pulp_secret.value,
-
-                          ('postbuild_plugins',
                            'pulp_sync',
                            'pulp_secret_path'):
                           self.spec.pulp_secret.value,
@@ -1659,7 +1603,6 @@ class BuildRequest(object):
         self.render_koji_parent()
         self.render_import_image(use_auth=use_auth)
         self.render_pulp_pull()
-        self.render_pulp_push()
         self.render_pulp_sync()
         self.render_pulp_tag()
         self.render_pulp_publish()

@@ -80,13 +80,6 @@
       "name": "tag_and_push"
     },
     {
-      "name": "pulp_push",
-      "args": {
-        "load_exported_image": true,
-        "publish": false
-      }
-    },
-    {
       "name": "export_operator_manifests"
     },
     {

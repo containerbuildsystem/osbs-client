@@ -1,5 +1,5 @@
 """
-Copyright (c) 2018 Red Hat, Inc
+Copyright (c) 2018, 2019 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -246,7 +246,6 @@ class TestPluginsConfiguration(object):
     not_flatpak_plugins = [
         ("o", "prebuild_plugins", "resolve_composes"),
         ("w", "prepublish_plugins", "squash"),
-        ("w", "postbuild_plugins", "pulp_push"),
         ("o", "postbuild_plugins", "pulp_tag"),
         ("o", "postbuild_plugins", "pulp_sync"),
         ("o", "exit_plugins", "pulp_publish"),

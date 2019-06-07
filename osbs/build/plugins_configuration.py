@@ -1,5 +1,5 @@
 """
-Copyright (c) 2018 Red Hat, Inc
+Copyright (c) 2018, 2019 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -197,7 +197,6 @@ class PluginsConfiguration(object):
                 # the docker image directly, so squash just slows things down.
                 ("prepublish_plugins", "squash"),
                 # Pulp can't currently handle Flatpaks, which are OCI images
-                ("postbuild_plugins", "pulp_push"),
                 ("postbuild_plugins", "pulp_tag"),
                 ("postbuild_plugins", "pulp_sync"),
                 ("exit_plugins", "pulp_publish"),

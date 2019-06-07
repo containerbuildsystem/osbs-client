@@ -1,5 +1,5 @@
 """
-Copyright (c) 2017 Red Hat, Inc
+Copyright (c) 2017, 2019 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -44,7 +44,6 @@ PLUGIN_KOJI_IMPORT_PLUGIN_KEY = 'koji_import'
 PLUGIN_KOJI_UPLOAD_PLUGIN_KEY = 'koji_upload'
 PLUGIN_KOJI_TAG_BUILD_KEY = 'koji_tag_build'
 PLUGIN_PULP_PUBLISH_KEY = 'pulp_publish'
-PLUGIN_PULP_PUSH_KEY = 'pulp_push'
 PLUGIN_PULP_SYNC_KEY = 'pulp_sync'
 PLUGIN_PULP_PULL_KEY = 'pulp_pull'
 PLUGIN_PULP_TAG_KEY = 'pulp_tag'
@@ -376,7 +375,6 @@ class TestArrangementV6(ArrangementBase):
                 'all_rpm_packages',
                 'tag_from_config',
                 'tag_and_push',
-                PLUGIN_PULP_PUSH_KEY,
                 PLUGIN_EXPORT_OPERATOR_MANIFESTS_KEY,
                 'compress',
                 PLUGIN_KOJI_UPLOAD_PLUGIN_KEY,
@@ -695,28 +693,6 @@ class TestArrangementV6(ArrangementBase):
             assert set(primary_tags) == set(['{version}-{release}'])
             floating_tags = args['tag_suffixes']['floating']
             assert set(floating_tags) == set(['latest', '{version}'])
-
-    @pytest.mark.parametrize('osbs', [  # noqa:F811
-        {
-            'additional_config': get_pulp_additional_config(),
-            'kwargs': {'registry_uri': 'registry.example.com/v2'},
-        }
-    ], indirect=True)
-    def test_pulp_push(self, osbs):
-        additional_params = {
-            'base_image': 'fedora:latest',
-        }
-        _, build_json = self.get_worker_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
-
-        args = plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_PULP_PUSH_KEY, 'args')
-
-        expected_args = {
-            'load_exported_image': True,
-            'publish': False,
-        }
-
-        assert args == expected_args
 
     @pytest.mark.parametrize('osbs', [OSBS_WITH_PULP_PARAMS], indirect=True)  # noqa:F811
     def test_pulp_tag(self, osbs):

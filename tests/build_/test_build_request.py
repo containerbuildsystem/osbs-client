@@ -1,5 +1,5 @@
 """
-Copyright (c) 2015, 2016, 2017 Red Hat, Inc
+Copyright (c) 2015, 2016, 2017, 2019 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -516,8 +516,6 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "koji")
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "pulp_push")
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_pull")
@@ -638,8 +636,6 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push", "args",
                                 "registries", "registry.example.com") == {"insecure": True}
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "pulp_push")
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_pull")
@@ -720,8 +716,6 @@ class TestBuildRequest(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "koji")
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "pulp_push")
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_pull")
@@ -773,11 +767,7 @@ class TestBuildRequest(object):
 
         # Check that the secret's mountPath matches the plugin's
         # configured path for the secret
-        mount_path = get_secret_mountpath_by_name(build_json, 'mysecret')
         plugins = get_plugins_from_build_json(build_json)
-        assert get_plugin(plugins, "postbuild_plugins", "pulp_push")
-        assert plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push',
-                                'args', 'pulp_secret_path') == mount_path
         assert get_plugin(plugins, "postbuild_plugins", "pulp_pull")
 
         with pytest.raises(NoSuchPluginException):
@@ -1048,31 +1038,15 @@ class TestBuildRequest(object):
         assert plugin_value_get(plugins, "postbuild_plugins", "tag_and_push",
                                 "args", "registries") == expected_registries
 
-        for version, plugin in [('v1', 'pulp_push'), ('v2', 'pulp_sync')]:
-            if version not in registry_api_versions:
-                continue
+        path = plugin_value_get(plugins, "postbuild_plugins", 'pulp_sync',
+                                "args", "pulp_secret_path")
+        mount_path = get_secret_mountpath_by_name(build_json, pulp_secret)
+        assert mount_path == path
 
-            path = plugin_value_get(plugins, "postbuild_plugins", plugin, "args",
-                                    "pulp_secret_path")
-            mount_path = get_secret_mountpath_by_name(build_json, pulp_secret)
-            assert mount_path == path
-
-            if plugin == 'pulp_sync':
-                path = plugin_value_get(plugins, "postbuild_plugins", plugin,
-                                        "args", "registry_secret_path")
-                mount_path = get_secret_mountpath_by_name(build_json,
-                                                          registry_secret)
-                assert mount_path == path
-
-        if 'v1' in registry_api_versions:
-            assert get_plugin(plugins, "postbuild_plugins",
-                              "pulp_push")
-            assert plugin_value_get(plugins, "postbuild_plugins", "pulp_push",
-                                    "args", "pulp_registry_name") == pulp_env
-        else:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, "postbuild_plugins",
-                           "pulp_push")
+        path = plugin_value_get(plugins, "postbuild_plugins", 'pulp_sync',
+                                "args", "registry_secret_path")
+        mount_path = get_secret_mountpath_by_name(build_json, registry_secret)
+        assert mount_path == path
 
         assert get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         env = plugin_value_get(plugins, "postbuild_plugins", "pulp_sync",
@@ -1190,8 +1164,6 @@ class TestBuildRequest(object):
 
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "koji")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "pulp_push")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "pulp_sync")
         with pytest.raises(NoSuchPluginException):
@@ -2186,13 +2158,6 @@ class TestBuildRequest(object):
 
             # Not using the sourceSecret scheme
             assert 'sourceSecret' not in build_json['spec']['source']
-
-            # Check that the secret's mountPath matches the plugin's
-            # configured path for the secret
-            mount_path = get_secret_mountpath_by_name(build_json, secret_name)
-            plugins = get_plugins_from_build_json(build_json)
-            assert plugin_value_get(plugins, 'postbuild_plugins', 'pulp_push',
-                                    'args', 'pulp_secret_path') == mount_path
 
     def test_render_prod_request_with_koji_secret(self, tmpdir):
         self.create_image_change_trigger_json(str(tmpdir))

@@ -119,15 +119,6 @@
       }
     },
     {
-      "name": "pulp_push",
-      "args": {
-        "pulp_registry_name": "{{PULP_REGISTRY_NAME}}",
-        "load_exported_image": true,
-        "dockpulp_loglevel": "INFO",
-        "publish": false
-      }
-    },
-    {
       "name": "compress",
       "args": {
         "load_exported_image": true,
