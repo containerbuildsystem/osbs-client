@@ -94,7 +94,7 @@ class BuildRequest(object):
                                    (private, authoritative-source-only, restricted, public)
         :param use_auth: bool, use auth from atomic-reactor?
         :param platform_node_selector: dict, a nodeselector for a specific platform
-        :param platform_descriptors: dict, platforms and their archiectures and enable_v1 settings
+        :param platform_descriptors: dict, platforms and their architectures
         :param scratch_build_node_selector: dict, a nodeselector for scratch builds
         :param explicit_build_node_selector: dict, a nodeselector for explicit builds
         :param auto_build_node_selector: dict, a nodeselector for auto builds
@@ -504,8 +504,8 @@ class BuildRequest(object):
         """
         versions = self.spec.registry_api_versions.value
 
-        if 'v2' not in versions:
-            raise OsbsValidationException('v1-only docker registry API is not supported')
+        if 'v1' in versions:
+            raise OsbsValidationException('v1 docker registry API is not supported')
 
         try:
             push_conf = self.dj.dock_json_get_plugin_conf('postbuild_plugins',

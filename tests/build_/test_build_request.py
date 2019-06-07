@@ -243,7 +243,7 @@ class TestBuildRequest(object):
             'builder_openshift_url': "http://openshift/",
             'base_image': base_image,
             'name_label': 'fedora/resultingimage',
-            'registry_api_versions': ['v1', 'v2'],
+            'registry_api_versions': ['v2'],
             'kojihub': koji_hub,
             'koji_certs_secret': certs_dir,
             'scratch': scratch,
@@ -300,7 +300,7 @@ class TestBuildRequest(object):
             'builder_openshift_url': "http://openshift/",
             'base_image': base_image,
             'name_label': 'fedora/resultingimage',
-            'registry_api_versions': ['v1', 'v2'],
+            'registry_api_versions': ['v2'],
             'kojihub': koji_hub,
             'koji_certs_secret': certs_dir,
             'scratch': scratch,
@@ -396,7 +396,7 @@ class TestBuildRequest(object):
             'build_image': 'fancy_buildroot:latestest',
             'base_image': 'fedora:latest',
             'name_label': 'fedora/resultingimage',
-            'registry_api_versions': ['v1', 'v2'],
+            'registry_api_versions': ['v2'],
             'osbs_api': MockOSBSApi(),
         }
         build_request.set_params(**kwargs)
@@ -469,7 +469,7 @@ class TestBuildRequest(object):
             'authoritative_registry': authoritative_registry,
             'distribution_scope': distribution_scope,
             'yum_repourls': ["http://example.com/my.repo"],
-            'registry_api_versions': ['v1', 'v2'],
+            'registry_api_versions': ['v2'],
             'build_image': build_image,
             'build_imagestream': build_imagestream,
             'proxy': proxy,
@@ -577,7 +577,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
-            'registry_api_versions': ['v1', 'v2'],
+            'registry_api_versions': ['v2'],
             'smtp_host': 'smtp.example.com',
             'smtp_from': 'user@example.com',
             'proxy': proxy,
@@ -680,7 +680,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
-            'registry_api_versions': ['v1', 'v2'],
+            'registry_api_versions': ['v2'],
             'build_from': 'image:buildroot:latest',
             'osbs_api': MockOSBSApi(),
         }
@@ -757,7 +757,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
-            'registry_api_versions': ['v1', 'v2'],
+            'registry_api_versions': ['v2'],
             'pulp_secret': 'mysecret',
             'build_from': 'image:buildroot:latest',
             'osbs_api': MockOSBSApi(),
@@ -884,7 +884,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
-            'registry_api_versions': ['v1', 'v2'],
+            'registry_api_versions': ['v2'],
             'pulp_secret': 'mysecret',
             'registry_secrets': ['registry_secret'],
             'build_from': 'image:buildroot:latest',
@@ -951,7 +951,6 @@ class TestBuildRequest(object):
             build_request.render()
 
     @pytest.mark.parametrize('registry_api_versions', [
-        ['v1'],
         ['v1', 'v2'],
         ['v2'],
     ])
@@ -1007,7 +1006,7 @@ class TestBuildRequest(object):
             'arrangement_version': arrangement_version,
         })
         build_request.set_params(**kwargs)
-        if registry_api_versions == ['v1']:
+        if 'v1' in registry_api_versions:
             with pytest.raises(OsbsValidationException):
                 build_json = build_request.render()
             return
@@ -1625,7 +1624,7 @@ class TestBuildRequest(object):
             'kojiroot': 'kojiroot',
             'pulp_registry': 'pulp_registry',
             'pulp_secret': 'pulp_secret',
-            'registry_api_versions': ['v1', 'v2'],
+            'registry_api_versions': ['v2'],
             'smtp_additional_addresses': ['spam@food.bz', 'bacon@food.bz'],
             'smtp_email_domain': 'smtp_email_domain',
             'smtp_error_addresses': ['error1@foo.com', 'error2@foo.com'],
@@ -1684,7 +1683,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
-            'registry_api_versions': ['v1', 'v2'],
+            'registry_api_versions': ['v2'],
             'client_config_secret': secret,
             'platforms': platforms,
             'arrangement_version': arrangement_version,
@@ -1898,7 +1897,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
-            'registry_api_versions': ['v1', 'v2'],
+            'registry_api_versions': ['v2'],
             'smtp_host': 'smtp.example.com',
             'smtp_from': 'user@example.com',
             'smtp_error_addresses': ['errors@example.com'],
@@ -2140,7 +2139,7 @@ class TestBuildRequest(object):
             'vendor': "Foo Vendor",
             'authoritative_registry': "registry.example.com",
             'distribution_scope': "authoritative-source-only",
-            'registry_api_versions': ['v1', 'v2'],
+            'registry_api_versions': ['v2'],
             'pulp_registry': 'foo',
             'pulp_secret': secret_name,
             'build_from': 'image:buildroot:latest',
