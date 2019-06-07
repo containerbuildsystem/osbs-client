@@ -246,7 +246,6 @@ class TestPluginsConfiguration(object):
     not_flatpak_plugins = [
         ("o", "prebuild_plugins", "resolve_composes"),
         ("w", "prepublish_plugins", "squash"),
-        ("o", "postbuild_plugins", "pulp_tag"),
         ("o", "postbuild_plugins", "pulp_sync"),
         ("o", "exit_plugins", "pulp_publish"),
         ("o", "exit_plugins", "pulp_pull"),

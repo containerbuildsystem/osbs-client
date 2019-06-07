@@ -46,7 +46,6 @@ PLUGIN_KOJI_TAG_BUILD_KEY = 'koji_tag_build'
 PLUGIN_PULP_PUBLISH_KEY = 'pulp_publish'
 PLUGIN_PULP_SYNC_KEY = 'pulp_sync'
 PLUGIN_PULP_PULL_KEY = 'pulp_pull'
-PLUGIN_PULP_TAG_KEY = 'pulp_tag'
 PLUGIN_ADD_FILESYSTEM_KEY = 'add_filesystem'
 PLUGIN_FETCH_WORKER_METADATA_KEY = 'fetch_worker_metadata'
 PLUGIN_GROUP_MANIFESTS_KEY = 'group_manifests'
@@ -323,7 +322,6 @@ class TestArrangementV6(ArrangementBase):
                 PLUGIN_COMPARE_COMPONENTS_KEY,
                 'tag_from_config',
                 PLUGIN_GROUP_MANIFESTS_KEY,
-                PLUGIN_PULP_TAG_KEY,
                 PLUGIN_PULP_SYNC_KEY,
             ],
 
@@ -693,18 +691,6 @@ class TestArrangementV6(ArrangementBase):
             assert set(primary_tags) == set(['{version}-{release}'])
             floating_tags = args['tag_suffixes']['floating']
             assert set(floating_tags) == set(['latest', '{version}'])
-
-    @pytest.mark.parametrize('osbs', [OSBS_WITH_PULP_PARAMS], indirect=True)  # noqa:F811
-    def test_pulp_tag(self, osbs):
-        additional_params = {
-            'base_image': 'fedora:latest',
-        }
-        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
-
-        get_plugin(plugins, 'postbuild_plugins', PLUGIN_PULP_TAG_KEY)
-        with pytest.raises(KeyError):
-            plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_PULP_TAG_KEY, 'args')
 
     @pytest.mark.parametrize('osbs', [OSBS_WITH_PULP_PARAMS], indirect=True)  # noqa:F811
     def test_pulp_sync(self, osbs):

@@ -68,9 +68,6 @@
       "name": "group_manifests"
     },
     {
-      "name": "pulp_tag"
-    },
-    {
       "name": "pulp_sync",
       "args": {
         "publish": false

@@ -197,7 +197,6 @@ class PluginsConfiguration(object):
                 # the docker image directly, so squash just slows things down.
                 ("prepublish_plugins", "squash"),
                 # Pulp can't currently handle Flatpaks, which are OCI images
-                ("postbuild_plugins", "pulp_tag"),
                 ("postbuild_plugins", "pulp_sync"),
                 ("exit_plugins", "pulp_publish"),
                 ("exit_plugins", "pulp_pull"),

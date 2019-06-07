@@ -108,13 +108,6 @@
       }
     },
     {
-      "name": "pulp_tag",
-      "args": {
-        "pulp_registry_name": "{{PULP_REGISTRY_NAME}}",
-        "dockpulp_loglevel": "INFO"
-      }
-    },
-    {
       "name": "pulp_sync",
       "args": {
         "pulp_registry_name": "{{PULP_REGISTRY_NAME}}",
