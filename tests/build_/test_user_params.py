@@ -15,7 +15,7 @@ import random
 import sys
 import json
 
-from osbs.build.user_params import BuildUserParams
+from osbs.build.user_params import BuildIDParam, RegistryURIsParam, BuildUserParams
 from osbs.exceptions import OsbsValidationException
 from osbs.constants import BUILD_TYPE_WORKER, REACTOR_CONFIG_ARRANGEMENT_VERSION
 from tests.constants import (TEST_COMPONENT, TEST_FILESYSTEM_KOJI_TASK_ID,
@@ -23,7 +23,58 @@ from tests.constants import (TEST_COMPONENT, TEST_FILESYSTEM_KOJI_TASK_ID,
                              TEST_IMAGESTREAM, TEST_KOJI_TASK_ID, TEST_USER)
 
 
+class TestBuildIDParam(object):
+    def test_build_id_param_shorten_id(self):
+        p = BuildIDParam()
+        p.value = "x" * 64
+
+        val = p.value
+
+        assert len(val) == 63
+
+    def test_build_id_param_raise_exc(self):
+        p = BuildIDParam()
+        with pytest.raises(OsbsValidationException):
+            p.value = r"\\\\@@@@||||"
+
+
+class TestRegistryURIsParam(object):
+    @pytest.mark.parametrize('suffix', ['', '/'])
+    def test_registry_uris_param_api_implicit(self, suffix):
+        p = RegistryURIsParam()
+        p.value = ['registry.example.com:5000{suffix}'.format(suffix=suffix)]
+
+        assert p.value[0].uri == 'registry.example.com:5000'  # pylint: disable=no-member
+        assert p.value[0].docker_uri == 'registry.example.com:5000'  # pylint: disable=no-member
+        assert p.value[0].version == 'v2'  # pylint: disable=no-member
+
+    def test_registry_uris_param_v2(self):
+        p = RegistryURIsParam()
+        p.value = ['registry.example.com:5000/v2']
+
+        assert p.value[0].uri == 'registry.example.com:5000'  # pylint: disable=no-member
+        assert p.value[0].docker_uri == 'registry.example.com:5000'  # pylint: disable=no-member
+        assert p.value[0].version == 'v2'  # pylint: disable=no-member
+
+    def test_registry_uris_param_v1(self):
+        p = RegistryURIsParam()
+        with pytest.raises(OsbsValidationException):
+            p.value = ['registry.example.com:5000/v1']
+
+
 class TestBuildUserParams(object):
+    def test_validate_missing_required(self):
+        kwargs = {
+            'base_image': 'base_image',
+            'git_uri': TEST_GIT_URI,
+            'name_label': 'name_label',
+            'build_from': 'image:buildroot:latest',
+        }
+        spec = BuildUserParams()
+        spec.set_params(**kwargs)
+
+        with pytest.raises(OsbsValidationException):
+            spec.validate()
 
     def get_minimal_kwargs(self):
         return {
@@ -64,7 +115,7 @@ class TestBuildUserParams(object):
         if platform:
             kwargs['platform'] = platform
 
-        (flexmock(sys.modules['osbs.build.spec'])
+        (flexmock(sys.modules['osbs.build.user_params'])
             .should_receive('utcnow').once()
             .and_return(datetime.datetime.strptime(timestr, '%Y%m%d%H%M%S')))
 
@@ -205,7 +256,7 @@ class TestBuildUserParams(object):
         })
         rand = '12345'
         timestr = '20170731111111'
-        (flexmock(sys.modules['osbs.build.spec'])
+        (flexmock(sys.modules['osbs.build.user_params'])
             .should_receive('utcnow').once()
             .and_return(datetime.datetime.strptime(timestr, '%Y%m%d%H%M%S')))
 
@@ -261,3 +312,34 @@ class TestBuildUserParams(object):
         with pytest.raises(ValueError):
             spec.from_json('{"this is not valid json": }')
         assert 'failed to convert {"this is not valid json": }' in caplog.text
+
+    def test_from_json_continue(self):
+        spec = BuildUserParams()
+        expected_json = {
+            "arrangement_version": REACTOR_CONFIG_ARRANGEMENT_VERSION,
+            "base_image": "buildroot:old",
+            "build_image": "buildroot:latest",
+            "build_json_dir": "build_dir",
+            "build_type": "worker",
+            "component": TEST_COMPONENT,
+            "compose_ids": [1, 2],
+            "customize_conf": "prod_customize.json",
+            "filesystem_koji_task_id": TEST_FILESYSTEM_KOJI_TASK_ID,
+            "git_branch": TEST_GIT_BRANCH,
+            "git_ref": TEST_GIT_REF,
+            "git_uri": TEST_GIT_URI,
+            "image_tag": "latest",
+            "imagestream_name": "name_label",
+            "koji_parent_build": "fedora-26-9",
+            "koji_target": "tothepoint",
+            "name": "path-master-cd1e4",
+            "platform": "x86_64",
+            "platforms": ["x86_64"],
+            "reactor_config_map": "reactor-config-map",
+            "reactor_config_override": "reactor-config-override",
+            "release": "29",
+            "trigger_imagestreamtag": "buildroot:old",
+            "this is not a valid key": "this is not a valid field",
+            "user": TEST_USER
+        }
+        spec.from_json(json.dumps(expected_json))

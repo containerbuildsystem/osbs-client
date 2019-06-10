@@ -8,16 +8,137 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import print_function, absolute_import, unicode_literals
 
 import logging
+import re
+import random
 import json
 
-from osbs.build.spec import BuildParam, BuildIDParam, BuildCommon
 from osbs.constants import (DEFAULT_GIT_REF, REACTOR_CONFIG_ARRANGEMENT_VERSION,
-                            DEFAULT_CUSTOMIZE_CONF)
+                            DEFAULT_CUSTOMIZE_CONF, RAND_DIGITS)
 from osbs.exceptions import OsbsValidationException
-from osbs.utils import get_imagestreamtag_from_image, make_name_from_git
+from osbs.utils import get_imagestreamtag_from_image, make_name_from_git, RegistryURI, utcnow
 
 
 logger = logging.getLogger(__name__)
+
+
+class BuildParam(object):
+    """ One parameter of a spec """
+
+    def __init__(self, name, default=None, allow_none=False):
+        self.name = name
+        self.allow_none = allow_none
+        self._value = default
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, val):
+        logger.debug("%s = '%s'", self.name, val)
+        self._value = val
+
+    def __repr__(self):
+        return "BuildParam(%s='%s')" % (self.name, self.value)
+
+
+class UserParam(BuildParam):
+    """ custom class for "user" parameter with postprocessing """
+    name = "user"
+
+    def __init__(self):
+        super(UserParam, self).__init__(self.name)
+
+
+class BuildIDParam(BuildParam):
+    """ validate build ID """
+    name = "name"
+
+    def __init__(self):
+        super(BuildIDParam, self).__init__(self.name)
+
+    @BuildParam.value.setter  # pylint: disable=no-member
+    def value(self, val):  # pylint: disable=W0221
+        # build ID has to conform to:
+        #  * 63 chars at most
+        #  * (([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?
+
+        if len(val) > 63:
+            # component + timestamp > 63
+            new_name = val[:63]
+            logger.warning("'%s' is too long, changing to '%s'", val, new_name)
+            val = new_name
+
+        build_id_re = re.compile(r"^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$")
+        match = build_id_re.match(val)
+        if not match:
+            logger.error("'%s' is not valid build ID", val)
+            raise OsbsValidationException("Build ID '%s', doesn't match regex '%s'" %
+                                          (val, build_id_re))
+        BuildParam.value.fset(self, val)  # pylint: disable=no-member
+
+
+class RegistryURIsParam(BuildParam):
+    """
+    Build parameter for a list of registry URIs
+
+    Each registry has a full URI, a docker URI, and a version (str).
+    """
+
+    name = "registry_uris"
+
+    def __init__(self):
+        super(RegistryURIsParam, self).__init__(self.name)
+
+    @BuildParam.value.setter  # pylint: disable=no-member
+    def value(self, val):  # pylint: disable=W0221
+        registry_uris = [RegistryURI(uri) for uri in val]
+        BuildParam.value.fset(self, registry_uris)  # pylint: disable=no-member
+
+
+class BuildCommon(object):
+    def __init__(self):
+        self.image_tag = BuildParam("image_tag")
+        self.koji_target = BuildParam("koji_target", allow_none=True)
+        self.platform = BuildParam("platform", allow_none=True)
+        self.arrangement_version = BuildParam("arrangement_version", allow_none=True)
+        self.filesystem_koji_task_id = BuildParam("filesystem_koji_task_id", allow_none=True)
+        self.user = UserParam()
+        self.component = BuildParam('component')
+        self.required_params = [
+            self.koji_target,
+        ]
+
+    def _populate_image_tag(self):
+        timestamp = utcnow().strftime('%Y%m%d%H%M%S')
+        # RNG is seeded once its imported, so in cli calls scratch builds would get unique name.
+        # On brew builders we import osbs once - thus RNG is seeded once and `randrange`
+        # returns the same values throughout the life of the builder.
+        # Before each `randrange` call we should be calling `.seed` to prevent this
+        random.seed()
+
+        tag_segments = [
+            self.koji_target.value or 'none',
+            str(random.randrange(10**(RAND_DIGITS - 1), 10**RAND_DIGITS)),
+            timestamp
+        ]
+
+        if self.platform.value and (self.arrangement_version.value or 0) >= 4:
+            tag_segments.append(self.platform.value)
+
+        tag = '-'.join(tag_segments)
+        self.image_tag.value = '{}/{}:{}'.format(self.user.value, self.component.value, tag)
+
+    def validate(self):
+        logger.info("Validating params of %s", self.__class__.__name__)
+        for param in self.required_params:
+            if param.value is None:
+                if param.allow_none:
+                    logger.debug("param '%s' is None; None is allowed", param.name)
+                else:
+                    logger.error("param '%s' is None; None is NOT allowed", param.name)
+                    raise OsbsValidationException("param '%s' is not valid: None is not allowed" %
+                                                  param.name)
 
 
 class BuildUserParams(BuildCommon):
