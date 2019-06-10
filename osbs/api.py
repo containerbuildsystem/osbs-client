@@ -20,7 +20,6 @@ from functools import wraps
 from contextlib import contextmanager
 from types import GeneratorType
 
-from osbs.build.build_request import BuildRequest
 from osbs.build.build_requestv2 import BuildRequestV2
 from osbs.build.user_params import BuildUserParams
 from osbs.build.plugins_configuration import PluginsConfiguration
@@ -210,17 +209,9 @@ class OSBS(object):
 
         validate_arrangement_version(arrangement_version)
 
-        if not arrangement_version or arrangement_version < REACTOR_CONFIG_ARRANGEMENT_VERSION:
-            build_request = BuildRequest(
-                build_json_store=self.os_conf.get_build_json_store(),
-                inner_template=inner_template,
-                outer_template=outer_template,
-                customize_conf=customize_conf)
-        else:
-            build_request = BuildRequestV2(
-                build_json_store=self.os_conf.get_build_json_store(),
-                outer_template=outer_template,
-                customize_conf=customize_conf)
+        build_request = BuildRequestV2(build_json_store=self.os_conf.get_build_json_store(),
+                                       outer_template=outer_template,
+                                       customize_conf=customize_conf)
 
         # Apply configured resource limits.
         cpu_limit = self.build_conf.get_cpu_limit()
@@ -1240,11 +1231,17 @@ class OSBS(object):
 
         :returns: str including leading dot, or else None if no compression
         """
+        build_request = BuildRequestV2(build_json_store=self.os_conf.get_build_json_store())
+        build_request.set_params(git_uri="/", git_ref="HEAD", git_branch="master", user="user",
+                                 build_image=self.build_conf.get_build_image(),
+                                 build_imagestream=self.build_conf.get_build_imagestream(),
+                                 build_from=self.build_conf.get_build_from(),
+                                 base_image="base_image", name_label='name', build_type='worker',
+                                 registry_uris=self.build_conf.get_registry_uris())
 
-        build_request = BuildRequest(build_json_store=self.os_conf.get_build_json_store())
-        inner = build_request.inner_template
-        postbuild_plugins = inner.get('postbuild_plugins', [])
-        for plugin in postbuild_plugins:
+        plugins_config = PluginsConfiguration(build_request.user_params)
+        build_json = json.loads(plugins_config.render())
+        for plugin in build_json.get('postbuild_plugins', []):
             if plugin.get('name') == 'compress':
                 args = plugin.get('args', {})
                 method = args.get('method', 'gzip')
@@ -1252,9 +1249,7 @@ class OSBS(object):
                     return '.gz'
                 elif method == 'lzma':
                     return '.xz'
-                raise OsbsValidationException("unknown compression method '%s'"
-                                              % method)
-
+                raise OsbsValidationException("unknown compression method '%s'" % method)
         return None
 
     @osbsapi
