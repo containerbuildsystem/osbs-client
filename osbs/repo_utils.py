@@ -63,7 +63,7 @@ class RepoConfiguration(object):
         if os.path.exists(file_path):
             with open(file_path) as f:
                 try:
-                    self.container = yaml.load(f) or {}
+                    self.container = yaml.safe_load(f) or {}
                 except yaml.scanner.ScannerError as e:
                     msg = ('Failed to parse YAML file "{file}": {reason}'
                            .format(file=REPO_CONTAINER_CONFIG, reason=e))
