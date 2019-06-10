@@ -12,9 +12,14 @@ import copy
 
 
 class DockJsonManipulator(object):
-    """ """
+    """
+    Wrapper for dock json plugin configuration.
+
+    Provides methods for configuration manipulation such as adding/removing
+    plugins or updating their arguments.
+    """
+
     def __init__(self, build_json, dock_json):
-        """ """
         self.build_json = build_json
         self.dock_json = dock_json
 
