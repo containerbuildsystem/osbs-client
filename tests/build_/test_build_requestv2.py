@@ -19,7 +19,7 @@ from copy import deepcopy
 from osbs.build.build_requestv2 import BuildRequestV2
 from osbs.constants import (DEFAULT_OUTER_TEMPLATE, BUILD_TYPE_WORKER,
                             BUILD_TYPE_ORCHESTRATOR, SECRETS_PATH)
-from osbs.exceptions import OsbsValidationException
+from osbs.exceptions import OsbsValidationException, OsbsException
 from osbs.repo_utils import RepoInfo, RepoConfiguration
 from osbs.api import OSBS
 
@@ -93,6 +93,7 @@ class TestBuildRequestV2(object):
         br = BuildRequestV2('something')
         flexmock(br).should_receive('template').and_return(build_json)
         assert br.has_ist_trigger() is True
+        assert br.trigger_imagestreamtag is None
 
     def test_build_request_isnt_auto_instantiated(self):
         build_json = copy.deepcopy(TEST_BUILD_JSON)
@@ -913,3 +914,56 @@ class TestBuildRequestV2(object):
 
         assert expected_registry == build_request.source_registry
         assert expected_organization == build_request.organization
+
+    @pytest.mark.parametrize('cpu', ['None', 100])
+    @pytest.mark.parametrize('memory', ['None', 50])
+    @pytest.mark.parametrize('storage', ['None', 25])
+    def test_set_resource_limits(self, cpu, memory, storage):
+        build_request = BuildRequestV2(INPUTS_PATH)
+
+        kwargs = get_sample_prod_params()
+        kwargs['base_image'] = 'base_image'
+        build_request.set_params(**kwargs)
+        build_request.set_resource_limits(cpu, memory, storage)
+        assert build_request._resource_limits['cpu'] == cpu
+        assert build_request._resource_limits['memory'] == memory
+        assert build_request._resource_limits['storage'] == storage
+        build_request.render()
+        assert build_request._resource_limits['cpu'] == cpu
+        assert build_request._resource_limits['memory'] == memory
+        assert build_request._resource_limits['storage'] == storage
+        expected_resources = {
+           'limits': {
+              'cpu': cpu,
+              'memory': memory,
+              'storage': storage,
+           }
+        }
+        assert build_request.template['spec']['resources'] == expected_resources
+
+    @pytest.mark.parametrize('openshift_version', ['None', 25])
+    def test_set_os_version(self, openshift_version):
+        build_request = BuildRequestV2(INPUTS_PATH)
+
+        kwargs = get_sample_prod_params()
+        kwargs['base_image'] = 'base_image'
+        build_request.set_params(**kwargs)
+        build_request.set_openshift_required_version(openshift_version)
+        assert build_request._openshift_required_version == openshift_version
+
+    def test_build_id(self):
+        build_request = BuildRequestV2(INPUTS_PATH)
+
+        kwargs = get_sample_prod_params()
+        kwargs['base_image'] = 'base_image'
+        build_request.set_params(**kwargs)
+        build_request.render()
+        assert build_request.build_id == 'path-master-cd1e4'
+
+    def test_bad_template_path(self):
+        build_request = BuildRequestV2('nowhere', 'nothing', 'invald')
+        kwargs = get_sample_prod_params()
+        kwargs['base_image'] = 'base_image'
+        build_request.set_params(**kwargs)
+        with pytest.raises(OsbsException):
+            build_request.render()

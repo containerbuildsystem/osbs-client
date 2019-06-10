@@ -7,34 +7,53 @@ of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, absolute_import, unicode_literals
 
+import json
 import logging
+import re
 import os
 import yaml
+from pkg_resources import parse_version
 
-from osbs.build.build_request import BuildRequest
 from osbs.build.user_params import BuildUserParams
-from osbs.exceptions import OsbsValidationException
-from osbs.utils import git_repo_humanish_part_from_uri
-from osbs.constants import SECRETS_PATH, BUILD_TYPE_ORCHESTRATOR
+from osbs.constants import (SECRETS_PATH, DEFAULT_OUTER_TEMPLATE,
+                            DEFAULT_CUSTOMIZE_CONF, BUILD_TYPE_ORCHESTRATOR,
+                            BUILD_TYPE_WORKER, ISOLATED_RELEASE_FORMAT)
+from osbs.exceptions import OsbsException, OsbsValidationException
+from osbs.utils import git_repo_humanish_part_from_uri, sanitize_strings_for_openshift, Labels
 
 logger = logging.getLogger(__name__)
 
 
-class BuildRequestV2(BuildRequest):
+class BuildRequestV2(object):
     """
     Wraps logic for creating build inputs
     """
-
     def __init__(self, build_json_store, outer_template=None, customize_conf=None):
         """
         :param build_json_store: str, path to directory with JSON build files
         :param outer_template: str, path to outer template JSON
         :param customize_conf: str, path to customize configuration JSON
         """
-        super(BuildRequestV2, self).__init__(build_json_store=build_json_store,
-                                             outer_template=outer_template,
-                                             customize_conf=customize_conf)
-        self.spec = None
+        self.build_json_store = build_json_store
+        self._outer_template_path = outer_template or DEFAULT_OUTER_TEMPLATE
+        self._customize_conf_path = customize_conf or DEFAULT_CUSTOMIZE_CONF
+        self.build_json = None       # rendered template
+        self._template = None        # template loaded from filesystem
+        self._resource_limits = None
+        self._openshift_required_version = parse_version('1.0.6')
+        self._repo_info = None
+        # For the koji "scratch" build type
+        self.scratch = None
+        self.isolated = None
+        self.is_auto = None
+        self.base_image = None
+        self.scratch_build_node_selector = None
+        self.explicit_build_node_selector = None
+        self.auto_build_node_selector = None
+        self.isolated_build_node_selector = None
+        self.is_auto = None
+        # forward reference
+        self.platform_node_selector = None
         self.user_params = BuildUserParams(build_json_store, customize_conf)
         self.osbs_api = None
         self.source_registry = None
@@ -312,3 +331,165 @@ class BuildRequestV2(BuildRequest):
         self.build_json = self.template
         logger.debug(self.build_json)
         return self.build_json
+
+    def validate_build_variation(self):
+        variations = (self.scratch, self.is_auto, self.isolated)
+        if variations.count(True) > 1:
+            raise OsbsValidationException(
+                'Build variations are mutually exclusive. '
+                'Must set either scratch, is_auto, isolated, or none. ')
+
+    def set_resource_limits(self, cpu=None, memory=None, storage=None):
+        if self._resource_limits is None:
+            self._resource_limits = {}
+
+        if cpu is not None:
+            self._resource_limits['cpu'] = cpu
+
+        if memory is not None:
+            self._resource_limits['memory'] = memory
+
+        if storage is not None:
+            self._resource_limits['storage'] = storage
+
+    def set_openshift_required_version(self, openshift_required_version):
+        if openshift_required_version is not None:
+            self._openshift_required_version = openshift_required_version
+
+    def set_repo_info(self, repo_info):
+        self._repo_info = repo_info
+
+    @property
+    def build_id(self):
+        return self.build_json['metadata']['name']
+
+    @property
+    def template(self):
+        if self._template is None:
+            path = os.path.join(self.build_json_store, self._outer_template_path)
+            logger.debug("loading template from path %s", path)
+            try:
+                with open(path, "r") as fp:
+                    self._template = json.load(fp)
+            except (IOError, OSError) as ex:
+                raise OsbsException("Can't open template '%s': %s" %
+                                    (path, repr(ex)))
+        return self._template
+
+    def has_ist_trigger(self):
+        """Return True if this BuildConfig has ImageStreamTag trigger."""
+        triggers = self.template['spec'].get('triggers', [])
+        if not triggers:
+            return False
+        for trigger in triggers:
+            if trigger['type'] == 'ImageChange' and \
+                    trigger['imageChange']['from']['kind'] == 'ImageStreamTag':
+                return True
+        return False
+
+    def set_label(self, name, value):
+        if not value:
+            value = ''
+        self.template['metadata'].setdefault('labels', {})
+        value = sanitize_strings_for_openshift(value)
+        self.template['metadata']['labels'][name] = value
+
+    def render_name(self, name, image_tag, platform):
+        """Sets the Build/BuildConfig object name"""
+
+        if self.scratch or self.isolated:
+            name = image_tag
+            # Platform name may contain characters not allowed by OpenShift.
+            if platform:
+                platform_suffix = '-{}'.format(platform)
+                if name.endswith(platform_suffix):
+                    name = name[:-len(platform_suffix)]
+
+            _, salt, timestamp = name.rsplit('-', 2)
+
+            if self.scratch:
+                name = 'scratch-{}-{}'.format(salt, timestamp)
+            elif self.isolated:
+                name = 'isolated-{}-{}'.format(salt, timestamp)
+
+        # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
+        self.template['metadata']['name'] = name
+
+    def render_node_selectors(self, build_type):
+        # for worker builds set nodeselectors
+        if build_type == BUILD_TYPE_WORKER:
+
+            # auto or explicit build selector
+            if self.is_auto:
+                self.template['spec']['nodeSelector'] = self.auto_build_node_selector
+            # scratch build nodeselector
+            elif self.scratch:
+                self.template['spec']['nodeSelector'] = self.scratch_build_node_selector
+            # isolated build nodeselector
+            elif self.isolated:
+                self.template['spec']['nodeSelector'] = self.isolated_build_node_selector
+            # explicit build nodeselector
+            else:
+                self.template['spec']['nodeSelector'] = self.explicit_build_node_selector
+
+            # platform nodeselector
+            if self.platform_node_selector:
+                self.template['spec']['nodeSelector'].update(self.platform_node_selector)
+
+    def render_resource_limits(self):
+        if self._resource_limits is not None:
+            resources = self.template['spec'].get('resources', {})
+            limits = resources.get('limits', {})
+            limits.update(self._resource_limits)
+            resources['limits'] = limits
+            self.template['spec']['resources'] = resources
+
+    def adjust_for_repo_info(self):
+        if not self._repo_info:
+            logger.warning('repo info not set')
+            return
+
+        if not self._repo_info.configuration.is_autorebuild_enabled():
+            logger.info('autorebuild is disabled in repo configuration, removing triggers')
+            self.template['spec'].pop('triggers', None)
+
+        else:
+            labels = Labels(self._repo_info.dockerfile_parser.labels)
+            try:
+                labels.get_name_and_value(Labels.LABEL_TYPE_RELEASE)
+            except KeyError:
+                # As expected, release label not set in Dockerfile
+                pass
+            else:
+                raise RuntimeError('when autorebuild is enabled in repo configuration, '
+                                   '"release" label must not be set in Dockerfile')
+
+    def adjust_for_isolated(self, release):
+        if not self.isolated:
+            return
+
+        self.template['spec'].pop('triggers', None)
+
+        if not release.value:
+            raise OsbsValidationException('The release parameter is required for isolated builds.')
+
+        if not ISOLATED_RELEASE_FORMAT.match(release.value):
+            raise OsbsValidationException(
+                'For isolated builds, the release value must be in the format: {}'
+                .format(ISOLATED_RELEASE_FORMAT.pattern))
+
+        self.set_label('isolated', 'true')
+        self.set_label('isolated-release', release.value)
+
+    def is_custom_base_image(self):
+        """
+        Returns whether or not this is a build from a custom base image
+        """
+        return bool(re.match('^koji/image-build(:.*)?$',
+                             self.base_image or ''))
+
+    def is_from_scratch_image(self):
+        """
+        Returns whether or not this is a build `FROM scratch`
+        """
+        return self.base_image == 'scratch'
