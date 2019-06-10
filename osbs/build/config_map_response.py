@@ -50,7 +50,7 @@ class ConfigMapResponse(object):
         data_dict = {}
         for key in data:
             if self.is_yaml(key):
-                data_dict[key] = yaml.load(data[key])
+                data_dict[key] = yaml.safe_load(data[key])
             else:
                 data_dict[key] = json.loads(data[key])
 
@@ -68,5 +68,5 @@ class ConfigMapResponse(object):
             return {}
 
         if self.is_yaml(name):
-            return yaml.load(data[name]) or {}
+            return yaml.safe_load(data[name]) or {}
         return json.loads(data[name])
