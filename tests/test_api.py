@@ -28,11 +28,11 @@ from tempfile import NamedTemporaryFile
 
 from osbs.api import OSBS, osbsapi, validate_arrangement_version
 from osbs.conf import Configuration
-from osbs.build.build_request import BuildRequest
+from osbs.build.user_params import BuildUserParams
+from osbs.build.build_requestv2 import BuildRequestV2
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
 from osbs.build.config_map_response import ConfigMapResponse
-from osbs.build.spec import BuildSpec
 from osbs.exceptions import (OsbsValidationException, OsbsException, OsbsResponseException,
                              OsbsOrchestratorNotEnabled)
 from osbs.http import HttpResponse
@@ -78,6 +78,7 @@ REQUIRED_BUILD_ARGS = {
     'git_ref': TEST_GIT_REF,
     'git_branch': TEST_GIT_BRANCH,
     'user': TEST_USER,
+    'build_type': BUILD_TYPE_ORCHESTRATOR,
 }
 
 TEST_MODULES = ['mod_name:mod_stream:mod_version']
@@ -205,6 +206,8 @@ class TestOSBS(object):
         assert 'buildroot:latest' in images
         image_id = images['buildroot:latest']
         assert not image_id.startswith("docker:")
+        with pytest.raises(OsbsException):
+            pod = osbs.get_pod_for_build('Not a valid pod')
 
     # osbs is a fixture here
     def test_create_build_with_deprecated_params(self, osbs):  # noqa
@@ -221,6 +224,7 @@ class TestOSBS(object):
             'component': TEST_COMPONENT,
             'target': TEST_TARGET,
             'architecture': TEST_ARCH,
+            'build_type': BUILD_TYPE_ORCHESTRATOR,
             'yum_repourls': None,
             'koji_task_id': None,
             'scratch': False,
@@ -280,7 +284,6 @@ class TestOSBS(object):
     # osbs is a fixture here
     @pytest.mark.parametrize(('inner_template', 'outer_template',  # noqa
                               'customize_conf', 'version'), (
-        (DEFAULT_INNER_TEMPLATE, DEFAULT_OUTER_TEMPLATE, DEFAULT_CUSTOMIZE_CONF, 1),
         (WORKER_INNER_TEMPLATE.format(
             arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
          WORKER_OUTER_TEMPLATE, WORKER_CUSTOMIZE_CONF, DEFAULT_ARRANGEMENT_VERSION),
@@ -300,18 +303,11 @@ class TestOSBS(object):
                        arrangement_version=None)
             .once())
 
-        if version < REACTOR_CONFIG_ARRANGEMENT_VERSION:
-            response = osbs.create_build(inner_template=inner_template,
-                                         outer_template=outer_template,
-                                         customize_conf=customize_conf,
-                                         **REQUIRED_BUILD_ARGS)
-            assert isinstance(response, BuildResponse)
-        else:
-            with pytest.raises(OsbsException):
-                response = osbs.create_build(inner_template=inner_template,
-                                             outer_template=outer_template,
-                                             customize_conf=customize_conf,
-                                             **REQUIRED_BUILD_ARGS)
+        response = osbs.create_build(inner_template=inner_template,
+                                     outer_template=outer_template,
+                                     customize_conf=customize_conf,
+                                     **REQUIRED_BUILD_ARGS)
+        assert isinstance(response, BuildResponse)
 
     @pytest.mark.parametrize('has_task_id', [True, False])
     def test_create_build_remove_koji_task_id(self, has_task_id):
@@ -453,10 +449,6 @@ class TestOSBS(object):
         (None, WORKER_OUTER_TEMPLATE, None,
          DEFAULT_ARRANGEMENT_VERSION, None),
 
-        (None, WORKER_OUTER_TEMPLATE, None, 1,
-         # Expect specified arrangement_version to be used
-         WORKER_INNER_TEMPLATE.format(arrangement_version=1)),
-
         (WORKER_INNER_TEMPLATE.format(
             arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
          None, None,
@@ -464,10 +456,6 @@ class TestOSBS(object):
 
         (None, None, WORKER_CUSTOMIZE_CONF,
          DEFAULT_ARRANGEMENT_VERSION, None),
-
-        (None, None, WORKER_CUSTOMIZE_CONF, 1,
-         # Expect specified arrangement_version to be used
-         WORKER_INNER_TEMPLATE.format(arrangement_version=1)),
 
         (None, None, None,
          DEFAULT_ARRANGEMENT_VERSION, None),
@@ -798,6 +786,7 @@ class TestOSBS(object):
             'component': TEST_COMPONENT,
             'target': TEST_TARGET,
             'architecture': TEST_ARCH,
+            'build_type': BUILD_TYPE_ORCHESTRATOR,
         }
         if should_succeed:
             osbs.create_build(**create_build_args)
@@ -838,7 +827,7 @@ class TestOSBS(object):
                                 target=TEST_TARGET,
                                 architecture=TEST_ARCH,
                                 **REQUIRED_BUILD_ARGS)
-        assert req.spec.component.value == component_override
+        assert req.user_params.component.value == component_override
 
     # osbs is a fixture here
     def test_missing_component_argument_doesnt_break_build(self, osbs):  # noqa
@@ -855,7 +844,7 @@ class TestOSBS(object):
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
-        (flexmock(BuildRequest)
+        (flexmock(BuildRequestV2)
             .should_receive('set_openshift_required_version')
             .with_args(parse_version('1.0.6'))
             .once())
@@ -875,6 +864,12 @@ class TestOSBS(object):
         assert isinstance(response, BuildResponse)
 
     # osbs is a fixture here
+    def test_cancel_build(self, osbs):  # noqa
+        response = osbs.cancel_build(TEST_BUILD)
+        # We should get a BuildResponse
+        assert isinstance(response, BuildResponse)
+
+    # osbs is a fixture here
     @pytest.mark.parametrize('build_type', (  # noqa
         None,
         'simple',
@@ -887,7 +882,7 @@ class TestOSBS(object):
             build = osbs.get_build_request(build_type)
         else:
             build = osbs.get_build_request()
-        assert isinstance(build, BuildRequest)
+        assert isinstance(build, BuildRequestV2)
 
     # osbs is a fixture here
     @pytest.mark.parametrize(('cpu', 'memory', 'storage', 'set_resource'), (  # noqa
@@ -914,7 +909,7 @@ class TestOSBS(object):
             'storage': storage,
         }
 
-        (flexmock(BuildRequest)
+        (flexmock(BuildRequestV2)
             .should_receive('set_resource_limits')
             .with_args(**set_resource_limits_kwargs)
             .times(1 if set_resource else 0))
@@ -1144,42 +1139,34 @@ class TestOSBS(object):
 
     @pytest.mark.parametrize(('compress', 'args', 'raises', 'expected'), [
         # compress plugin not run
-        (False, None, None, None),
-
+        (False, None, False, None),
         # run with no args
-        (True, {}, None, '.gz'),
-        (True, {'args': {}}, None, '.gz'),
-
+        (True, {}, False, '.gz'),
+        (True, {'args': {}}, False, '.gz'),
         # run with args
-        (True, {'args': {'method': 'gzip'}}, None, '.gz'),
-        (True, {'args': {'method': 'lzma'}}, None, '.xz'),
-
+        (True, {'args': {'method': 'gzip'}}, False, '.gz'),
+        (True, {'args': {'method': 'lzma'}}, False, '.xz'),
         # run with method not known to us
         (True, {'args': {'method': 'unknown'}}, OsbsValidationException, None),
     ])
-    def test_get_compression_extension(self, tmpdir, compress, args,
-                                       raises, expected):
+    def test_get_compression_extension(self, tmpdir, compress, args, raises, expected):
+        wit_file = WORKER_INNER_TEMPLATE.format(arrangement_version=DEFAULT_ARRANGEMENT_VERSION)
         # Make temporary copies of the JSON files
-        for basename in [DEFAULT_OUTER_TEMPLATE, DEFAULT_INNER_TEMPLATE]:
+        for basename in [WORKER_OUTER_TEMPLATE, wit_file]:
             shutil.copy(os.path.join(INPUTS_PATH, basename),
                         os.path.join(str(tmpdir), basename))
 
         # Create an inner JSON description with the specified compress
         # plugin method
-        with open(os.path.join(str(tmpdir), DEFAULT_INNER_TEMPLATE),
-                  'r+') as inner:
+        with open(os.path.join(str(tmpdir), wit_file), 'r+') as inner:
             inner_json = json.load(inner)
-
             postbuild_plugins = inner_json['postbuild_plugins']
-            inner_json['postbuild_plugins'] = [plugin
-                                               for plugin in postbuild_plugins
+            inner_json['postbuild_plugins'] = [plugin for plugin in postbuild_plugins
                                                if plugin['name'] != 'compress']
-
             if compress:
                 plugin = {'name': 'compress'}
                 plugin.update(args)
                 inner_json['postbuild_plugins'].insert(0, plugin)
-
             inner.seek(0)
             json.dump(inner_json, inner)
             inner.truncate()
@@ -1191,6 +1178,9 @@ class TestOSBS(object):
                 [default]
                 openshift_url = /
                 registry_uri = registry.example.com
+                sources_command = /bin/true
+                registry_uri = registry.example.com
+                build_image = build_image
                 """.format(build_json_dir=str(tmpdir))))
             fp.flush()
             config = Configuration(fp.name)
@@ -1725,7 +1715,7 @@ class TestOSBS(object):
         image_stream_json = {'apiVersion': 'v', 'kind': 'ImageStream'}
         image_stream_tag_json = {'apiVersion': 'v1', 'kind': 'ImageStreamTag'}
 
-        spec = BuildSpec()
+        spec = BuildUserParams()
         # Params needed to avoid exceptions.
         spec.set_params(
             user='user',
@@ -1876,6 +1866,8 @@ class TestOSBS(object):
             'yum_repourls': None,
             'koji_task_id': None,
             'scratch': False,
+            'build_type': 'orchestrator',
+            'reactor_config_override': {'flatpak': {'base_image': 'base_image'}},
         }
 
         if modules:
@@ -2299,7 +2291,6 @@ class TestOSBS(object):
                 sources_command = /bin/true
                 vendor = Example, Inc
                 authoritative_registry = localhost
-                reactor_config_secret = mysecret
                 build_from = image:buildroot:latest
                 """))
             fp.flush()
@@ -2313,8 +2304,9 @@ class TestOSBS(object):
 
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
 
-        req = osbs_obj.create_build(target=TEST_TARGET,
-                                    architecture=TEST_ARCH,
+        reactor_config_override = {'required_secrets': ['mysecret']}
+        req = osbs_obj.create_build(target=TEST_TARGET, architecture=TEST_ARCH,
+                                    reactor_config_override=reactor_config_override,
                                     **REQUIRED_BUILD_ARGS)
         secrets = req.json['spec']['strategy']['customStrategy']['secrets']
         expected_secret = {
@@ -2328,10 +2320,8 @@ class TestOSBS(object):
     @pytest.mark.parametrize(('platform', 'release', 'platforms', 'worker',  # noqa
                               'arrangement_version', 'raises_exception'), [
         # worker build
-        ("plat", 'rel', None, True, 1, False),
         ("plat", 'rel', None, True, None, True),
         # orchestrator build
-        (None, None, 'platforms', False, 1, False),
         (None, None, 'platforms', False, None, False),
     ])
     def test_arrangement_version(self, caplog, osbs, platform, release, platforms,
@@ -2425,7 +2415,7 @@ class TestOSBS(object):
                 self.platform = None
                 self.release = None
                 self.platforms = 'platforms'
-                self.arrangement_version = 4
+                self.arrangement_version = 6
                 self.worker = False
                 self.orchestrator = True
                 self.scratch = None
@@ -2449,7 +2439,7 @@ class TestOSBS(object):
             'git_uri': None,
             'git_ref': None,
             'git_branch': TEST_GIT_BRANCH,
-            'arrangement_version': 4,
+            'arrangement_version': 6,
             'user': None,
             'tag': None,
             'target': None,
@@ -2516,7 +2506,8 @@ class TestOSBS(object):
                                                   branch_name, TEST_USER,
                                                   inner_template=inner_template,
                                                   outer_template=outer_template,
-                                                  customize_conf=customize_conf)
+                                                  customize_conf=customize_conf,
+                                                  build_type=BUILD_TYPE_ORCHESTRATOR)
             assert isinstance(response, BuildResponse)
         else:
             with pytest.raises(OsbsException):
@@ -2524,7 +2515,8 @@ class TestOSBS(object):
                                            branch_name, TEST_USER,
                                            inner_template=inner_template,
                                            outer_template=outer_template,
-                                           customize_conf=customize_conf)
+                                           customize_conf=customize_conf,
+                                           build_type=BUILD_TYPE_ORCHESTRATOR)
 
     # osbs is a fixture here
     def test_config_map(self, osbs):  # noqa
@@ -2632,7 +2624,7 @@ class TestOSBS(object):
             'status': {'lastVersion': 'lastVersion'},
         }
 
-        spec = BuildSpec()
+        spec = BuildUserParams()
         # Params needed to avoid exceptions.
         spec.set_params(
             user='user',
@@ -2776,7 +2768,7 @@ class TestOSBS(object):
             'status': {'lastVersion': 'lastVersion'},
         }
 
-        spec = BuildSpec()
+        spec = BuildUserParams()
         # Params needed to avoid exceptions.
         spec.set_params(
             user='user',
@@ -2941,6 +2933,7 @@ class TestOSBS(object):
             'inner_template': DEFAULT_INNER_TEMPLATE,
             'outer_template': DEFAULT_OUTER_TEMPLATE,
             'customize_conf': DEFAULT_CUSTOMIZE_CONF,
+            'build_type': 'orchestrator',
         }
         if not flatpak:
             with pytest.raises(RuntimeError) as exc:
@@ -2948,5 +2941,29 @@ class TestOSBS(object):
             assert 'Could not parse Dockerfile in %s' % tmpdir in str(exc.value)
         else:
             kwargs['flatpak'] = True
+            kwargs['reactor_config_override'] = {'flatpak': {'base_image': 'base_image'}}
             response = osbs._do_create_prod_build(**kwargs)
             assert isinstance(response, BuildResponse)
+
+    @pytest.mark.parametrize(('field_selector'), (None, 'test'))  # noqa
+    def test_watch_builds(self, osbs, field_selector):
+        mocked_df_parser = MockDfParser()
+        (flexmock(utils)
+         .should_receive('get_repo_info')
+         .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
+         .and_return(self.mock_repo_info(mock_df_parser=mocked_df_parser)))
+
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': TEST_USER,
+            'inner_template': DEFAULT_INNER_TEMPLATE,
+            'outer_template': DEFAULT_OUTER_TEMPLATE,
+            'customize_conf': DEFAULT_CUSTOMIZE_CONF,
+            'build_type': 'orchestrator',
+        }
+        osbs._do_create_prod_build(**kwargs)
+        with pytest.raises(ValueError):
+            for changetype, _ in osbs.watch_builds(field_selector):
+                assert changetype is None
