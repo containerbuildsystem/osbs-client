@@ -16,7 +16,6 @@ import json
 from pkg_resources import parse_version
 import os
 import pytest
-import shutil
 import six
 import stat
 import copy
@@ -1136,61 +1135,6 @@ class TestOSBS(object):
             }
         }
         osbs.restore_resource("builds", {"items": [build], "kind": "BuildList", "apiVersion": "v1"})
-
-    @pytest.mark.parametrize(('compress', 'args', 'raises', 'expected'), [
-        # compress plugin not run
-        (False, None, False, None),
-        # run with no args
-        (True, {}, False, '.gz'),
-        (True, {'args': {}}, False, '.gz'),
-        # run with args
-        (True, {'args': {'method': 'gzip'}}, False, '.gz'),
-        (True, {'args': {'method': 'lzma'}}, False, '.xz'),
-        # run with method not known to us
-        (True, {'args': {'method': 'unknown'}}, OsbsValidationException, None),
-    ])
-    def test_get_compression_extension(self, tmpdir, compress, args, raises, expected):
-        wit_file = WORKER_INNER_TEMPLATE.format(arrangement_version=DEFAULT_ARRANGEMENT_VERSION)
-        # Make temporary copies of the JSON files
-        for basename in [WORKER_OUTER_TEMPLATE, wit_file]:
-            shutil.copy(os.path.join(INPUTS_PATH, basename),
-                        os.path.join(str(tmpdir), basename))
-
-        # Create an inner JSON description with the specified compress
-        # plugin method
-        with open(os.path.join(str(tmpdir), wit_file), 'r+') as inner:
-            inner_json = json.load(inner)
-            postbuild_plugins = inner_json['postbuild_plugins']
-            inner_json['postbuild_plugins'] = [plugin for plugin in postbuild_plugins
-                                               if plugin['name'] != 'compress']
-            if compress:
-                plugin = {'name': 'compress'}
-                plugin.update(args)
-                inner_json['postbuild_plugins'].insert(0, plugin)
-            inner.seek(0)
-            json.dump(inner_json, inner)
-            inner.truncate()
-
-        with NamedTemporaryFile(mode='wt') as fp:
-            fp.write(dedent("""\
-                [general]
-                build_json_dir = {build_json_dir}
-                [default]
-                openshift_url = /
-                registry_uri = registry.example.com
-                sources_command = /bin/true
-                registry_uri = registry.example.com
-                build_image = build_image
-                """.format(build_json_dir=str(tmpdir))))
-            fp.flush()
-            config = Configuration(fp.name)
-            osbs_obj = OSBS(config, config)
-
-        if raises:
-            with pytest.raises(raises):
-                osbs_obj.get_compression_extension()
-        else:
-            assert osbs_obj.get_compression_extension() == expected
 
     @pytest.mark.parametrize(('build_image', 'build_imagestream', 'valid'), (
         ('registry.example.com/buildroot:2.0', '', True),
