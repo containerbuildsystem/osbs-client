@@ -1221,38 +1221,6 @@ class OSBS(object):
             logger.info("restored %s/%s %s", ntotal - nfailed, ntotal, resource_type)
 
     @osbsapi
-    def get_compression_extension(self):
-        """
-        Find the filename extension for the 'docker save' output, which
-        may or may not be compressed.
-
-        Raises OsbsValidationException if the extension cannot be
-        determined due to a configuration error.
-
-        :returns: str including leading dot, or else None if no compression
-        """
-        build_request = BuildRequestV2(build_json_store=self.os_conf.get_build_json_store())
-        build_request.set_params(git_uri="/", git_ref="HEAD", git_branch="master", user="user",
-                                 build_image=self.build_conf.get_build_image(),
-                                 build_imagestream=self.build_conf.get_build_imagestream(),
-                                 build_from=self.build_conf.get_build_from(),
-                                 base_image="base_image", name_label='name', build_type='worker',
-                                 registry_uris=self.build_conf.get_registry_uris())
-
-        plugins_config = PluginsConfiguration(build_request.user_params)
-        build_json = json.loads(plugins_config.render())
-        for plugin in build_json.get('postbuild_plugins', []):
-            if plugin.get('name') == 'compress':
-                args = plugin.get('args', {})
-                method = args.get('method', 'gzip')
-                if method == 'gzip':
-                    return '.gz'
-                elif method == 'lzma':
-                    return '.xz'
-                raise OsbsValidationException("unknown compression method '%s'" % method)
-        return None
-
-    @osbsapi
     def list_resource_quotas(self):
         return self.os.list_resource_quotas().json()
 
