@@ -23,9 +23,9 @@ koji_root = http://koji.example.com/koji
 koji_hub = http://koji.example.com/kojihub
 sources_command = fedpkg sources
 # We 'docker pull' from here:
-source_registry_uri = https://distribution.example.com/v2
+source_registry_uri = https://distribution.example.com
 # and 'docker push' to here:
-registry_uri = https://distribution.example.com/v2
+registry_uri = https://distribution.example.com
 ```
 
 Note that currently there is no support for pushing to Distribution registry instances that require authentication.
@@ -72,9 +72,9 @@ koji_root = http://koji.example.com/koji
 koji_hub = http://koji.example.com/kojihub
 sources_command = fedpkg sources
 # We 'docker pull' from here:
-source_registry_uri = https://crane.example.com/v2
+source_registry_uri = https://crane.example.com
 # We 'docker push 'to here:
-registry_uri = https://distribution.example.com/v2
+registry_uri = https://distribution.example.com
 # This is the Pulp environment that will sync from registry_uri:
 pulp_registry_name = prodpulp
 pulp_secret = pulpsecret

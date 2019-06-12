@@ -60,12 +60,10 @@ pulp_sync_registry_name = stage-pulp
 
 If this is not specified, value of `pulp_registry_name` is used.
 
-pulp sync command (the way to get image from distribution to pulp) is requested when `v2` is in `registry_api_versions`.
-
 
 ### About v1 builds
 
-OSBS no longer supports parallel v1 and v2 builds.
+OSBS no longer supports v1 builds.
 
 ## OSBS Repo Configuration File
 
