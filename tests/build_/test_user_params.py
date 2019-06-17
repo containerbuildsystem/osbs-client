@@ -136,7 +136,7 @@ class TestBuildUserParams(object):
     def test_user_params_bad_json(self):
         required_json = json.dumps({
             'arrangement_version': 6,
-            'customize_conf': 'prod_customize.json',
+            'customize_conf': 'worker_customize.json',
             'git_ref': 'master'
         }, sort_keys=True)
         spec = BuildUserParams()
@@ -276,7 +276,7 @@ class TestBuildUserParams(object):
             "build_type": "worker",
             "component": TEST_COMPONENT,
             "compose_ids": [1, 2],
-            "customize_conf": "prod_customize.json",
+            "customize_conf": "worker_customize.json",
             "filesystem_koji_task_id": TEST_FILESYSTEM_KOJI_TASK_ID,
             "git_branch": TEST_GIT_BRANCH,
             "git_ref": TEST_GIT_REF,
