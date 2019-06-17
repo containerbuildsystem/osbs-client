@@ -17,7 +17,8 @@ import yaml
 from copy import deepcopy
 
 from osbs.build.build_requestv2 import BuildRequestV2
-from osbs.constants import (DEFAULT_OUTER_TEMPLATE, BUILD_TYPE_WORKER,
+from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
+                            ORCHESTRATOR_OUTER_TEMPLATE, BUILD_TYPE_WORKER,
                             BUILD_TYPE_ORCHESTRATOR, SECRETS_PATH)
 from osbs.exceptions import OsbsValidationException, OsbsException
 from osbs.repo_utils import RepoInfo, RepoConfiguration
@@ -717,7 +718,10 @@ class TestBuildRequestV2(object):
         'reactor-config-map',
     ])
     def test_set_config_map(self, build_type, reactor_config_map, reactor_config_override):
-        build_request = BuildRequestV2(INPUTS_PATH)
+        outer_template = WORKER_OUTER_TEMPLATE
+        if build_type == BUILD_TYPE_ORCHESTRATOR:
+            outer_template = ORCHESTRATOR_OUTER_TEMPLATE
+        build_request = BuildRequestV2(INPUTS_PATH, outer_template)
         kwargs = get_sample_prod_params()
         kwargs['reactor_config_map'] = reactor_config_map
         kwargs['reactor_config_override'] = reactor_config_override
@@ -792,7 +796,10 @@ class TestBuildRequestV2(object):
     ])
     def test_set_required_secrets(self, build_type, existing, reactor_config_map,
                                   reactor_config_override):
-        build_request = BuildRequestV2(INPUTS_PATH)
+        outer_template = WORKER_OUTER_TEMPLATE
+        if build_type == BUILD_TYPE_ORCHESTRATOR:
+            outer_template = ORCHESTRATOR_OUTER_TEMPLATE
+        build_request = BuildRequestV2(INPUTS_PATH, outer_template)
         reactor_config_name = 'REACTOR_CONFIG'
         all_secrets = deepcopy(reactor_config_map)
 
