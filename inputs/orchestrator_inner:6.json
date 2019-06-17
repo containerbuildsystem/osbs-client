@@ -72,6 +72,9 @@
       "args": {
         "publish": false
       }
+    },
+    {
+      "name": "push_operator_manifests"
     }
   ],
   "prepublish_plugins": [],
