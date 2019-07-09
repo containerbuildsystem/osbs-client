@@ -974,3 +974,34 @@ class TestBuildRequestV2(object):
         build_request.set_params(**kwargs)
         with pytest.raises(OsbsException):
             build_request.render()
+
+    @pytest.mark.parametrize(('worker_max', 'orchestrator_max', 'build_type', 'expected'), [
+        (None, None, BUILD_TYPE_ORCHESTRATOR, 4),
+        (None, None, BUILD_TYPE_WORKER, 3),
+        (6, 7, BUILD_TYPE_ORCHESTRATOR, 7),
+        (6, 7, BUILD_TYPE_WORKER, 6),
+        ("6", "invalid string", BUILD_TYPE_ORCHESTRATOR, 4),
+        ("invalid string", "7", BUILD_TYPE_WORKER, 3),
+        ({"6": "hours"}, {"7": "hours"}, BUILD_TYPE_ORCHESTRATOR, 4),
+        ({"6": "hours"}, {"7": "hours"}, BUILD_TYPE_WORKER, 3),
+        ("6", "7", BUILD_TYPE_ORCHESTRATOR, 7),
+        ("6", "7", BUILD_TYPE_WORKER, 6),
+        ("6", "-1", BUILD_TYPE_ORCHESTRATOR, None),
+        ("0", "7", BUILD_TYPE_WORKER, None),
+    ])
+    def test_set_deadlines(self, worker_max, orchestrator_max, build_type, expected):
+        build_request = BuildRequestV2(INPUTS_PATH)
+
+        kwargs = get_sample_prod_params()
+        kwargs['worker_deadline'] = worker_max
+        kwargs['orchestrator_deadline'] = orchestrator_max
+        kwargs['build_type'] = build_type
+
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+        if expected:
+            expected_hours = expected * 3600
+            assert build_json['spec']['completionDeadlineSeconds'] == expected_hours
+        else:
+            with pytest.raises(KeyError):
+                assert build_json['spec']['completionDeadlineSeconds']

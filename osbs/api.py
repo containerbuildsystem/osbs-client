@@ -714,6 +714,8 @@ class OSBS(object):
             additional_tags=repo_info.additional_tags.tags,
             git_commit_depth=repo_info.configuration.depth,
             operator_manifests_extract_platform=operator_manifests_extract_platform,
+            worker_deadline=self.build_conf.get_worker_deadline(),
+            orchestrator_deadline=self.build_conf.get_orchestor_deadline(),
         )
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
         build_request.set_repo_info(repo_info)

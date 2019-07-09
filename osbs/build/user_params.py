@@ -13,7 +13,8 @@ import random
 import json
 
 from osbs.constants import (DEFAULT_GIT_REF, REACTOR_CONFIG_ARRANGEMENT_VERSION,
-                            DEFAULT_CUSTOMIZE_CONF, RAND_DIGITS)
+                            DEFAULT_CUSTOMIZE_CONF, RAND_DIGITS,
+                            WORKER_MAX_RUNTIME, ORCHESTRATOR_MAX_RUNTIME)
 from osbs.exceptions import OsbsValidationException
 from osbs.utils import get_imagestreamtag_from_image, make_name_from_git, RegistryURI, utcnow
 
@@ -179,6 +180,8 @@ class BuildUserParams(BuildCommon):
         self.tags_from_yaml = BuildParam('tags_from_yaml', allow_none=True)
         self.additional_tags = BuildParam('additional_tags', allow_none=True)
         self.git_commit_depth = BuildParam('git_commit_depth', allow_none=True)
+        self.worker_deadline = BuildParam('worker_deadline', allow_none=True)
+        self.orchestrator_deadline = BuildParam('orchestrator_deadline', allow_none=True)
 
         self.required_params = [
             self.build_json_dir,
@@ -209,6 +212,7 @@ class BuildUserParams(BuildCommon):
                    isolated=None, scratch=None, parent_images_digests=None,
                    tags_from_yaml=None, additional_tags=None,
                    git_commit_depth=None,
+                   worker_deadline=None, orchestrator_deadline=None,
                    operator_manifests_extract_platform=None, **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
@@ -279,6 +283,15 @@ class BuildUserParams(BuildCommon):
         self.yum_repourls.value = yum_repourls or []
         self.signing_intent.value = signing_intent
         self.compose_ids.value = compose_ids or []
+
+        try:
+            self.orchestrator_deadline.value = int(orchestrator_deadline)
+        except (ValueError, TypeError):
+            self.orchestrator_deadline.value = ORCHESTRATOR_MAX_RUNTIME
+        try:
+            self.worker_deadline.value = int(worker_deadline)
+        except (ValueError, TypeError):
+            self.worker_deadline.value = WORKER_MAX_RUNTIME
 
         self._populate_image_tag()
 

@@ -101,6 +101,8 @@ class BuildRequestV2(object):
         :param operator_manifests_extract_platform: str, indicates which platform should upload
                                                     operator manifests to koji
         :param parent_images_digests: dict, mapping image digests to names and platforms
+        :param worker_deadline: int, worker completion deadline in hours
+        :param orchestrator_deadline: int, orchestrator deadline in hours
         """
 
         # Here we cater to the koji "scratch" build type, this will disable
@@ -316,6 +318,8 @@ class BuildRequestV2(object):
         self.adjust_for_isolated(self.user_params.release)
         self.render_node_selectors(self.user_params.build_type.value)
 
+        self.set_deadline(self.user_params.build_type.value)
+
         # Set our environment variables
         custom_strategy['env'].append({
             'name': 'USER_PARAMS',
@@ -326,6 +330,7 @@ class BuildRequestV2(object):
             if env['name'] == 'ATOMIC_REACTOR_PLUGINS':
                 del custom_strategy['env'][index]
                 break
+
         # Log build json
         # Return build json
         self.build_json = self.template
@@ -443,6 +448,18 @@ class BuildRequestV2(object):
             limits.update(self._resource_limits)
             resources['limits'] = limits
             self.template['spec']['resources'] = resources
+
+    def set_deadline(self, build_type):
+        if build_type == BUILD_TYPE_WORKER:
+            deadline_hours = self.user_params.worker_deadline.value
+        else:
+            deadline_hours = self.user_params.orchestrator_deadline.value
+
+        if deadline_hours > 0:
+            deadline_seconds = deadline_hours * 3600
+            self.template['spec']['completionDeadlineSeconds'] = deadline_seconds
+            logger.info("settting completion_dealine to %s hours (%s seconds)", deadline_hours,
+                        deadline_seconds)
 
     def adjust_for_repo_info(self):
         if not self._repo_info:
