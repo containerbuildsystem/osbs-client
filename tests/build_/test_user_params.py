@@ -231,6 +231,7 @@ class TestBuildUserParams(object):
             'isolated': False,
             'koji_parent_build': 'fedora-26-9',
             'koji_target': 'tothepoint',
+            "orchestrator_deadline": 4,
             'parent_images_digests': {
                 'registry.fedorahosted.org/fedora:29': {
                     'x86_64': 'registry.fedorahosted.org/fedora@sha256:8b96f2f9f88179a065738b2b37'
@@ -249,6 +250,7 @@ class TestBuildUserParams(object):
             'trigger_imagestreamtag': 'base_image:latest',
             'user': TEST_USER,
             # 'yum_repourls': ,  # not used with compose_ids
+            "worker_deadline": 3,
         }
         # additional values that BuildUserParams requires but stores under different names
         param_kwargs.update({
@@ -287,6 +289,7 @@ class TestBuildUserParams(object):
             "koji_parent_build": "fedora-26-9",
             "koji_target": "tothepoint",
             "name": "path-master-cd1e4",
+            "orchestrator_deadline": 4,
             'parent_images_digests': {
                 'registry.fedorahosted.org/fedora:29': {
                     'x86_64': 'registry.fedorahosted.org/fedora@sha256:8b96f2f9f88179a065738b2b37'
@@ -299,7 +302,8 @@ class TestBuildUserParams(object):
             "reactor_config_override": "reactor-config-override",
             "release": "29",
             "trigger_imagestreamtag": "buildroot:old",
-            "user": TEST_USER
+            "user": TEST_USER,
+            "worker_deadline": 3,
         }
         assert spec.to_json() == json.dumps(expected_json, sort_keys=True)
 
@@ -333,6 +337,7 @@ class TestBuildUserParams(object):
             "koji_parent_build": "fedora-26-9",
             "koji_target": "tothepoint",
             "name": "path-master-cd1e4",
+            "orchestrator_deadline": 4,
             "platform": "x86_64",
             "platforms": ["x86_64"],
             "reactor_config_map": "reactor-config-map",
@@ -340,6 +345,7 @@ class TestBuildUserParams(object):
             "release": "29",
             "trigger_imagestreamtag": "buildroot:old",
             "this is not a valid key": "this is not a valid field",
-            "user": TEST_USER
+            "user": TEST_USER,
+            "worker_deadline": 3,
         }
         spec.from_json(json.dumps(expected_json))

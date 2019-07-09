@@ -173,6 +173,10 @@ Some options are also mandatory.
 
 * `build_from` (*optional*, `string`) — build source to use, consists of 2 parts separated with delimiter ':', first part can be : image or imagestream, and second part is corresponding image or imagestream
 
+* `worker_max_run_hours` (*optional*, `int`) - the build will be cancelled if a worker process takes more than this amount of hours to build. Default is 3 hours. If the value is 0 or less, the build will not be cancelled no matter how long it takes to build
+
+* `orchestrator_max_run_hours` (*optional*, `int`) - the build will be cancelled if it is not completed across all workers within this time. Default is 4 hours. If the value is 0 or less, the build will not be cancelled no matter how long it takes to build
+
 ### `[platform:ARCH]` options
 
 * `architecture` (*optional*, `string`) — platform's GOARCH (Go language platform name). If not declared, this option assumes the name of the platform being defined.

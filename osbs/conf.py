@@ -19,7 +19,8 @@ from six.moves.urllib.parse import urljoin
 
 from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
                             GENERAL_CONFIGURATION_SECTION, DEFAULT_NAMESPACE,
-                            DEFAULT_ARRANGEMENT_VERSION, REACTOR_CONFIG_ARRANGEMENT_VERSION)
+                            DEFAULT_ARRANGEMENT_VERSION, REACTOR_CONFIG_ARRANGEMENT_VERSION,
+                            WORKER_MAX_RUNTIME, ORCHESTRATOR_MAX_RUNTIME)
 from osbs.exceptions import OsbsValidationException
 from osbs import utils
 
@@ -622,3 +623,11 @@ class Configuration(object):
     def get_reactor_config_map(self):
         return self._get_value("reactor_config_map", self.conf_section,
                                "reactor_config_map")
+
+    def get_worker_deadline(self):
+        return self._get_value("worker_max_run_hours", self.conf_section, "worker_max_run_hours",
+                               WORKER_MAX_RUNTIME)
+
+    def get_orchestor_deadline(self):
+        return self._get_value("orchestrator_max_run_hours", self.conf_section,
+                               "orchestrator_max_run_hours", ORCHESTRATOR_MAX_RUNTIME)
