@@ -84,6 +84,10 @@ case ${ACTION} in
   PACKAGES='osbs tests'
   TEST_CMD="${PYTHON} -m pylint ${PACKAGES}"
   ;;
+"bandit")
+  $RUN $PIP install bandit
+  TEST_CMD="bandit-baseline -r osbs -ll -ii"
+  ;;
 *)
   echo "Unknown action: ${ACTION}"
   exit 2
