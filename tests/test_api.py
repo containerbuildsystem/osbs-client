@@ -2852,7 +2852,7 @@ class TestOSBS(object):
                                        outer_template=outer_template,
                                        customize_conf=customize_conf,
                                        isolated=True)
-        assert '"FROM scratch" image build cannot be isolated' in str(exc)
+        assert '"FROM scratch" image build cannot be isolated' in str(exc.value)
 
     @pytest.mark.parametrize(('flatpak'), (True, False))  # noqa
     def test_do_create_prod_build_no_dockerfile(self, osbs, flatpak, tmpdir):
