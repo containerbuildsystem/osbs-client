@@ -513,6 +513,9 @@ class OSBS(object):
 
         required_missing = False
         req_labels = {}
+        # required labels which needs to have explicit value (not from env variable)
+        explicit_labels = [utils.Labels.LABEL_TYPE_NAME,
+                           utils.Labels.LABEL_TYPE_COMPONENT]
         # version label isn't used here, but is required label in Dockerfile
         # and is used and required for atomic reactor
         # if we don't catch error here, it will fail in atomic reactor later
@@ -521,6 +524,11 @@ class OSBS(object):
                       utils.Labels.LABEL_TYPE_VERSION]:
             try:
                 _, req_labels[label] = labels.get_name_and_value(label)
+
+                if label in explicit_labels and not req_labels[label]:
+                    required_missing = True
+                    logger.error("required label doesn't have explicit value in Dockerfile : %s",
+                                 labels.get_name(label))
             except KeyError:
                 required_missing = True
                 logger.error("required label missing from Dockerfile : %s",
@@ -528,7 +536,7 @@ class OSBS(object):
 
         try:
             _, release_value = labels.get_name_and_value(utils.Labels.LABEL_TYPE_RELEASE)
-            if not RELEASE_LABEL_FORMAT.match(release_value):
+            if release_value and not RELEASE_LABEL_FORMAT.match(release_value):
                 logger.error("release label '%s' doesn't match regex : %s", release_value,
                              RELEASE_LABEL_FORMAT.pattern)
                 raise OsbsValidationException("release label doesn't have proper format")
