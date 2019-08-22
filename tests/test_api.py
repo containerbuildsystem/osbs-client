@@ -737,24 +737,101 @@ class TestOSBS(object):
                               **REQUIRED_BUILD_ARGS)
 
     # osbs is a fixture here
-    @pytest.mark.parametrize('label_name', ['BZComponent', 'com.redhat.component', 'Name', 'name'])  # noqa
-    def test_missing_component_and_name_labels(self, osbs, label_name):
+    @pytest.mark.parametrize(('all_labels', 'error_msgs' ), (  # noqa
+        ({'BZComponent': 'component'},
+         ["required label missing from Dockerfile : name",
+          "required label missing from Dockerfile : version"]),
+
+        ({'BZComponent': ''},
+         ["required label missing from Dockerfile : name",
+          "required label missing from Dockerfile : version",
+          "required label doesn't have explicit value in Dockerfile : BZComponent"]),
+
+        ({'com.redhat.component': 'component'},
+         ["required label missing from Dockerfile : name",
+          "required label missing from Dockerfile : version"]),
+
+        ({'com.redhat.component': ''},
+         ["required label missing from Dockerfile : name",
+          "required label missing from Dockerfile : version",
+          "required label doesn't have explicit value in Dockerfile : com.redhat.component"]),
+
+        ({'name': 'name'},
+         ["required label missing from Dockerfile : com.redhat.component",
+          "required label missing from Dockerfile : version"]),
+
+        ({'name': ''},
+         ["required label missing from Dockerfile : com.redhat.component",
+          "required label missing from Dockerfile : version",
+          "required label doesn't have explicit value in Dockerfile : name"]),
+
+        ({'Name': 'name'},
+         ["required label missing from Dockerfile : com.redhat.component",
+          "required label missing from Dockerfile : version"]),
+
+        ({'Name': ''},
+         ["required label missing from Dockerfile : com.redhat.component",
+          "required label missing from Dockerfile : version",
+          "required label doesn't have explicit value in Dockerfile : Name"]),
+
+        ({'version': 'version'},
+         ["required label missing from Dockerfile : name",
+          "required label missing from Dockerfile : com.redhat.component"]),
+
+        ({'version': ''},
+         ["required label missing from Dockerfile : name",
+          "required label missing from Dockerfile : com.redhat.component"]),
+
+        ({'Version': 'version'},
+         ["required label missing from Dockerfile : name",
+          "required label missing from Dockerfile : com.redhat.component"]),
+
+        ({'Version': ''},
+         ["required label missing from Dockerfile : name",
+          "required label missing from Dockerfile : com.redhat.component"]),
+
+        ({'Name': 'name', 'BZComponent': 'component', 'Version': 'version'},
+         []),
+
+        ({'Name': 'name', 'BZComponent': 'component', 'Version': ''},
+         []),
+
+        ({'name': 'name', 'com.redhat.component': 'component', 'version': 'version'},
+         []),
+
+        ({'name': 'name', 'com.redhat.component': 'component', 'version': ''},
+         []),
+    ))
+    def test_missing_required_labels(self, osbs, caplog, all_labels, error_msgs):
         """
-        tests if raises exception if there is only component
-        or only name in labels
+        tests if raises exception if required lables are missing
         """
 
         class MockParser(object):
-            labels = {label_name: 'something'}
+            labels = all_labels
             baseimage = 'fedora23/python'
+
+        required_args = copy.deepcopy(REQUIRED_BUILD_ARGS)
+        # just so we stop right after checking labels when error_msgs are empty
+        required_args['git_branch'] = None
+
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=None, depth=None)
             .and_return(self.mock_repo_info(MockParser())))
-        with pytest.raises(OsbsValidationException):
+
+        with pytest.raises(OsbsValidationException) as exc:
             osbs.create_build(target=TEST_TARGET,
                               architecture=TEST_ARCH,
-                              **REQUIRED_BUILD_ARGS)
+                              **required_args)
+        if error_msgs:
+            exc_msg = 'required label missing from Dockerfile'
+            assert exc_msg in str(exc.value)
+            for error in error_msgs:
+                assert error in caplog.text
+        else:
+            exc_msg = "required argument 'git_branch' can't be None"
+            assert exc_msg in str(exc.value)
 
     # osbs is a fixture here
     @pytest.mark.parametrize('name,should_succeed', [  # noqa:F811
@@ -2793,6 +2870,7 @@ class TestOSBS(object):
         ('1_release_with5', None),
         ('123.54.release_with5', None),
         ('123.54.release_withalpha', None),
+        ('', None),
     ])
     def test_release_label_validation(self, release_value, exc):
         with NamedTemporaryFile(mode='wt') as fp:
