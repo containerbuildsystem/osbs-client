@@ -628,7 +628,7 @@ class Openshift(object):
 
             encoding = None
             for line in response.iter_lines():
-                logger.debug(line)
+                logger.debug('%r', line)
 
                 if not encoding:
                     encoding = guess_json_utf(line)
@@ -741,7 +741,7 @@ class Openshift(object):
         """
         url = self._build_url("%s/%s" % (collection, name))
         response = self._get(url)
-        logger.debug("before modification: %s", response.content)
+        logger.debug("before modification: %r", response.content)
         build_json = response.json()
         how(build_json['metadata'], things, values)
         response = self._put(url, data=json.dumps(build_json), use_json=True)
