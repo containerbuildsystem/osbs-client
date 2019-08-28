@@ -345,7 +345,7 @@ def cmd_build(args, osbs):
         print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
         try:
             for line in build_logs:
-                print(line)
+                print('{!r}'.format(line))
         except Exception as ex:
             logger.error("Error during fetching logs for build %s: %s", build_id, repr(ex))
 
