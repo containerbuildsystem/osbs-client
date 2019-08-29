@@ -1,5 +1,5 @@
 """
-Copyright (c) 2018 Red Hat, Inc
+Copyright (c) 2018, 2019 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -458,7 +458,7 @@ class BuildRequestV2(object):
         if deadline_hours > 0:
             deadline_seconds = deadline_hours * 3600
             self.template['spec']['completionDeadlineSeconds'] = deadline_seconds
-            logger.info("settting completion_dealine to %s hours (%s seconds)", deadline_hours,
+            logger.info("setting completion_deadline to %s hours (%s seconds)", deadline_hours,
                         deadline_seconds)
 
     def adjust_for_repo_info(self):
