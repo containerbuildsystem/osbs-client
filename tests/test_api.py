@@ -319,7 +319,7 @@ class TestOSBS(object):
                     'git-branch': 'branch',
                 }
             },
-            'spec': {}
+            'spec': {'triggers': []}
         }
 
         if has_task_id:
@@ -1576,7 +1576,7 @@ class TestOSBS(object):
                     'git-branch': 'branch',
                 },
             },
-            'spec': {},
+            'spec': {'triggers': []},
         }
 
         existing_build_json = copy.deepcopy(build_json)
@@ -1586,7 +1586,8 @@ class TestOSBS(object):
         build_request = flexmock(
             render=lambda: build_json,
             has_ist_trigger=lambda: False,
-            scratch=False)
+            scratch=False,
+            skip_build=False)
 
         (flexmock(osbs_obj)
             .should_receive('_get_existing_build_config')
@@ -1631,7 +1632,8 @@ class TestOSBS(object):
         build_request = flexmock(
             render=lambda: build_json,
             has_ist_trigger=lambda: False,
-            scratch=False)
+            scratch=False,
+            skip_build=False)
 
         (flexmock(osbs_obj)
             .should_receive('_get_existing_build_config')
@@ -1653,10 +1655,13 @@ class TestOSBS(object):
         build_response = osbs_obj._create_build_config_and_build(build_request)
         assert build_response.json == {'spam': 'maps'}
 
+    @pytest.mark.parametrize('skip_build', [True, False])
     @pytest.mark.parametrize('triggers_bj', [True, False])
     @pytest.mark.parametrize('existing_bc', [True, False])
     @pytest.mark.parametrize('existing_is', [True, False])
     @pytest.mark.parametrize('existing_ist', [True, False])
+    @pytest.mark.parametrize('trigger_name',
+                             ['fedora23-python:new_trigger', 'fedora23-python:old_trigger'])
     @pytest.mark.parametrize(('source_registry', 'organization', 'base_image',
                               'expected_repo', 'expected_insecure'), [
         (None, None, None,
@@ -1682,9 +1687,9 @@ class TestOSBS(object):
          'old_registry.com/fedora23/python',
          'source_registry.com/my_org/fedora23-python', True),
     ])
-    def test_create_build_config_auto_start(self, triggers_bj, existing_bc,
-                                            existing_is, existing_ist, source_registry,
-                                            organization, base_image,
+    def test_create_build_config_auto_start(self, skip_build, triggers_bj, existing_bc,
+                                            existing_is, existing_ist, trigger_name,
+                                            source_registry, organization, base_image,
                                             expected_repo, expected_insecure):
         # If ImageStream exists, always expect auto instantiated
         # build, because this test assumes an auto_instantiated BuildRequest
@@ -1698,7 +1703,6 @@ class TestOSBS(object):
             config = Configuration(fp.name)
 
         osbs_obj = OSBS(config, config)
-        new_trigger = 'fedora23-python:new_trigger'
 
         build_json = {
             'apiVersion': 'v1',
@@ -1711,7 +1715,7 @@ class TestOSBS(object):
                 },
             },
             'spec': {
-                'triggers': [{'imageChange': {'from': {'name': new_trigger}}}]
+                'triggers': [{'imageChange': {'from': {'name': trigger_name}}}]
             },
         }
         if not triggers_bj:
@@ -1733,8 +1737,13 @@ class TestOSBS(object):
             'status': {'lastVersion': 'lastVersion'},
         }
 
-        image_stream_json = {'apiVersion': 'v', 'kind': 'ImageStream'}
-        image_stream_tag_json = {'apiVersion': 'v1', 'kind': 'ImageStreamTag'}
+        image_stream_json = {'apiVersion': 'v',
+                             'kind': 'ImageStream',
+                             'metadata': {'name': 'fedora23-python'}}
+        image_stream_tag_json = {'apiVersion': 'v1',
+                                 'kind': 'ImageStreamTag',
+                                 'image': {'dockerImageReference':
+                                               "registry/namespace/repo@sha256:123456"}}
 
         spec = BuildUserParams()
         # Params needed to avoid exceptions.
@@ -1756,12 +1765,13 @@ class TestOSBS(object):
             base_image=base_image,
             source_registry=source_registry,
             organization=organization,
+            skip_build=skip_build,
         )
         # Cannot use spec keyword arg in flexmock constructor
         # because it appears to be used by flexmock itself
         build_request.spec = spec
         if triggers_bj:
-            build_request.trigger_imagestreamtag = new_trigger
+            build_request.trigger_imagestreamtag = trigger_name
 
         get_existing_count = 1
         if existing_bc:
@@ -1794,24 +1804,30 @@ class TestOSBS(object):
             .replace_with(mock_get_image_stream))
 
         if existing_is:
-            def mock_get_image_stream_tag(*args, **kwargs):
-                if not existing_ist:
-                    raise OsbsResponseException('missing ImageStreamTag',
-                                                status_code=404)
-                return flexmock(json=lambda: image_stream_tag_json)
-            (flexmock(osbs_obj.os)
-                .should_receive('get_image_stream_tag')
-                .with_args(new_trigger)
-                .times(1 if triggers_bj else 0)
-                .replace_with(mock_get_image_stream_tag))
+            get_image_stream_tag = (flexmock(osbs_obj.os)
+                                    .should_receive('get_image_stream_tag')
+                                    .times(2 if triggers_bj else 0))
 
-            ist_tag = new_trigger.split(':')[1]
+            if triggers_bj:
+                if existing_ist:
+                    get_image_stream_tag.and_return(flexmock(json=lambda: image_stream_tag_json))
+                    get_image_stream_tag.and_return(flexmock(json=lambda: image_stream_tag_json))
+                else:
+                    get_image_stream_tag.and_raise(OsbsResponseException('missing ImageStreamTag',
+                                                   status_code=404))
+                    get_image_stream_tag.and_return(flexmock(json=lambda: image_stream_tag_json))
+
+            ist_tag = trigger_name.split(':')[1]
             (flexmock(osbs_obj.os)
                 .should_receive('ensure_image_stream_tag')
                 .with_args(image_stream_json, ist_tag, dict, True,
                            repository=expected_repo, insecure=expected_insecure)
                 .times(1 if triggers_bj else 0)
                 .and_return(True))
+        else:
+            (flexmock(osbs_obj.os)
+                .should_receive('get_image_stream_tag')
+                .never())
 
         update_build_config_times = 0
 
@@ -1844,24 +1860,27 @@ class TestOSBS(object):
             (flexmock(osbs_obj.os)
                 .should_receive('wait_for_new_build_config_instance')
                 .with_args('build', 'lastVersion')
-                .once()
+                .times(0 if skip_build else 1)
                 .and_return('build-id'))
 
             (flexmock(osbs_obj.os)
                 .should_receive('get_build')
                 .with_args('build-id')
-                .once()
+                .times(0 if skip_build else 1)
                 .and_return(flexmock(json=lambda: {'spam': 'maps'})))
 
         else:
             (flexmock(osbs_obj.os)
                 .should_receive('start_build')
                 .with_args('build')
-                .once()
+                .times(0 if skip_build else 1)
                 .and_return(flexmock(json=lambda: {'spam': 'maps'})))
 
         build_response = osbs_obj._create_build_config_and_build(build_request)
-        assert build_response.json == {'spam': 'maps'}
+        if skip_build:
+            assert build_response is None
+        else:
+            assert build_response.json == {'spam': 'maps'}
 
     # osbs is a fixture here
     @pytest.mark.parametrize('modules', (  # noqa
@@ -2367,6 +2386,7 @@ class TestOSBS(object):
                 self.flatpak = False
                 self.signing_intent = 'release'
                 self.compose_ids = [1, 2]
+                self.skip_build = False
 
         expected_kwargs = {
             'platform': platform,
@@ -2385,6 +2405,7 @@ class TestOSBS(object):
             'koji_parent_build': None,
             'signing_intent': 'release',
             'compose_ids': [1, 2],
+            'skip_build': False,
         }
         if arrangement_version:
             expected_kwargs.update({
@@ -2429,6 +2450,74 @@ class TestOSBS(object):
                 )
 
     # osbs is a fixture here
+    @pytest.mark.parametrize('skip_build', (True, False))  # noqa
+    def test_skip_orchestrator_build(self, osbs, skip_build):
+        class MockArgs(object):
+            def __init__(self, skip_build):
+                self.platform = None
+                self.release = None
+                self.platforms = ['spam', 'bacon']
+                self.arrangement_version = None
+                self.worker = False
+                self.orchestrator = True
+                self.scratch = None
+                self.isolated = None
+                self.koji_upload_dir = None
+                self.git_uri = None
+                self.git_ref = None
+                self.git_branch = TEST_GIT_BRANCH
+                self.koji_parent_build = None
+                self.flatpak = False
+                self.signing_intent = None
+                self.compose_ids = None
+                self.skip_build = skip_build
+
+        expected_kwargs = {
+            'platform': None,
+            'scratch': None,
+            'isolated': None,
+            'platforms': ['spam', 'bacon'],
+            'release': None,
+            'git_uri': None,
+            'git_ref': None,
+            'git_branch': TEST_GIT_BRANCH,
+            'user': None,
+            'tag': None,
+            'target': None,
+            'architecture': None,
+            'yum_repourls': None,
+            'koji_parent_build': None,
+            'signing_intent': None,
+            'compose_ids': None,
+            'skip_build': skip_build,
+            'arrangement_version': DEFAULT_ARRANGEMENT_VERSION,
+            'build_type': BUILD_TYPE_ORCHESTRATOR,
+            'inner_template': ORCHESTRATOR_INNER_TEMPLATE.format(
+                arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
+            'outer_template': ORCHESTRATOR_OUTER_TEMPLATE,
+            'customize_conf': ORCHESTRATOR_CUSTOMIZE_CONF,
+        }
+
+        flexmock(osbs.build_conf, get_git_branch=lambda: TEST_GIT_BRANCH)
+
+        (flexmock(osbs)
+            .should_receive('_do_create_prod_build')
+            .with_args(**expected_kwargs)
+            .and_return(None if skip_build else BuildResponse({}))
+            .once())
+
+        (flexmock(osbs)
+            .should_receive("wait_for_build_to_get_scheduled")
+            .times(0 if skip_build else 1)
+            .and_raise(CustomTestException))
+
+        if skip_build:
+            cmd_build(MockArgs(skip_build), osbs)
+        else:
+            with pytest.raises(CustomTestException):
+                cmd_build(MockArgs(skip_build), osbs)
+
+    # osbs is a fixture here
     @pytest.mark.parametrize('isolated', [True, False])  # noqa
     def test_flatpak_args_from_cli(self, caplog, osbs, isolated):
         class MockArgs(object):
@@ -2449,6 +2538,7 @@ class TestOSBS(object):
                 self.flatpak = True
                 self.signing_intent = 'release'
                 self.compose_ids = [1, 2]
+                self.skip_build = False
 
         expected_kwargs = {
             'platform': None,
@@ -2469,6 +2559,7 @@ class TestOSBS(object):
             'koji_parent_build': None,
             'signing_intent': 'release',
             'compose_ids': [1, 2],
+            'skip_build': False,
         }
 
         (flexmock(utils)
@@ -2504,7 +2595,8 @@ class TestOSBS(object):
         '',
         None
     ])
-    def test_do_create_prod_build_branch_required(self, osbs, branch_name):
+    @pytest.mark.parametrize('skip_build', [True, False])
+    def test_do_create_prod_build_branch_required(self, osbs, branch_name, skip_build):
         (flexmock(utils)
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=branch_name, depth=None)
@@ -2528,8 +2620,12 @@ class TestOSBS(object):
                                                   inner_template=inner_template,
                                                   outer_template=outer_template,
                                                   customize_conf=customize_conf,
-                                                  build_type=BUILD_TYPE_ORCHESTRATOR)
-            assert isinstance(response, BuildResponse)
+                                                  build_type=BUILD_TYPE_ORCHESTRATOR,
+                                                  skip_build=skip_build)
+            if skip_build:
+                assert response is None
+            else:
+                assert isinstance(response, BuildResponse)
         else:
             with pytest.raises(OsbsException):
                 osbs._do_create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
@@ -2537,7 +2633,8 @@ class TestOSBS(object):
                                            inner_template=inner_template,
                                            outer_template=outer_template,
                                            customize_conf=customize_conf,
-                                           build_type=BUILD_TYPE_ORCHESTRATOR)
+                                           build_type=BUILD_TYPE_ORCHESTRATOR,
+                                           skip_build=skip_build)
 
     # osbs is a fixture here
     def test_config_map(self, osbs):  # noqa
@@ -2660,7 +2757,8 @@ class TestOSBS(object):
         build_request = flexmock(
             render=lambda: build_json,
             has_ist_trigger=lambda: triggers,
-            scratch=False)
+            scratch=False,
+            skip_build=False)
         # Cannot use spec keyword arg in flexmock constructor
         # because it appears to be used by flexmock itself
         build_request.spec = spec
@@ -2804,7 +2902,8 @@ class TestOSBS(object):
         build_request = flexmock(
             render=lambda: build_json,
             has_ist_trigger=lambda: True,
-            scratch=False)
+            scratch=False,
+            skip_build=False)
         # Cannot use spec keyword arg in flexmock constructor
         # because it appears to be used by flexmock itself
         build_request.spec = spec

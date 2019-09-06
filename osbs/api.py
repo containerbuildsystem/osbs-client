@@ -456,7 +456,7 @@ class OSBS(object):
 
         build_config_name = build_json['metadata']['name']
         logger.debug('build config to be named "%s"', build_config_name)
-        existing_bc = self._get_existing_build_config(build_json)
+        original_bc = self._get_existing_build_config(build_json)
 
         image_stream, image_stream_tag_name = \
             self._get_image_stream_info_for_build_request(build_request)
@@ -465,10 +465,10 @@ class OSBS(object):
         # auto instance of Build. If defined, triggers will
         # be added to BuildConfig after ImageStreamTag object
         # is properly configured.
-        triggers = build_json['spec'].pop('triggers', None)
+        triggers = build_json['spec'].pop('triggers', [])
 
-        if existing_bc:
-            build_config_name = existing_bc['metadata']['name']
+        if original_bc:
+            build_config_name = original_bc['metadata']['name']
             existing_bc = self._update_build_config_when_exist(build_json)
 
         else:
@@ -476,6 +476,7 @@ class OSBS(object):
                          build_config_name)
             existing_bc = self.os.create_build_config(json.dumps(build_json)).json()
 
+        imstreamtag = None
         if image_stream:
             source_registry = getattr(build_request, 'source_registry', None)
             organization = getattr(build_request, 'organization', None)
@@ -488,8 +489,29 @@ class OSBS(object):
                                                        base_image=build_request.base_image)
             logger.debug('Changed parent ImageStreamTag? %s', changed_ist)
 
+            tag_id = '{}:{}'.format(image_stream['metadata']['name'], image_stream_tag_name)
+            imstreamtag = self.get_image_stream_tag(tag_id).json()
+
+        original_trigger = original_bc['spec']['triggers'] if original_bc else []
+        if original_trigger:
+            original_trigger[0]['imageChange'].pop('lastTriggeredImageID', None)
+
+        if triggers or original_trigger:
+            if triggers == original_trigger:
+                logger.info("Trigger didn't change")
+            else:
+                logger.info("Trigger changed from : %s to %s", original_trigger, triggers)
+
         if triggers:
+            if build_request.skip_build and imstreamtag:
+                triggers[0]['imageChange']['lastTriggeredImageID'] =\
+                    imstreamtag['image']['dockerImageReference']
+
             existing_bc = self._update_build_config_with_triggers(build_json, triggers)
+
+        if build_request.skip_build:
+            logger.info('Build skipped')
+            return
 
         if image_stream and triggers:
             prev_version = existing_bc['status']['lastVersion']
@@ -611,6 +633,7 @@ class OSBS(object):
                               parent_images_digests=None,
                               git_commit_depth=None,
                               operator_manifests_extract_platform=None,
+                              skip_build=False,
                               **kwargs):
 
         if flatpak:
@@ -707,6 +730,7 @@ class OSBS(object):
             isolated_build_node_selector=self.build_conf.get_isolated_build_node_selector(),
             auto_build_node_selector=self.build_conf.get_auto_build_node_selector(),
             is_auto=is_auto,
+            skip_build=skip_build,
             filesystem_koji_task_id=filesystem_koji_task_id,
             koji_upload_dir=koji_upload_dir,
             platform_descriptors=self.build_conf.get_platform_descriptors(),
@@ -756,6 +780,10 @@ class OSBS(object):
         else:
             logger.info("creating build from build_config")
             response = self._create_build_config_and_build(build_request)
+        # when build is skipped
+        if response is None:
+            return
+
         logger.debug(response.json)
         return response
 

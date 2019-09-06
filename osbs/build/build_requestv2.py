@@ -46,6 +46,7 @@ class BuildRequestV2(object):
         self.scratch = None
         self.isolated = None
         self.is_auto = None
+        self.skip_build = None
         self.base_image = None
         self.scratch_build_node_selector = None
         self.explicit_build_node_selector = None
@@ -103,6 +104,7 @@ class BuildRequestV2(object):
         :param parent_images_digests: dict, mapping image digests to names and platforms
         :param worker_deadline: int, worker completion deadline in hours
         :param orchestrator_deadline: int, orchestrator deadline in hours
+        :param skip_build: bool, if we should skip build and just set buildconfig for autorebuilds
         """
 
         # Here we cater to the koji "scratch" build type, this will disable
@@ -111,6 +113,7 @@ class BuildRequestV2(object):
         # When true, it indicates build was automatically started by
         # OpenShift via a trigger, for instance ImageChangeTrigger
         self.is_auto = kwargs.pop('is_auto', False)
+        self.skip_build = kwargs.pop('skip_build', False)
         # An isolated build is meant to patch a certain release and not
         # update transient tags in container registry
         self.isolated = kwargs.get('isolated')

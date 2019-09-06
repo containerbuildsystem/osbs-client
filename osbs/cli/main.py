@@ -323,6 +323,7 @@ def cmd_build(args, osbs):
         'isolated': args.isolated,
         'signing_intent': args.signing_intent,
         'compose_ids': args.compose_ids,
+        'skip_build': args.skip_build,
     }
     if args.arrangement_version:
         build_kwargs['arrangement_version'] = args.arrangement_version
@@ -334,6 +335,10 @@ def cmd_build(args, osbs):
         build_kwargs['flatpak'] = True
 
     build = create_func(**build_kwargs)
+    if build is None:
+        print("Build skipped")
+        return
+
     build_id = build.get_build_name()
     # we need to wait for kubelet to schedule the build, otherwise it's 500
     build = osbs.wait_for_build_to_get_scheduled(build_id)
@@ -710,6 +715,9 @@ def cli():
     orchestrator_group.add_argument('--platforms', action='append', metavar='PLATFORM',
                                     help='name of each platform to use (only required for '
                                     'arrangement 5 or earlier; deprecated in arrangement 6+')
+    orchestrator_group.add_argument('--skip-build', action='store_true', required=False,
+                                    help="don't create build, but just modify settings"
+                                         " for autorebuilds")
 
     build_parser.add_argument('--source-registry-uri', action='store', required=False,
                               help="set source registry for pulling parent image")
