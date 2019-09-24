@@ -19,7 +19,7 @@
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 
 # set to 0 to create a normal release
-%global dev_release 1
+%global dev_release 0
 
 %if 0%{?dev_release}
 %global postrelease dev
@@ -210,6 +210,9 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %endif # with_python3
 
 %changelog
+* Tue Sep 24 2019 Robert Cerven <rcerven@redhat.com> - 0.59-1
+- new upstream release: 0.59
+
 * Mon Aug 19 2019 Robert Cerven <rcerven@redhat.com> - 0.58-1
 - new upstream release: 0.58
 
