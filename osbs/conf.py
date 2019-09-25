@@ -147,28 +147,25 @@ class Configuration(object):
         # This is not configurable.
         return "v1"
 
-    def _get_api_uri(self, keyword):
-        base_uri = self.get_openshift_base_uri()
-        version = self.get_openshift_api_version()
-        return urljoin(base_uri,
-                       "/{keyword}/{version}/".format(keyword=keyword,
-                                                      version=version))
-
     def get_k8s_api_uri(self):
         """
         https://<host>[:<port>]/api/<API version>/
 
         :return: str
         """
-        return self._get_api_uri('api')
+        base_uri = self.get_openshift_base_uri()
+        version = self.get_openshift_api_version()
+        return urljoin(base_uri, "/api/{version}/".format(version=version))
 
     def get_openshift_api_uri(self):
         """
-        https://<host>[:<port>]/oapi/<API version>/
+        Compatible with OCP3.6+
+        https://<host>[:<port>]/apis/
 
         :return: str
         """
-        return self._get_api_uri('oapi')
+        base_uri = self.get_openshift_base_uri()
+        return urljoin(base_uri, "/apis/")
 
     def get_openshift_oauth_api_uri(self):
         """

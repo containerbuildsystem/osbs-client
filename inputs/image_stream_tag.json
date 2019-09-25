@@ -1,6 +1,6 @@
 {
   "kind": "ImageStreamTag",
-  "apiVersion": "v1",
+  "apiVersion": "image.openshift.io/v1",
   "metadata": {
     "name": "{{IMAGE_STREAM_ID}}:{{TAG_ID}}"
   },

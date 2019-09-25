@@ -1,5 +1,5 @@
 {
-    "apiVersion": "v1",
+    "apiVersion": "user.openshift.io/v1",
     "groups": [],
     "identities": null,
     "kind": "User",
@@ -7,7 +7,7 @@
         "creationTimestamp": "2019-05-13T17:56:39Z",
         "name": "test",
         "resourceVersion": "17840788",
-        "selfLink": "/oapi/v1/users/test",
+        "selfLink": "/apis/user.openshift.io/v1/users/test",
         "uid": "75865149-75a8-11e9-800f-fa163e5cf8d6"
     }
 }

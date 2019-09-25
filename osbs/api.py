@@ -450,10 +450,6 @@ class OSBS(object):
 
     def _create_build_config_and_build(self, build_request):
         build_json = build_request.render()
-        api_version = build_json['apiVersion']
-        if api_version != self.os_conf.get_openshift_api_version():
-            raise OsbsValidationException('BuildConfig template has incorrect apiVersion (%s)' %
-                                          api_version)
 
         build_config_name = build_json['metadata']['name']
         logger.debug('build config to be named "%s"', build_config_name)

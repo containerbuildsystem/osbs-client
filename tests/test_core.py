@@ -31,7 +31,7 @@ from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
                              TEST_LABEL_VALUE, TEST_IMAGESTREAM, TEST_IMAGESTREAM_NO_TAGS,
                              TEST_IMAGESTREAM_WITH_ANNOTATION,
                              TEST_IMAGESTREAM_WITHOUT_IMAGEREPOSITORY)
-from tests.conftest import OAPI_PREFIX, API_VER
+from tests.conftest import APIS_PREFIX, API_VER
 from tests.test_utils import JsonMatcher
 
 import requests
@@ -258,7 +258,10 @@ class TestOpenshift(object):
     def test_get_build_config(self, openshift):  # noqa
         mock_response = {"spam": "maps"}
         build_config_name = 'some-build-config-name'
-        expected_url = openshift._build_url("buildconfigs/%s/" % build_config_name)
+        expected_url = openshift._build_url(
+            "build.openshift.io/v1",
+            "buildconfigs/%s/" % build_config_name
+        )
         (flexmock(openshift)
             .should_receive("_get")
             .with_args(expected_url)
@@ -269,7 +272,10 @@ class TestOpenshift(object):
 
     def test_get_missing_build_config(self, openshift):  # noqa
         build_config_name = 'some-build-config-name'
-        expected_url = openshift._build_url("buildconfigs/%s/" % build_config_name)
+        expected_url = openshift._build_url(
+            "build.openshift.io/v1",
+            "buildconfigs/%s/" % build_config_name
+        )
         (flexmock(openshift)
             .should_receive("_get")
             .with_args(expected_url)
@@ -285,6 +291,7 @@ class TestOpenshift(object):
             ('label-2', 'value-2'),
         )
         expected_url = openshift._build_url(
+            "build.openshift.io/v1",
             "buildconfigs/?labelSelector=label-1%3Dvalue-1%2Clabel-2%3Dvalue-2")
         (flexmock(openshift)
             .should_receive("_get")
@@ -309,6 +316,7 @@ class TestOpenshift(object):
             ('label-2', 'value-2'),
         )
         expected_url = openshift._build_url(
+            "build.openshift.io/v1",
             "buildconfigs/?labelSelector=label-1%3Dvalue-1%2Clabel-2%3Dvalue-2")
         (flexmock(openshift)
             .should_receive("_get")
@@ -326,6 +334,7 @@ class TestOpenshift(object):
             ('label-2', 'value-2'),
         )
         expected_url = openshift._build_url(
+            "build.openshift.io/v1",
             "buildconfigs/?labelSelector=label-1%3Dvalue-1%2Clabel-2%3Dvalue-2")
         (flexmock(openshift)
             .should_receive("_get")
@@ -344,6 +353,7 @@ class TestOpenshift(object):
             ('label-2', 'value-2'),
         )
         expected_url = openshift._build_url(
+            "build.openshift.io/v1",
             "buildconfigs/?labelSelector=label-1%3Dvalue-1%2Clabel-2%3Dvalue-2")
         (flexmock(openshift)
             .should_receive("_get")
@@ -377,6 +387,7 @@ class TestOpenshift(object):
             ('label-2', 'value-2'),
         )
         expected_url = openshift._build_url(
+            "build.openshift.io/v1",
             "buildconfigs/?labelSelector=label-1%3Dvalue-1%2Clabel-2%3Dvalue-2")
         (flexmock(openshift)
             .should_receive("_get")
@@ -396,6 +407,7 @@ class TestOpenshift(object):
             ('label-2', 'value-2'),
         )
         expected_url = openshift._build_url(
+            "build.openshift.io/v1",
             "buildconfigs/?labelSelector=label-1%3Dvalue-1%2Clabel-2%3Dvalue-2")
         (flexmock(openshift)
             .should_receive("_get")
@@ -467,7 +479,10 @@ class TestOpenshift(object):
           }
         }
 
-        expected_url = openshift._build_url('imagestreamtags/' + tag_id)
+        expected_url = openshift._build_url(
+            "image.openshift.io/v1",
+            'imagestreamtags/' + tag_id
+        )
         (flexmock(openshift)
             .should_receive("_put")
             .with_args(expected_url, data=json.dumps(mock_data),
@@ -549,8 +564,9 @@ class TestOpenshift(object):
         tag_name = 'maps'
         tag_id = '{}:{}'.format(stream_name, tag_name)
 
-        expected_url = openshift._build_url('imagestreamtags/' +
-                                            tag_id)
+        expected_url = openshift._build_url(
+            "image.openshift.io/v1",
+            'imagestreamtags/' + tag_id)
 
         def verify_image_stream_tag(*args, **kwargs):
             data = json.loads(kwargs['data'])
@@ -714,7 +730,7 @@ class TestOpenshift(object):
             openshift_mock.once()
         else:
             openshift_mock.never()
-        Openshift(OAPI_PREFIX, API_VER, "/oauth/authorize", **kwargs)
+        Openshift(APIS_PREFIX, API_VER, "/oauth/authorize", **kwargs)
 
     @pytest.mark.parametrize('tags', (  # noqa:F811
         None,
@@ -773,8 +789,14 @@ class TestOpenshift(object):
                 }
                 stream_import_json['spec']['images'].append(image_import)
 
-        put_url = openshift._build_url("imagestreams/%s" % imagestream_name)
-        post_url = openshift._build_url("imagestreamimports/")
+        put_url = openshift._build_url(
+            "image.openshift.io/v1",
+            "imagestreams/%s" % imagestream_name
+        )
+        post_url = openshift._build_url(
+            "image.openshift.io/v1",
+            "imagestreamimports/"
+        )
         (flexmock(openshift)
             .should_call('_put')
             .times(1 if expect_update else 0)
@@ -846,8 +868,13 @@ class TestOpenshift(object):
                 }
                 stream_import_json['spec']['images'].append(image_import)
 
-        put_url = openshift._build_url("imagestreams/%s" % imagestream_name)
-        post_url = openshift._build_url("imagestreamimports/")
+        put_url = openshift._build_url(
+            "image.openshift.io/v1",
+            "imagestreams/%s" % imagestream_name
+        )
+        post_url = openshift._build_url(
+            "image.openshift.io/v1",
+            "imagestreamimports/")
         (flexmock(openshift)
             .should_call('_put')
             .times(1 if expect_update else 0)

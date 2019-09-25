@@ -1,9 +1,0 @@
-{
-    "apiVersion": "v1",
-    "items": [],
-    "kind": "BuildList",
-    "metadata": {
-        "resourceVersion": "3931",
-        "selfLink": "/oapi/v1/namespaces/default/builds/"
-    }
-}
