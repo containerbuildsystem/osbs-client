@@ -1,11 +1,11 @@
 {
-    "apiVersion": "v1",
+    "apiVersion": "image.openshift.io/v1",
     "kind": "ImageStreamImport",
     "metadata": {
         "creationTimestamp": "2019-10-11T15:38:04Z",
         "name": "test_imagestream",
         "namespace": "osbs-stage",
-        "selfLink": "/oapi/v1/namespaces/osbs-stage/imagestreamimports/test_imagestream",
+        "selfLink": "/apis/image.openshift.io/v1/namespaces/osbs-stage/imagestreamimports/test_imagestream",
         "uid": "1ddd01bc-ec3d-11e9-9f3e-fa163e98c891"
     },
     "spec": {

@@ -1207,7 +1207,8 @@ class TestOSBS(object):
                 "resourceVersion": "141714",
                 "creationTimestamp": "2015-09-16T19:25:52Z",
                 "selfLink":
-                    "/oapi/v1/namespaces/default/builds/aos-f5-router-docker-20150916-152551",
+                    "/apis/build.openshift.io/v1/namespaces/default/builds/"
+                    "aos-f5-router-docker-20150916-152551",
                 "uid": "be5dbec5-5ca8-11e5-af58-6cae8b5467ca"
             }
         }
@@ -1474,18 +1475,6 @@ class TestOSBS(object):
 
         builds_list = osbs_obj._get_not_cancelled_builds_for_koji_task(koji_task_id)
         assert len(builds_list) == count
-
-    def test_create_build_config_bad_version(self):
-        config = Configuration(conf_name=None)
-        osbs_obj = OSBS(config, config)
-        build_json = {'apiVersion': 'spam'}
-        build_request = flexmock(
-            render=lambda: build_json,
-            has_ist_trigger=lambda: False,
-            scratch=False)
-
-        with pytest.raises(OsbsValidationException):
-            osbs_obj._create_build_config_and_build(build_request)
 
     def test_create_build_config_label_mismatch(self):
         config = Configuration(conf_name=None)
@@ -2680,7 +2669,7 @@ class TestOSBS(object):
     def test_retries_disabled(self, osbs):  # noqa
         (flexmock(osbs.os._con)
             .should_call('get')
-            .with_args("/oapi/v1/namespaces/default/builds/", headers={},
+            .with_args("/apis/build.openshift.io/v1/namespaces/default/builds/", headers={},
                        verify_ssl=True, retries_enabled=False))
         with osbs.retries_disabled():
             response_list = osbs.list_builds()

@@ -1,11 +1,11 @@
 {
     "object": {
         "kind": "Build",
-        "apiVersion": "v1",
+        "apiVersion": "build.openshift.io/v1",
         "metadata": {
             "name": "test-orchestrator-build-123",
             "namespace": "osbs-stage",
-            "selfLink": "/oapi/v1/namespaces/osbs-stage/builds/scratch-88836-20191011153053",
+            "selfLink": "/apis/build.openshift.io/v1/namespaces/osbs-stage/builds/scratch-88836-20191011153053",
             "uid": "1d712d8b-ec3c-11e9-9f3e-fa163e98c891",
             "resourceVersion": "59465532",
             "creationTimestamp": "2019-10-11T15:30:54Z",

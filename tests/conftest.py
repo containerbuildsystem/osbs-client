@@ -33,8 +33,12 @@ from six.moves.urllib.parse import urlparse
 
 logger = logging.getLogger("osbs.tests")
 API_VER = Configuration.get_openshift_api_version()
-OAPI_PREFIX = "/oapi/{v}/".format(v=API_VER)
+APIS_PREFIX = "/apis/"
 API_PREFIX = "/api/{v}/".format(v=API_VER)
+
+API_BUILD_V1 = APIS_PREFIX + "build.openshift.io/v1/"
+API_IMAGE_V1 = APIS_PREFIX + "image.openshift.io/v1/"
+API_USER_V1 = APIS_PREFIX + "user.openshift.io/v1/"
 
 
 class StreamingResponse(object):
@@ -65,9 +69,9 @@ class Connection(object):
         # The files are captured using the command line tool's
         # --capture-dir parameter, and edited as needed.
         self.DEFINITION = {
-            (OAPI_PREFIX + "namespaces/default/builds",
-             OAPI_PREFIX + "namespaces/default/builds/",
-             OAPI_PREFIX + "namespaces/default/builds/?labelSelector=koji-task-id%3D123456789"): {
+            (API_BUILD_V1 + "namespaces/default/builds",
+             API_BUILD_V1 + "namespaces/default/builds/",
+             API_BUILD_V1 + "namespaces/default/builds/?labelSelector=koji-task-id%3D123456789"): {
                 "get": {
                     # Contains a list of builds
                     "file": "builds_list.json",
@@ -78,31 +82,31 @@ class Connection(object):
                 },
             },
 
-            (OAPI_PREFIX + "namespaces/default/builds/?labelSelector=koji-task-id%3D987654321"): {
+            (API_BUILD_V1 + "namespaces/default/builds/?labelSelector=koji-task-id%3D987654321"): {
                 "get": {
                     # no build for this koji id
                     "file": "builds_list_empty.json",
                 },
             },
 
-            (OAPI_PREFIX + "namespaces/default/builds/?labelSelector=koji-task-id%3D123459876"): {
+            (API_BUILD_V1 + "namespaces/default/builds/?labelSelector=koji-task-id%3D123459876"): {
                 "get": {
                     # one build for this koji id
                     "file": "builds_list_one.json",
                 },
             },
 
-            (OAPI_PREFIX + "namespaces/default/builds?fieldSelector=status%3DRunning",
-             OAPI_PREFIX + "namespaces/default/builds/?fieldSelector=status%3DRunning"): {
+            (API_BUILD_V1 + "namespaces/default/builds?fieldSelector=status%3DRunning",
+             API_BUILD_V1 + "namespaces/default/builds/?fieldSelector=status%3DRunning"): {
                 "get": {
                     # Contains a list of builds
                     "file": "builds_list.json",
                 }
             },
 
-            (OAPI_PREFIX + "namespaces/default/builds?fieldSelector=status%21%3DFailed%2C"
+            (API_BUILD_V1 + "namespaces/default/builds?fieldSelector=status%21%3DFailed%2C"
                            "status%21%3DComplete%2Cstatus%21%3DError%2Cstatus%21%3DCancelled",
-             OAPI_PREFIX + "namespaces/default/builds/?fieldSelector=status%21%3DFailed%2C"
+             API_BUILD_V1 + "namespaces/default/builds/?fieldSelector=status%21%3DFailed%2C"
                            "status%21%3DComplete%2Cstatus%21%3DError%2Cstatus%21%3DCancelled"): {
                 "get": {
                     # Contains a list of builds
@@ -110,10 +114,10 @@ class Connection(object):
                 }
             },
 
-            (OAPI_PREFIX + "namespaces/default/builds?fieldSelector=foo%3Doof%2C"
+            (API_BUILD_V1 + "namespaces/default/builds?fieldSelector=foo%3Doof%2C"
                            "status%21%3DFailed%2Cstatus%21%3DComplete%2Cstatus%21%3DError%2C"
                            "status%21%3DCancelled",
-             OAPI_PREFIX + "namespaces/default/builds/?fieldSelector=foo%3Doof%2C"
+             API_BUILD_V1 + "namespaces/default/builds/?fieldSelector=foo%3Doof%2C"
                            "status%21%3DFailed%2Cstatus%21%3DComplete%2Cstatus%21%3DError%2C"
                            "status%21%3DCancelled"): {
                 "get": {
@@ -122,15 +126,15 @@ class Connection(object):
                 }
             },
 
-            (OAPI_PREFIX + "namespaces/default/builds?fieldSelector=foo%3Doof",
-             OAPI_PREFIX + "namespaces/default/builds/?fieldSelector=foo%3Doof"): {
+            (API_BUILD_V1 + "namespaces/default/builds?fieldSelector=foo%3Doof",
+             API_BUILD_V1 + "namespaces/default/builds/?fieldSelector=foo%3Doof"): {
                 "get": {
                     # Contains a list of builds
                     "file": "builds_list.json",
                 }
             },
 
-            OAPI_PREFIX + "namespaces/default/builds/"
+            API_BUILD_V1 + "namespaces/default/builds/"
                           "?labelSelector=koji-task-id%3D{task}".format(task=TEST_KOJI_TASK_ID): {
                 "get": {
                     # Contains a list of builds
@@ -139,8 +143,8 @@ class Connection(object):
             },
 
             # Some 'builds' requests are with a trailing slash, some without:
-            (OAPI_PREFIX + "namespaces/default/builds/%s" % TEST_BUILD,
-             OAPI_PREFIX + "namespaces/default/builds/%s/" % TEST_BUILD): {
+            (API_BUILD_V1 + "namespaces/default/builds/%s" % TEST_BUILD,
+             API_BUILD_V1 + "namespaces/default/builds/%s/" % TEST_BUILD): {
                  "get": {
                      # Contains a single build in Completed phase
                      # named test-build-123
@@ -152,8 +156,8 @@ class Connection(object):
             },
 
             # Some 'builds' requests are with a trailing slash, some without:
-            (OAPI_PREFIX + "namespaces/default/builds/%s" % TEST_ORCHESTRATOR_BUILD,
-             OAPI_PREFIX + "namespaces/default/builds/%s/" % TEST_ORCHESTRATOR_BUILD): {
+            (API_BUILD_V1 + "namespaces/default/builds/%s" % TEST_ORCHESTRATOR_BUILD,
+             API_BUILD_V1 + "namespaces/default/builds/%s/" % TEST_ORCHESTRATOR_BUILD): {
                  "get": {
                      # Contains a single build in Completed phase
                      # named test-orchestrator-build-123
@@ -165,8 +169,8 @@ class Connection(object):
             },
 
             # Simulate build cancellation
-            (OAPI_PREFIX + "namespaces/default/builds/%s" % TEST_CANCELLED_BUILD,
-             OAPI_PREFIX + "namespaces/default/builds/%s/" % TEST_CANCELLED_BUILD): {
+            (API_BUILD_V1 + "namespaces/default/builds/%s" % TEST_CANCELLED_BUILD,
+             API_BUILD_V1 + "namespaces/default/builds/%s/" % TEST_CANCELLED_BUILD): {
                  "get": {
                      # Contains a single build in Completed phase
                      # named test-build-123
@@ -178,18 +182,18 @@ class Connection(object):
             },
 
 
-            (OAPI_PREFIX + "namespaces/default/builds/%s/log/" % TEST_BUILD,
-             OAPI_PREFIX + "namespaces/default/builds/%s/log/?follow=0" % TEST_BUILD,
-             OAPI_PREFIX + "namespaces/default/builds/%s/log/?follow=1" % TEST_BUILD): {
+            (API_BUILD_V1 + "namespaces/default/builds/%s/log/" % TEST_BUILD,
+             API_BUILD_V1 + "namespaces/default/builds/%s/log/?follow=0" % TEST_BUILD,
+             API_BUILD_V1 + "namespaces/default/builds/%s/log/?follow=1" % TEST_BUILD): {
                  "get": {
                      # Lines of text
                      "file": "build_test-build-123_logs.txt",
                  },
             },
 
-            (OAPI_PREFIX + "namespaces/default/builds/%s/log/" % TEST_ORCHESTRATOR_BUILD,
-             OAPI_PREFIX + "namespaces/default/builds/%s/log/?follow=0" % TEST_ORCHESTRATOR_BUILD,
-             OAPI_PREFIX + "namespaces/default/builds/%s/log/?follow=1"
+            (API_BUILD_V1 + "namespaces/default/builds/%s/log/" % TEST_ORCHESTRATOR_BUILD,
+             API_BUILD_V1 + "namespaces/default/builds/%s/log/?follow=0" % TEST_ORCHESTRATOR_BUILD,
+             API_BUILD_V1 + "namespaces/default/builds/%s/log/?follow=1"
              % TEST_ORCHESTRATOR_BUILD): {
                  "get": {
                      # Lines of text
@@ -206,13 +210,13 @@ class Connection(object):
                  }
             },
 
-            OAPI_PREFIX + "users/~/": {
+            API_USER_V1 + "users/~/": {
                 "get": {
                     "file": "get_user.json",
                 }
             },
 
-            OAPI_PREFIX + "watch/namespaces/default/builds/%s/" % TEST_BUILD: {
+            API_BUILD_V1 + "watch/namespaces/default/builds/%s/" % TEST_BUILD: {
                 "get": {
                     # Single MODIFIED item, with a Build object in
                     # Completed phase named test-build-123
@@ -220,7 +224,7 @@ class Connection(object):
                 }
             },
 
-            OAPI_PREFIX + "watch/namespaces/default/builds/%s/" % TEST_ORCHESTRATOR_BUILD: {
+            API_BUILD_V1 + "watch/namespaces/default/builds/%s/" % TEST_ORCHESTRATOR_BUILD: {
                 "get": {
                     # Single MODIFIED item, with a Build object in
                     # Completed phase named test-build-123
@@ -228,14 +232,14 @@ class Connection(object):
                 }
             },
 
-            OAPI_PREFIX + "namespaces/default/buildconfigs/": {
+            API_BUILD_V1 + "namespaces/default/buildconfigs/": {
                 "post": {
                     # Contains a BuildConfig named test-build-config-123
                     "file": "created_build_config_test-build-config-123.json",
                 }
             },
 
-            OAPI_PREFIX + "namespaces/default/buildconfigs/%s/instantiate" % TEST_BUILD_CONFIG: {
+            API_BUILD_V1 + "namespaces/default/buildconfigs/%s/instantiate" % TEST_BUILD_CONFIG: {
                 "post": {
                     # A Build named test-build-123 instantiated from a
                     # BuildConfig named test-build-config-123
@@ -244,12 +248,12 @@ class Connection(object):
             },
 
             # use both version with ending slash and without it
-            (OAPI_PREFIX + "namespaces/default/buildconfigs/%s" % TEST_BUILD_CONFIG,
-             OAPI_PREFIX + "namespaces/default/buildconfigs/%s/" % TEST_BUILD_CONFIG,
-             ((OAPI_PREFIX + "namespaces/default/buildconfigs/?labelSelector=" +
+            (API_BUILD_V1 + "namespaces/default/buildconfigs/%s" % TEST_BUILD_CONFIG,
+             API_BUILD_V1 + "namespaces/default/buildconfigs/%s/" % TEST_BUILD_CONFIG,
+             ((API_BUILD_V1 + "namespaces/default/buildconfigs/?labelSelector=" +
                "git-repo-name%%3D%s" "%%2C" "git-branch%%3D%s"
                ) % (TEST_GIT_URI_HUMAN_NAME, TEST_GIT_BRANCH)),
-             ((OAPI_PREFIX + "namespaces/default/buildconfigs/?labelSelector=" +
+             ((API_BUILD_V1 + "namespaces/default/buildconfigs/?labelSelector=" +
                "git-repo-name%%3D%s" "%%2C" "git-branch%%3D%s" "%%2C" "git-full-repo%%3D%s"
                ) % (TEST_GIT_URI_HUMAN_NAME, TEST_GIT_BRANCH, TEST_GIT_URI_SANITIZED)),
              ): {
@@ -261,7 +265,7 @@ class Connection(object):
                  }
             },
 
-            OAPI_PREFIX + "namespaces/default/builds/?labelSelector=buildconfig%%3D%s" %
+            API_BUILD_V1 + "namespaces/default/builds/?labelSelector=buildconfig%%3D%s" %
             TEST_BUILD_CONFIG: {
                 "get": {
                     # Contains a BuildList with Builds labeled with
@@ -271,7 +275,7 @@ class Connection(object):
                 }
             },
 
-            OAPI_PREFIX + "namespaces/default/imagestreams/%s" %
+            API_IMAGE_V1 + "namespaces/default/imagestreams/%s" %
             TEST_IMAGESTREAM: {
                 "get": {
                     # Contains imagestream
@@ -286,7 +290,7 @@ class Connection(object):
                 }
             },
 
-            OAPI_PREFIX + "namespaces/default/imagestreams/%s" %
+            API_IMAGE_V1 + "namespaces/default/imagestreams/%s" %
             TEST_IMAGESTREAM_NO_TAGS: {
                 "get": {
                     # Contains imagestream with no tags
@@ -300,7 +304,7 @@ class Connection(object):
                 }
             },
 
-            OAPI_PREFIX + "namespaces/default/imagestreams/%s" %
+            API_IMAGE_V1 + "namespaces/default/imagestreams/%s" %
             TEST_IMAGESTREAM_WITH_ANNOTATION: {
                 "get": {
                     # Contains imagestream with 3 tags; source repository
@@ -316,7 +320,7 @@ class Connection(object):
                 }
             },
 
-            OAPI_PREFIX + "namespaces/default/imagestreams/%s" %
+            API_IMAGE_V1 + "namespaces/default/imagestreams/%s" %
             TEST_IMAGESTREAM_WITHOUT_IMAGEREPOSITORY: {
                 "get": {
                     # Contains imagestream with 3 tags; source repository
@@ -332,7 +336,7 @@ class Connection(object):
                 }
             },
 
-            OAPI_PREFIX + "namespaces/default/imagestreamimports/": {
+            API_IMAGE_V1 + "namespaces/default/imagestreamimports/": {
                 "post": {
                     "file": "imagestreamimport.json",
                 }
@@ -498,9 +502,9 @@ class Connection(object):
         return self.request(url, "delete", *args, **kwargs)
 
 
-@pytest.fixture(params=["1.0.4", "3.9.41"])
+@pytest.fixture(params=["3.9.41"])
 def openshift(request):
-    os_inst = Openshift(OAPI_PREFIX, API_VER, "/oauth/authorize",
+    os_inst = Openshift(APIS_PREFIX, API_VER, "/oauth/authorize",
                         k8s_api_url=API_PREFIX)
     os_inst._con = Connection(request.param)
     return os_inst

@@ -45,6 +45,16 @@ MAX_BAD_RESPONSES = WATCH_RETRY // 3
 WAIT_RETRY_HOURS = 12
 WAIT_RETRY = WAIT_RETRY_HOURS * 3600 // (WATCH_RETRY_SECS * WATCH_RETRY)
 
+OCP_BUILD_API_V1 = "build.openshift.io/v1"
+OCP_IMAGE_API_V1 = "image.openshift.io/v1"
+OCP_USER_API_V1 = "user.openshift.io/v1"
+
+OCP_RESOURCE_API_VERSION_MAP = {
+    'builds': OCP_BUILD_API_V1,
+    'buildconfigs': OCP_BUILD_API_V1,
+    'imagestreams': OCP_IMAGE_API_V1,
+}
+
 
 def check_response(response, log_level=logging.ERROR):
     if response.status_code not in (http_client.OK, http_client.CREATED):
@@ -134,11 +144,12 @@ class Openshift(object):
             url += ("?" + urlencode(query))
         return urljoin(self.k8s_api_url, url)
 
-    def _build_url(self, url, _prepend_namespace=True, **query):
+    def _build_url(self, api_version, url, _prepend_namespace=True, **query):
         if _prepend_namespace:
             url = "namespaces/%s/%s" % (self.namespace, url)
         if query:
             url += ("?" + urlencode(query))
+        url = "{}/{}".format(api_version, url)
         return urljoin(self.os_api_url, url)
 
     def _request_args(self, with_auth=True, **kwargs):
@@ -237,7 +248,11 @@ class Openshift(object):
         :param username: str, name of user to get info about, default="~"
         :return: dict
         """
-        url = self._build_url("users/%s/" % username, _prepend_namespace=False)
+        url = self._build_url(
+            OCP_USER_API_V1,
+            "users/%s/" % username,
+            _prepend_namespace=False
+        )
         response = self._get(url)
         check_response(response)
         return response
@@ -297,7 +312,7 @@ class Openshift(object):
         """
         :return:
         """
-        url = self._build_url("builds/")
+        url = self._build_url(OCP_BUILD_API_V1, "builds/")
         logger.debug(build_json)
         return self._post(url, data=json.dumps(build_json),
                           headers={"Content-Type": "application/json"})
@@ -306,7 +321,7 @@ class Openshift(object):
         response = self.get_build(build_id)
         br = BuildResponse(response.json())
         br.cancelled = True
-        url = self._build_url("builds/%s/" % build_id)
+        url = self._build_url(OCP_BUILD_API_V1, "builds/%s/" % build_id)
         return self._put(url, data=json.dumps(br.json),
                          headers={"Content-Type": "application/json"})
 
@@ -318,7 +333,10 @@ class Openshift(object):
         return self._get(url)
 
     def get_build_config(self, build_config_id):
-        url = self._build_url("buildconfigs/%s/" % build_config_id)
+        url = self._build_url(
+            OCP_BUILD_API_V1,
+            "buildconfigs/%s/" % build_config_id
+        )
         response = self._get(url)
         build_config = response.json()
         return build_config
@@ -330,7 +348,11 @@ class Openshift(object):
         """
         labels = ['%s=%s' % (field, value) for field, value in label_selectors]
         labels = ','.join(labels)
-        url = self._build_url("buildconfigs/", labelSelector=labels)
+        url = self._build_url(
+            OCP_BUILD_API_V1,
+            "buildconfigs/",
+            labelSelector=labels
+        )
         return self._get(url).json()['items']
 
     def get_build_config_by_labels(self, label_selectors):
@@ -382,22 +404,29 @@ class Openshift(object):
         """
         :return:
         """
-        url = self._build_url("buildconfigs/")
+        url = self._build_url(OCP_BUILD_API_V1, "buildconfigs/")
         return self._post(url, data=build_config_json,
                           headers={"Content-Type": "application/json"})
 
     def update_build_config(self, build_config_id, build_config_json):
-        url = self._build_url("buildconfigs/%s" % build_config_id)
+        url = self._build_url(
+            OCP_BUILD_API_V1,
+            "buildconfigs/%s" % build_config_id
+        )
         response = self._put(url, data=build_config_json,
                              headers={"Content-Type": "application/json"})
         check_response(response)
         return response
 
     def instantiate_build_config(self, build_config_id):
-        url = self._build_url("buildconfigs/%s/instantiate" % build_config_id)
+        api_ver = OCP_BUILD_API_V1
+        url = self._build_url(
+            api_ver,
+            "buildconfigs/%s/instantiate" % build_config_id
+        )
         data = json.dumps({
             "kind": "BuildRequest",
-            "apiVersion": self._os_api_version,
+            "apiVersion": api_ver,
             "metadata": {
                 "name": build_config_id,
             },
@@ -449,8 +478,11 @@ class Openshift(object):
         # would be set to.
         last_activity = time.time()
         while True:
-            buildlogs_url = self._build_url("builds/%s/log/" % build_id,
-                                            **kwargs)
+            buildlogs_url = self._build_url(
+                OCP_BUILD_API_V1,
+                "builds/%s/log/" % build_id,
+                **kwargs
+            )
             try:
                 response = self._get(buildlogs_url, stream=1,
                                      headers={'Connection': 'close'})
@@ -514,7 +546,10 @@ class Openshift(object):
         if follow:
             return self.stream_logs(build_id)
 
-        buildlogs_url = self._build_url("builds/%s/log/" % build_id)
+        buildlogs_url = self._build_url(
+            OCP_BUILD_API_V1,
+            "builds/%s/log/" % build_id
+        )
         response = self._get(buildlogs_url, headers={'Connection': 'close'})
         check_response(response)
         return response.content
@@ -549,7 +584,11 @@ class Openshift(object):
 
         if field_selector is not None:
             query['fieldSelector'] = field_selector
-        url = self._build_url("builds/", **query)
+        url = self._build_url(
+            OCP_BUILD_API_V1,
+            "builds/",
+            **query
+        )
         return self._get(url)
 
     def get_build(self, build_id):
@@ -557,7 +596,10 @@ class Openshift(object):
 
         :return:
         """
-        url = self._build_url("builds/%s/" % build_id)
+        url = self._build_url(
+            OCP_BUILD_API_V1,
+            "builds/%s/" % build_id
+        )
         response = self._get(url)
         check_response(response)
         return response
@@ -608,7 +650,10 @@ class Openshift(object):
         path = "watch/namespaces/%s/%s/" % (self.namespace, resource_type)
         if resource_name is not None:
             path += "%s/" % resource_name
-        url = self._build_url(path, _prepend_namespace=False, **request_args)
+        api_ver = OCP_RESOURCE_API_VERSION_MAP[resource_type]
+        url = self._build_url(
+            api_ver, path, _prepend_namespace=False, **request_args
+        )
 
         bad_responses = 0
         for _ in range(WATCH_RETRY):
@@ -739,7 +784,8 @@ class Openshift(object):
                     self._replace_metadata_things
         :return:
         """
-        url = self._build_url("%s/%s" % (collection, name))
+        api_ver = OCP_RESOURCE_API_VERSION_MAP[collection]
+        url = self._build_url(api_ver, "%s/%s" % (collection, name))
         response = self._get(url)
         logger.debug("before modification: %r", response.content)
         build_json = response.json()
@@ -786,13 +832,19 @@ class Openshift(object):
                                                 self._replace_metadata_things)
 
     def get_image_stream_tag(self, tag_id):
-        url = self._build_url("imagestreamtags/%s" % tag_id)
+        url = self._build_url(
+            OCP_IMAGE_API_V1,
+            "imagestreamtags/%s" % tag_id
+        )
         response = self._get(url)
         check_response(response, log_level=logging.DEBUG)
         return response
 
     def put_image_stream_tag(self, tag_id, tag):
-        url = self._build_url("imagestreamtags/%s" % tag_id)
+        url = self._build_url(
+            OCP_IMAGE_API_V1,
+            "imagestreamtags/%s" % tag_id
+        )
         response = self._put(url, data=json.dumps(tag),
                              headers={"Content-Type": "application/json"})
         check_response(response)
@@ -848,20 +900,29 @@ class Openshift(object):
         return changed
 
     def get_image_stream(self, stream_id):
-        url = self._build_url("imagestreams/%s" % stream_id)
+        url = self._build_url(
+            OCP_IMAGE_API_V1,
+            "imagestreams/%s" % stream_id
+        )
         response = self._get(url)
         check_response(response, log_level=logging.DEBUG)
         return response
 
     def create_image_stream(self, stream_json):
-        url = self._build_url("imagestreams/")
+        url = self._build_url(
+            OCP_IMAGE_API_V1,
+            "imagestreams/"
+        )
         response = self._post(url, data=stream_json,
                               headers={"Content-Type": "application/json"})
         check_response(response)
         return response
 
     def update_image_stream(self, stream_id, stream_json):
-        url = self._build_url("imagestreams/%s" % stream_id)
+        url = self._build_url(
+            OCP_IMAGE_API_V1,
+            "imagestreams/%s" % stream_id
+        )
         response = self._put(url, data=json.dumps(stream_json),
                              use_json=True)
         check_response(response)
@@ -909,7 +970,10 @@ class Openshift(object):
             logger.debug('No tags to import')
             return False
 
-        import_url = self._build_url("imagestreamimports/")
+        import_url = self._build_url(
+            OCP_IMAGE_API_V1,
+            "imagestreamimports/"
+        )
         import_response = self._post(import_url, data=json.dumps(stream_import),
                                      use_json=True)
         self._check_import_image_response(import_response)
@@ -973,7 +1037,10 @@ class Openshift(object):
             }
             stream_import['spec']['images'].append(image_import)
 
-        import_url = self._build_url("imagestreamimports/")
+        import_url = self._build_url(
+            OCP_IMAGE_API_V1,
+            "imagestreamimports/"
+        )
         import_response = self._post(import_url, data=json.dumps(stream_import),
                                      use_json=True)
         self._check_import_image_response(import_response)
@@ -1008,13 +1075,15 @@ class Openshift(object):
                 raise ImportImageFailed(error_msg)
 
     def dump_resource(self, resource_type):
-        url = self._build_url("%s" % resource_type)
+        api_ver = OCP_RESOURCE_API_VERSION_MAP[resource_type]
+        url = self._build_url(api_ver, "%s" % resource_type)
         response = self._get(url)
         check_response(response)
         return response
 
     def restore_resource(self, resource_type, resource):
-        url = self._build_url("%s" % resource_type)
+        api_ver = OCP_RESOURCE_API_VERSION_MAP[resource_type]
+        url = self._build_url(api_ver, "%s" % resource_type)
         response = self._post(url, data=json.dumps(resource),
                               headers={"Content-Type": "application/json"})
         check_response(response)
@@ -1040,7 +1109,7 @@ class Openshift(object):
 
 
 if __name__ == '__main__':
-    o = Openshift(openshift_api_url="https://localhost:8443/oapi/v1/",
+    o = Openshift(openshift_api_url="https://localhost:8443/apis/",
                   openshift_api_version="v1",
                   openshift_oauth_url="https://localhost:8443/oauth/authorize",
                   verbose=True)

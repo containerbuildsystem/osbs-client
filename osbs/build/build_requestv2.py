@@ -40,7 +40,7 @@ class BuildRequestV2(object):
         self.build_json = None       # rendered template
         self._template = None        # template loaded from filesystem
         self._resource_limits = None
-        self._openshift_required_version = parse_version('1.0.6')
+        self._openshift_required_version = parse_version('3.6.0')
         self._repo_info = None
         # For the koji "scratch" build type
         self.scratch = None
