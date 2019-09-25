@@ -506,6 +506,7 @@ class OSBS(object):
             if build_request.skip_build and imstreamtag:
                 triggers[0]['imageChange']['lastTriggeredImageID'] =\
                     imstreamtag['image']['dockerImageReference']
+                build_json['metadata']['labels']['is_autorebuild'] = "true"
 
             existing_bc = self._update_build_config_with_triggers(build_json, triggers)
 
