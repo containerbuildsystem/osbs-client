@@ -440,10 +440,11 @@ class OSBS(object):
         return existing_bc
 
     @retry_on_conflict
-    def _update_build_config_with_triggers(self, build_json, triggers):
+    def _update_build_config_with_triggers(self, build_json, triggers, is_autorebuild=False):
         existing_bc = self._get_existing_build_config(build_json)
         existing_bc['spec']['triggers'] = triggers
         build_config_name = existing_bc['metadata']['name']
+        existing_bc['metadata']['labels']['is_autorebuild'] = "true" if is_autorebuild else "false"
         self.os.update_build_config(build_config_name, json.dumps(existing_bc))
         return existing_bc
 
@@ -503,12 +504,14 @@ class OSBS(object):
                 logger.info("Trigger changed from : %s to %s", original_trigger, triggers)
 
         if triggers:
+            is_autorebuild = False
             if build_request.skip_build and imstreamtag:
                 triggers[0]['imageChange']['lastTriggeredImageID'] =\
                     imstreamtag['image']['dockerImageReference']
-                build_json['metadata']['labels']['is_autorebuild'] = "true"
+                is_autorebuild = True
 
-            existing_bc = self._update_build_config_with_triggers(build_json, triggers)
+            existing_bc = self._update_build_config_with_triggers(build_json, triggers,
+                                                                  is_autorebuild)
 
         if build_request.skip_build:
             logger.info('Build skipped')
