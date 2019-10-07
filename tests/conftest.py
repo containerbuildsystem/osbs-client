@@ -433,7 +433,7 @@ class Connection(object):
     def remove_imagerepository(key, content):
         content = json.loads(content)
         content['spec'].pop('dockerImageRepository', None)
-        content['metadata']['annotations'].pop(ANNOTATION_INSECURE_REPO)
+        content['metadata']['annotations'].pop(ANNOTATION_INSECURE_REPO, None)
         content['spec']['tags'] = []
         return {"content": json.dumps(content).encode('utf-8')}
 

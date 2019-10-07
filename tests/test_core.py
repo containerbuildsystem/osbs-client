@@ -739,9 +739,13 @@ class TestOpenshift(object):
         with open(json_path) as f:
             template_resource_json = json.load(f)
 
+        source_repo = None
         modified_resource_json = deepcopy(template_resource_json)
-        source_repo = modified_resource_json['spec'].pop('dockerImageRepository')
-        modified_resource_json['metadata']['annotations'][ANNOTATION_SOURCE_REPO] = source_repo
+        if modified_resource_json['spec'].get('dockerImageRepository'):
+            source_repo = modified_resource_json['spec'].pop('dockerImageRepository')
+            modified_resource_json['metadata']['annotations'][ANNOTATION_SOURCE_REPO] = source_repo
+        else:
+            source_repo = modified_resource_json['status'].get('dockerImageRepository')
 
         stream_import = {'metadata': {'name': 'FOO'}, 'spec': {'images': []}}
         stream_import_json = deepcopy(stream_import)
@@ -812,7 +816,16 @@ class TestOpenshift(object):
         modified_resource_json = deepcopy(template_resource_json)
         for annotation in ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO:
             modified_resource_json['metadata']['annotations'].pop(annotation, None)
-        source_repo = modified_resource_json['spec'].pop('dockerImageRepository')
+
+        source_repo = None
+        if modified_resource_json['spec'].get('dockerImageRepository'):
+            source_repo = modified_resource_json['spec'].pop('dockerImageRepository')
+        else:
+            source_repo = modified_resource_json['status'].get('dockerImageRepository')
+            modified_resource_json['spec']['dockerImageRepository'] = source_repo
+        if modified_resource_json['metadata']['annotations'].get(ANNOTATION_SOURCE_REPO):
+            modified_resource_json['metadata']['annotations'][ANNOTATION_SOURCE_REPO] = source_repo
+
         if remove_tags:
             modified_resource_json['spec']['tags'] = []
         expect_import = False
