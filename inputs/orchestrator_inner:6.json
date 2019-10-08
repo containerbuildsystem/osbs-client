@@ -68,26 +68,11 @@
       "name": "group_manifests"
     },
     {
-      "name": "pulp_sync",
-      "args": {
-        "publish": false
-      }
-    },
-    {
       "name": "push_operator_manifests"
     }
   ],
   "prepublish_plugins": [],
   "exit_plugins": [
-    {
-      "name": "pulp_publish"
-    },
-    {
-      "name": "pulp_pull",
-      "args": {
-        "insecure": true
-      }
-    },
     {
       "name": "verify_media",
       "required": false

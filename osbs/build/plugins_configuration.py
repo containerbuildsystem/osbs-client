@@ -156,7 +156,6 @@ class PluginsConfiguration(object):
             remove_plugins = [
                 ("prebuild_plugins", "koji_parent"),
                 ("postbuild_plugins", "compress"),  # required only to make an archive for Koji
-                ("postbuild_plugins", "pulp_pull"),  # required only to make an archive for Koji
                 ("postbuild_plugins", "compare_components"),
                 ("postbuild_plugins", "import_image"),
                 ("exit_plugins", "koji_promote"),
@@ -196,13 +195,6 @@ class PluginsConfiguration(object):
                 # We'll extract the filesystem anyways for a Flatpak instead of exporting
                 # the docker image directly, so squash just slows things down.
                 ("prepublish_plugins", "squash"),
-                # Pulp can't currently handle Flatpaks, which are OCI images
-                ("postbuild_plugins", "pulp_sync"),
-                ("exit_plugins", "pulp_publish"),
-                ("exit_plugins", "pulp_pull"),
-                # delete_from_registry is used for deleting builds from the temporary registry
-                # that pulp_sync mirrors from.
-                ("exit_plugins", "delete_from_registry"),
             ]
             for when, which in remove_plugins:
                 self.pt.remove_plugin(when, which, 'not needed for flatpak build')

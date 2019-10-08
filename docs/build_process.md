@@ -33,8 +33,7 @@ This document mentions several components that communicate with each other:
 
 Since in v2 there is no file-like representation of an image, you can transport image only via registry protocol.
 
-In order to create a v2 form, you need an instance of [distribution](https://github.com/docker/distribution) registry. Once you push the built image there, it's up to you, if you want to move the v2 image into pulp registry. That process is called sync.
-
+In order to create a v2 form, you need an instance of [distribution](https://github.com/docker/distribution) registry.
  * upstream docker registry — can be configured with `registry_uri`:
 
 ```ini
@@ -51,14 +50,6 @@ registry_uri = registry.example.com
 ```ini
 registry_uri = registry.example.com/v2
 ```
-
-Configuration of pulp registry where images should be synced can be done via:
-
-```ini
-pulp_sync_registry_name = stage-pulp
-```
-
-If this is not specified, value of `pulp_registry_name` is used.
 
 
 ### About v1 builds
