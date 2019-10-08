@@ -246,9 +246,6 @@ class TestPluginsConfiguration(object):
     not_flatpak_plugins = [
         ("o", "prebuild_plugins", "resolve_composes"),
         ("w", "prepublish_plugins", "squash"),
-        ("o", "postbuild_plugins", "pulp_sync"),
-        ("o", "exit_plugins", "pulp_publish"),
-        ("o", "exit_plugins", "pulp_pull"),
         ("o", "exit_plugins", "import_image"),
     ]
 
@@ -648,7 +645,7 @@ class TestPluginsConfiguration(object):
         base_plugins = get_plugins_from_build_json(base_build_json)
 
         plugin_type = "exit_plugins"
-        plugin_name = "pulp_publish"
+        plugin_name = "koji_import"
         plugin_args = {"foo": "bar"}
 
         for plugin_dict in base_plugins[plugin_type]:
@@ -815,7 +812,6 @@ class TestPluginsConfiguration(object):
         remove_plugins = [
             ("prebuild_plugins", "koji_parent"),
             ("postbuild_plugins", "compress"),
-            ("postbuild_plugins", "pulp_pull"),
             ("postbuild_plugins", "compare_components"),
             ("postbuild_plugins", "import_image"),
             ("exit_plugins", "koji_promote"),

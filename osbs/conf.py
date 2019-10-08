@@ -310,9 +310,6 @@ class Configuration(object):
         return self._get_deprecated("source_registry_uri", self.conf_section,
                                     "source_registry_uri")
 
-    def get_pulp_registry(self):
-        return self._get_deprecated("pulp_registry_name", self.conf_section, "pulp_registry_name")
-
     def get_prefer_schema1_digest(self):
         return self._get_deprecated("prefer_schema1_digest", self.conf_section,
                                     "prefer_schema1_digest", is_bool_val=True)
@@ -368,10 +365,6 @@ class Configuration(object):
             logger.warning("%r not found, falling back to build_json_dir", key)
             builder_build_json_dir = self.get_build_json_store()
         return builder_build_json_dir
-
-    def get_pulp_secret(self):
-        secret = self._get_deprecated("pulp_secret", self.conf_section, "pulp_secret")
-        return secret
 
     def get_smtp_host(self):
         return self._get_deprecated("smtp_host", self.conf_section, "smtp_host")

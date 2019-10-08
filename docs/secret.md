@@ -29,11 +29,10 @@ $ oc secrets add serviceaccount/builder secrets/mysecret --for=mount
 In your OSBS build instance configuration, use the following values:
 
 ```
-pulp_secret = mysecret
 koji_certs_secret = myothersecret
 ```
 
-`pulp_secret` and `koji_certs_secret` names must match the resource names specified in the JSON.
+`koji_certs_secret` name must match the resource name specified in the JSON.
 
 ## Fetching the secrets within the build root
 

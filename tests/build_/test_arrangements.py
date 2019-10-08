@@ -10,7 +10,6 @@ from __future__ import unicode_literals, absolute_import
 import shutil
 import os
 import json
-from textwrap import dedent
 from osbs.api import OSBS
 from osbs.constants import (DEFAULT_ARRANGEMENT_VERSION,
                             ORCHESTRATOR_INNER_TEMPLATE,
@@ -43,9 +42,6 @@ PLUGIN_KOJI_PROMOTE_PLUGIN_KEY = 'koji_promote'
 PLUGIN_KOJI_IMPORT_PLUGIN_KEY = 'koji_import'
 PLUGIN_KOJI_UPLOAD_PLUGIN_KEY = 'koji_upload'
 PLUGIN_KOJI_TAG_BUILD_KEY = 'koji_tag_build'
-PLUGIN_PULP_PUBLISH_KEY = 'pulp_publish'
-PLUGIN_PULP_SYNC_KEY = 'pulp_sync'
-PLUGIN_PULP_PULL_KEY = 'pulp_pull'
 PLUGIN_ADD_FILESYSTEM_KEY = 'add_filesystem'
 PLUGIN_FETCH_WORKER_METADATA_KEY = 'fetch_worker_metadata'
 PLUGIN_GROUP_MANIFESTS_KEY = 'group_manifests'
@@ -58,25 +54,6 @@ PLUGIN_RESOLVE_COMPOSES_KEY = 'resolve_composes'
 PLUGIN_VERIFY_MEDIA_KEY = 'verify_media'
 PLUGIN_EXPORT_OPERATOR_MANIFESTS_KEY = 'export_operator_manifests'
 PLUGIN_PUSH_OPERATOR_MANIFESTS_KEY = 'push_operator_manifests'
-
-
-def get_pulp_additional_config(with_group=False):
-    if with_group:
-        conf = dedent("""\
-            pulp_registry_name = pulp
-            pulp_secret = secret
-            group_manifests = true""")
-    else:
-        conf = dedent("""\
-            pulp_registry_name = pulp
-            pulp_secret = secret""")
-    return conf
-
-
-OSBS_WITH_PULP_PARAMS = {
-    'platform_descriptors': None,
-    'additional_config': get_pulp_additional_config(),
-    'kwargs': {'registry_uri': 'registry.example.com/v2'}}
 
 
 class NoSuchPluginException(Exception):
@@ -239,13 +216,6 @@ class ArrangementBase(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, phase, name)
 
-    def get_pulp_sync_registry(self, conf):
-        """Return the docker registry used by pulp content sync."""
-        for registry_uri in conf.get_registry_uris():
-            registry = utils.RegistryURI(registry_uri)
-            if registry.version == 'v2':
-                return registry.docker_uri
-
 
 class TestArrangementV6(ArrangementBase):
     """
@@ -323,13 +293,10 @@ class TestArrangementV6(ArrangementBase):
                 PLUGIN_COMPARE_COMPONENTS_KEY,
                 'tag_from_config',
                 PLUGIN_GROUP_MANIFESTS_KEY,
-                PLUGIN_PULP_SYNC_KEY,
                 PLUGIN_PUSH_OPERATOR_MANIFESTS_KEY,
             ],
 
             'exit_plugins': [
-                PLUGIN_PULP_PUBLISH_KEY,
-                PLUGIN_PULP_PULL_KEY,
                 PLUGIN_VERIFY_MEDIA_KEY,
                 'import_image',
                 PLUGIN_KOJI_IMPORT_PLUGIN_KEY,
@@ -693,43 +660,6 @@ class TestArrangementV6(ArrangementBase):
             assert set(primary_tags) == set(['{version}-{release}'])
             floating_tags = args['tag_suffixes']['floating']
             assert set(floating_tags) == set(['latest', '{version}'])
-
-    @pytest.mark.parametrize('osbs', [OSBS_WITH_PULP_PARAMS], indirect=True)  # noqa:F811
-    def test_pulp_sync(self, osbs):
-        additional_params = {
-            'base_image': 'fedora:latest',
-        }
-        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
-
-        args = plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_PULP_SYNC_KEY, 'args')
-        expected_args = {
-            'publish': False,
-        }
-
-        assert args == expected_args
-
-    def test_pulp_publish(self, osbs):  # noqa:F811
-        additional_params = {
-            'base_image': 'fedora:latest',
-        }
-        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
-
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, 'postbuild_plugins', PLUGIN_PULP_PUBLISH_KEY)
-        get_plugin(plugins, 'exit_plugins', PLUGIN_PULP_PUBLISH_KEY)
-
-    def test_pulp_pull(self, osbs):
-        additional_params = {
-            'base_image': 'fedora:latest',
-        }
-        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
-
-        args = plugin_value_get(plugins, 'exit_plugins', PLUGIN_PULP_PULL_KEY, 'args')
-        expected_args = {'insecure': True}
-        assert args == expected_args
 
     def test_group_manifests(self, osbs):  # noqa:F811
         additional_params = {
