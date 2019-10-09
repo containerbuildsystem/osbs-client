@@ -998,7 +998,7 @@ class TestOSBS(object):
 
     # osbs is a fixture here
     def test_create_build_from_buildrequest(self, osbs):  # noqa
-        api_version = osbs.os_conf.get_openshift_api_version()
+        api_version = "random-api.openshift.io/random-version"
         build_json = {
             'apiVersion': api_version,
         }
@@ -1481,7 +1481,7 @@ class TestOSBS(object):
         osbs_obj = OSBS(config, config)
 
         build_json = {
-            'apiVersion': osbs_obj.os_conf.get_openshift_api_version(),
+            'apiVersion': 'build.openshift.io/v1',
             'metadata': {
                 'name': 'build',
                 'labels': {
@@ -1518,7 +1518,7 @@ class TestOSBS(object):
         osbs_obj = OSBS(config, config)
 
         build_json = {
-            'apiVersion': osbs_obj.os_conf.get_openshift_api_version(),
+            'apiVersion': 'build.openshift.io/v1',
             'metadata': {
                 'name': 'build',
                 'labels': {
@@ -1557,7 +1557,7 @@ class TestOSBS(object):
         osbs_obj = OSBS(config, config)
 
         build_json = {
-            'apiVersion': osbs_obj.os_conf.get_openshift_api_version(),
+            'apiVersion': "build.openshift.io/v1",
             'metadata': {
                 'name': 'build',
                 'labels': {
@@ -1607,7 +1607,7 @@ class TestOSBS(object):
         osbs_obj = OSBS(config, config)
 
         build_json = {
-            'apiVersion': osbs_obj.os_conf.get_openshift_api_version(),
+            'apiVersion': "build.openshift.io/v1",
             'metadata': {
                 'name': 'build',
                 'labels': {
@@ -1924,7 +1924,7 @@ class TestOSBS(object):
         osbs_obj = OSBS(config, config)
 
         build_json = {
-            'apiVersion': osbs_obj.os_conf.get_openshift_api_version(),
+            'apiVersion': "image.openshift.io/v1",
 
             'metadata': {
                 'labels': {
@@ -1978,7 +1978,7 @@ class TestOSBS(object):
                 .with_args('buildroot:latest')
                 .once()
                 .and_return(flexmock(json=lambda: {
-                    "apiVersion": "v1",
+                    "apiVersion": "image.openshift.io/v1",
                     "kind": "ImageStreamTag",
                     "image": {
                         "dockerImageReference": expect_name,

@@ -110,7 +110,6 @@ class OSBS(object):
         self.os_conf = openshift_configuration
         self.build_conf = build_configuration
         self.os = Openshift(openshift_api_url=self.os_conf.get_openshift_api_uri(),
-                            openshift_api_version=self.os_conf.get_openshift_api_version(),
                             openshift_oauth_url=self.os_conf.get_openshift_oauth_api_uri(),
                             k8s_api_url=self.os_conf.get_k8s_api_uri(),
                             verbose=self.os_conf.get_verbosity(),

@@ -62,7 +62,7 @@ class TestHttpRetries(object):
 
     def test_stream_logs_not_decoded(self, caplog):
         flexmock(Retry).new_instances(fake_retry)
-        server = Openshift('http://apis/', 'v1', 'http://oauth/authorize',
+        server = Openshift('http://apis/', 'http://oauth/authorize',
                            k8s_api_url='http://api/v1/')
 
         logs = (

@@ -69,7 +69,7 @@ def check_response(response, log_level=logging.ERROR):
 
 # TODO: error handling: create function which handles errors in response object
 class Openshift(object):
-    def __init__(self, openshift_api_url, openshift_api_version, openshift_oauth_url,
+    def __init__(self, openshift_api_url, openshift_oauth_url,
                  k8s_api_url=None,
                  verbose=False, username=None, password=None, use_kerberos=False,
                  kerberos_keytab=None, kerberos_principal=None, kerberos_ccache=None,
@@ -77,7 +77,6 @@ class Openshift(object):
                  token=None, namespace=DEFAULT_NAMESPACE):
         self.os_api_url = openshift_api_url
         self.k8s_api_url = k8s_api_url
-        self._os_api_version = openshift_api_version
         self._os_oauth_url = openshift_oauth_url
         self.namespace = namespace
         self.verbose = verbose
@@ -1110,7 +1109,6 @@ class Openshift(object):
 
 if __name__ == '__main__':
     o = Openshift(openshift_api_url="https://localhost:8443/apis/",
-                  openshift_api_version="v1",
                   openshift_oauth_url="https://localhost:8443/oauth/authorize",
                   verbose=True)
     print(o.get_oauth_token())

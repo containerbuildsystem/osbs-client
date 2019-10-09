@@ -31,7 +31,7 @@ from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
                              TEST_LABEL_VALUE, TEST_IMAGESTREAM, TEST_IMAGESTREAM_NO_TAGS,
                              TEST_IMAGESTREAM_WITH_ANNOTATION,
                              TEST_IMAGESTREAM_WITHOUT_IMAGEREPOSITORY)
-from tests.conftest import APIS_PREFIX, API_VER
+from tests.conftest import APIS_PREFIX
 from tests.test_utils import JsonMatcher
 
 import requests
@@ -730,7 +730,7 @@ class TestOpenshift(object):
             openshift_mock.once()
         else:
             openshift_mock.never()
-        Openshift(APIS_PREFIX, API_VER, "/oauth/authorize", **kwargs)
+        Openshift(APIS_PREFIX, "/oauth/authorize", **kwargs)
 
     @pytest.mark.parametrize('tags', (  # noqa:F811
         None,
