@@ -32,7 +32,7 @@ from six.moves.urllib.parse import urlparse
 
 
 logger = logging.getLogger("osbs.tests")
-API_VER = Configuration.get_openshift_api_version()
+API_VER = Configuration.get_k8s_api_version()
 APIS_PREFIX = "/apis/"
 API_PREFIX = "/api/{v}/".format(v=API_VER)
 
@@ -504,8 +504,7 @@ class Connection(object):
 
 @pytest.fixture(params=["3.9.41"])
 def openshift(request):
-    os_inst = Openshift(APIS_PREFIX, API_VER, "/oauth/authorize",
-                        k8s_api_url=API_PREFIX)
+    os_inst = Openshift(APIS_PREFIX, "/oauth/authorize", k8s_api_url=API_PREFIX)
     os_inst._con = Connection(request.param)
     return os_inst
 

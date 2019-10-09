@@ -143,7 +143,7 @@ class Configuration(object):
         return self._get_value(key, self.conf_section, key)
 
     @staticmethod
-    def get_openshift_api_version():
+    def get_k8s_api_version():
         # This is not configurable.
         return "v1"
 
@@ -154,7 +154,7 @@ class Configuration(object):
         :return: str
         """
         base_uri = self.get_openshift_base_uri()
-        version = self.get_openshift_api_version()
+        version = self.get_k8s_api_version()
         return urljoin(base_uri, "/api/{version}/".format(version=version))
 
     def get_openshift_api_uri(self):
