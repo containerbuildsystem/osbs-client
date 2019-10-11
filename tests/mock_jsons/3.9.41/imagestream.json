@@ -3,20 +3,20 @@
     "kind": "ImageStream",
     "metadata": {
         "annotations": {
-            "openshift.io/image.dockerRepositoryCheck": "2017-01-06T19:35:54Z",
-            "openshift.io/image.insecureRepository": "true"
+            "openshift.io/image.dockerRepositoryCheck": "2019-10-11T15:38:07Z"
         },
-        "creationTimestamp": "2017-01-06T19:35:52Z",
+        "creationTimestamp": "2019-10-11T15:38:03Z",
         "generation": 2,
         "name": "test_imagestream",
-        "namespace": "test_namespace",
-        "resourceVersion": "5722991",
-        "selfLink": "/oapi/v1/namespaces/test_namespace/imagestreams/test_imagestream",
-        "uid": "55c37369-d447-11e6-bfac-40f2e94f02e8"
+        "namespace": "osbs-stage",
+        "resourceVersion": "59465552",
+        "selfLink": "/oapi/v1/namespaces/osbs-stage/imagestreams/test_imagestream",
+        "uid": "1cd48006-ec3d-11e9-9f3e-fa163e98c891"
     },
     "spec": {
-        "dockerImageRepository": "example.com:8888/username/rhel7",
-        "resources": {},
+        "lookupPolicy": {
+            "local": false
+        },
         "tags": [
             {
                 "annotations": null,
@@ -25,10 +25,11 @@
                     "name": "example.com:8888/username/rhel7:7.2.username-66"
                 },
                 "generation": 2,
-                "importPolicy": {
-                    "insecure": true
-                },
-                "name": "7.2.username-66"
+                "importPolicy": {},
+                "name": "7.2.username-66",
+                "referencePolicy": {
+                    "type": "Source"
+                }
             },
             {
                 "annotations": null,
@@ -37,10 +38,11 @@
                     "name": "example.com:8888/username/rhel7:7.2.username-67"
                 },
                 "generation": 2,
-                "importPolicy": {
-                    "insecure": true
-                },
-                "name": "7.2.username-67"
+                "importPolicy": {},
+                "name": "7.2.username-67",
+                "referencePolicy": {
+                    "type": "Source"
+                }
             },
             {
                 "annotations": null,
@@ -49,23 +51,25 @@
                     "name": "example.com:8888/username/rhel7:7.2.username-68"
                 },
                 "generation": 2,
-                "importPolicy": {
-                    "insecure": true
-                },
-                "name": "7.2.username-68"
+                "importPolicy": {},
+                "name": "7.2.username-68",
+                "referencePolicy": {
+                    "type": "Source"
+                }
             }
-        ]
+        ],
+        "dockerImageRepository": "docker-registry.default.svc:5000/osbs-stage/test_imagestream"
     },
     "status": {
-        "dockerImageRepository": "192.168.1.1:5000/osbs-stage/username-rhel7",
+        "dockerImageRepository": "docker-registry.default.svc:5000/osbs-stage/test_imagestream",
         "tags": [
             {
                 "items": [
                     {
-                        "created": "2017-01-06T19:35:54Z",
-                        "dockerImageReference": "example.com:8888/username/rhel7@sha256:2a1efffcbeeaf4bf8135698ba839e8c0dace5ac1d4ecc711c65981c8da43e12d",
+                        "created": "2019-10-11T15:38:07Z",
+                        "dockerImageReference": "example.com/prometheus/prometheus@sha256:91b3a2d38e2151f5f9cb7fc11b79e5d27f731e2fe691285f8c38a3ca2b8d301e",
                         "generation": 2,
-                        "image": "sha256:2a1efffcbeeaf4bf8135698ba839e8c0dace5ac1d4ecc711c65981c8da43e12d"
+                        "image": "sha256:91b3a2d38e2151f5f9cb7fc11b79e5d27f731e2fe691285f8c38a3ca2b8d301e"
                     }
                 ],
                 "tag": "7.2.username-66"
@@ -73,10 +77,10 @@
             {
                 "items": [
                     {
-                        "created": "2017-01-06T19:35:54Z",
-                        "dockerImageReference": "example.com:8888/username/rhel7@sha256:447a2c2dd52cdc096b51c349807951632f184223927000466175d5fe586243ce",
+                        "created": "2019-10-11T15:38:07Z",
+                        "dockerImageReference": "example.com/prometheus/prometheus@sha256:5a48b0f7604eee83935efac6aaba2f74cc784edfe0ea8475657835a17537030f",
                         "generation": 2,
-                        "image": "sha256:447a2c2dd52cdc096b51c349807951632f184223927000466175d5fe586243ce"
+                        "image": "sha256:5a48b0f7604eee83935efac6aaba2f74cc784edfe0ea8475657835a17537030f"
                     }
                 ],
                 "tag": "7.2.username-67"
@@ -84,10 +88,10 @@
             {
                 "items": [
                     {
-                        "created": "2017-01-06T19:35:54Z",
-                        "dockerImageReference": "example.com:8888/username/rhel7@sha256:4f77a026066753ed81a4c98d4e0485f87f1cb6507ae1b47b06fb2e63c29545cb",
+                        "created": "2019-10-11T15:38:07Z",
+                        "dockerImageReference": "example.com/prometheus/prometheus@sha256:91b3a2d38e2151f5f9cb7fc11b79e5d27f731e2fe691285f8c38a3ca2b8d301e",
                         "generation": 2,
-                        "image": "sha256:4f77a026066753ed81a4c98d4e0485f87f1cb6507ae1b47b06fb2e63c29545cb"
+                        "image": "sha256:91b3a2d38e2151f5f9cb7fc11b79e5d27f731e2fe691285f8c38a3ca2b8d301e"
                     }
                 ],
                 "tag": "7.2.username-68"

@@ -2,52 +2,45 @@
     "apiVersion": "v1",
     "items": [
         {
-            "apiVersion": "v1",
-            "kind": "Pod",
             "metadata": {
                 "annotations": {
                     "kubernetes.io/limit-ranger": "LimitRanger plugin set: cpu request for container custom-build",
-                    "openshift.io/build.name": "build-20150820173208-1",
+                    "openshift.io/build.name": "scratch-79683-20191011152333",
                     "openshift.io/scc": "privileged"
                 },
-                "creationTimestamp": "2018-10-30T12:12:55Z",
+                "creationTimestamp": "2019-10-11T15:23:35Z",
+                "deletionGracePeriodSeconds": 30,
+                "deletionTimestamp": "2019-10-11T15:24:10Z",
                 "labels": {
-                    "openshift.io/build.name": "build-20150820173208-1"
+                    "openshift.io/build.name": "scratch-79683-20191011152333"
                 },
-                "name": "build-20150820173208-1-build",
-                "namespace": "default",
-                "resourceVersion": "71252334",
-                "selfLink": "/api/v1/namespaces/default/pods/build-20150820173208-1-build",
-                "uid": "21f6bb74-dc3d-11e8-b0f1-fa163e2c0f1d",
+                "name": "scratch-79683-20191011152333-build",
+                "namespace": "osbs-stage",
                 "ownerReferences": [
                     {
                         "apiVersion": "build.openshift.io/v1",
                         "controller": true,
                         "kind": "Build",
-                        "name": "build-20150820173208-1-build",
-                        "uid": "21e8d07d-dc3d-11e8-8a5b-fa163ec407ed"
+                        "name": "scratch-79683-20191011152333",
+                        "uid": "172ecd0a-ec3b-11e9-9f3e-fa163e98c891"
                     }
-                ]
+                ],
+                "resourceVersion": "59462828",
+                "selfLink": "/api/v1/namespaces/osbs-stage/pods/scratch-79683-20191011152333-build",
+                "uid": "175ce116-ec3b-11e9-8a1e-fa163e59461a"
             },
             "spec": {
+                "activeDeadlineSeconds": 10800,
                 "containers": [
                     {
                         "env": [
                             {
                                 "name": "BUILD",
-                                "value": "{\"kind\":\"Build\",\"apiVersion\":\"v1\",\"metadata\":{\"name\":\"scratch-99183-20181030121257\",\"namespace\":\"default\",\"selfLink\":\"/apis/build.openshift.io/v1/namespaces/default/builds/scratch-99183-20181030121257\",\"uid\":\"21e8d07d-dc3d-11e8-8a5b-fa163ec407ed\",\"resourceVersion\":\"71248377\",\"creationTimestamp\":\"2018-10-30T12:12:55Z\",\"labels\":{\"git-branch\":\"private-osbs-add-file-from-lookaside\",\"git-full-repo\":\"gitgit.example.comrpmsosbs-buildroot-docker\",\"git-repo-name\":\"osbs-buildroot-docker\",\"is_autorebuild\":\"false\",\"scratch\":\"true\"},\"annotations\":{\"from\":\"{\\\"kind\\\": \\\"DockerImage\\\", \\\"name\\\": \\\"crane.example.com/rcm/buildroot-daily-tests:osbs-test-multiarch-containers-candidate-30792-20181030113825\\\"}\"}},\"spec\":{\"serviceAccount\":\"builder\",\"source\":{\"type\":\"Git\",\"git\":{\"uri\":\"git://git.example.com/rpms/osbs-buildroot-docker\",\"ref\":\"70a8ecb\"}},\"strategy\":{\"type\":\"Custom\",\"customStrategy\":{\"from\":{\"kind\":\"DockerImage\",\"name\":\"crane.example.com/rcm/buildroot-daily-tests:osbs-test-multiarch-containers-candidate-30792-20181030113825\"},\"env\":[{\"name\":\"REACTOR_CONFIG\",\"value\":\"# reactor-config-map\\n---\\nartifacts_allowed_domains:\\n- files.example.com/released\\n- files.example.com/devel/candidates\\nbuild_image_override:\\n    aarch64: pulp.example.com/rcm/buildroot_aarch64:1.0-6\\nclusters:\\n    aarch64:\\n    -   enabled: true\\n        max_concurrent_builds: 24\\n        name: aarch64-on-premise\\n    ppc64le:\\n    -   enabled: false\\n        max_concurrent_builds: 4\\n        name: ppc64le-on-premise\\n    -   enabled: true\\n        max_concurrent_builds: 40\\n        name: ppc64le-1-on-premise\\n    s390x:\\n    -   enabled: true\\n        max_concurrent_builds: 4\\n        name: s390x-on-premise\\n    x86_64:\\n    -   enabled: true\\n        max_concurrent_builds: 21\\n        name: x86_64-upshift\\nclusters_client_config_dir: /var/run/secrets/atomic-reactor/client-config-secret\\ncontent_versions:\\n- v1\\n- v2\\nflatpak:\\n    base_image: pulp.example.com/rhel8:8.0-723\\ngroup_manifests: true\\nimage_equal_labels:\\n-   - description\\n    - io.k8s.description\\nimage_label_info_url_format: https://access.example.com/containers/#/{authoritative-source-url}/{name}/images/{version}-{release}\\nimage_labels:\\n    authoritative-source-url: registry.examplle.com\\n    distribution-scope: private\\n    vendor: Example, Inc.\\nkoji:\\n    auth:\\n        ssl_certs_dir: /var/run/secrets/atomic-reactor/kojisecret\\n    hub_url: https://brewhub.example.com/brewhub\\n    root_url: https://brewweb.example.com/brewroot/\\nodcs:\\n    api_url: https://odcs.example.com/api/1\\n    auth:\\n        ssl_certs_dir: /var/run/secrets/atomic-reactor/kojisecret\\n    default_signing_intent: release\\n    signing_intents:\\n    -   keys:\\n        - '37017186'\\n        - FD431D51\\n        - DB42A60E\\n        name: release\\n    -   keys:\\n        - F21541EB\\n        - 897DA07A\\n        - '37017186'\\n        - FD431D51\\n        - DB42A60E\\n        name: beta\\n    -   keys:\\n        - F21541EB\\n        - 897DA07A\\n        - '37017186'\\n        - FD431D51\\n        - DB42A60E\\n        - '37036783'\\n        name: e2e_testing\\n    -   keys: []\\n        name: unsigned\\nopenshift:\\n    auth:\\n        enable: true\\n    build_json_dir: /usr/share/osbs\\n    url: https://upshift.example.com/\\npackage_comparison_exceptions:\\n- libquadmath\\nplatform_descriptors:\\n-   architecture: amd64\\n    enable_v1: true\\n    platform: x86_64\\n-   architecture: arm64\\n    platform: aarch64\\nprefer_schema1_digest: false\\npulp:\\n    auth:\\n        ssl_certs_dir: /var/run/secrets/atomic-reactor/pulpsecret\\n    name: brew-qa\\nregistries:\\n-   auth:\\n        cfg_path: /var/run/secrets/atomic-reactor/v2-registry-dockercfg\\n    insecure: true\\n    url: https://registry.example.com/v2\\nrequired_secrets:\\n- kojisecret\\n- pulpsecret\\n- v2-registry-dockercfg\\nsmtp:\\n    domain: example.com\\n    error_addresses:\\n    - container-buildsys-results@example.com\\n    from_address: buildsys@example.com\\n    host: smtp.example.com\\n    send_to_pkg_owner: true\\n    send_to_submitter: true\\nsource_registry:\\n    insecure: true\\n    url: http://crane.example.com\\nsources_command: rhpkg sources\\nversion: 1\\nworker_token_secrets:\\n- x86-64-upshift-orchestrator\\n- ppc64le-on-premise-orchestrator\\n- ppc64le-1-on-premise-orchestrator\\n- s390x-on-premise-orchestrator\\n- aarch64-on-premise-orchestrator\\n- client-config-secret\\n\"},{\"name\":\"USER_PARAMS\",\"value\":\"{\\\"arrangement_version\\\": 6, \\\"base_image\\\": \\\"osbs-test/base:1.0.public.distscope\\\", \\\"build_image\\\": \\\"crane.example.com/rcm/buildroot-daily-tests:osbs-test-multiarch-containers-candidate-30792-20181030113825\\\", \\\"build_json_dir\\\": \\\"/usr/share/osbs/\\\", \\\"build_type\\\": \\\"orchestrator\\\", \\\"component\\\": \\\"osbs-test-hamburger-docker\\\", \\\"customize_conf\\\": \\\"orchestrator_customize.json\\\", \\\"git_branch\\\": \\\"private-osbs-add-file-from-lookaside\\\", \\\"git_ref\\\": \\\"70a8ecb\\\", \\\"git_uri\\\": \\\"git://git.example.com/rpms/osbs-buildroot-docker\\\", \\\"image_tag\\\": \\\"autobot-brew-stage-osbs/osbs-test-hamburger-docker:eng-rhel-7-docker-candidate-99183-20181030121257\\\", \\\"imagestream_name\\\": \\\"osbs-test-add-file-from-lookaside\\\", \\\"koji_target\\\": \\\"eng-rhel-7-docker-candidate\\\", \\\"name\\\": \\\"osbs-buildroot-docker-private-osbs-add-file-fro-a4f51\\\", \\\"platforms\\\": [\\\"x86_64\\\"], \\\"reactor_config_map\\\": \\\"reactor-config-map\\\", \\\"scratch\\\": true, \\\"trigger_imagestreamtag\\\": \\\"osbs-test-base:1.0.public.distscope\\\", \\\"user\\\": \\\"autobot-brew-stage-osbs\\\"}\"},{\"name\":\"OPENSHIFT_CUSTOM_BUILD_BASE_IMAGE\",\"value\":\"crane.example.com/rcm/buildroot-daily-tests:osbs-test-multiarch-containers-candidate-30792-20181030113825\"}],\"exposeDockerSocket\":true,\"secrets\":[{\"secretSource\":{\"name\":\"client-config-secret\"},\"mountPath\":\"/var/run/secrets/atomic-reactor/client-config-secret\"},{\"secretSource\":{\"name\":\"pulpsecret\"},\"mountPath\":\"/var/run/secrets/atomic-reactor/pulpsecret\"},{\"secretSource\":{\"name\":\"v2-registry-dockercfg\"},\"mountPath\":\"/var/run/secrets/atomic-reactor/v2-registry-dockercfg\"},{\"secretSource\":{\"name\":\"ppc64le-1-on-premise-orchestrator\"},\"mountPath\":\"/var/run/secrets/atomic-reactor/ppc64le-1-on-premise-orchestrator\"},{\"secretSource\":{\"name\":\"kojisecret\"},\"mountPath\":\"/var/run/secrets/atomic-reactor/kojisecret\"},{\"secretSource\":{\"name\":\"ppc64le-on-premise-orchestrator\"},\"mountPath\":\"/var/run/secrets/atomic-reactor/ppc64le-on-premise-orchestrator\"},{\"secretSource\":{\"name\":\"s390x-on-premise-orchestrator\"},\"mountPath\":\"/var/run/secrets/atomic-reactor/s390x-on-premise-orchestrator\"},{\"secretSource\":{\"name\":\"aarch64-on-premise-orchestrator\"},\"mountPath\":\"/var/run/secrets/atomic-reactor/aarch64-on-premise-orchestrator\"},{\"secretSource\":{\"name\":\"x86-64-upshift-orchestrator\"},\"mountPath\":\"/var/run/secrets/atomic-reactor/x86-64-upshift-orchestrator\"}]}},\"output\":{\"to\":{\"kind\":\"DockerImage\",\"name\":\"autobot-brew-stage-osbs/osbs-test-hamburger-docker:eng-rhel-7-docker-candidate-99183-20181030121257\"}},\"resources\":{},\"postCommit\":{},\"nodeSelector\":null,\"triggeredBy\":null},\"status\":{\"phase\":\"New\",\"outputDockerImageReference\":\"autobot-brew-stage-osbs/osbs-test-hamburger-docker:eng-rhel-7-docker-candidate-99183-20181030121257\",\"output\":{}}}\n"
+                                "value": "{\"kind\":\"Build\",\"apiVersion\":\"build.openshift.io/v1\",\"metadata\":{\"name\":\"scratch-79683-20191011152333\",\"namespace\":\"osbs-stage\",\"selfLink\":\"/apis/build.openshift.io/v1/namespaces/osbs-stage/builds/scratch-79683-20191011152333\",\"uid\":\"172ecd0a-ec3b-11e9-9f3e-fa163e98c891\",\"resourceVersion\":\"59462800\",\"creationTimestamp\":\"2019-10-11T15:23:34Z\",\"labels\":{\"git-branch\":\"master\",\"git-full-repo\":\"httpsgithub.comomasomecekdocker-hello-world.git\",\"git-repo-name\":\"docker-hello-world\",\"scratch\":\"true\"},\"annotations\":{\"from\":\"{\\\"kind\\\": \\\"ImageStreamTag\\\", \\\"name\\\": example.com/rh-osbs/rcm-buildroot@sha256:1fb45ad9da7453dcc7d4c3f63464cd4553f4d4ca12d24f526a762c86708c6a91\"},\"pullSecret\":{\"name\":\"builder-dockercfg-8rq9z\"},\"env\":[{\"name\":\"REACTOR_CONFIG\",\"value\":\"# reactor-config-map\\n---\\nartifacts_allowed_domains:\\n- example.com/released\\n- example.com/devel/candidates\\n- example.com/brewroot\\nbuild_image_override:\\n    aarch64: example.com/rh-osbs/rcm-buildroot_aarch64:1.0-26\\nbuildstep_alias:\\n    buildah_bud: imagebuilder\\nclusters:\\n    aarch64:\\n    -   enabled: true\\n        max_concurrent_builds: 24\\n        name: aarch64-on-premise\\n    ppc64le:\\n    -   enabled: true\\n        max_concurrent_builds: 40\\n        name: ppc64le-1-on-premise\\n    -   enabled: true\\n        max_concurrent_builds: 40\\n        name: ppc64le-2-on-premise\\n    s390x:\\n    -   enabled: false\\n        max_concurrent_builds: 9\\n        name: s390x-on-premise\\n    -   enabled: true\\n        max_concurrent_builds: 16\\n        name: s390x-1-on-premise\\n    -   enabled: true\\n        max_concurrent_builds: 16\\n        name: s390x-2-on-premise\\n    x86_64:\\n    -   enabled: true\\n        max_concurrent_builds: 80\\n        name: x86_64-upshift\\nclusters_client_config_dir: /var/run/secrets/atomic-reactor/client-config-secret\\ncontent_versions:\\n- v2\\nflatpak:\\n    base_image: example.com/rh-osbs-stage/rhel-8:1.0-1\\ngroup_manifests: true\\nhide_files:\\n    files:\\n    - /etc/yum.repos.d/ubi.repo\\n    tmpdir: /tmp\\nimage_equal_labels:\\n-   - description\\n    - io.k8s.description\\nimage_label_info_url_format: example.com/containers/#/{authoritative-source-url}/{name}/images/{version}-{release}\\nimage_labels:\\n    authoritative-source-url: example.com\\n    com.redhat.license_terms: example.com/en/about/red-hat-end-user-license-agreements\\n    distribution-scope: private\\n    vendor: Red Hat, Inc.\\nkoji:\\n    auth:\\n        ssl_certs_dir: /var/run/secrets/atomic-reactor/kojisecret\\n    hub_url: example.com/brewhub\\n    reserve_build: true\\n    root_url: example.com/brewroot/\\nodcs:\\n    api_url: example.com/api/1\\n    auth:\\n        ssl_certs_dir: /var/run/secrets/atomic-reactor/kojisecret\\n    default_signing_intent: release\\n    signing_intents:\\n    -   keys:\\n        - '37017186'\\n        - FD431D51\\n        - DB42A60E\\n        name: release\\n    -   keys:\\n        - F21541EB\\n        - 897DA07A\\n        - '37017186'\\n        - FD431D51\\n        - DB42A60E\\n        name: beta\\n    -   keys:\\n        - F21541EB\\n        - 897DA07A\\n        - '37017186'\\n        - FD431D51\\n        - DB42A60E\\n        - '37036783'\\n        name: e2e_testing\\n    -   keys: []\\n        name: unsigned\\nomps:\\n    appregistry_url: https://quay.io/cnr\\n    omps_namespace: rh-osbs-operators-stage\\n    omps_secret_dir: /var/run/secrets/atomic-reactor/ompssecret\\n    omps_url: example.com\\nopenshift:\\n    auth:\\n        enable: true\\n    build_json_dir: /usr/share/osbs\\n    url: example.com/\\npackage_comparison_exceptions:\\n- libquadmath\\nplatform_descriptors:\\n-   architecture: amd64\\n    platform: x86_64\\n-   architecture: arm64\\n    platform: aarch64\\nprefer_schema1_digest: false\\nregistries:\\n-   auth:\\n        cfg_path: /var/run/secrets/atomic-reactor/quay-secret\\n    insecure: false\\n    url: example.com/v2\\nregistries_organization: rh-osbs-stage\\nrequired_secrets:\\n- kojisecret\\n- quay-secret\\n- v2-registry-dockercfg\\nsmtp:\\n    domain: example.com\\n    error_addresses:\\n    - container-buildsys-results@example.com\\n    from_address: buildsys@example.com\\n    host: example.com\\n    send_to_pkg_owner: true\\n    send_to_submitter: true\\nsource_registry:\\n    insecure: false\\n    url: example.com\\nsources_command: rhpkg-env sources\\nversion: 1\\nworker_token_secrets:\\n- x86-64-upshift-orchestrator\\n- ppc64le-1-on-premise-orchestrator\\n- ppc64le-2-on-premise-orchestrator\\n- s390x-on-premise-orchestrator\\n- s390x-1-on-premise-orchestrator\\n- s390x-2-on-premise-orchestrator\\n- aarch64-on-premise-orchestrator\\n- client-config-secret\\n- ompssecret\\n\"},{\"name\":\"USER_PARAMS\",\"value\":\"{\\\"arrangement_version\\\": 6, \\\"base_image\\\": \\\"fedora:latest\\\", \\\"build_imagestream\\\": \\\"osbs-rcm-buildroot:staged\\\", \\\"build_json_dir\\\": \\\"/usr/share/osbs/\\\", \\\"build_type\\\": \\\"worker\\\", \\\"component\\\": \\\"chromium\\\", \\\"customize_conf\\\": \\\"worker_customize.json\\\", \\\"git_branch\\\": \\\"master\\\", \\\"git_commit_depth\\\": 1, \\\"git_ref\\\": \\\"HEAD\\\", \\\"git_uri\\\": \\\"https://github.com/TomasTomecek/docker-hello-world.git\\\", \\\"image_tag\\\": \\\"mlangsdo/chromium:none-79683-20191011152333-x86_64\\\", \\\"imagestream_name\\\": \\\"myproject-hello-world\\\", \\\"name\\\": \\\"docker-hello-world-master-bd212\\\", \\\"orchestrator_deadline\\\": 4, \\\"platform\\\": \\\"x86_64\\\", \\\"reactor_config_map\\\": \\\"reactor-config-map\\\", \\\"release\\\": \\\"test-build-123\\\", \\\"scratch\\\": true, \\\"trigger_imagestreamtag\\\": \\\"fedora:latest\\\", \\\"user\\\": \\\"mlangsdo\\\", \\\"worker_deadline\\\": example.com/rh-osbs/rcm-buildroot@sha256:1fb45ad9da7453dcc7d4c3f63464cd4553f4d4ca12d24f526a762c86708c6a91\"}],\"exposeDockerSocket\":true,\"secrets\":[{\"secretSource\":{\"name\":\"quay-secret\"},\"mountPath\":\"/var/run/secrets/atomic-reactor/quay-secret\"},{\"secretSource\":{\"name\":\"kojisecret\"},\"mountPath\":\"/var/run/secrets/atomic-reactor/kojisecret\"},{\"secretSource\":{\"name\":\"v2-registry-dockercfg\"},\"mountPath\":\"/var/run/secrets/atomic-reactor/v2-registry-dockercfg\"}]}},\"output\":{\"to\":{\"kind\":\"DockerImage\",\"name\":\"mlangsdo/chromium:none-79683-20191011152333-x86_64\"},\"pushSecret\":{\"name\":\"builder-dockercfg-8rq9z\"}},\"resources\":{},\"postCommit\":{},\"completionDeadlineSeconds\":10800,\"nodeSelector\":{},\"triggeredBy\":null},\"status\":{\"phase\":\"New\",\"outputDockerImageReference\":\"mlangsdo/chromium:none-79683-20191011152333-x86_64\",\"output\":{}}}\n"
                             },
                             {
                                 "name": "SOURCE_REPOSITORY",
                                 "value": "https://github.com/TomasTomecek/docker-hello-world.git"
-                            },
-                            {
-                                "name": "OPENSHIFT_CUSTOM_BUILD_BASE_IMAGE",
-                                "value": "buildroot:latest"
-                            },
-                            {
-                                "name": "DOCKER_SOCKET",
-                                "value": "/var/run/docker.sock"
                             },
                             {
                                 "name": "SOURCE_URI",
@@ -55,18 +48,14 @@
                             },
                             {
                                 "name": "SOURCE_REF",
-                                "value": "master"
-                            },
-                            {
-                                "name": "ORIGIN_VERSION",
-                                "value": "v3.9.41"
+                                "value": "HEAD"
                             },
                             {
                                 "name": "OUTPUT_REGISTRY"
                             },
                             {
                                 "name": "OUTPUT_IMAGE",
-                                "value": "twaugh/component:20150820174104"
+                                "value": "mlangsdo/chromium:none-79683-20191011152333-x86_64"
                             },
                             {
                                 "name": "REACTOR_CONFIG",
@@ -79,10 +68,26 @@
                             },
                             {
                                 "name": "USER_PARAMS",
-                                "value": "{\"arrangement_version\": 6, \"base_image\": \"osbs-test/base:1.0.public.distscope\", \"build_image\": \"crane.example.com/rcm/buildroot-daily-tests:osbs-test-multiarch-containers-candidate-30792-20181030113825\", \"build_json_dir\": \"/usr/share/osbs/\", \"build_type\": \"orchestrator\", \"component\": \"osbs-test-hamburger-docker\", \"customize_conf\": \"orchestrator_customize.json\", \"git_branch\": \"private-osbs-add-file-from-lookaside\", \"git_ref\": \"70a8ecb\", \"git_uri\": \"git://git.example.com/rpms/osbs-buildroot-docker\", \"image_tag\": \"autobot-brew-stage-osbs/osbs-test-hamburger-docker:eng-rhel-7-docker-candidate-99183-20181030121257\", \"imagestream_name\": \"osbs-test-add-file-from-lookaside\", \"koji_target\": \"eng-rhel-7-docker-candidate\", \"name\": \"osbs-buildroot-docker-private-osbs-add-file-fro-a4f51\", \"platforms\": [\"x86_64\"], \"reactor_config_map\": \"reactor-config-map\", \"scratch\": true, \"trigger_imagestreamtag\": \"osbs-test-base:1.0.public.distscope\", \"user\": \"autobot-brew-stage-osbs\"}"
+                                "value": "{\"arrangement_version\": 6, \"base_image\": \"fedora:latest\", \"build_imagestream\": \"osbs-rcm-buildroot:staged\", \"build_json_dir\": \"/usr/share/osbs/\", \"build_type\": \"worker\", \"component\": \"chromium\", \"customize_conf\": \"worker_customize.json\", \"git_branch\": \"master\", \"git_commit_depth\": 1, \"git_ref\": \"HEAD\", \"git_uri\": \"https://github.com/TomasTomecek/docker-hello-world.git\", \"image_tag\": \"mlangsdo/chromium:none-79683-20191011152333-x86_64\", \"imagestream_name\": \"myproject-hello-world\", \"name\": \"docker-hello-world-master-bd212\", \"orchestrator_deadline\": 4, \"platform\": \"x86_64\", \"reactor_config_map\": \"reactor-config-map\", \"release\": \"test-build-123\", \"scratch\": true, \"trigger_imagestreamtag\": \"fedora:latest\", \"user\": \"mlangsdo\", \"worker_deadline\": 3}"
+                            },
+                            {
+                                "name": "OPENSHIFT_CUSTOM_BUILD_BASE_IMAGE",
+                                "value": "example.com/rh-osbs/rcm-buildroot@sha256:1fb45ad9da7453dcc7d4c3f63464cd4553f4d4ca12d24f526a762c86708c6a91"
+                            },
+                            {
+                                "name": "DOCKER_SOCKET",
+                                "value": "/var/run/docker.sock"
+                            },
+                            {
+                                "name": "PUSH_DOCKERCFG_PATH",
+                                "value": "/var/run/secrets/openshift.io/push"
+                            },
+                            {
+                                "name": "PULL_DOCKERCFG_PATH",
+                                "value": "/var/run/secrets/openshift.io/pull"
                             }
                         ],
-                        "image": "buildroot:latest",
+                        "image": "example.com/rh-osbs/rcm-buildroot@sha256:1fb45ad9da7453dcc7d4c3f63464cd4553f4d4ca12d24f526a762c86708c6a91",
                         "imagePullPolicy": "IfNotPresent",
                         "name": "custom-build",
                         "resources": {
@@ -101,23 +106,18 @@
                                 "name": "docker-socket"
                             },
                             {
-                                "mountPath": "/var/run/secrets/atomic-reactor/client-config-secret",
-                                "name": "client-config-secret-secret",
+                                "mountPath": "/var/run/secrets/openshift.io/push",
+                                "name": "builder-dockercfg-8rq9z-push",
                                 "readOnly": true
                             },
                             {
-                                "mountPath": "/var/run/secrets/atomic-reactor/pulpsecret",
-                                "name": "pulpsecret-secret",
+                                "mountPath": "/var/run/secrets/openshift.io/pull",
+                                "name": "builder-dockercfg-8rq9z-pull",
                                 "readOnly": true
                             },
                             {
-                                "mountPath": "/var/run/secrets/atomic-reactor/v2-registry-dockercfg",
-                                "name": "v2-registry-dockercfg-secret",
-                                "readOnly": true
-                            },
-                            {
-                                "mountPath": "/var/run/secrets/atomic-reactor/ppc64le-1-on-premise-orchestrator",
-                                "name": "ppc64le-1-on-premise-orchestrator-secret",
+                                "mountPath": "/var/run/secrets/atomic-reactor/quay-secret",
+                                "name": "quay-secret-secret",
                                 "readOnly": true
                             },
                             {
@@ -126,28 +126,13 @@
                                 "readOnly": true
                             },
                             {
-                                "mountPath": "/var/run/secrets/atomic-reactor/ppc64le-on-premise-orchestrator",
-                                "name": "ppc64le-on-premise-orchestrator-secret",
-                                "readOnly": true
-                            },
-                            {
-                                "mountPath": "/var/run/secrets/atomic-reactor/s390x-on-premise-orchestrator",
-                                "name": "s390x-on-premise-orchestrator-secret",
-                                "readOnly": true
-                            },
-                            {
-                                "mountPath": "/var/run/secrets/atomic-reactor/aarch64-on-premise-orchestrator",
-                                "name": "aarch64-on-premise-orchestrator-secret",
-                                "readOnly": true
-                            },
-                            {
-                                "mountPath": "/var/run/secrets/atomic-reactor/x86-64-upshift-orchestrator",
-                                "name": "x86-64-upshift-orchestrator-secret",
+                                "mountPath": "/var/run/secrets/atomic-reactor/v2-registry-dockercfg",
+                                "name": "v2-registry-dockercfg-secret",
                                 "readOnly": true
                             },
                             {
                                 "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
-                                "name": "builder-token-p62zo",
+                                "name": "builder-token-v48jz",
                                 "readOnly": true
                             }
                         ]
@@ -156,13 +141,14 @@
                 "dnsPolicy": "ClusterFirst",
                 "imagePullSecrets": [
                     {
-                        "name": "builder-dockercfg-7zusx"
+                        "name": "builder-dockercfg-8rq9z"
                     }
                 ],
-                "nodeName": "osbs.localdomain",
+                "nodeName": "example.com",
                 "nodeSelector": {
                     "orchestrator": "true"
                 },
+                "priority": 0,
                 "restartPolicy": "Never",
                 "schedulerName": "default-scheduler",
                 "securityContext": {},
@@ -179,44 +165,30 @@
                 "volumes": [
                     {
                         "hostPath": {
-                            "type": "",
-                            "path": "/var/run/docker.sock"
+                            "path": "/var/run/docker.sock",
+                            "type": ""
                         },
                         "name": "docker-socket"
                     },
                     {
-                        "name": "builder-token-p62zo",
+                        "name": "builder-dockercfg-8rq9z-push",
                         "secret": {
                             "defaultMode": 384,
-                            "secretName": "builder-token-p62zo"
+                            "secretName": "builder-dockercfg-8rq9z"
                         }
                     },
                     {
-                        "name": "client-config-secret-secret",
+                        "name": "builder-dockercfg-8rq9z-pull",
                         "secret": {
                             "defaultMode": 384,
-                            "secretName": "client-config-secret"
+                            "secretName": "builder-dockercfg-8rq9z"
                         }
                     },
                     {
-                        "name": "pulpsecret-secret",
+                        "name": "quay-secret-secret",
                         "secret": {
                             "defaultMode": 384,
-                            "secretName": "pulpsecret"
-                        }
-                    },
-                    {
-                        "name": "v2-registry-dockercfg-secret",
-                        "secret": {
-                            "defaultMode": 384,
-                            "secretName": "v2-registry-dockercfg"
-                        }
-                    },
-                    {
-                        "name": "ppc64le-1-on-premise-orchestrator-secret",
-                        "secret": {
-                            "defaultMode": 384,
-                            "secretName": "ppc64le-1-on-premise-orchestrator"
+                            "secretName": "quay-secret"
                         }
                     },
                     {
@@ -227,38 +199,17 @@
                         }
                     },
                     {
-                        "name": "ppc64le-on-premise-orchestrator-secret",
+                        "name": "v2-registry-dockercfg-secret",
                         "secret": {
                             "defaultMode": 384,
-                            "secretName": "ppc64le-on-premise-orchestrator"
+                            "secretName": "v2-registry-dockercfg"
                         }
                     },
                     {
-                        "name": "s390x-on-premise-orchestrator-secret",
-                        "secret": {
-                            "defaultMode": 384,
-                            "secretName": "s390x-on-premise-orchestrator"
-                        }
-                    },
-                    {
-                        "name": "aarch64-on-premise-orchestrator-secret",
-                        "secret": {
-                            "defaultMode": 384,
-                            "secretName": "aarch64-on-premise-orchestrator"
-                        }
-                    },
-                    {
-                        "name": "x86-64-upshift-orchestrator-secret",
-                        "secret": {
-                            "defaultMode": 384,
-                            "secretName": "x86-64-upshift-orchestrator"
-                        }
-                    },
-                    {
-                        "name": "builder-token-mjnbz",
+                        "name": "builder-token-v48jz",
                         "secret": {
                             "defaultMode": 420,
-                            "secretName": "builder-token-mjnbz"
+                            "secretName": "builder-token-v48jz"
                         }
                     }
                 ]
@@ -267,54 +218,56 @@
                 "conditions": [
                     {
                         "lastProbeTime": null,
-                        "lastTransitionTime": "2018-10-30T12:12:55Z",
-                        "reason": "PodCompleted",
+                        "lastTransitionTime": "2019-10-11T15:23:35Z",
                         "status": "True",
                         "type": "Initialized"
                     },
                     {
                         "lastProbeTime": null,
-                        "lastTransitionTime": "2018-10-30T12:27:38Z",
-                        "reason": "PodCompleted",
-                        "status": "False",
+                        "lastTransitionTime": "2019-10-11T15:23:38Z",
+                        "status": "True",
                         "type": "Ready"
                     },
                     {
                         "lastProbeTime": null,
-                        "lastTransitionTime": "2018-10-30T12:12:55Z",
+                        "lastTransitionTime": null,
+                        "status": "True",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2019-10-11T15:23:35Z",
                         "status": "True",
                         "type": "PodScheduled"
                     }
                 ],
                 "containerStatuses": [
                     {
-                        "containerID": "docker://d9e6dee11d7acf361f44572d839a5108034693bc902eb2d490b0b2e6f1b6d45e",
+                        "containerID": "docker://5a2209d1efe08e4f877f2a974a7aa71e7e74930272cfb7302e931f504594710a",
                         "image": "buildroot:latest",
-                        "imageID": "docker://8daf4790420f666bea3bfe56d1df720d9bc03e0a85de6278eab5f13a4641b509",
+                        "imageID": "docker-pullable://buildroot:latest",
                         "lastState": {},
                         "name": "custom-build",
-                        "ready": false,
+                        "ready": true,
                         "restartCount": 0,
                         "state": {
-                            "terminated": {
-                                "containerID": "docker://4b723c4bc3e39e73a067123564916329571566f83a84f1223d768897c6679b6d",
-                                "exitCode": 1,
-                                "finishedAt": "2018-10-30T12:27:37Z",
-                                "startedAt": "2018-10-30T12:12:58Z"
+                            "running": {
+                                "startedAt": "2019-10-11T15:23:38Z"
                             }
                         }
                     }
                 ],
-                "hostIP": "192.168.124.195",
-                "phase": "Failed",
-                "podIP": "172.16.73.6",
+                "hostIP": "10.0.10.126",
+                "phase": "Running",
+                "podIP": "172.20.48.82",
                 "qosClass": "Burstable",
-                "startTime": "2018-10-30T12:12:55Z"
+                "startTime": "2019-10-11T15:23:35Z"
             }
         }
     ],
-    "kind": "List",
-    "metadata": {},
-    "resourceVersion": "",
-    "selfLink": ""
+    "kind": "PodList",
+    "metadata": {
+        "resourceVersion": "59462842",
+        "selfLink": "/api/v1/namespaces/osbs-stage/pods/"
+    }
 }
