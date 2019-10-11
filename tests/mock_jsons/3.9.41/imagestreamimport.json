@@ -1,131 +1,461 @@
 {
+    "apiVersion": "v1",
+    "kind": "ImageStreamImport",
+    "metadata": {
+        "creationTimestamp": "2019-10-11T15:38:04Z",
+        "name": "test_imagestream",
+        "namespace": "osbs-stage",
+        "selfLink": "/oapi/v1/namespaces/osbs-stage/imagestreamimports/test_imagestream",
+        "uid": "1ddd01bc-ec3d-11e9-9f3e-fa163e98c891"
+    },
+    "spec": {
+        "images": [
+            {
+                "from": {
+                    "kind": "DockerImage",
+                    "name": "example.com/prometheus/prometheus:v2.13.0"
+                },
+                "importPolicy": {},
+                "referencePolicy": {
+                    "type": "Source"
+                },
+                "to": {
+                    "name": "v2.13.0"
+                }
+            },
+            {
+                "from": {
+                    "kind": "DockerImage",
+                    "name": "example.com/prometheus/prometheus:latest"
+                },
+                "importPolicy": {},
+                "referencePolicy": {
+                    "type": "Source"
+                },
+                "to": {
+                    "name": "latest"
+                }
+            },
+            {
+                "from": {
+                    "kind": "DockerImage",
+                    "name": "example.com/prometheus/prometheus:master"
+                },
+                "importPolicy": {},
+                "referencePolicy": {
+                    "type": "Source"
+                },
+                "to": {
+                    "name": "master"
+                }
+            }
+        ],
+        "import": true
+    },
     "status": {
         "images": [
             {
-                "status": {
-                    "status": "Success",
-                    "metadata": {}
-                },
                 "image": {
-                    "dockerImageManifestMediaType": "application/vnd.docker.distribution.manifest.v1+json",
-                    "dockerImageMetadataVersion": "1.0",
                     "dockerImageLayers": [
                         {
-                            "mediaType": "application/vnd.docker.container.image.rootfs.diff+x-gtar",
-                            "name": "sha256:87f05fc278b9fb3ced3f7ca56d264c7f967eb1f8abcecb56a98a7e8182579be2",
-                            "size": 81348860
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:8e674ad76dcef6f6d0398bc25550f680f8751876064a87a15347f00687492090",
+                            "size": 762734
                         },
                         {
-                            "mediaType": "application/vnd.docker.container.image.rootfs.diff+x-gtar",
-                            "name": "sha256:f549bd1d9711e598e995b223d8791a6365815cc6663dc7db4d8cf8361bbef1eb",
-                            "size": 710
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:e77d2419d1c215d556135ae03e21365fe2b9891fb2d60dbd8d76a318c6c88939",
+                            "size": 495113
                         },
                         {
-                            "mediaType": "application/vnd.docker.container.image.rootfs.diff+x-gtar",
-                            "name": "sha256:34467983caaeda2f9dc30d1eb554c2bee07332588a932df1c7d7e5389345d385",
-                            "size": 4491308
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:404121236cc333fd02ba706a291ffc02641314ddb64b7349707df1f720545e81",
+                            "size": 30982173
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:9177a3dd2b555496b19b07711f9bb93480377b84ab5528f33f7e605aa425a13f",
+                            "size": 19466117
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:322a0ba168eb502ece0c29dc3eeee68d1913ed98f65257b42a8b7a531a6040b0",
+                            "size": 601
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:a6d55ecbc9e13064dce9eabc408d973f4d411fdbafef842d812a99810a8cbd6d",
+                            "size": 2658
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:bd9aab1d6b43e950088314a6bb5e85ae701283a4e0d8bea45a86f196a3c0cabe",
+                            "size": 3058
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:afbd972630e500109669f34cba81f95180ff4fcc32e4594c20755160ce4e1c92",
+                            "size": 185
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:1196a163e012f2639ba17842f05a11a75116e5fc19d7ed5ef76db89993e3db2c",
+                            "size": 687
                         }
                     ],
-                    "dockerImageReference": "example.com/lucarval/rsyslog@sha256:2b80dd6f25a2eef8696ecb8caacbad8c48984ef72fa61d63d1a12c7edb200572",
-                    "metadata": {
-                        "annotations": {
-                            "image.openshift.io/dockerLayersOrder": "ascending"
-                        },
-                        "creationTimestamp": "2018-04-30T12:21:49Z",
-                        "name": "sha256:2b80dd6f25a2eef8696ecb8caacbad8c48984ef72fa61d63d1a12c7edb200572",
-                        "uid": "0e5c260b-4c71-11e8-b942-fa163ec407ed"
-                    },
+                    "dockerImageManifestMediaType": "application/vnd.docker.distribution.manifest.v2+json",
                     "dockerImageMetadata": {
-                        "kind": "DockerImage",
-                        "DockerVersion": "1.12.5",
-                        "Parent": "b6dc5ac173e88389336148451c2d8b85631faa2cd1c1faede7790f7edfd20e27",
-                        "Created": "2017-10-10T18:19:56Z",
-                        "Author": "Example, Inc.",
-                        "apiVersion": "1.0",
                         "Architecture": "amd64",
+                        "Config": {
+                            "Cmd": [
+                                "--config.file=/etc/prometheus/prometheus.yml",
+                                "--storage.tsdb.path=/prometheus",
+                                "--web.console.libraries=/usr/share/prometheus/console_libraries",
+                                "--web.console.templates=/usr/share/prometheus/consoles"
+                            ],
+                            "Entrypoint": [
+                                "/bin/prometheus"
+                            ],
+                            "Env": [
+                                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+                            ],
+                            "ExposedPorts": {
+                                "9090/tcp": {}
+                            },
+                            "Image": "sha256:4f3b4b9bce7db3f1a29aa6a3a0412ce195239bf2f9a905fd2254f089f77a3aa4",
+                            "Labels": {
+                                "maintainer": "The Prometheus Authors <prometheus-developers@googlegroups.com>"
+                            },
+                            "User": "nobody",
+                            "Volumes": {
+                                "/prometheus": {}
+                            },
+                            "WorkingDir": "/prometheus"
+                        },
+                        "Container": "43b98cd4fc6198e2530cad59416414532e6e641a088f6c83226c1574a0e2a163",
                         "ContainerConfig": {
                             "Cmd": [
                                 "/bin/sh",
                                 "-c",
-                                "rm -f '/etc/yum.repos.d/extras-rhel-7.2-candidate.repo'"
+                                "#(nop) ",
+                                "CMD [\"--config.file=/etc/prometheus/prometheus.yml\" \"--storage.tsdb.path=/prometheus\" \"--web.console.libraries=/usr/share/prometheus/console_libraries\" \"--web.console.templates=/usr/share/prometheus/consoles\"]"
                             ],
-                            "Hostname": "f8377a82acd3",
-                            "Labels": {
-                                "com.example.component": "rsyslog-docker",
-                                "authoritative-source-url": "registry.example.com",
-                                "distribution-scope": "private",
-                                "run": "docker run -d --privileged --name NAME --net=host --pid=host -v /etc/pki/rsyslog:/etc/pki/rsyslog -v /etc/rsyslog.conf:/etc/rsyslog.conf -v /etc/sysconfig/rsyslog:/etc/sysconfig/rsyslog -v /etc/rsyslog.d:/etc/rsyslog.d -v /var/log:/var/log -v /var/lib/rsyslog:/var/lib/rsyslog -v /run:/run -v /etc/machine-id:/etc/machine-id -v /etc/localtime:/etc/localtime -e IMAGE=IMAGE -e NAME=NAME --restart=always IMAGE /bin/rsyslog.sh",
-                                "name": "lucarval/rsyslog",
-                                "License": "GPLv3",
-                                "vcs-type": "git",
-                                "vcs-ref": "8bf624ebf9fb6fb735f1391980d567055d2d0326",
-                                "version": "7.2.lucarval",
-                                "architecture": "x86_64",
-                                "install": "docker run --rm --privileged -v /:/host -e HOST=/host -e IMAGE=IMAGE -e NAME=NAME IMAGE /bin/install.sh",
-                                "uninstall": "docker run --rm --privileged -v /:/host -e HOST=/host -e IMAGE=IMAGE -e NAME=NAME IMAGE /bin/uninstall.sh",
-                                "release": "104",
-                                "vendor": "Example, Inc.",
-                                "build-date": "2017-10-10T18:17:47.804500",
-                                "com.example.build-host": "files.example.com"
-                            },
-                            "Image": "sha256:21f2e1b1ff939b055fcd2e8427ecaac78996d392b35117b8393ae3f09a5180fc",
-                            "Env": [
-                                "PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin",
-                                "container=docker"
-                            ]
-                        },
-                        "Config": {
-                            "Cmd": [
-                                "/bin/rsyslog.sh"
+                            "Entrypoint": [
+                                "/bin/prometheus"
                             ],
-                            "Hostname": "f8377a82acd3",
-                            "Labels": {
-                                "com.example.component": "rsyslog-docker",
-                                "authoritative-source-url": "registry.example.com",
-                                "distribution-scope": "private",
-                                "run": "docker run -d --privileged --name NAME --net=host --pid=host -v /etc/pki/rsyslog:/etc/pki/rsyslog -v /etc/rsyslog.conf:/etc/rsyslog.conf -v /etc/sysconfig/rsyslog:/etc/sysconfig/rsyslog -v /etc/rsyslog.d:/etc/rsyslog.d -v /var/log:/var/log -v /var/lib/rsyslog:/var/lib/rsyslog -v /run:/run -v /etc/machine-id:/etc/machine-id -v /etc/localtime:/etc/localtime -e IMAGE=IMAGE -e NAME=NAME --restart=always IMAGE /bin/rsyslog.sh",
-                                "name": "lucarval/rsyslog",
-                                "License": "GPLv3",
-                                "vcs-type": "git",
-                                "vcs-ref": "8bf624ebf9fb6fb735f1391980d567055d2d0326",
-                                "version": "7.2.lucarval",
-                                "architecture": "x86_64",
-                                "install": "docker run --rm --privileged -v /:/host -e HOST=/host -e IMAGE=IMAGE -e NAME=NAME IMAGE /bin/install.sh",
-                                "uninstall": "docker run --rm --privileged -v /:/host -e HOST=/host -e IMAGE=IMAGE -e NAME=NAME IMAGE /bin/uninstall.sh",
-                                "release": "104",
-                                "vendor": "Example, Inc.",
-                                "build-date": "2017-10-10T18:17:47.804500",
-                                "com.example.build-host": "files.example.com"
-                            },
-                            "Image": "8d8e1f6078d4f190d4cce134a201a33acb7bc656a6caabd696e7fef9356066be",
                             "Env": [
-                                "PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin",
-                                "container=docker"
-                            ]
+                                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+                            ],
+                            "ExposedPorts": {
+                                "9090/tcp": {}
+                            },
+                            "Hostname": "43b98cd4fc61",
+                            "Image": "sha256:4f3b4b9bce7db3f1a29aa6a3a0412ce195239bf2f9a905fd2254f089f77a3aa4",
+                            "Labels": {
+                                "maintainer": "The Prometheus Authors <prometheus-developers@googlegroups.com>"
+                            },
+                            "User": "nobody",
+                            "Volumes": {
+                                "/prometheus": {}
+                            },
+                            "WorkingDir": "/prometheus"
                         },
-                        "Id": "3be1b299d1c80b027283ada3bf97cbd11f24a2db1493282a71c02e0c043bf462",
-                        "Size": 85840878
+                        "Created": "2019-10-04T13:22:27Z",
+                        "DockerVersion": "18.06.0-ce",
+                        "Id": "sha256:a3d30ee5b98b550a373fad09ed1008fcd12467aa2ab57008bbe897772fe4b1fc",
+                        "Size": 51719262,
+                        "apiVersion": "1.0",
+                        "kind": "DockerImage"
+                    },
+                    "dockerImageMetadataVersion": "1.0",
+                    "dockerImageReference": "example.com/prometheus/prometheus@sha256:91b3a2d38e2151f5f9cb7fc11b79e5d27f731e2fe691285f8c38a3ca2b8d301e",
+                    "metadata": {
+                        "annotations": {
+                            "image.openshift.io/dockerLayersOrder": "ascending"
+                        },
+                        "creationTimestamp": "2019-10-11T15:38:07Z",
+                        "name": "sha256:91b3a2d38e2151f5f9cb7fc11b79e5d27f731e2fe691285f8c38a3ca2b8d301e",
+                        "uid": "1f902a4c-ec3d-11e9-9f3e-fa163e98c891"
                     }
                 },
-                "tag": "latest"
+                "status": {
+                    "metadata": {},
+                    "status": "Success"
+                },
+                "tag": "7.2.username-66"
+            },
+            {
+                "image": {
+                    "dockerImageLayers": [
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:8e674ad76dcef6f6d0398bc25550f680f8751876064a87a15347f00687492090",
+                            "size": 762734
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:e77d2419d1c215d556135ae03e21365fe2b9891fb2d60dbd8d76a318c6c88939",
+                            "size": 495113
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:404121236cc333fd02ba706a291ffc02641314ddb64b7349707df1f720545e81",
+                            "size": 30982173
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:9177a3dd2b555496b19b07711f9bb93480377b84ab5528f33f7e605aa425a13f",
+                            "size": 19466117
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:322a0ba168eb502ece0c29dc3eeee68d1913ed98f65257b42a8b7a531a6040b0",
+                            "size": 601
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:a6d55ecbc9e13064dce9eabc408d973f4d411fdbafef842d812a99810a8cbd6d",
+                            "size": 2658
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:bd9aab1d6b43e950088314a6bb5e85ae701283a4e0d8bea45a86f196a3c0cabe",
+                            "size": 3058
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:afbd972630e500109669f34cba81f95180ff4fcc32e4594c20755160ce4e1c92",
+                            "size": 185
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:1196a163e012f2639ba17842f05a11a75116e5fc19d7ed5ef76db89993e3db2c",
+                            "size": 687
+                        }
+                    ],
+                    "dockerImageManifestMediaType": "application/vnd.docker.distribution.manifest.v2+json",
+                    "dockerImageMetadata": {
+                        "Architecture": "amd64",
+                        "Config": {
+                            "Cmd": [
+                                "--config.file=/etc/prometheus/prometheus.yml",
+                                "--storage.tsdb.path=/prometheus",
+                                "--web.console.libraries=/usr/share/prometheus/console_libraries",
+                                "--web.console.templates=/usr/share/prometheus/consoles"
+                            ],
+                            "Entrypoint": [
+                                "/bin/prometheus"
+                            ],
+                            "Env": [
+                                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+                            ],
+                            "ExposedPorts": {
+                                "9090/tcp": {}
+                            },
+                            "Image": "sha256:4f3b4b9bce7db3f1a29aa6a3a0412ce195239bf2f9a905fd2254f089f77a3aa4",
+                            "Labels": {
+                                "maintainer": "The Prometheus Authors <prometheus-developers@googlegroups.com>"
+                            },
+                            "User": "nobody",
+                            "Volumes": {
+                                "/prometheus": {}
+                            },
+                            "WorkingDir": "/prometheus"
+                        },
+                        "Container": "43b98cd4fc6198e2530cad59416414532e6e641a088f6c83226c1574a0e2a163",
+                        "ContainerConfig": {
+                            "Cmd": [
+                                "/bin/sh",
+                                "-c",
+                                "#(nop) ",
+                                "CMD [\"--config.file=/etc/prometheus/prometheus.yml\" \"--storage.tsdb.path=/prometheus\" \"--web.console.libraries=/usr/share/prometheus/console_libraries\" \"--web.console.templates=/usr/share/prometheus/consoles\"]"
+                            ],
+                            "Entrypoint": [
+                                "/bin/prometheus"
+                            ],
+                            "Env": [
+                                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+                            ],
+                            "ExposedPorts": {
+                                "9090/tcp": {}
+                            },
+                            "Hostname": "43b98cd4fc61",
+                            "Image": "sha256:4f3b4b9bce7db3f1a29aa6a3a0412ce195239bf2f9a905fd2254f089f77a3aa4",
+                            "Labels": {
+                                "maintainer": "The Prometheus Authors <prometheus-developers@googlegroups.com>"
+                            },
+                            "User": "nobody",
+                            "Volumes": {
+                                "/prometheus": {}
+                            },
+                            "WorkingDir": "/prometheus"
+                        },
+                        "Created": "2019-10-04T13:22:27Z",
+                        "DockerVersion": "18.06.0-ce",
+                        "Id": "sha256:a3d30ee5b98b550a373fad09ed1008fcd12467aa2ab57008bbe897772fe4b1fc",
+                        "Size": 51719262,
+                        "apiVersion": "1.0",
+                        "kind": "DockerImage"
+                    },
+                    "dockerImageMetadataVersion": "1.0",
+                    "dockerImageReference": "example.com/prometheus/prometheus@sha256:91b3a2d38e2151f5f9cb7fc11b79e5d27f731e2fe691285f8c38a3ca2b8d301e",
+                    "metadata": {
+                        "annotations": {
+                            "image.openshift.io/dockerLayersOrder": "ascending"
+                        },
+                        "creationTimestamp": "2019-10-11T15:38:07Z",
+                        "name": "sha256:91b3a2d38e2151f5f9cb7fc11b79e5d27f731e2fe691285f8c38a3ca2b8d301e",
+                        "uid": "1f902a4c-ec3d-11e9-9f3e-fa163e98c891"
+                    }
+                },
+                "status": {
+                    "metadata": {},
+                    "status": "Success"
+                },
+                "tag": "7.2.username-67"
+            },
+            {
+                "image": {
+                    "dockerImageLayers": [
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:8e674ad76dcef6f6d0398bc25550f680f8751876064a87a15347f00687492090",
+                            "size": 762734
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:e77d2419d1c215d556135ae03e21365fe2b9891fb2d60dbd8d76a318c6c88939",
+                            "size": 495113
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:921fe255ed3e0e398f79d9551aa2eb020f8902cd25c3b78d4a539a3059a95320",
+                            "size": 30984165
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:713606dfcf004e4712a369d4f1e4d1d34cd5ab275ba8c60f9bd3b6b7d8c527eb",
+                            "size": 19465195
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:1e5d3faf5c71cd7c7f5bbda5a30be1a6c97c1314ad8d2ac9c0d894a11d4964b7",
+                            "size": 602
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:84921bb06858b1fe49a903f9b39aaf26feead7d1f0272be052e5947045fd0c2c",
+                            "size": 2657
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:4c9b3990be23f6446ae911054226cbc293b3eff0b84f57c56cb77d540b525b71",
+                            "size": 3059
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:ee0734e69b3afed304add401ad81123f3be024f1632508621ee2bd22e698ccda",
+                            "size": 183
+                        },
+                        {
+                            "mediaType": "application/vnd.docker.image.rootfs.diff.tar.gzip",
+                            "name": "sha256:d9f64dd5ae0113d55ebb68491ffbb7c31f809553398a6a7615554fc10cb960b5",
+                            "size": 688
+                        }
+                    ],
+                    "dockerImageManifestMediaType": "application/vnd.docker.distribution.manifest.v2+json",
+                    "dockerImageMetadata": {
+                        "Architecture": "amd64",
+                        "Config": {
+                            "Cmd": [
+                                "--config.file=/etc/prometheus/prometheus.yml",
+                                "--storage.tsdb.path=/prometheus",
+                                "--web.console.libraries=/usr/share/prometheus/console_libraries",
+                                "--web.console.templates=/usr/share/prometheus/consoles"
+                            ],
+                            "Entrypoint": [
+                                "/bin/prometheus"
+                            ],
+                            "Env": [
+                                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+                            ],
+                            "ExposedPorts": {
+                                "9090/tcp": {}
+                            },
+                            "Image": "sha256:45eb5e05f0679d3db6a90d707980671d30a4dce042a1bd9d5816b0215a41e162",
+                            "Labels": {
+                                "maintainer": "The Prometheus Authors <prometheus-developers@googlegroups.com>"
+                            },
+                            "User": "nobody",
+                            "Volumes": {
+                                "/prometheus": {}
+                            },
+                            "WorkingDir": "/prometheus"
+                        },
+                        "Container": "5b323dd769c4810d55cf46abd516383b0dd0b946fc27a6084923d064c8a23146",
+                        "ContainerConfig": {
+                            "Cmd": [
+                                "/bin/sh",
+                                "-c",
+                                "#(nop) ",
+                                "CMD [\"--config.file=/etc/prometheus/prometheus.yml\" \"--storage.tsdb.path=/prometheus\" \"--web.console.libraries=/usr/share/prometheus/console_libraries\" \"--web.console.templates=/usr/share/prometheus/consoles\"]"
+                            ],
+                            "Entrypoint": [
+                                "/bin/prometheus"
+                            ],
+                            "Env": [
+                                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+                            ],
+                            "ExposedPorts": {
+                                "9090/tcp": {}
+                            },
+                            "Hostname": "5b323dd769c4",
+                            "Image": "sha256:45eb5e05f0679d3db6a90d707980671d30a4dce042a1bd9d5816b0215a41e162",
+                            "Labels": {
+                                "maintainer": "The Prometheus Authors <prometheus-developers@googlegroups.com>"
+                            },
+                            "User": "nobody",
+                            "Volumes": {
+                                "/prometheus": {}
+                            },
+                            "WorkingDir": "/prometheus"
+                        },
+                        "Created": "2019-10-11T01:57:15Z",
+                        "DockerVersion": "18.06.0-ce",
+                        "Id": "sha256:b9a57b44709b603c16d13820b53c5e749fc02a1161de0d0b13a776dc2ab0713f",
+                        "Size": 51720331,
+                        "apiVersion": "1.0",
+                        "kind": "DockerImage"
+                    },
+                    "dockerImageMetadataVersion": "1.0",
+                    "dockerImageReference": "example.com/prometheus/prometheus@sha256:5a48b0f7604eee83935efac6aaba2f74cc784edfe0ea8475657835a17537030f",
+                    "metadata": {
+                        "annotations": {
+                            "image.openshift.io/dockerLayersOrder": "ascending"
+                        },
+                        "creationTimestamp": "2019-10-11T15:38:07Z",
+                        "name": "sha256:5a48b0f7604eee83935efac6aaba2f74cc784edfe0ea8475657835a17537030f",
+                        "uid": "1f918ff3-ec3d-11e9-9f3e-fa163e98c891"
+                    }
+                },
+                "status": {
+                    "metadata": {},
+                    "status": "Success"
+                },
+                "tag": "7.2.username-68"
             }
         ],
         "import": {
-            "status": {
-                "dockerImageRepository": "docker-registry.default.svc:5000/osbs/lucarval-spam",
-                "tags": [
-                    {
-                        "items": [
-                            {
-                                "generation": 2,
-                                "image": "sha256:2b80dd6f25a2eef8696ecb8caacbad8c48984ef72fa61d63d1a12c7edb200572",
-                                "dockerImageReference": "example.com/lucarval/rsyslog@sha256:2b80dd6f25a2eef8696ecb8caacbad8c48984ef72fa61d63d1a12c7edb200572",
-                                "created": "2018-04-27T14:18:43Z"
-                            }
-                        ],
-                        "tag": "latest"
-                    }
-                ]
+            "metadata": {
+                "annotations": {
+                    "openshift.io/image.dockerRepositoryCheck": "2019-10-11T15:38:07Z"
+                },
+                "creationTimestamp": "2019-10-11T15:38:03Z",
+                "generation": 2,
+                "name": "test_imagestream",
+                "namespace": "osbs-stage",
+                "resourceVersion": "59465552",
+                "uid": "1cd48006-ec3d-11e9-9f3e-fa163e98c891"
             },
             "spec": {
                 "lookupPolicy": {
@@ -133,63 +463,84 @@
                 },
                 "tags": [
                     {
-                        "importPolicy": {
-                            "insecure": true
-                        },
+                        "annotations": null,
                         "from": {
                             "kind": "DockerImage",
-                            "name": "example.com/lucarval/rsyslog:latest"
+                            "name": "example.com/prometheus/prometheus:latest"
                         },
-                        "name": "latest",
                         "generation": 2,
+                        "importPolicy": {},
+                        "name": "7.2.username-66",
                         "referencePolicy": {
                             "type": "Source"
+                        }
+                    },
+                    {
+                        "annotations": null,
+                        "from": {
+                            "kind": "DockerImage",
+                            "name": "example.com/prometheus/prometheus:master"
                         },
-                        "annotations": null
+                        "generation": 2,
+                        "importPolicy": {},
+                        "name": "7.2.username-67",
+                        "referencePolicy": {
+                            "type": "Source"
+                        }
+                    },
+                    {
+                        "annotations": null,
+                        "from": {
+                            "kind": "DockerImage",
+                            "name": "example.com/prometheus/prometheus:v2.13.0"
+                        },
+                        "generation": 2,
+                        "importPolicy": {},
+                        "name": "7.2.username-68",
+                        "referencePolicy": {
+                            "type": "Source"
+                        }
                     }
                 ]
             },
-            "metadata": {
-                "name": "lucarval-spam",
-                "generation": 2,
-                "namespace": "osbs",
-                "resourceVersion": "17356342",
-                "creationTimestamp": "2018-04-27T14:18:42Z",
-                "annotations": {
-                    "openshift.io/image.insecureRepository": "true",
-                    "openshift.io/image.dockerRepositoryCheck": "2018-04-27T14:18:43Z"
-                },
-                "uid": "e3b3cab4-4a25-11e8-90c1-fa163e2c0f1d"
+            "status": {
+                "dockerImageRepository": "docker-registry.default.svc:5000/osbs-stage/test_imagestream",
+                "tags": [
+                    {
+                        "items": [
+                            {
+                                "created": "2019-10-11T15:38:07Z",
+                                "dockerImageReference": "example.com/prometheus/prometheus@sha256:91b3a2d38e2151f5f9cb7fc11b79e5d27f731e2fe691285f8c38a3ca2b8d301e",
+                                "generation": 2,
+                                "image": "sha256:91b3a2d38e2151f5f9cb7fc11b79e5d27f731e2fe691285f8c38a3ca2b8d301e"
+                            }
+                        ],
+                        "tag": "7.2.username-66"
+                    },
+                    {
+                        "items": [
+                            {
+                                "created": "2019-10-11T15:38:07Z",
+                                "dockerImageReference": "example.com/prometheus/prometheus@sha256:5a48b0f7604eee83935efac6aaba2f74cc784edfe0ea8475657835a17537030f",
+                                "generation": 2,
+                                "image": "sha256:5a48b0f7604eee83935efac6aaba2f74cc784edfe0ea8475657835a17537030f"
+                            }
+                        ],
+                        "tag": "7.2.username-67"
+                    },
+                    {
+                        "items": [
+                            {
+                                "created": "2019-10-11T15:38:07Z",
+                                "dockerImageReference": "example.com/prometheus/prometheus@sha256:91b3a2d38e2151f5f9cb7fc11b79e5d27f731e2fe691285f8c38a3ca2b8d301e",
+                                "generation": 2,
+                                "image": "sha256:91b3a2d38e2151f5f9cb7fc11b79e5d27f731e2fe691285f8c38a3ca2b8d301e"
+                            }
+                        ],
+                        "tag": "7.2.username-68"
+                    }
+                ]
             }
         }
-    },
-    "kind": "ImageStreamImport",
-    "spec": {
-        "images": [
-            {
-                "to": {
-                    "name": "latest"
-                },
-                "referencePolicy": {
-                    "type": "Source"
-                },
-                "from": {
-                    "kind": "DockerImage",
-                    "name": "example.com/lucarval/rsyslog:latest"
-                },
-                "importPolicy": {
-                    "insecure": true
-                }
-            }
-        ],
-        "import": true
-    },
-    "apiVersion": "v1",
-    "metadata": {
-        "creationTimestamp": "2018-04-30T12:21:48Z",
-        "namespace": "osbs",
-        "name": "lucarval-spam",
-        "selfLink": "/oapi/v1/namespaces/osbs/imagestreamimports/lucarval-spam",
-        "uid": "0e09a3a0-4c71-11e8-b942-fa163ec407ed"
     }
 }

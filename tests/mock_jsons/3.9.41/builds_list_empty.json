@@ -3,7 +3,7 @@
     "items": [],
     "kind": "BuildList",
     "metadata": {
-        "resourceVersion": "3931",
-        "selfLink": "/oapi/v1/namespaces/default/builds/"
+        "resourceVersion": "59462770",
+        "selfLink": "/oapi/v1/namespaces/osbs-stage/builds/"
     }
 }
