@@ -228,7 +228,7 @@ class MockCreator(object):
             if "fullName" in user_data:
                 del user_data["fullName"]
             user_data["metadata"]["name"] = "test"
-            user_data["metadata"]["selfLink"] = "/oapi/v1/users/test"
+            user_data["metadata"]["selfLink"] = "/apis/user.openshift.io/v1/users/test"
             self.comp_write("get_user.json", user_data)
         os.remove(user_list_path)
 
