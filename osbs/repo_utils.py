@@ -51,6 +51,7 @@ class RepoConfiguration(object):
         self._config_parser = ConfigParser()
         self.container = {}
         self.depth = depth or 0
+        self.autorebuild = {}
 
         # Set default options
         self._config_parser.readfp(StringIO(self.DEFAULT_CONFIG))   # pylint: disable=W1505; py2
@@ -72,6 +73,8 @@ class RepoConfiguration(object):
         # container values may be set to None
         container_compose = self.container.get('compose') or {}
         modules = container_compose.get('modules') or []
+
+        self.autorebuild = self.container.get('autorebuild') or {}
 
         self.container_module_specs = []
         value_errors = []

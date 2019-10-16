@@ -73,15 +73,24 @@ class TestRepoConfiguration(object):
                     enabled={}
                     """.format(config_value)))
 
+        add_timestamp = ''
+        if expected_value:
+            add_timestamp = 'add_timestamp_to_release: true'
         with open(os.path.join(str(tmpdir), REPO_CONTAINER_CONFIG), 'w') as f:
             f.write(dedent("""\
                 compose:
                     modules:
                     - mod_name:mod_stream:mod_version
-                """))
+                autorebuild:
+                    {}
+                """.format(add_timestamp)))
 
         conf = RepoConfiguration(dir_path=str(tmpdir))
         assert conf.is_autorebuild_enabled() is expected_value
+        if add_timestamp:
+            assert conf.autorebuild == {'add_timestamp_to_release': True}
+        else:
+            assert conf.autorebuild == {}
 
     @pytest.mark.parametrize('module_a_nsv, module_b_nsv, should_raise', [
         ('name:stream', 'name', True),
