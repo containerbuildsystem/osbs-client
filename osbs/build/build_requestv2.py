@@ -475,6 +475,15 @@ class BuildRequestV2(object):
 
         else:
             labels = Labels(self._repo_info.dockerfile_parser.labels)
+
+            add_timestamp = self._repo_info.configuration.autorebuild.\
+                get('add_timestamp_to_release', False)
+
+            if add_timestamp:
+                logger.info('add_timestamp_to_release is enabled for autorebuilds,'
+                            'skipping release check in dockerfile')
+                return
+
             try:
                 labels.get_name_and_value(Labels.LABEL_TYPE_RELEASE)
             except KeyError:

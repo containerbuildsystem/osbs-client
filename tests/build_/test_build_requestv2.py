@@ -500,16 +500,22 @@ class TestBuildRequestV2(object):
             assert build_json['metadata']['labels']['isolated'] == 'true'
             assert build_json['metadata']['labels']['isolated-release'] == extra_kwargs['release']
 
-    @pytest.mark.parametrize(('autorebuild_enabled', 'release_label', 'expected'), (
-        (True, None, True),
-        (True, 'release', RuntimeError),
-        (True, 'Release', RuntimeError),
-        (False, 'release', False),
-        (False, 'Release', False),
+    @pytest.mark.parametrize(('autorebuild_enabled', 'release_label', 'add_timestamp',
+                              'expected'), (
+        (True, None, True, True),
+        (True, None, False, True),
+        (True, 'release', True, True),
+        (True, 'release', False, RuntimeError),
+        (True, 'Release', True, True),
+        (True, 'Release', False, RuntimeError),
+        (False, 'release', True, False),
+        (False, 'release', False, False),
+        (False, 'Release', True, False),
+        (False, 'Release', False, False),
     ))
     def test_render_prod_request_with_repo_info(self, tmpdir,
                                                 autorebuild_enabled, release_label,
-                                                expected):
+                                                add_timestamp, expected):
         self.create_image_change_trigger_json(str(tmpdir))
 
         class MockDfParser(object):
@@ -520,6 +526,7 @@ class TestBuildRequestV2(object):
             .and_return(autorebuild_enabled))
 
         repo_info = RepoInfo(MockDfParser())
+        repo_info.configuration.autorebuild['add_timestamp_to_release'] = add_timestamp
 
         build_request_kwargs = get_sample_prod_params()
         base_image = build_request_kwargs['base_image']
