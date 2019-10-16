@@ -59,6 +59,7 @@ class BuildRequestV2(object):
         self.osbs_api = None
         self.source_registry = None
         self.organization = None
+        self.triggered_after_koji_task = None
 
     # Override
     def set_params(self, **kwargs):
@@ -105,6 +106,7 @@ class BuildRequestV2(object):
         :param worker_deadline: int, worker completion deadline in hours
         :param orchestrator_deadline: int, orchestrator deadline in hours
         :param skip_build: bool, if we should skip build and just set buildconfig for autorebuilds
+        :param triggered_after_koji_task: int, koji task ID from which was autorebuild triggered
         """
 
         # Here we cater to the koji "scratch" build type, this will disable
@@ -113,6 +115,7 @@ class BuildRequestV2(object):
         # When true, it indicates build was automatically started by
         # OpenShift via a trigger, for instance ImageChangeTrigger
         self.is_auto = kwargs.pop('is_auto', False)
+        self.triggered_after_koji_task = kwargs.pop('triggered_after_koji_task', None)
         self.skip_build = kwargs.pop('skip_build', False)
         # An isolated build is meant to patch a certain release and not
         # update transient tags in container registry

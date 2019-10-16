@@ -505,6 +505,9 @@ class OSBS(object):
                     imstreamtag['image']['dockerImageReference']
                 is_autorebuild = True
 
+            if build_request.triggered_after_koji_task is not None:
+                is_autorebuild = True
+
             existing_bc = self._update_build_config_with_triggers(build_json, triggers,
                                                                   is_autorebuild)
 
@@ -633,6 +636,7 @@ class OSBS(object):
                               git_commit_depth=None,
                               operator_manifests_extract_platform=None,
                               skip_build=False,
+                              triggered_after_koji_task=None,
                               **kwargs):
 
         if flatpak:
@@ -729,6 +733,7 @@ class OSBS(object):
             isolated_build_node_selector=self.build_conf.get_isolated_build_node_selector(),
             auto_build_node_selector=self.build_conf.get_auto_build_node_selector(),
             is_auto=is_auto,
+            triggered_after_koji_task=triggered_after_koji_task,
             skip_build=skip_build,
             filesystem_koji_task_id=filesystem_koji_task_id,
             koji_upload_dir=koji_upload_dir,

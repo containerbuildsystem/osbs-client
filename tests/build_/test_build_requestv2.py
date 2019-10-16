@@ -148,6 +148,7 @@ class TestBuildRequestV2(object):
 
     def test_render_simple_request(self):
         build_request = BuildRequestV2(INPUTS_PATH)
+        triggered_after_koji_task = '12345'
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -159,9 +160,12 @@ class TestBuildRequestV2(object):
             'build_type': BUILD_TYPE_WORKER,
             'osbs_api': MockOSBSApi(),
             'reactor_config_map': 'reactor-config-map',
+            'triggered_after_koji_task': triggered_after_koji_task,
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
+
+        assert build_request.triggered_after_koji_task == triggered_after_koji_task
 
         assert build_json["metadata"]["name"] is not None
         assert "triggers" not in build_json["spec"]

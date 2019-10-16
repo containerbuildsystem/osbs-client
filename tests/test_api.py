@@ -1755,6 +1755,7 @@ class TestOSBS(object):
             source_registry=source_registry,
             organization=organization,
             skip_build=skip_build,
+            triggered_after_koji_task='12345',
         )
         # Cannot use spec keyword arg in flexmock constructor
         # because it appears to be used by flexmock itself
@@ -2747,7 +2748,8 @@ class TestOSBS(object):
             render=lambda: build_json,
             has_ist_trigger=lambda: triggers,
             scratch=False,
-            skip_build=False)
+            skip_build=False,
+            triggered_after_koji_task='12345')
         # Cannot use spec keyword arg in flexmock constructor
         # because it appears to be used by flexmock itself
         build_request.spec = spec
@@ -2892,7 +2894,8 @@ class TestOSBS(object):
             render=lambda: build_json,
             has_ist_trigger=lambda: True,
             scratch=False,
-            skip_build=False)
+            skip_build=False,
+            triggered_after_koji_task='12345')
         # Cannot use spec keyword arg in flexmock constructor
         # because it appears to be used by flexmock itself
         build_request.spec = spec
