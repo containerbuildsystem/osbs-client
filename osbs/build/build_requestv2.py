@@ -115,7 +115,7 @@ class BuildRequestV2(object):
         # When true, it indicates build was automatically started by
         # OpenShift via a trigger, for instance ImageChangeTrigger
         self.is_auto = kwargs.pop('is_auto', False)
-        self.triggered_after_koji_task = kwargs.pop('triggered_after_koji_task', None)
+        self.triggered_after_koji_task = kwargs.get('triggered_after_koji_task')
         self.skip_build = kwargs.pop('skip_build', False)
         # An isolated build is meant to patch a certain release and not
         # update transient tags in container registry
@@ -303,6 +303,12 @@ class BuildRequestV2(object):
         koji_task_id = self.user_params.koji_task_id.value
         if koji_task_id is not None:
             self.set_label('koji-task-id', str(koji_task_id))
+
+            # keep also original task for all manual builds with task
+            # that way when delegated task for autorebuild will be used
+            # we will still keep track of it
+            if self.triggered_after_koji_task is None:
+                self.set_label('original-koji-task-id', str(koji_task_id))
 
         # Set template.spec.strategy.customStrategy.env[] USER_PARAMS
         # Set required_secrets based on reactor_config

@@ -182,6 +182,7 @@ class BuildUserParams(BuildCommon):
         self.git_commit_depth = BuildParam('git_commit_depth', allow_none=True)
         self.worker_deadline = BuildParam('worker_deadline', allow_none=True)
         self.orchestrator_deadline = BuildParam('orchestrator_deadline', allow_none=True)
+        self.triggered_after_koji_task = BuildParam('triggered_after_koji_task', allow_none=True)
 
         self.required_params = [
             self.build_json_dir,
@@ -213,7 +214,8 @@ class BuildUserParams(BuildCommon):
                    tags_from_yaml=None, additional_tags=None,
                    git_commit_depth=None,
                    worker_deadline=None, orchestrator_deadline=None,
-                   operator_manifests_extract_platform=None, **kwargs):
+                   operator_manifests_extract_platform=None,
+                   triggered_after_koji_task=None, **kwargs):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
         self.git_branch.value = git_branch
@@ -263,6 +265,7 @@ class BuildUserParams(BuildCommon):
         self.flatpak.value = flatpak
         self.isolated.value = isolated
         self.scratch.value = scratch
+        self.triggered_after_koji_task.value = triggered_after_koji_task
 
         if not flatpak:
             if not base_image:

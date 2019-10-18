@@ -824,3 +824,24 @@ class TestPluginsConfiguration(object):
         for (plugin_type, plugin) in remove_plugins:
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, plugin_type, plugin)
+
+    @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
+    @pytest.mark.parametrize('triggered_task', (None, 12345))
+    def test_render_koji_delegate(self, build_type, triggered_task):
+        user_params = get_sample_user_params({'triggered_after_koji_task': triggered_task},
+                                             build_type=build_type)
+        self.mock_repo_info()
+        build_json = PluginsConfiguration(user_params).render()
+        plugins = get_plugins_from_build_json(build_json)
+        if build_type == BUILD_TYPE_ORCHESTRATOR:
+            assert get_plugin(plugins, 'prebuild_plugins', 'koji_delegate')
+            plugin_args = plugin_value_get(plugins, 'prebuild_plugins', 'koji_delegate', 'args')
+
+            if triggered_task:
+                assert plugin_args.get('triggered_after_koji_task') == triggered_task
+            else:
+                assert 'triggered_after_koji_task' not in plugin_args
+
+        else:
+            with pytest.raises(NoSuchPluginException):
+                assert get_plugin(plugins, 'prebuild_plugins', 'koji_delegate')

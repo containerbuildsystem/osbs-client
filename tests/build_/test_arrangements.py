@@ -269,6 +269,7 @@ class TestArrangementV6(ArrangementBase):
             'prebuild_plugins': [
                 'reactor_config',
                 'check_and_set_rebuild',
+                'koji_delegate',
                 PLUGIN_CHECK_AND_SET_PLATFORMS_KEY,
                 'resolve_module_compose',
                 'flatpak_create_dockerfile',
