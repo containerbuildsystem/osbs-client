@@ -525,3 +525,9 @@ class BuildRequestV2(object):
         Returns whether or not this is a build `FROM scratch`
         """
         return self.base_image == 'scratch'
+
+
+class SourceBuildRequest(BuildRequestBase):
+    # BuildRequestV2 has hardcoded too many assumptions :-(
+    # we need new implementation for source builds
+    # will try to reuse code as much as possible from base class

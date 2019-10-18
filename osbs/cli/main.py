@@ -300,6 +300,31 @@ def cmd_cancel_build(args, osbs):
     osbs.cancel_build(args.BUILD_ID[0])
 
 
+def _print_build_logs(args, osbs, build):
+    build_id = build.get_build_name()
+    # we need to wait for kubelet to schedule the build, otherwise it's 500
+    build = osbs.wait_for_build_to_get_scheduled(build_id)
+    if not args.no_logs:
+        build_logs = osbs.get_build_logs(build_id, follow=True, decode=True)
+        if not isinstance(build_logs, collections.Iterable):
+            logger.error("'%s' is not iterable; can't display logs", build_logs)
+            return
+        print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
+        try:
+            for line in build_logs:
+                print('{!r}'.format(line))
+        except Exception as ex:
+            logger.error("Error during fetching logs for build %s: %s", build_id, repr(ex))
+
+        osbs.wait_for_build_to_finish(build_id)
+        _display_build_summary(osbs.get_build(build_id))
+    else:
+        if args.output == 'json':
+            print_json_nicely(build.json)
+        elif args.output == 'text':
+            print(build_id)
+
+
 def cmd_build(args, osbs):
     if args.worker:
         create_func = osbs.create_worker_build
@@ -339,28 +364,30 @@ def cmd_build(args, osbs):
         print("Build skipped")
         return
 
-    build_id = build.get_build_name()
-    # we need to wait for kubelet to schedule the build, otherwise it's 500
-    build = osbs.wait_for_build_to_get_scheduled(build_id)
-    if not args.no_logs:
-        build_logs = osbs.get_build_logs(build_id, follow=True, decode=True)
-        if not isinstance(build_logs, collections.Iterable):
-            logger.error("'%s' is not iterable; can't display logs", build_logs)
-            return
-        print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
-        try:
-            for line in build_logs:
-                print('{!r}'.format(line))
-        except Exception as ex:
-            logger.error("Error during fetching logs for build %s: %s", build_id, repr(ex))
+    _print_build_logs(args, osbs, build)
 
-        osbs.wait_for_build_to_finish(build_id)
-        _display_build_summary(osbs.get_build(build_id))
-    else:
-        if args.output == 'json':
-            print_json_nicely(build.json)
-        elif args.output == 'text':
-            print(build_id)
+
+def cmd_build_sources(args, osbs):
+    build_kwargs = {
+        'user': osbs.build_conf.get_user(),
+        'tag': osbs.build_conf.get_tag(),
+        'target': osbs.build_conf.get_koji_target(),
+        'architecture': osbs.build_conf.get_architecture(),
+        'scratch': args.scratch,
+        'platform': args.platform,
+        'platforms': args.platforms,
+        'release': args.release,
+        'koji_parent_build': args.koji_parent_build,
+    }
+    if args.arrangement_version:
+        build_kwargs['arrangement_version'] = args.arrangement_version
+
+    if args.koji_upload_dir:
+        build_kwargs['koji_upload_dir'] = args.koji_upload_dir
+
+    build = osbs.create_source_image_build(**build_kwargs)
+
+    _print_build_logs(args, osbs, build)
 
 
 def _display_build_summary(build):
@@ -700,6 +727,37 @@ def cli():
     build_parser.add_argument("--compose-id", action='append', required=False,
                               dest="compose_ids", type=int, help="ODCS compose"
                               "used, may be used multiple times")
+
+    build_sources_parser = subparsers.add_parser(str_on_2_unicode_on_3('build-sources'),
+                                         help='build an source image in OSBS')
+    build_logs_parser.add_argument("NVR", help="koji build NVR", nargs=1)
+    build_sources_parser.add_argument("--build-json-dir", action="store", metavar="PATH",
+                              help="directory with build jsons")
+    build_sources_parser.add_argument("-t", "--target", action='store',
+                              help="koji target name")
+    build_sources_parser.add_argument("-a", "--arch", action='store',
+                              help="build architecture")
+    build_sources_parser.add_argument("-u", "--user", action='store', required=True,
+                              help="prefix for docker image repository")
+    build_sources_parser.add_argument("-c", "--component", action='store', required=False,
+                              help="not used; use com.redhat.component label in Dockerfile")
+    build_sources_parser.add_argument("-A", "--tag", action='store', required=False,
+                              help="tag of the built image (simple builds only)")
+    build_sources_parser.add_argument("--no-logs", action='store_true', required=False, default=False,
+                              help="don't print logs after submitting build")
+    build_sources_parser.add_argument("--cpu-limit", action='store', required=False,
+                              help="CPU limit (KCU)")
+    build_sources_parser.add_argument("--memory-limit", action='store', required=False,
+                              help="memory limit")
+    build_sources_parser.add_argument("--storage-limit", action='store', required=False,
+                              help="storage limit")
+    build_sources_parser.add_argument("--scratch", action='store_true', required=False,
+                              help="perform a scratch build")
+    build_sources_parser.add_argument('--release', action='store', required=False,
+                              help='release value to use')
+    build_sources_parser.add_argument('--arrangement-version', action='store', required=False,
+                              help='version of inner template to use')
+    build_sources_parser.set_defaults(func=cmd_build_sources)
 
     worker_group = build_parser.add_argument_group(title='arguments for --worker',
                                                    description='Required arguments for creating a '

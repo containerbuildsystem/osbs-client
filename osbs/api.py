@@ -33,7 +33,9 @@ from osbs.constants import (BUILD_RUNNING_STATES, WORKER_OUTER_TEMPLATE,
                             BUILD_TYPE_ORCHESTRATOR, BUILD_FINISHED_STATES,
                             DEFAULT_ARRANGEMENT_VERSION, REACTOR_CONFIG_ARRANGEMENT_VERSION,
                             ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO, FILTER_KEY,
-                            RELEASE_LABEL_FORMAT)
+                            RELEASE_LABEL_FORMAT, ORCHESTRATOR_SOURCES_INNER_TEMPLATE,
+                            ORCHESTRATOR_SOURCES_OUTER_TEMPLATE
+                            )
 from osbs.core import Openshift
 from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsResponseException,
                              OsbsOrchestratorNotEnabled)
@@ -798,6 +800,163 @@ class OSBS(object):
         :return: instance of BuildRequest
         """
         return self._do_create_prod_build(**kwargs)
+
+    @osbsapi
+    def create_source_image_build(
+        self,
+        nvr=None,
+        inner_template=None,
+        outer_template=None,
+        customize_conf=None,
+        arrangement_version=None,
+        scratch=None,
+        user=None,
+        platform=None,
+        platforms=None,
+        koji_task_id=None,
+        architecture=None,
+        reactor_config_override=None,
+        filesystem_koji_task_id=None,
+        koji_upload_dir=None,
+        target=None,
+    ):
+        """
+        Take input args, create build request and submit the source image build
+
+        :return: instance of BuildRequest
+        """
+        build_request = self.get_build_request(  # TODO: create own api for source_build_request
+            inner_template=inner_template or ORCHESTRATOR_SOURCES_INNER_TEMPLATE, # TODO this is ignored later ayway :D  this must be set in atomic_reactor
+            outer_template=outer_template or ORCHESTRATOR_SOURCES_OUTER_TEMPLATE,
+            customize_conf=customize_conf,
+            arrangement_version=arrangement_version
+        )
+
+        if not nvr:
+            raise OsbsValidationException("required argument 'nvr' can't be None")
+
+        name, version, release = nvr.split('-', 3)
+
+        build_request.set_params(
+            # git_uri=git_uri,
+            # git_ref=git_ref,
+            # git_branch=git_branch,
+            user=user,
+            # component=req_labels[utils.Labels.LABEL_TYPE_COMPONENT],
+            build_image=self.build_conf.get_build_image(),
+            build_imagestream=self.build_conf.get_build_imagestream(),
+            build_from=self.build_conf.get_build_from(),
+            # base_image=base_image,
+            name_label=name,  # TODO check this
+            registry_uris=self.build_conf.get_registry_uris(),
+            registry_secrets=self.build_conf.get_registry_secrets(),
+            source_registry_uri=self.build_conf.get_source_registry_uri(),
+            registry_api_versions=self.build_conf.get_registry_api_versions(platform),
+            openshift_uri=self.os_conf.get_openshift_base_uri(),
+            builder_openshift_url=self.os_conf.get_builder_openshift_url(),
+            kojiroot=self.build_conf.get_kojiroot(),
+            kojihub=self.build_conf.get_kojihub(),
+            # sources_command=self.build_conf.get_sources_command(),
+            koji_target=target,
+            koji_certs_secret=self.build_conf.get_koji_certs_secret(),
+            koji_task_id=koji_task_id,
+            koji_use_kerberos=self.build_conf.get_koji_use_kerberos(),
+            koji_kerberos_keytab=self.build_conf.get_koji_kerberos_keytab(),
+            koji_kerberos_principal=self.build_conf.get_koji_kerberos_principal(),
+            # flatpak=flatpak,
+            # odcs_url=self.build_conf.get_odcs_url(),
+            # odcs_insecure=self.build_conf.get_odcs_insecure(),
+            # odcs_openidc_secret=self.build_conf.get_odcs_openidc_secret(),
+            # odcs_ssl_secret=self.build_conf.get_odcs_ssl_secret(),
+            # pdc_url=self.build_conf.get_pdc_url(),
+            # pdc_insecure=self.build_conf.get_pdc_insecure(),
+            architecture=architecture,
+            platforms=platforms,
+            platform=platform,
+            # build_type=build_type, # TODO special secrets?
+            release=release,
+            vendor=self.build_conf.get_vendor(),
+            build_host=self.build_conf.get_build_host(),
+            authoritative_registry=self.build_conf.get_authoritative_registry(),
+            distribution_scope=self.build_conf.get_distribution_scope(),
+            # yum_repourls=yum_repourls,
+            proxy=self.build_conf.get_proxy(),
+            # pulp_secret=self.build_conf.get_pulp_secret(),
+            smtp_host=self.build_conf.get_smtp_host(),
+            smtp_from=self.build_conf.get_smtp_from(),
+            smtp_additional_addresses=self.build_conf.get_smtp_additional_addresses(),
+            smtp_error_addresses=self.build_conf.get_smtp_error_addresses(),
+            smtp_email_domain=self.build_conf.get_smtp_email_domain(),
+            smtp_to_submitter=self.build_conf.get_smtp_to_submitter(),
+            smtp_to_pkgowner=self.build_conf.get_smtp_to_pkgowner(),
+            use_auth=self.build_conf.get_builder_use_auth(),
+            # pulp_registry=self.os_conf.get_pulp_registry(),
+            builder_build_json_dir=self.build_conf.get_builder_build_json_store(),
+            scratch=self.build_conf.get_scratch(scratch),
+            reactor_config_secret=self.build_conf.get_reactor_config_secret(),
+            reactor_config_map=self.build_conf.get_reactor_config_map(),
+            reactor_config_override=reactor_config_override,
+            client_config_secret=self.build_conf.get_client_config_secret(),
+            token_secrets=self.build_conf.get_token_secrets(),
+            arrangement_version=arrangement_version,
+            info_url_format=self.build_conf.get_info_url_format(),
+            artifacts_allowed_domains=self.build_conf.get_artifacts_allowed_domains(),
+            equal_labels=self.build_conf.get_equal_labels(),
+            platform_node_selector=self.build_conf.get_platform_node_selector(platform),
+            scratch_build_node_selector=self.build_conf.get_scratch_build_node_selector(),
+            explicit_build_node_selector=self.build_conf.get_explicit_build_node_selector(),
+            isolated_build_node_selector=self.build_conf.get_isolated_build_node_selector(),
+            auto_build_node_selector=self.build_conf.get_auto_build_node_selector(),
+            # is_auto=is_auto,
+            # skip_build=skip_build,
+            filesystem_koji_task_id=filesystem_koji_task_id,
+            koji_upload_dir=koji_upload_dir,
+            platform_descriptors=self.build_conf.get_platform_descriptors(),
+            # koji_parent_build=koji_parent_build,
+            group_manifests=self.os_conf.get_group_manifests(),
+            # isolated=isolated,
+            prefer_schema1_digest=self.build_conf.get_prefer_schema1_digest(),
+            # signing_intent=signing_intent,
+            # compose_ids=compose_ids,
+            osbs_api=self,
+            # parent_images_digests=parent_images_digests,
+            # TODO configurable tags?
+            # tags_from_yaml=repo_info.additional_tags.from_container_yaml,
+            # additional_tags=repo_info.additional_tags.tags,
+            # git_commit_depth=repo_info.configuration.depth,
+            # operator_manifests_extract_platform=operator_manifests_extract_platform,
+            worker_deadline=self.build_conf.get_worker_deadline(),
+            orchestrator_deadline=self.build_conf.get_orchestor_deadline(),
+        )
+        build_request.set_openshift_required_version(
+            self.os_conf.get_openshift_required_version()
+        )
+
+        builds_for_koji_task = []
+        if koji_task_id:
+            # try to find build for koji_task which isn't canceled and use that one
+            builds_for_koji_task = self._get_not_cancelled_builds_for_koji_task(koji_task_id)
+
+        builds_count = len(builds_for_koji_task)
+        if builds_count == 1:
+            logger.info("found running build for koji task: %s",
+                        builds_for_koji_task[0].get_build_name())
+            response =\
+                BuildResponse(self.os.get_build(builds_for_koji_task[0].get_build_name()).json(),
+                              self)
+        elif builds_count > 1:
+            raise OsbsException("Multiple builds %s for koji task id %s" %
+                                (builds_count, koji_task_id))
+        elif build_request.scratch:
+            logger.info("creating scratch build")
+            response = self._create_scratch_build(build_request)
+        else:
+            logger.info("creating build from build_config")
+            response = self._create_build_config_and_build(build_request)
+
+        logger.debug(response.json)
+        return response
+
 
     @osbsapi
     def create_worker_build(self, **kwargs):

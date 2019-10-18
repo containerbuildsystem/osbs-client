@@ -1,0 +1,34 @@
+{
+  "prebuild_plugins": [
+    {
+      "name": "reactor_config"
+    }
+  ],
+  "buildstep_plugins": [
+    {
+      "name": "source_container_build"
+    }
+  ],
+  "postbuild_plugins": [],
+  "prepublish_plugins": [],
+  "exit_plugins": [
+    {
+      "name": "koji_import"
+    },
+    {
+      "name": "koji_tag_build"
+    },
+    {
+      "name": "store_metadata_in_osv3"
+    },
+    {
+      "name": "sendmail"
+    },
+    {
+      "name": "remove_built_image"
+    },
+    {
+      "name": "remove_worker_metadata"
+    }
+  ]
+}
