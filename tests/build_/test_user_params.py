@@ -347,5 +347,6 @@ class TestBuildUserParams(object):
             "this is not a valid key": "this is not a valid field",
             "user": TEST_USER,
             "worker_deadline": 3,
+            "triggered_after_koji_task": 12345,
         }
         spec.from_json(json.dumps(expected_json))

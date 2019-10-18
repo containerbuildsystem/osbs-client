@@ -482,6 +482,16 @@ class PluginsConfiguration(object):
             self.pt.set_plugin_arg(phase, plugin, 'parent_images_digests',
                                    self.user_params.parent_images_digests.value)
 
+    def render_koji_delegate(self):
+        """Configure koji_delegate"""
+        phase = 'prebuild_plugins'
+        plugin = 'koji_delegate'
+
+        if self.pt.has_plugin_conf(phase, plugin):
+            if self.user_params.triggered_after_koji_task.value:
+                self.pt.set_plugin_arg(phase, plugin, 'triggered_after_koji_task',
+                                       self.user_params.triggered_after_koji_task.value)
+
     def render(self):
         self.user_params.validate()
         # adjust for custom configuration first
@@ -510,4 +520,5 @@ class PluginsConfiguration(object):
         self.render_resolve_composes()
         self.render_resolve_module_compose()
         self.render_tag_from_config()
+        self.render_koji_delegate()
         return self.pt.to_json()
