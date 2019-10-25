@@ -475,8 +475,8 @@ class Openshift(object):
         # due to idle timeout. In that case, try again until the
         # call returns more quickly than a reasonable timeout
         # would be set to.
-        last_activity = time.time()
         while True:
+            connected = time.time()
             buildlogs_url = self._build_url(
                 OCP_BUILD_API_V1,
                 "builds/%s/log/" % build_id,
@@ -488,7 +488,7 @@ class Openshift(object):
                 check_response(response)
 
                 for line in response.iter_lines():
-                    last_activity = time.time()
+                    connected = time.time()
                     yield line
             # NOTE1: If self._get causes ChunkedEncodingError, ConnectionError,
             # or IncompleteRead to be raised, they'll be wrapped in
@@ -502,8 +502,10 @@ class Openshift(object):
             except OsbsException as exc:
                 if not isinstance(exc.cause, requests.ConnectionError):
                     raise
+            except requests.exceptions.ConnectionError:
+                pass
 
-            idle = time.time() - last_activity
+            idle = time.time() - connected
             logger.debug("connection closed after %ds", idle)
             if idle < min_idle_timeout:
                 # Finish output

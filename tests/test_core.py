@@ -118,12 +118,13 @@ class TestOpenshift(object):
     @pytest.mark.parametrize('exc', [  # noqa
         requests.ConnectionError('Connection aborted.', http_client.BadStatusLine("''",)),
     ])
-    def test_stream_logs_bad_initial_connection(self, openshift, exc):
+    def test_stream_logs_bad_initial_connection_and_error_in_iter(self, openshift, exc):
         response = flexmock(status_code=http_client.OK)
         (response
             .should_receive('iter_lines')
             .and_return([b"{'stream': 'foo\n'}"])
-            .and_raise(StopIteration))
+            .and_raise(requests.exceptions.ConnectionError)
+            .and_return([b"{'stream': 'ham\n'}"]))
 
         wrapped_exc = OsbsNetworkException('http://spam.com', str(exc), status_code=None,
                                            cause=exc)
@@ -132,15 +133,22 @@ class TestOpenshift(object):
             # First: simulate initial connection problem
             .and_raise(wrapped_exc)
             # Next: return a real response
-            .and_return(response))
+            .and_return(response)
+            .and_return(response)
+            # we want to call it just as many times so we read all from response,
+            # but not more times because it would start again looping from 1st raise
+            .and_return(response).times(4))
 
-        (flexmock(time)
-            .should_receive('time')
-            .and_return(0)
-            .and_return(100))
+        mocked_time = (flexmock(time).should_receive('time'))
+        # times are tricky, because we use time.time() explicitly in
+        # stream logs, BUT also those two log.debug use it
+        # so this is caluculated that it will be increasing times for all operations
+        # we want, after that it will stop iteration
+        for num in range(0, 1500, 100):
+            mocked_time.and_return(num)
 
         logs = openshift.stream_logs(TEST_BUILD)
-        assert len([log for log in logs]) == 1
+        assert len([log for log in logs]) == 2
 
     def test_stream_logs_utf8(self, openshift):  # noqa
         response = flexmock(status_code=http_client.OK)
