@@ -168,6 +168,16 @@ class TestBuildUserParams(object):
         with pytest.raises(OsbsValidationException):
             spec.set_params(**kwargs)
 
+    def test_user_params_bad_build_from(self):
+        kwargs = self.get_minimal_kwargs()
+        # does not have an "image:" prefix:
+        kwargs['build_from'] = 'registry.example.com/buildroot'
+        spec = BuildUserParams()
+
+        with pytest.raises(OsbsValidationException) as e:
+            spec.set_params(**kwargs)
+        assert 'build_from must be "source_type:source_value"' in str(e.value)
+
     @pytest.mark.parametrize(('signing_intent', 'compose_ids', 'yum_repourls', 'exc'), (
         ('release', [1, 2], ['http://example.com/my.repo'], OsbsValidationException),
         ('release', [1, 2], None, OsbsValidationException),
