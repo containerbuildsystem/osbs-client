@@ -244,6 +244,9 @@ class BuildUserParams(BuildCommon):
                            "use build_from instead")
 
         if build_from:
+            if ':' not in build_from:
+                raise OsbsValidationException(
+                        'build_from must be "source_type:source_value"')
             source_type, source_value = build_from.split(':', 1)
             if source_type not in ('image', 'imagestream'):
                 raise OsbsValidationException(
