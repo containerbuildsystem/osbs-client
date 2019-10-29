@@ -61,7 +61,10 @@ class RegistryURI(object):
     versionre = re.compile(r'((https?://)?([^/]*))(/(v\d+)?)?$')
 
     def __init__(self, uri):
-        groups = self.versionre.match(uri).groups()
+        match = self.versionre.match(uri)
+        if not match:
+            raise ValueError('Invalid registry URI {}'.format(uri))
+        groups = match.groups()
         self.docker_uri = groups[2]
         self.version = groups[4] or 'v2'
         self.scheme = groups[1] or ''
