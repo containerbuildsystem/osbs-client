@@ -133,9 +133,12 @@ class BuildCommon(object):
         return 'DEFINE_KIND_NAME_IN_SUBCLASS'
 
     def __init__(self, build_json_dir=None):
-        self.arrangement_version = BuildParam("arrangement_version", allow_none=True)
+        self.arrangement_version = BuildParam(
+            "arrangement_version",
+            allow_none=True,
+            default=REACTOR_CONFIG_ARRANGEMENT_VERSION)
         self.build_json_dir = BuildParam('build_json_dir', default=build_json_dir)
-        self.kind = BuildParam(KIND_KEY)
+        self.kind = BuildParam(KIND_KEY, default=self.KIND)
         self.component = BuildParam('component')
         self.filesystem_koji_task_id = BuildParam("filesystem_koji_task_id", allow_none=True)
         self.image_tag = BuildParam("image_tag")
@@ -153,10 +156,6 @@ class BuildCommon(object):
             self.user,
         ]
         self.convert_dict = {}
-
-        # Defaults
-        self.arrangement_version.value = REACTOR_CONFIG_ARRANGEMENT_VERSION
-        self.kind.value = self.KIND
 
     def attrs_finalizer(self):
         for _, param in self.__dict__.items():
