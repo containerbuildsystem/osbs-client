@@ -98,17 +98,67 @@ class RegistryURIsParam(BuildParam):
 
 
 class BuildCommon(object):
-    def __init__(self):
+    def __init__(self, build_json_dir=None):
+        self.arrangement_version = BuildParam("arrangement_version", allow_none=True)
+        self.build_json_dir = BuildParam('build_json_dir', default=build_json_dir)
+        self.component = BuildParam('component')
+        self.filesystem_koji_task_id = BuildParam("filesystem_koji_task_id", allow_none=True)
         self.image_tag = BuildParam("image_tag")
         self.koji_target = BuildParam("koji_target", allow_none=True)
+        self.koji_task_id = BuildParam('koji_task_id', allow_none=True)
         self.platform = BuildParam("platform", allow_none=True)
-        self.arrangement_version = BuildParam("arrangement_version", allow_none=True)
-        self.filesystem_koji_task_id = BuildParam("filesystem_koji_task_id", allow_none=True)
+        self.orchestrator_deadline = BuildParam('orchestrator_deadline', allow_none=True)
+        self.scratch = BuildParam('scratch', allow_none=True)
         self.user = UserParam()
-        self.component = BuildParam('component')
+        self.worker_deadline = BuildParam('worker_deadline', allow_none=True)
+
         self.required_params = [
+            self.build_json_dir,
             self.koji_target,
+            self.user,
         ]
+        self.convert_dict = {}
+
+        # Defaults
+        self.arrangement_version.value = REACTOR_CONFIG_ARRANGEMENT_VERSION
+
+    def attrs_finalizer(self):
+        for _, param in self.__dict__.items():
+            if isinstance(param, BuildParam):
+                # check that every parameter has a unique name
+                if param.name in self.convert_dict:
+                    raise OsbsValidationException('Two user params with the same name')
+                self.convert_dict[param.name] = param
+
+    def set_params(
+        self,
+        component=None,
+        koji_target=None,
+        koji_task_id=None,
+        orchestrator_deadline=None,
+        platform=None,
+        scratch=None,
+        user=None,
+        worker_deadline=None,
+        **kwargs
+    ):
+        self.component.value = component
+        self.koji_target.value = koji_target
+        self.koji_task_id.value = koji_task_id
+        self.platform.value = platform
+        self.scratch.value = scratch
+        self.user.value = user
+
+        try:
+            self.orchestrator_deadline.value = int(orchestrator_deadline)
+        except (ValueError, TypeError):
+            self.orchestrator_deadline.value = ORCHESTRATOR_MAX_RUNTIME
+        try:
+            self.worker_deadline.value = int(worker_deadline)
+        except (ValueError, TypeError):
+            self.worker_deadline.value = WORKER_MAX_RUNTIME
+
+        self._populate_image_tag()
 
     def _populate_image_tag(self):
         timestamp = utcnow().strftime('%Y%m%d%H%M%S')
@@ -141,17 +191,46 @@ class BuildCommon(object):
                     raise OsbsValidationException("param '%s' is not valid: None is not allowed" %
                                                   param.name)
 
+    def __repr__(self):
+        return "{}({})".format(self.__class__.__name__, self.__dict__)
+
+    def from_json(self, user_params_json):
+        if not user_params_json:
+            return
+        try:
+            json_dict = json.loads(user_params_json)
+        except ValueError:
+            logger.debug('failed to convert %s', user_params_json)
+            raise
+        for key, value in json_dict.items():
+            try:
+                self.convert_dict[key].value = value
+            except KeyError:
+                continue
+
+    def set_if_exists(self, json_dict, param):
+        if self.convert_dict[param].value:
+            json_dict[param] = self.convert_dict[param].value
+
+    def to_dict(self, keys):
+        retdict = {}
+        for key in keys:
+            self.set_if_exists(retdict, key)
+        return retdict
+
+    def to_json(self):
+        json_dict = self.to_dict(list(self.convert_dict))
+        return json.dumps(json_dict, sort_keys=True)
+
 
 class BuildUserParams(BuildCommon):
     def __init__(self, build_json_dir=None, customize_conf=None):
         # defines image_tag, koji_target, filesystem_koji_task_id, platform, arrangement_version
-        super(BuildUserParams, self).__init__()
-        self.arrangement_version.value = REACTOR_CONFIG_ARRANGEMENT_VERSION
+        super(BuildUserParams, self).__init__(build_json_dir=build_json_dir)
         self.base_image = BuildParam('base_image', allow_none=True)
         self.build_from = BuildParam('build_from')
         self.build_image = BuildParam('build_image')
         self.build_imagestream = BuildParam('build_imagestream')
-        self.build_json_dir = BuildParam('build_json_dir', default=build_json_dir)
         self.build_type = BuildParam('build_type')
         self.compose_ids = BuildParam("compose_ids", allow_none=True)
         self.customize_conf_path = BuildParam("customize_conf", allow_none=True,
@@ -163,7 +242,6 @@ class BuildUserParams(BuildCommon):
         self.imagestream_name = BuildParam('imagestream_name')
         self.isolated = BuildParam('isolated', allow_none=True)
         self.koji_parent_build = BuildParam('koji_parent_build', allow_none=True)
-        self.koji_task_id = BuildParam('koji_task_id', allow_none=True)
         self.koji_upload_dir = BuildParam('koji_upload_dir', allow_none=True)
         self.name = BuildIDParam()
         self.parent_images_digests = BuildParam('parent_images_digests', allow_none=True)
@@ -173,49 +251,38 @@ class BuildUserParams(BuildCommon):
         self.reactor_config_map = BuildParam("reactor_config_map", allow_none=True)
         self.reactor_config_override = BuildParam("reactor_config_override", allow_none=True)
         self.release = BuildParam('release', allow_none=True)
-        self.scratch = BuildParam('scratch', allow_none=True)
         self.signing_intent = BuildParam('signing_intent', allow_none=True)
         self.trigger_imagestreamtag = BuildParam('trigger_imagestreamtag')
         self.yum_repourls = BuildParam("yum_repourls")
         self.tags_from_yaml = BuildParam('tags_from_yaml', allow_none=True)
         self.additional_tags = BuildParam('additional_tags', allow_none=True)
         self.git_commit_depth = BuildParam('git_commit_depth', allow_none=True)
-        self.worker_deadline = BuildParam('worker_deadline', allow_none=True)
-        self.orchestrator_deadline = BuildParam('orchestrator_deadline', allow_none=True)
         self.triggered_after_koji_task = BuildParam('triggered_after_koji_task', allow_none=True)
 
-        self.required_params = [
-            self.build_json_dir,
+        self.required_params.extend([
             self.build_type,
             self.git_ref,
             self.git_uri,
-            self.koji_target,
-            self.user,
-        ]
-        self.convert_dict = {}
-        for _, param in self.__dict__.items():
-            if isinstance(param, BuildParam):
-                # check that every parameter has a unique name
-                if param.name in self.convert_dict:
-                    raise OsbsValidationException('Two user params with the same name')
-                self.convert_dict[param.name] = param
+        ])
+
+        self.attrs_finalizer()
 
     def set_params(self,
                    git_uri=None, git_ref=None, git_branch=None,
-                   base_image=None, name_label=None, user=None,
-                   component=None, release=None,
+                   base_image=None, name_label=None,
+                   release=None,
                    build_image=None, build_imagestream=None, build_from=None,
-                   platforms=None, platform=None, build_type=None,
-                   koji_target=None, koji_task_id=None, filesystem_koji_task_id=None,
+                   platforms=None, build_type=None,
+                   filesystem_koji_task_id=None,
                    koji_parent_build=None, koji_upload_dir=None,
                    flatpak=None, reactor_config_map=None, reactor_config_override=None,
                    yum_repourls=None, signing_intent=None, compose_ids=None,
-                   isolated=None, scratch=None, parent_images_digests=None,
+                   isolated=None, parent_images_digests=None,
                    tags_from_yaml=None, additional_tags=None,
                    git_commit_depth=None,
-                   worker_deadline=None, orchestrator_deadline=None,
                    operator_manifests_extract_platform=None,
                    triggered_after_koji_task=None, **kwargs):
+        super(BuildUserParams, self).set_params(**kwargs)
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
         self.git_branch.value = git_branch
@@ -223,8 +290,6 @@ class BuildUserParams(BuildCommon):
         self.tags_from_yaml.value = tags_from_yaml
         self.additional_tags.value = additional_tags or set()
 
-        self.user.value = user
-        self.component.value = component
         self.release.value = release
         self.build_type.value = build_type
         self.base_image.value = base_image
@@ -259,15 +324,11 @@ class BuildUserParams(BuildCommon):
         self.parent_images_digests.value = parent_images_digests
         self.operator_manifests_extract_platform.value = operator_manifests_extract_platform
         self.platforms.value = platforms
-        self.platform.value = platform
-        self.koji_target.value = koji_target
-        self.koji_task_id.value = koji_task_id
         self.filesystem_koji_task_id.value = filesystem_koji_task_id
         self.koji_parent_build.value = koji_parent_build
         self.koji_upload_dir.value = koji_upload_dir
         self.flatpak.value = flatpak
         self.isolated.value = isolated
-        self.scratch.value = scratch
         self.triggered_after_koji_task.value = triggered_after_koji_task
 
         if not flatpak:
@@ -289,45 +350,3 @@ class BuildUserParams(BuildCommon):
         self.yum_repourls.value = yum_repourls or []
         self.signing_intent.value = signing_intent
         self.compose_ids.value = compose_ids or []
-
-        try:
-            self.orchestrator_deadline.value = int(orchestrator_deadline)
-        except (ValueError, TypeError):
-            self.orchestrator_deadline.value = ORCHESTRATOR_MAX_RUNTIME
-        try:
-            self.worker_deadline.value = int(worker_deadline)
-        except (ValueError, TypeError):
-            self.worker_deadline.value = WORKER_MAX_RUNTIME
-
-        self._populate_image_tag()
-
-    def __repr__(self):
-        return "UserParams(%s)" % self.__dict__
-
-    def from_json(self, user_params_json):
-        if not user_params_json:
-            return
-        try:
-            json_dict = json.loads(user_params_json)
-        except ValueError:
-            logger.debug('failed to convert %s', user_params_json)
-            raise
-        for key, value in json_dict.items():
-            try:
-                self.convert_dict[key].value = value
-            except KeyError:
-                continue
-
-    def set_if_exists(self, json_dict, param):
-        if self.convert_dict[param].value:
-            json_dict[param] = self.convert_dict[param].value
-
-    def to_dict(self, keys):
-        retdict = {}
-        for key in keys:
-            self.set_if_exists(retdict, key)
-        return retdict
-
-    def to_json(self):
-        json_dict = self.to_dict(list(self.convert_dict))
-        return json.dumps(json_dict, sort_keys=True)
