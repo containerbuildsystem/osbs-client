@@ -21,7 +21,7 @@ from contextlib import contextmanager
 from types import GeneratorType
 
 from osbs.build.build_requestv2 import BuildRequestV2
-from osbs.build.user_params import BuildUserParams
+from osbs.build.user_params import load_user_params_from_json
 from osbs.build.plugins_configuration import PluginsConfiguration
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
@@ -1333,7 +1333,7 @@ class OSBS(object):
 
     @osbsapi
     def render_plugins_configuration(self, user_params_json):
-        user_params = BuildUserParams()
-        user_params.from_json(user_params_json)
+        user_params = load_user_params_from_json(user_params_json)
 
+        # TODO use different plugin configuration
         return PluginsConfiguration(user_params).render()

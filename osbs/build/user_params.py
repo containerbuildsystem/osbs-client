@@ -7,6 +7,7 @@ of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, absolute_import, unicode_literals
 
+from abc import abstractproperty
 import logging
 import re
 import random
@@ -20,6 +21,19 @@ from osbs.utils import get_imagestreamtag_from_image, make_name_from_git, Regist
 
 
 logger = logging.getLogger(__name__)
+
+KIND_KEY = 'kind'
+
+# keeps map between kind name and object registered with decorator
+# @register_user_params
+user_param_kinds = {}
+
+
+def register_user_params(klass):
+    """Decorator for registering classes user params classes"""
+    assert issubclass(klass, BuildCommon)
+    user_param_kinds[klass.KIND] = klass
+    return klass
 
 
 class BuildParam(object):
@@ -97,10 +111,31 @@ class RegistryURIsParam(BuildParam):
         BuildParam.value.fset(self, registry_uris)  # pylint: disable=no-member
 
 
+def load_user_params_from_json(user_params_json):
+    """Load user params from json into proper object
+
+    :param str user_params_json: json with user params
+    :rtype: subclass of BuildCommon
+    :return: initialized object with user params
+    """
+    json_dict = json.loads(user_params_json)
+    kind = json_dict.get(KIND_KEY, BuildUserParams.KIND)  # BW comp. default to BuildUserParams
+    user_params_class = user_param_kinds[kind]
+    user_params = user_params_class()
+    user_params.from_json(user_params_json)
+    return user_params
+
+
 class BuildCommon(object):
+
+    @abstractproperty
+    def KIND(self):
+        return 'DEFINE_KIND_NAME_IN_SUBCLASS'
+
     def __init__(self, build_json_dir=None):
         self.arrangement_version = BuildParam("arrangement_version", allow_none=True)
         self.build_json_dir = BuildParam('build_json_dir', default=build_json_dir)
+        self.kind = BuildParam(KIND_KEY)
         self.component = BuildParam('component')
         self.filesystem_koji_task_id = BuildParam("filesystem_koji_task_id", allow_none=True)
         self.image_tag = BuildParam("image_tag")
@@ -121,6 +156,7 @@ class BuildCommon(object):
 
         # Defaults
         self.arrangement_version.value = REACTOR_CONFIG_ARRANGEMENT_VERSION
+        self.kind.value = self.KIND
 
     def attrs_finalizer(self):
         for _, param in self.__dict__.items():
@@ -223,7 +259,11 @@ class BuildCommon(object):
         return json.dumps(json_dict, sort_keys=True)
 
 
+@register_user_params
 class BuildUserParams(BuildCommon):
+
+    KIND = 'build_user_params'
+
     def __init__(self, build_json_dir=None, customize_conf=None):
         # defines image_tag, koji_target, filesystem_koji_task_id, platform, arrangement_version
         super(BuildUserParams, self).__init__(build_json_dir=build_json_dir)
@@ -352,8 +392,11 @@ class BuildUserParams(BuildCommon):
         self.compose_ids.value = compose_ids or []
 
 
+@register_user_params
 class SourceContainerUserParams(BuildCommon):
     """User params for building source containers"""
+
+    KIND = 'source_containers_user_params'
 
     def __init__(self, build_json_dir=None):
         super(SourceContainerUserParams, self).__init__(
