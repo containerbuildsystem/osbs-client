@@ -162,7 +162,8 @@ class BuildCommon(object):
             if isinstance(param, BuildParam):
                 # check that every parameter has a unique name
                 if param.name in self.convert_dict:
-                    raise OsbsValidationException('Two user params with the same name')
+                    raise OsbsValidationException(
+                        'Two user params with the same name: {}'.format(param.name))
                 self.convert_dict[param.name] = param
 
     def set_params(
