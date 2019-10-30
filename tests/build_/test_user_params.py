@@ -15,7 +15,12 @@ import random
 import sys
 import json
 
-from osbs.build.user_params import BuildIDParam, RegistryURIsParam, BuildUserParams
+from osbs.build.user_params import (
+    BuildIDParam,
+    RegistryURIsParam,
+    BuildUserParams,
+    SourceContainerUserParams,
+)
 from osbs.exceptions import OsbsValidationException
 from osbs.constants import BUILD_TYPE_WORKER, REACTOR_CONFIG_ARRANGEMENT_VERSION
 from tests.constants import (TEST_COMPONENT, TEST_FILESYSTEM_KOJI_TASK_ID,
@@ -360,3 +365,69 @@ class TestBuildUserParams(object):
             "triggered_after_koji_task": 12345,
         }
         spec.from_json(json.dumps(expected_json))
+
+
+class TestSourceContainerUserParams(object):
+    """Tests for source container user params"""
+
+    def get_minimal_kwargs(self):
+        return {
+            # Params needed to avoid exceptions.
+            'user': TEST_USER,
+            'koji_nvr': 'test-1-123',
+        }
+
+    def test_validate_missing_required(self):
+        kwargs = {
+            'user': TEST_USER,
+        }
+        spec = SourceContainerUserParams()
+        spec.set_params(**kwargs)
+
+        with pytest.raises(OsbsValidationException):
+            spec.validate()
+
+    def test_all_values_and_json(self):
+        param_kwargs = {
+            'component': TEST_COMPONENT,
+            "koji_target": "tothepoint",
+            "orchestrator_deadline": 5,
+            "platform": "x86_64",
+            'scratch': True,
+            "user": TEST_USER,
+            "worker_deadline": 3,
+        }
+
+        rand = '12345'
+        timestr = '20170731111111'
+        (flexmock(sys.modules['osbs.build.user_params'])
+            .should_receive('utcnow').once()
+            .and_return(datetime.datetime.strptime(timestr, '%Y%m%d%H%M%S')))
+
+        (flexmock(random)
+            .should_receive('randrange').once()
+            .with_args(10**(len(rand) - 1), 10**len(rand))
+            .and_return(int(rand)))
+
+        build_json_dir = 'inputs'
+        spec = SourceContainerUserParams(build_json_dir)
+        spec.set_params(**param_kwargs)
+
+        expected_json = {
+            "arrangement_version": REACTOR_CONFIG_ARRANGEMENT_VERSION,
+            "build_json_dir": build_json_dir,
+            'component': TEST_COMPONENT,
+            "image_tag": "{}/{}:tothepoint-{}-{}-x86_64".format(
+                TEST_USER, TEST_COMPONENT, rand, timestr),
+            "koji_target": "tothepoint",
+            "orchestrator_deadline": 5,
+            "platform": "x86_64",
+            'scratch': True,
+            "user": TEST_USER,
+            "worker_deadline": 3,
+        }
+        assert spec.to_json() == json.dumps(expected_json, sort_keys=True)
+
+        spec2 = SourceContainerUserParams()
+        spec2.from_json(spec.to_json())
+        assert spec2.to_json() == json.dumps(expected_json, sort_keys=True)

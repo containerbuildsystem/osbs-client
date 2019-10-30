@@ -350,3 +350,31 @@ class BuildUserParams(BuildCommon):
         self.yum_repourls.value = yum_repourls or []
         self.signing_intent.value = signing_intent
         self.compose_ids.value = compose_ids or []
+
+
+class SourceContainerUserParams(BuildCommon):
+    """User params for building source containers"""
+
+    def __init__(self, build_json_dir=None):
+        super(SourceContainerUserParams, self).__init__(
+            build_json_dir=build_json_dir)
+        self.sources_for_koji_build_nvr = BuildParam("sources_for_koji_build_nvr")
+
+        self.required_params.extend([
+            self.sources_for_koji_build_nvr,
+        ])
+
+        self.attrs_finalizer()
+
+    def set_params(
+        self,
+        sources_for_koji_build_nvr=None,
+        **kwargs
+    ):
+        """
+        :param str sources_for_koji_build_nvr: NVR of build that will be used
+                                               to fetch sources
+        :return:
+        """
+        super(SourceContainerUserParams, self).set_params(**kwargs)
+        self.sources_for_koji_build_nvr.value = sources_for_koji_build_nvr
