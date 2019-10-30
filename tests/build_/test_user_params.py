@@ -20,6 +20,7 @@ from osbs.build.user_params import (
     RegistryURIsParam,
     BuildUserParams,
     SourceContainerUserParams,
+    load_user_params_from_json,
 )
 from osbs.exceptions import OsbsValidationException
 from osbs.constants import BUILD_TYPE_WORKER, REACTOR_CONFIG_ARRANGEMENT_VERSION
@@ -142,7 +143,8 @@ class TestBuildUserParams(object):
         required_json = json.dumps({
             'arrangement_version': 6,
             'customize_conf': 'worker_customize.json',
-            'git_ref': 'master'
+            'git_ref': 'master',
+            'kind': 'build_user_params',
         }, sort_keys=True)
         spec = BuildUserParams()
 
@@ -301,6 +303,7 @@ class TestBuildUserParams(object):
             "image_tag": "{}/{}:tothepoint-{}-{}-x86_64".format(TEST_USER, TEST_COMPONENT,
                                                                 rand, timestr),
             "imagestream_name": "name_label",
+            "kind": "build_user_params",
             "koji_parent_build": "fedora-26-9",
             "koji_target": "tothepoint",
             "name": "path-master-cd1e4",
@@ -419,6 +422,7 @@ class TestSourceContainerUserParams(object):
             'component': TEST_COMPONENT,
             "image_tag": "{}/{}:tothepoint-{}-{}-x86_64".format(
                 TEST_USER, TEST_COMPONENT, rand, timestr),
+            "kind": "source_containers_user_params",
             "koji_target": "tothepoint",
             "orchestrator_deadline": 5,
             "platform": "x86_64",
@@ -431,3 +435,13 @@ class TestSourceContainerUserParams(object):
         spec2 = SourceContainerUserParams()
         spec2.from_json(spec.to_json())
         assert spec2.to_json() == json.dumps(expected_json, sort_keys=True)
+
+
+@pytest.mark.parametrize('user_params,expected', [
+    ({"kind": "build_user_params"}, BuildUserParams),
+    ({"kind": "source_containers_user_params"}, SourceContainerUserParams),
+])
+def test_load_user_params_from_json(user_params, expected):
+    user_params_json = json.dumps(user_params)
+    user_params_obj = load_user_params_from_json(user_params_json)
+    assert isinstance(user_params_obj, expected)
