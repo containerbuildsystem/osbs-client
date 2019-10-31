@@ -244,7 +244,7 @@ class PluginsConfiguration(object):
 
         enable_plugins = self.pt.customize_conf.get('enable_plugins', [])
         if not enable_plugins:
-            logger.debug('No site-user specified plugins to enable"')
+            logger.debug('No site-user specified plugins to enable')
         else:
             for plugin in enable_plugins:
                 try:
