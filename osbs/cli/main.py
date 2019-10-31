@@ -789,9 +789,12 @@ def cli():
     parser.add_argument("--source-registry-uri", action='store', metavar="URL",
                         help="registry with base images")
     parser.add_argument("--config", action='store', metavar="PATH",
-                        help="path to configuration file", default=DEFAULT_CONFIGURATION_FILE)
+                        help="path to configuration file, default %s" % DEFAULT_CONFIGURATION_FILE,
+                        default=DEFAULT_CONFIGURATION_FILE)
     parser.add_argument("--instance", "-i", action='store', metavar="SECTION_NAME",
-                        help="section within config for requested instance",
+                        help="section within config for requested instance."
+                             " If unspecified, osbs will load the section"
+                             " named '%s'" % DEFAULT_CONFIGURATION_SECTION,
                         default=DEFAULT_CONFIGURATION_SECTION)
     parser.add_argument("--username", action='store',
                         help="name of user to use for Basic Authentication in OSBS")
