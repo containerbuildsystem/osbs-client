@@ -376,12 +376,14 @@ class TestSourceContainerUserParams(object):
     def get_minimal_kwargs(self):
         return {
             # Params needed to avoid exceptions.
+            "build_from": "image:buildroot:latest",
             'user': TEST_USER,
-            'koji_nvr': 'test-1-123',
+            'sources_for_koji_build_nvr': 'test-1-123',
         }
 
     def test_validate_missing_required(self):
         kwargs = {
+            "build_from": "image:buildroot:latest",
             'user': TEST_USER,
         }
         spec = SourceContainerUserParams()
@@ -391,15 +393,15 @@ class TestSourceContainerUserParams(object):
             spec.validate()
 
     def test_all_values_and_json(self):
-        param_kwargs = {
+        param_kwargs = self.get_minimal_kwargs()
+        param_kwargs.update({
             'component': TEST_COMPONENT,
             "koji_target": "tothepoint",
             "orchestrator_deadline": 5,
             "platform": "x86_64",
             'scratch': True,
-            "user": TEST_USER,
             "worker_deadline": 3,
-        }
+        })
 
         rand = '12345'
         timestr = '20170731111111'
@@ -418,12 +420,15 @@ class TestSourceContainerUserParams(object):
 
         expected_json = {
             "arrangement_version": REACTOR_CONFIG_ARRANGEMENT_VERSION,
+            "build_image": "buildroot:latest",
             "build_json_dir": build_json_dir,
             'component': TEST_COMPONENT,
             "image_tag": "{}/{}:tothepoint-{}-{}-x86_64".format(
                 TEST_USER, TEST_COMPONENT, rand, timestr),
             "kind": "source_containers_user_params",
+            "sources_for_koji_build_nvr": "test-1-123",
             "koji_target": "tothepoint",
+            "name": "test-source",
             "orchestrator_deadline": 5,
             "platform": "x86_64",
             'scratch': True,
