@@ -16,8 +16,12 @@ import yaml
 from pkg_resources import parse_version
 import six
 
-from osbs.build.user_params import BuildUserParams, BuildCommon
+from osbs.build.user_params import (
+    BuildUserParams,
+    SourceContainerUserParams,
+)
 from osbs.constants import (SECRETS_PATH, DEFAULT_OUTER_TEMPLATE,
+                            DEFAULT_SOURCES_OUTER_TEMPLATE,
                             DEFAULT_CUSTOMIZE_CONF, BUILD_TYPE_ORCHESTRATOR,
                             BUILD_TYPE_WORKER, ISOLATED_RELEASE_FORMAT)
 from osbs.exceptions import OsbsException, OsbsValidationException
@@ -42,7 +46,17 @@ class BaseBuildRequest(object):
         self._resource_limits = None
         self._template = None
 
+        self.isolated = None
         self.scratch = None
+        self.user_params = None  # must be initialized in subclasses
+
+    def delete_atomic_reactor_placeholder(self):
+        """Delete the ATOMIC_REACTOR_PLUGINS placeholder"""
+        custom_strategy = self.template['spec']['strategy']['customStrategy']
+        for (index, env) in enumerate(custom_strategy['env']):
+            if env['name'] == 'ATOMIC_REACTOR_PLUGINS':
+                del custom_strategy['env'][index]
+                break
 
     @abc.abstractmethod
     def render(self, validate=True):
@@ -51,9 +65,52 @@ class BaseBuildRequest(object):
         if validate:
             self.user_params.validate()
 
+        self.render_name(
+            self.user_params.name.value,
+            self.user_params.image_tag.value,
+            self.user_params.platform.value)
+        self.render_output_name()
+        self.render_custom_strategy()
         self.render_resource_limits()
         self.adjust_for_scratch()
+        self.set_reactor_config()
+        self.render_user_params()
+        self.delete_atomic_reactor_placeholder()
+
         return self.template
+
+    def render_custom_strategy(self):
+        """Render data about buildroot used for custom strategy"""
+        custom_strategy = self.template['spec']['strategy']['customStrategy']
+        if self.user_params.build_imagestream.value:
+            custom_strategy['from']['kind'] = 'ImageStreamTag'
+            custom_strategy['from']['name'] = self.user_params.build_imagestream.value
+        else:
+            custom_strategy['from']['name'] = self.user_params.build_image.value
+
+    def render_name(self, name, image_tag, platform):
+        """Sets the Build/BuildConfig object name"""
+
+        if self.scratch or self.isolated:
+            name = image_tag
+            # Platform name may contain characters not allowed by OpenShift.
+            if platform:
+                platform_suffix = '-{}'.format(platform)
+                if name.endswith(platform_suffix):
+                    name = name[:-len(platform_suffix)]
+
+            _, salt, timestamp = name.rsplit('-', 2)
+
+            if self.scratch:
+                name = 'scratch-{}-{}'.format(salt, timestamp)
+            elif self.isolated:
+                name = 'isolated-{}-{}'.format(salt, timestamp)
+
+        # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
+        self.template['metadata']['name'] = name
+
+    def render_output_name(self):
+        self.template['spec']['output']['to']['name'] = self.user_params.image_tag.value
 
     def render_resource_limits(self):
         if self._resource_limits is not None:
@@ -62,6 +119,14 @@ class BaseBuildRequest(object):
             limits.update(self._resource_limits)
             resources['limits'] = limits
             self.template['spec']['resources'] = resources
+
+    def render_user_params(self):
+        custom_strategy = self.template['spec']['strategy']['customStrategy']
+        # Set our environment variables
+        custom_strategy['env'].append({
+            'name': 'USER_PARAMS',
+            'value': self.user_params.to_json(),
+        })
 
     def adjust_for_scratch(self):
         """
@@ -95,6 +160,32 @@ class BaseBuildRequest(object):
         # Here we cater to the koji "scratch" build type, this will disable
         # all plugins that might cause importing of data to koji
         self.scratch = kwargs.get('scratch')
+
+    def set_reactor_config(self):
+        reactor_config_override = self.user_params.reactor_config_override.value
+        reactor_config_map = self.user_params.reactor_config_map.value
+
+        if not reactor_config_map and not reactor_config_override:
+            return
+        custom = self.template['spec']['strategy']['customStrategy']
+
+        if reactor_config_override:
+            reactor_config = {
+                'name': 'REACTOR_CONFIG',
+                'value': yaml.safe_dump(reactor_config_override)
+            }
+        elif reactor_config_map:
+            reactor_config = {
+                'name': 'REACTOR_CONFIG',
+                'valueFrom': {
+                    'configMapKeyRef': {
+                        'name': reactor_config_map,
+                        'key': 'config.yaml'
+                    }
+                }
+            }
+
+        custom['env'].append(reactor_config)
 
     def set_resource_limits(self, cpu=None, memory=None, storage=None):
         if self._resource_limits is None:
@@ -247,32 +338,6 @@ class BuildRequestV2(BaseBuildRequest):
     def trigger_imagestreamtag(self):
         return self.user_params.trigger_imagestreamtag.value
 
-    def set_reactor_config(self):
-        reactor_config_override = self.user_params.reactor_config_override.value
-        reactor_config_map = self.user_params.reactor_config_map.value
-
-        if not reactor_config_map and not reactor_config_override:
-            return
-        custom = self.template['spec']['strategy']['customStrategy']
-
-        if reactor_config_override:
-            reactor_config = {
-                'name': 'REACTOR_CONFIG',
-                'value': yaml.safe_dump(reactor_config_override)
-            }
-        elif reactor_config_map:
-            reactor_config = {
-                'name': 'REACTOR_CONFIG',
-                'valueFrom': {
-                    'configMapKeyRef': {
-                        'name': reactor_config_map,
-                        'key': 'config.yaml'
-                    }
-                }
-            }
-
-        custom['env'].append(reactor_config)
-
     def set_data_from_reactor_config(self):
         """
         Sets data from reactor config
@@ -354,24 +419,12 @@ class BuildRequestV2(BaseBuildRequest):
 
         super(BuildRequestV2, self).render(validate=validate)
 
-        self.render_name(self.user_params.name.value, self.user_params.image_tag.value,
-                         self.user_params.platform.value)
-
         self.template['spec']['source']['git']['uri'] = self.user_params.git_uri.value
         self.template['spec']['source']['git']['ref'] = self.user_params.git_ref.value
-
-        self.template['spec']['output']['to']['name'] = self.user_params.image_tag.value
 
         if self.has_ist_trigger():
             imagechange = self.template['spec']['triggers'][0]['imageChange']
             imagechange['from']['name'] = self.user_params.trigger_imagestreamtag.value
-
-        custom_strategy = self.template['spec']['strategy']['customStrategy']
-        if self.user_params.build_imagestream.value:
-            custom_strategy['from']['kind'] = 'ImageStreamTag'
-            custom_strategy['from']['name'] = self.user_params.build_imagestream.value
-        else:
-            custom_strategy['from']['name'] = self.user_params.build_image.value
 
         # Set git-repo-name and git-full-name labels
         repo_name = git_repo_humanish_part_from_uri(self.user_params.git_uri.value)
@@ -394,7 +447,6 @@ class BuildRequestV2(BaseBuildRequest):
         # Set template.spec.strategy.customStrategy.env[] USER_PARAMS
         # Set required_secrets based on reactor_config
         # Set worker_token_secrets based on reactor_config, if any
-        self.set_reactor_config()
         self.set_data_from_reactor_config()
 
         # Adjust triggers for custom base image
@@ -411,17 +463,6 @@ class BuildRequestV2(BaseBuildRequest):
         self.render_node_selectors(self.user_params.build_type.value)
 
         self._set_deadline()
-
-        # Set our environment variables
-        custom_strategy['env'].append({
-            'name': 'USER_PARAMS',
-            'value': self.user_params.to_json(),
-        })
-        # delete the ATOMIC_REACTOR_PLUGINS placeholder
-        for (index, env) in enumerate(custom_strategy['env']):
-            if env['name'] == 'ATOMIC_REACTOR_PLUGINS':
-                del custom_strategy['env'][index]
-                break
 
         # Log build json
         # Return build json
@@ -453,27 +494,6 @@ class BuildRequestV2(BaseBuildRequest):
                     trigger['imageChange']['from']['kind'] == 'ImageStreamTag':
                 return True
         return False
-
-    def render_name(self, name, image_tag, platform):
-        """Sets the Build/BuildConfig object name"""
-
-        if self.scratch or self.isolated:
-            name = image_tag
-            # Platform name may contain characters not allowed by OpenShift.
-            if platform:
-                platform_suffix = '-{}'.format(platform)
-                if name.endswith(platform_suffix):
-                    name = name[:-len(platform_suffix)]
-
-            _, salt, timestamp = name.rsplit('-', 2)
-
-            if self.scratch:
-                name = 'scratch-{}-{}'.format(salt, timestamp)
-            elif self.isolated:
-                name = 'isolated-{}-{}'.format(salt, timestamp)
-
-        # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
-        self.template['metadata']['name'] = name
 
     def render_node_selectors(self, build_type):
         # for worker builds set nodeselectors
@@ -562,3 +582,26 @@ class BuildRequestV2(BaseBuildRequest):
         Returns whether or not this is a build `FROM scratch`
         """
         return self.base_image == 'scratch'
+
+
+class SourceBuildRequest(BaseBuildRequest):
+    """Build request for source containers"""
+    def __init__(self, build_json_store, outer_template=None):
+        """
+        :param build_json_store: str, path to directory with JSON build files
+        :param outer_template: str, path to outer template JSON
+        """
+        super(SourceBuildRequest, self).__init__(
+            build_json_store,
+            outer_template=outer_template or DEFAULT_SOURCES_OUTER_TEMPLATE
+        )
+        self.user_params = SourceContainerUserParams(self.build_json_store)
+
+    def render(self, validate=True):
+        return super(SourceBuildRequest, self).render(validate=validate)
+
+    def set_params(self, **kwargs):
+        super(SourceBuildRequest, self).set_params(**kwargs)
+
+        logger.debug("now setting params '%s' for user_params", kwargs)
+        self.user_params.set_params(**kwargs)
