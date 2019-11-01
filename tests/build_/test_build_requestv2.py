@@ -16,7 +16,10 @@ import shutil
 import yaml
 from copy import deepcopy
 
-from osbs.build.build_requestv2 import BuildRequestV2
+from osbs.build.build_requestv2 import (
+    BuildRequestV2,
+    SourceBuildRequest,
+)
 from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             ORCHESTRATOR_OUTER_TEMPLATE, BUILD_TYPE_WORKER,
                             BUILD_TYPE_ORCHESTRATOR, SECRETS_PATH)
@@ -1016,3 +1019,43 @@ class TestBuildRequestV2(object):
         else:
             with pytest.raises(KeyError):
                 assert build_json['spec']['completionDeadlineSeconds']
+
+
+class TestSourceBuildRequest(object):
+    """Test suite for SourceBuildRequest"""
+
+    def test_render_simple_request(self):
+        build_request = SourceBuildRequest(INPUTS_PATH)
+        kwargs = {
+            'build_from': 'image:buildroot:latest',
+            'component': TEST_COMPONENT,
+            'user': "john-foo",
+            'reactor_config_map': 'reactor-config-map',
+            'sources_for_koji_build_nvr': "name-1.0-123",
+        }
+        build_request.set_params(**kwargs)
+        build_json = build_request.render()
+
+        assert build_json["metadata"]["name"] is not None
+        assert "triggers" not in build_json["spec"]
+
+        expected_output = "john-foo/component:none-"
+        assert build_json["spec"]["output"]["to"]["name"].startswith(expected_output)
+
+        rendered_build_image = build_json["spec"]["strategy"]["customStrategy"]["from"]["name"]
+        assert rendered_build_image == 'buildroot:latest'
+
+        json_env = build_json['spec']['strategy']['customStrategy']['env']
+        envs = {}
+        for env in json_env:
+            envs[env['name']] = (env.get('valueFrom', None), env.get('value', None))
+
+        configmapkeyref = {
+            'name': 'reactor-config-map',
+            'key': 'config.yaml'
+        }
+        assert 'REACTOR_CONFIG' in envs
+        assert 'configMapKeyRef' in envs['REACTOR_CONFIG'][0]
+        assert envs['REACTOR_CONFIG'][0]['configMapKeyRef'] == configmapkeyref
+
+        assert 'USER_PARAMS' in envs
