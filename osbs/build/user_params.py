@@ -17,7 +17,12 @@ from osbs.constants import (DEFAULT_GIT_REF, REACTOR_CONFIG_ARRANGEMENT_VERSION,
                             DEFAULT_CUSTOMIZE_CONF, RAND_DIGITS,
                             WORKER_MAX_RUNTIME, ORCHESTRATOR_MAX_RUNTIME)
 from osbs.exceptions import OsbsValidationException
-from osbs.utils import get_imagestreamtag_from_image, make_name_from_git, RegistryURI, utcnow
+from osbs.utils import (
+    get_imagestreamtag_from_image,
+    make_name_from_git,
+    make_source_container_name,
+    RegistryURI,
+    utcnow)
 
 
 logger = logging.getLogger(__name__)
@@ -137,6 +142,9 @@ class BuildCommon(object):
             "arrangement_version",
             allow_none=True,
             default=REACTOR_CONFIG_ARRANGEMENT_VERSION)
+        self.build_from = BuildParam('build_from')
+        self.build_image = BuildParam('build_image')
+        self.build_imagestream = BuildParam('build_imagestream')
         self.build_json_dir = BuildParam('build_json_dir', default=build_json_dir)
         self.kind = BuildParam(KIND_KEY, default=self.KIND)
         self.component = BuildParam('component')
@@ -144,8 +152,11 @@ class BuildCommon(object):
         self.image_tag = BuildParam("image_tag")
         self.koji_target = BuildParam("koji_target", allow_none=True)
         self.koji_task_id = BuildParam('koji_task_id', allow_none=True)
+        self.name = BuildIDParam()
         self.platform = BuildParam("platform", allow_none=True)
         self.orchestrator_deadline = BuildParam('orchestrator_deadline', allow_none=True)
+        self.reactor_config_map = BuildParam("reactor_config_map", allow_none=True)
+        self.reactor_config_override = BuildParam("reactor_config_override", allow_none=True)
         self.scratch = BuildParam('scratch', allow_none=True)
         self.user = UserParam()
         self.worker_deadline = BuildParam('worker_deadline', allow_none=True)
@@ -168,11 +179,16 @@ class BuildCommon(object):
 
     def set_params(
         self,
+        build_from=None,
+        build_image=None,
+        build_imagestream=None,
         component=None,
         koji_target=None,
         koji_task_id=None,
         orchestrator_deadline=None,
         platform=None,
+        reactor_config_map=None,
+        reactor_config_override=None,
         scratch=None,
         user=None,
         worker_deadline=None,
@@ -182,8 +198,33 @@ class BuildCommon(object):
         self.koji_target.value = koji_target
         self.koji_task_id.value = koji_task_id
         self.platform.value = platform
+        self.reactor_config_map.value = reactor_config_map
+        self.reactor_config_override.value = reactor_config_override
         self.scratch.value = scratch
         self.user.value = user
+
+        unique_build_args = (build_imagestream, build_image, build_from)
+        if sum(bool(a) for a in unique_build_args) != 1:
+            raise OsbsValidationException(
+                'Please only define one of build_from, build_image, build_imagestream')
+        self.build_image.value = build_image
+        self.build_imagestream.value = build_imagestream
+        if self.build_image.value or self.build_imagestream.value:
+            logger.warning("build_image or build_imagestream is defined, they are deprecated,"
+                           "use build_from instead")
+
+        if build_from:
+            if ':' not in build_from:
+                raise OsbsValidationException(
+                        'build_from must be "source_type:source_value"')
+            source_type, source_value = build_from.split(':', 1)
+            if source_type not in ('image', 'imagestream'):
+                raise OsbsValidationException(
+                    'first part in build_from, may be only image or imagestream')
+            if source_type == 'image':
+                self.build_image.value = source_value
+            else:
+                self.build_imagestream.value = source_value
 
         try:
             self.orchestrator_deadline.value = int(orchestrator_deadline)
@@ -268,9 +309,6 @@ class BuildUserParams(BuildCommon):
         # defines image_tag, koji_target, filesystem_koji_task_id, platform, arrangement_version
         super(BuildUserParams, self).__init__(build_json_dir=build_json_dir)
         self.base_image = BuildParam('base_image', allow_none=True)
-        self.build_from = BuildParam('build_from')
-        self.build_image = BuildParam('build_image')
-        self.build_imagestream = BuildParam('build_imagestream')
         self.build_type = BuildParam('build_type')
         self.compose_ids = BuildParam("compose_ids", allow_none=True)
         self.customize_conf_path = BuildParam("customize_conf", allow_none=True,
@@ -283,13 +321,10 @@ class BuildUserParams(BuildCommon):
         self.isolated = BuildParam('isolated', allow_none=True)
         self.koji_parent_build = BuildParam('koji_parent_build', allow_none=True)
         self.koji_upload_dir = BuildParam('koji_upload_dir', allow_none=True)
-        self.name = BuildIDParam()
         self.parent_images_digests = BuildParam('parent_images_digests', allow_none=True)
         self.operator_manifests_extract_platform = BuildParam('operator_manifests_extract_platform',
                                                               allow_none=True)
         self.platforms = BuildParam('platforms', allow_none=True)
-        self.reactor_config_map = BuildParam("reactor_config_map", allow_none=True)
-        self.reactor_config_override = BuildParam("reactor_config_override", allow_none=True)
         self.release = BuildParam('release', allow_none=True)
         self.signing_intent = BuildParam('signing_intent', allow_none=True)
         self.trigger_imagestreamtag = BuildParam('trigger_imagestreamtag')
@@ -311,11 +346,10 @@ class BuildUserParams(BuildCommon):
                    git_uri=None, git_ref=None, git_branch=None,
                    base_image=None, name_label=None,
                    release=None,
-                   build_image=None, build_imagestream=None, build_from=None,
                    platforms=None, build_type=None,
                    filesystem_koji_task_id=None,
                    koji_parent_build=None, koji_upload_dir=None,
-                   flatpak=None, reactor_config_map=None, reactor_config_override=None,
+                   flatpak=None,
                    yum_repourls=None, signing_intent=None, compose_ids=None,
                    isolated=None, parent_images_digests=None,
                    tags_from_yaml=None, additional_tags=None,
@@ -335,31 +369,6 @@ class BuildUserParams(BuildCommon):
         self.base_image.value = base_image
 
         self.name.value = make_name_from_git(self.git_uri.value, self.git_branch.value)
-        self.reactor_config_map.value = reactor_config_map
-        self.reactor_config_override.value = reactor_config_override
-
-        unique_build_args = (build_imagestream, build_image, build_from)
-        if sum(bool(a) for a in unique_build_args) != 1:
-            raise OsbsValidationException(
-                'Please only define one of build_from, build_image, build_imagestream')
-        self.build_image.value = build_image
-        self.build_imagestream.value = build_imagestream
-        if self.build_image.value or self.build_imagestream.value:
-            logger.warning("build_image or build_imagestream is defined, they are deprecated,"
-                           "use build_from instead")
-
-        if build_from:
-            if ':' not in build_from:
-                raise OsbsValidationException(
-                        'build_from must be "source_type:source_value"')
-            source_type, source_value = build_from.split(':', 1)
-            if source_type not in ('image', 'imagestream'):
-                raise OsbsValidationException(
-                    'first part in build_from, may be only image or imagestream')
-            if source_type == 'image':
-                self.build_image.value = source_value
-            else:
-                self.build_imagestream.value = source_value
 
         self.parent_images_digests.value = parent_images_digests
         self.operator_manifests_extract_platform.value = operator_manifests_extract_platform
@@ -421,3 +430,5 @@ class SourceContainerUserParams(BuildCommon):
         """
         super(SourceContainerUserParams, self).set_params(**kwargs)
         self.sources_for_koji_build_nvr.value = sources_for_koji_build_nvr
+        if sources_for_koji_build_nvr:
+            self.name.value = make_source_container_name(sources_for_koji_build_nvr)
