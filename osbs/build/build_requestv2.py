@@ -7,14 +7,16 @@ of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, absolute_import, unicode_literals
 
+import abc
 import json
 import logging
 import re
 import os
 import yaml
 from pkg_resources import parse_version
+import six
 
-from osbs.build.user_params import BuildUserParams
+from osbs.build.user_params import BuildUserParams, BuildCommon
 from osbs.constants import (SECRETS_PATH, DEFAULT_OUTER_TEMPLATE,
                             DEFAULT_CUSTOMIZE_CONF, BUILD_TYPE_ORCHESTRATOR,
                             BUILD_TYPE_WORKER, ISOLATED_RELEASE_FORMAT)
@@ -24,7 +26,104 @@ from osbs.utils import git_repo_humanish_part_from_uri, sanitize_strings_for_ope
 logger = logging.getLogger(__name__)
 
 
-class BuildRequestV2(object):
+@six.add_metaclass(abc.ABCMeta)
+class BaseBuildRequest(object):
+    """
+    Abstract class for all build requests
+
+    Subclasses must:
+      * implement `render` method which returns builds input
+      * initialize proper user_params class
+    """
+    def __init__(self, build_json_store, outer_template):
+        self.build_json_store = build_json_store
+        self._openshift_required_version = parse_version('3.6.0')
+        self._outer_template_path = outer_template
+        self._resource_limits = None
+        self._template = None
+
+        self.scratch = None
+
+    @abc.abstractmethod
+    def render(self, validate=True):
+
+        # Validate BuildUserParams
+        if validate:
+            self.user_params.validate()
+
+        self.render_resource_limits()
+        self.adjust_for_scratch()
+        return self.template
+
+    def render_resource_limits(self):
+        if self._resource_limits is not None:
+            resources = self.template['spec'].get('resources', {})
+            limits = resources.get('limits', {})
+            limits.update(self._resource_limits)
+            resources['limits'] = limits
+            self.template['spec']['resources'] = resources
+
+    def adjust_for_scratch(self):
+        """
+        Scratch builds must not affect subsequent builds,
+        and should not be imported into Koji.
+        """
+        if self.scratch:
+            self.template['spec'].pop('triggers', None)
+            self.set_label('scratch', 'true')
+
+    def set_deadline(self, deadline_hours):
+
+        if deadline_hours > 0:
+            deadline_seconds = deadline_hours * 3600
+            self.template['spec']['completionDeadlineSeconds'] = deadline_seconds
+            logger.info("setting completion_deadline to %s hours (%s seconds)", deadline_hours,
+                        deadline_seconds)
+
+    def set_label(self, name, value):
+        if not value:
+            value = ''
+        self.template['metadata'].setdefault('labels', {})
+        value = sanitize_strings_for_openshift(value)
+        self.template['metadata']['labels'][name] = value
+
+    def set_openshift_required_version(self, openshift_required_version):
+        if openshift_required_version is not None:
+            self._openshift_required_version = openshift_required_version
+
+    def set_params(self, **kwargs):
+        # Here we cater to the koji "scratch" build type, this will disable
+        # all plugins that might cause importing of data to koji
+        self.scratch = kwargs.get('scratch')
+
+    def set_resource_limits(self, cpu=None, memory=None, storage=None):
+        if self._resource_limits is None:
+            self._resource_limits = {}
+
+        if cpu is not None:
+            self._resource_limits['cpu'] = cpu
+
+        if memory is not None:
+            self._resource_limits['memory'] = memory
+
+        if storage is not None:
+            self._resource_limits['storage'] = storage
+
+    @property
+    def template(self):
+        if self._template is None:
+            path = os.path.join(self.build_json_store, self._outer_template_path)
+            logger.debug("loading template from path %s", path)
+            try:
+                with open(path, "r") as fp:
+                    self._template = json.load(fp)
+            except (IOError, OSError) as ex:
+                raise OsbsException("Can't open template '%s': %s" %
+                                    (path, repr(ex)))
+        return self._template
+
+
+class BuildRequestV2(BaseBuildRequest):
     """
     Wraps logic for creating build inputs
     """
@@ -34,16 +133,13 @@ class BuildRequestV2(object):
         :param outer_template: str, path to outer template JSON
         :param customize_conf: str, path to customize configuration JSON
         """
-        self.build_json_store = build_json_store
-        self._outer_template_path = outer_template or DEFAULT_OUTER_TEMPLATE
+        super(BuildRequestV2, self).__init__(
+            build_json_store,
+            outer_template=outer_template or DEFAULT_OUTER_TEMPLATE
+        )
         self._customize_conf_path = customize_conf or DEFAULT_CUSTOMIZE_CONF
         self.build_json = None       # rendered template
-        self._template = None        # template loaded from filesystem
-        self._resource_limits = None
-        self._openshift_required_version = parse_version('3.6.0')
         self._repo_info = None
-        # For the koji "scratch" build type
-        self.scratch = None
         self.isolated = None
         self.is_auto = None
         self.skip_build = None
@@ -55,7 +151,7 @@ class BuildRequestV2(object):
         self.is_auto = None
         # forward reference
         self.platform_node_selector = None
-        self.user_params = BuildUserParams(build_json_store, customize_conf)
+        self.user_params = BuildUserParams(self.build_json_store, customize_conf)
         self.osbs_api = None
         self.source_registry = None
         self.organization = None
@@ -108,10 +204,7 @@ class BuildRequestV2(object):
         :param skip_build: bool, if we should skip build and just set buildconfig for autorebuilds
         :param triggered_after_koji_task: int, koji task ID from which was autorebuild triggered
         """
-
-        # Here we cater to the koji "scratch" build type, this will disable
-        # all plugins that might cause importing of data to koji
-        self.scratch = kwargs.get('scratch')
+        super(BuildRequestV2, self).set_params(**kwargs)
         # When true, it indicates build was automatically started by
         # OpenShift via a trigger, for instance ImageChangeTrigger
         self.is_auto = kwargs.pop('is_auto', False)
@@ -153,15 +246,6 @@ class BuildRequestV2(object):
     @property
     def trigger_imagestreamtag(self):
         return self.user_params.trigger_imagestreamtag.value
-
-    def adjust_for_scratch(self):
-        """
-        Scratch builds must not affect subsequent builds,
-        and should not be imported into Koji.
-        """
-        if self.scratch:
-            self.template['spec'].pop('triggers', None)
-            self.set_label('scratch', 'true')
 
     def set_reactor_config(self):
         reactor_config_override = self.user_params.reactor_config_override.value
@@ -268,13 +352,10 @@ class BuildRequestV2(object):
         if not self.osbs_api:
             raise OsbsValidationException
 
-        # Validate BuildUserParams
-        if validate:
-            self.user_params.validate()
+        super(BuildRequestV2, self).render(validate=validate)
 
         self.render_name(self.user_params.name.value, self.user_params.image_tag.value,
                          self.user_params.platform.value)
-        self.render_resource_limits()
 
         self.template['spec']['source']['git']['uri'] = self.user_params.git_uri.value
         self.template['spec']['source']['git']['ref'] = self.user_params.git_ref.value
@@ -326,11 +407,10 @@ class BuildRequestV2(object):
             del self.template['spec']['triggers']
 
         self.adjust_for_repo_info()
-        self.adjust_for_scratch()
         self.adjust_for_isolated(self.user_params.release)
         self.render_node_selectors(self.user_params.build_type.value)
 
-        self.set_deadline(self.user_params.build_type.value)
+        self._set_deadline()
 
         # Set our environment variables
         custom_strategy['env'].append({
@@ -356,42 +436,12 @@ class BuildRequestV2(object):
                 'Build variations are mutually exclusive. '
                 'Must set either scratch, is_auto, isolated, or none. ')
 
-    def set_resource_limits(self, cpu=None, memory=None, storage=None):
-        if self._resource_limits is None:
-            self._resource_limits = {}
-
-        if cpu is not None:
-            self._resource_limits['cpu'] = cpu
-
-        if memory is not None:
-            self._resource_limits['memory'] = memory
-
-        if storage is not None:
-            self._resource_limits['storage'] = storage
-
-    def set_openshift_required_version(self, openshift_required_version):
-        if openshift_required_version is not None:
-            self._openshift_required_version = openshift_required_version
-
     def set_repo_info(self, repo_info):
         self._repo_info = repo_info
 
     @property
     def build_id(self):
         return self.build_json['metadata']['name']
-
-    @property
-    def template(self):
-        if self._template is None:
-            path = os.path.join(self.build_json_store, self._outer_template_path)
-            logger.debug("loading template from path %s", path)
-            try:
-                with open(path, "r") as fp:
-                    self._template = json.load(fp)
-            except (IOError, OSError) as ex:
-                raise OsbsException("Can't open template '%s': %s" %
-                                    (path, repr(ex)))
-        return self._template
 
     def has_ist_trigger(self):
         """Return True if this BuildConfig has ImageStreamTag trigger."""
@@ -403,13 +453,6 @@ class BuildRequestV2(object):
                     trigger['imageChange']['from']['kind'] == 'ImageStreamTag':
                 return True
         return False
-
-    def set_label(self, name, value):
-        if not value:
-            value = ''
-        self.template['metadata'].setdefault('labels', {})
-        value = sanitize_strings_for_openshift(value)
-        self.template['metadata']['labels'][name] = value
 
     def render_name(self, name, image_tag, platform):
         """Sets the Build/BuildConfig object name"""
@@ -453,25 +496,13 @@ class BuildRequestV2(object):
             if self.platform_node_selector:
                 self.template['spec']['nodeSelector'].update(self.platform_node_selector)
 
-    def render_resource_limits(self):
-        if self._resource_limits is not None:
-            resources = self.template['spec'].get('resources', {})
-            limits = resources.get('limits', {})
-            limits.update(self._resource_limits)
-            resources['limits'] = limits
-            self.template['spec']['resources'] = resources
-
-    def set_deadline(self, build_type):
-        if build_type == BUILD_TYPE_WORKER:
+    def _set_deadline(self):
+        if self.user_params.build_type.value == BUILD_TYPE_WORKER:
             deadline_hours = self.user_params.worker_deadline.value
         else:
             deadline_hours = self.user_params.orchestrator_deadline.value
 
-        if deadline_hours > 0:
-            deadline_seconds = deadline_hours * 3600
-            self.template['spec']['completionDeadlineSeconds'] = deadline_seconds
-            logger.info("setting completion_deadline to %s hours (%s seconds)", deadline_hours,
-                        deadline_seconds)
+        self.set_deadline(deadline_hours)
 
     def adjust_for_repo_info(self):
         if not self._repo_info:
