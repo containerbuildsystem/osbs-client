@@ -1,0 +1,30 @@
+{
+  "apiVersion": "build.openshift.io/v1",
+  "kind": "BuildConfig",
+  "metadata": {
+    "name": "{{NAME}}",
+    "labels": {
+      "is_autorebuild": "false"
+    }
+  },
+  "spec": {
+    "output": {
+      "to": {
+        "kind": "DockerImage",
+        "name": "{{REGISTRY_URI}}/{{OUTPUT_IMAGE_TAG}}"
+      }
+    },
+    "strategy": {
+      "type": "Custom",
+      "customStrategy": {
+        "from": {
+          "kind": "DockerImage",
+          "name": "{{BUILD_IMAGE}}"
+        },
+        "exposeDockerSocket": true,
+        "env": [],
+        "secrets": []
+      }
+    }
+  }
+}
