@@ -7,11 +7,13 @@ of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, absolute_import, unicode_literals
 
-from abc import abstractproperty
+from abc import abstractproperty, ABCMeta
 import logging
 import re
 import random
 import json
+
+import six
 
 from osbs.constants import (DEFAULT_GIT_REF, REACTOR_CONFIG_ARRANGEMENT_VERSION,
                             DEFAULT_CUSTOMIZE_CONF, RAND_DIGITS,
@@ -126,7 +128,9 @@ def load_user_params_from_json(user_params_json):
     return user_params
 
 
+@six.add_metaclass(ABCMeta)
 class BuildCommon(object):
+    """Abstract class for user parameters"""
 
     @abstractproperty
     def KIND(self):
