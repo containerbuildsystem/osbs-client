@@ -20,7 +20,11 @@ from functools import wraps
 from contextlib import contextmanager
 from types import GeneratorType
 
-from osbs.build.build_requestv2 import BuildRequestV2
+from osbs.build.build_requestv2 import (
+    BaseBuildRequest,
+    BuildRequestV2,
+    SourceBuildRequest,
+)
 from osbs.build.user_params import load_user_params_from_json
 from osbs.build.plugins_configuration import PluginsConfiguration
 from osbs.build.build_response import BuildResponse
@@ -33,7 +37,9 @@ from osbs.constants import (BUILD_RUNNING_STATES, WORKER_OUTER_TEMPLATE,
                             BUILD_TYPE_ORCHESTRATOR, BUILD_FINISHED_STATES,
                             DEFAULT_ARRANGEMENT_VERSION, REACTOR_CONFIG_ARRANGEMENT_VERSION,
                             ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO, FILTER_KEY,
-                            RELEASE_LABEL_FORMAT)
+                            RELEASE_LABEL_FORMAT,
+                            ORCHESTRATOR_SOURCES_OUTER_TEMPLATE,
+                            )
 from osbs.core import Openshift
 from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsResponseException,
                              OsbsOrchestratorNotEnabled)
@@ -188,6 +194,20 @@ class OSBS(object):
             raise OsbsException("Only one pod expected but %d returned" % len(pod_list))
         return pod_list[0]
 
+    def _set_build_request_resource_limits(self, build_request):
+        """Apply configured resource limits to build_request"""
+        assert isinstance(build_request, BaseBuildRequest)
+        cpu_limit = self.build_conf.get_cpu_limit()
+        memory_limit = self.build_conf.get_memory_limit()
+        storage_limit = self.build_conf.get_storage_limit()
+        if any(
+                limit is not None
+                for limit in (cpu_limit, memory_limit, storage_limit)
+        ):
+            build_request.set_resource_limits(cpu=cpu_limit,
+                                              memory=memory_limit,
+                                              storage=storage_limit)
+
     @osbsapi
     def get_build_request(self, build_type=None, inner_template=None,
                           outer_template=None, customize_conf=None,
@@ -212,17 +232,28 @@ class OSBS(object):
                                        outer_template=outer_template,
                                        customize_conf=customize_conf)
 
-        # Apply configured resource limits.
-        cpu_limit = self.build_conf.get_cpu_limit()
-        memory_limit = self.build_conf.get_memory_limit()
-        storage_limit = self.build_conf.get_storage_limit()
-        if (cpu_limit is not None or
-                memory_limit is not None or
-                storage_limit is not None):
-            build_request.set_resource_limits(cpu=cpu_limit,
-                                              memory=memory_limit,
-                                              storage=storage_limit)
+        self._set_build_request_resource_limits(build_request)
+        return build_request
 
+    @osbsapi
+    def get_source_container_build_request(
+            self, outer_template=None,
+            arrangement_version=DEFAULT_ARRANGEMENT_VERSION,
+    ):
+        """
+        return instance of SourceBuildRequest
+
+        :param str outer_template: name of outer template for SourceBuildRequest
+        :return: instance of SourceBuildRequest
+        """
+        validate_arrangement_version(arrangement_version)
+
+        build_request = SourceBuildRequest(
+            build_json_store=self.os_conf.get_build_json_store(),
+            outer_template=outer_template,
+        )
+
+        self._set_build_request_resource_limits(build_request)
         return build_request
 
     @osbsapi
@@ -798,6 +829,81 @@ class OSBS(object):
         :return: instance of BuildRequest
         """
         return self._do_create_prod_build(**kwargs)
+
+    @osbsapi
+    def create_source_container_build(
+        self,
+        sources_for_koji_build_nvr=None,
+        outer_template=None,
+        arrangement_version=None,
+        scratch=None,
+        user=None,
+        platform=None,
+        koji_task_id=None,
+        reactor_config_override=None,
+        target=None,
+    ):
+        """
+        Take input args, create build request and submit the source image build
+
+        :return: instance of BuildRequest
+        """
+        build_request = self.get_source_container_build_request(
+            outer_template=outer_template or ORCHESTRATOR_SOURCES_OUTER_TEMPLATE,
+            arrangement_version=arrangement_version
+        )
+
+        if not sources_for_koji_build_nvr:
+            raise OsbsValidationException(
+                "required argument 'sources_for_koji_build_nvr' can't be None"
+            )
+
+        name, version, release = sources_for_koji_build_nvr.split('-', 3)
+
+        build_request.set_params(
+            arrangement_version=arrangement_version,
+            component=name,  # TODO check this
+            build_image=self.build_conf.get_build_image(),
+            build_imagestream=self.build_conf.get_build_imagestream(),
+            build_from=self.build_conf.get_build_from(),
+            builder_build_json_dir=self.build_conf.get_builder_build_json_store(),
+            koji_target=target,
+            koji_task_id=koji_task_id,
+            orchestrator_deadline=self.build_conf.get_orchestor_deadline(),
+            platform=platform,
+            reactor_config_map=self.build_conf.get_reactor_config_map(),
+            reactor_config_override=reactor_config_override,
+            scratch=self.build_conf.get_scratch(scratch),
+            sources_for_koji_build_nvr=sources_for_koji_build_nvr,
+            user=user,
+            worker_deadline=self.build_conf.get_worker_deadline(),
+        )
+        build_request.set_openshift_required_version(
+            self.os_conf.get_openshift_required_version()
+        )
+
+        builds_for_koji_task = []
+        if koji_task_id:
+            # try to find build for koji_task which isn't canceled and use that one
+            builds_for_koji_task = self._get_not_cancelled_builds_for_koji_task(koji_task_id)
+
+        builds_count = len(builds_for_koji_task)
+        if builds_count == 1:
+            logger.info("found running build for koji task: %s",
+                        builds_for_koji_task[0].get_build_name())
+            response =\
+                BuildResponse(self.os.get_build(builds_for_koji_task[0].get_build_name()).json(),
+                              self)
+        elif builds_count > 1:
+            raise OsbsException("Multiple builds %s for koji task id %s" %
+                                (builds_count, koji_task_id))
+        else:
+            logger.info("creating source container image build")
+            response = self._create_build_directly(build_request)
+
+        logger.debug(response.json)
+        return response
+
 
     @osbsapi
     def create_worker_build(self, **kwargs):
