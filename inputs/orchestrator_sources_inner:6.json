@@ -1,0 +1,15 @@
+{
+  "prebuild_plugins": [
+    {
+      "name": "reactor_config"
+    }
+  ],
+  "buildstep_plugins": [
+    {
+      "name": "source_container_build"
+    }
+  ],
+  "postbuild_plugins": [],
+  "prepublish_plugins": [],
+  "exit_plugins": []
+}

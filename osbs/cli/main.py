@@ -300,6 +300,31 @@ def cmd_cancel_build(args, osbs):
     osbs.cancel_build(args.BUILD_ID[0])
 
 
+def _print_build_logs(args, osbs, build):
+    build_id = build.get_build_name()
+    # we need to wait for kubelet to schedule the build, otherwise it's 500
+    build = osbs.wait_for_build_to_get_scheduled(build_id)
+    if not args.no_logs:
+        build_logs = osbs.get_build_logs(build_id, follow=True, decode=True)
+        if not isinstance(build_logs, collections.Iterable):
+            logger.error("'%s' is not iterable; can't display logs", build_logs)
+            return
+        print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
+        try:
+            for line in build_logs:
+                print('{!r}'.format(line))
+        except Exception as ex:
+            logger.error("Error during fetching logs for build %s: %s", build_id, repr(ex))
+
+        osbs.wait_for_build_to_finish(build_id)
+        _display_build_summary(osbs.get_build(build_id))
+    else:
+        if args.output == 'json':
+            print_json_nicely(build.json)
+        elif args.output == 'text':
+            print(build_id)
+
+
 def cmd_build(args, osbs):
     if args.worker:
         create_func = osbs.create_worker_build
@@ -339,28 +364,22 @@ def cmd_build(args, osbs):
         print("Build skipped")
         return
 
-    build_id = build.get_build_name()
-    # we need to wait for kubelet to schedule the build, otherwise it's 500
-    build = osbs.wait_for_build_to_get_scheduled(build_id)
-    if not args.no_logs:
-        build_logs = osbs.get_build_logs(build_id, follow=True, decode=True)
-        if not isinstance(build_logs, collections.Iterable):
-            logger.error("'%s' is not iterable; can't display logs", build_logs)
-            return
-        print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
-        try:
-            for line in build_logs:
-                print('{!r}'.format(line))
-        except Exception as ex:
-            logger.error("Error during fetching logs for build %s: %s", build_id, repr(ex))
+    _print_build_logs(args, osbs, build)
 
-        osbs.wait_for_build_to_finish(build_id)
-        _display_build_summary(osbs.get_build(build_id))
-    else:
-        if args.output == 'json':
-            print_json_nicely(build.json)
-        elif args.output == 'text':
-            print(build_id)
+
+def cmd_build_source_container(args, osbs):
+    build_kwargs = {
+        'user': osbs.build_conf.get_user(),
+        'target': osbs.build_conf.get_koji_target(),
+        'scratch': args.scratch,
+        'sources_for_koji_build_nvr': args.sources_for_koji_build_nvr,
+    }
+    if args.arrangement_version:
+        build_kwargs['arrangement_version'] = args.arrangement_version
+
+    build = osbs.create_source_container_build(**build_kwargs)
+
+    _print_build_logs(args, osbs, build)
 
 
 def _display_build_summary(build):
@@ -700,6 +719,52 @@ def cli():
     build_parser.add_argument("--compose-id", action='append', required=False,
                               dest="compose_ids", type=int, help="ODCS compose"
                               "used, may be used multiple times")
+
+    build_source_container_parser = subparsers.add_parser(
+        str_on_2_unicode_on_3('build-source-container'),
+        help='build a source container image in OSBS'
+    )
+    build_source_container_parser.add_argument(
+        "--sources-for-koji-build-nvr", action='store', required=True,
+        metavar='N-V-R',  help="koji build NVR"
+    )
+    build_source_container_parser.add_argument(
+        "--build-json-dir", action="store", metavar="PATH",
+        help="directory with build jsons"
+    )
+    build_source_container_parser.add_argument(
+        "-t", "--target", action='store',
+        help="koji target name"
+    )
+    build_source_container_parser.add_argument(
+        "-u", "--user", action='store', required=True,
+        help="prefix for docker image repository"
+    )
+    build_source_container_parser.add_argument(
+        "--no-logs", action='store_true', required=False, default=False,
+        help="don't print logs after submitting build"
+    )
+    build_source_container_parser.add_argument(
+        "--cpu-limit", action='store', required=False,
+        help="CPU limit (KCU)"
+    )
+    build_source_container_parser.add_argument(
+        "--memory-limit", action='store', required=False,
+        help="memory limit"
+    )
+    build_source_container_parser.add_argument(
+        "--storage-limit", action='store', required=False,
+        help="storage limit"
+    )
+    build_source_container_parser.add_argument(
+        "--scratch", action='store_true', required=False,
+        help="perform a scratch build"
+    )
+    build_source_container_parser.add_argument(
+        '--arrangement-version', action='store', required=False,
+        help='version of inner template to use'
+    )
+    build_source_container_parser.set_defaults(func=cmd_build_source_container)
 
     worker_group = build_parser.add_argument_group(title='arguments for --worker',
                                                    description='Required arguments for creating a '

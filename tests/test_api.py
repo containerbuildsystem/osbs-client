@@ -80,6 +80,11 @@ REQUIRED_BUILD_ARGS = {
     'build_type': BUILD_TYPE_ORCHESTRATOR,
 }
 
+REQUIRED_SOURCE_CONTAINER_BUILD_ARGS = {
+    'user': TEST_USER,
+    'sources_for_koji_build_nvr': 'test-1-123',
+}
+
 TEST_MODULES = ['mod_name:mod_stream:mod_version']
 
 
@@ -3080,3 +3085,11 @@ class TestOSBS(object):
         with pytest.raises(ValueError):
             for changetype, _ in osbs.watch_builds(field_selector):
                 assert changetype is None
+
+    # osbs is a fixture here
+    def test_create_source_container_build(self, osbs):
+        response = osbs.create_source_container_build(
+            target=TEST_TARGET,
+            **REQUIRED_SOURCE_CONTAINER_BUILD_ARGS
+        )
+        assert isinstance(response, BuildResponse)
