@@ -600,6 +600,25 @@ class SourceBuildRequest(BaseBuildRequest):
     def render(self, validate=True):
         return super(SourceBuildRequest, self).render(validate=validate)
 
+    def render_name(self, name, image_tag, platform):
+        """Sets the Build/BuildConfig object name
+
+        Source container builds must have unique names, because we are not
+        using buildConfigs just regular builds
+
+        platform is unused for source container images builds
+        """
+        name = image_tag
+
+        _, salt, timestamp = name.rsplit('-', 2)
+
+        name = 'sources-{}-{}'.format(salt, timestamp)
+        if self.scratch:
+            name = 'scratch-{}'.format(name)
+
+        # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
+        self.template['metadata']['name'] = name
+
     def set_params(self, **kwargs):
         super(SourceBuildRequest, self).set_params(**kwargs)
 
