@@ -123,6 +123,6 @@ GIT_BACKOFF_FACTOR = 60
 # in the shallow depth of the original clone
 GIT_FETCH_RETRY = 9
 
-# completion deadlin in hours
+# completion deadlines in hours
 WORKER_MAX_RUNTIME = 3
 ORCHESTRATOR_MAX_RUNTIME = 4
