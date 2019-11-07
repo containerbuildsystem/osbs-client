@@ -10,8 +10,14 @@ from __future__ import absolute_import
 import json
 from flexmock import flexmock
 
-from osbs.build.user_params import BuildUserParams
-from osbs.build.plugins_configuration import PluginsConfiguration
+from osbs.build.user_params import (
+    BuildUserParams,
+    SourceContainerUserParams,
+)
+from osbs.build.plugins_configuration import (
+    PluginsConfiguration,
+    SourceContainerPluginsConfiguration,
+)
 from osbs.constants import (BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR,
                             REACTOR_CONFIG_ARRANGEMENT_VERSION)
 from osbs.exceptions import OsbsValidationException
@@ -57,6 +63,26 @@ def get_sample_user_params(extra_args=None, build_type=BUILD_TYPE_ORCHESTRATOR):
     if extra_args:
         sample_params.update(extra_args)
     user_params = BuildUserParams(INPUTS_PATH)
+    user_params.set_params(**sample_params)
+    return user_params
+
+
+def get_sample_source_container_params():
+    return {
+        'build_from': 'image:buildroot:latest',
+        'component': TEST_COMPONENT,
+        'koji_target': 'tothepoint',
+        "platform": "x86_64",
+        'user': TEST_USER,
+        "sources_for_koji_build_nvr": "test-1-123",
+    }
+
+
+def source_container_user_params(extra_args=None):
+    sample_params = get_sample_source_container_params()
+    if extra_args:
+        sample_params.update(extra_args)
+    user_params = SourceContainerUserParams(INPUTS_PATH)
     user_params.set_params(**sample_params)
     return user_params
 
@@ -845,3 +871,16 @@ class TestPluginsConfiguration(object):
         else:
             with pytest.raises(NoSuchPluginException):
                 assert get_plugin(plugins, 'prebuild_plugins', 'koji_delegate')
+
+
+class TestSourceContainerPluginsConfiguration(object):
+
+    def test_render_simple_request(self):
+        user_params = source_container_user_params()
+        build_json = SourceContainerPluginsConfiguration(user_params).render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        source_container_build = get_plugin(
+            plugins, "buildstep_plugins", "source_container_build"
+        )
+        assert source_container_build is not None
