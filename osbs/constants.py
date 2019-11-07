@@ -129,3 +129,6 @@ GIT_FETCH_RETRY = 9
 # completion deadlines in hours
 WORKER_MAX_RUNTIME = 3
 ORCHESTRATOR_MAX_RUNTIME = 4
+
+USER_PARAMS_KIND_IMAGE_BUILDS = 'build_user_params'
+USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS = 'source_containers_user_params'
