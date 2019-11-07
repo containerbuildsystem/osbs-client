@@ -7,9 +7,12 @@ of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, absolute_import, unicode_literals
 
+import abc
 import logging
 import os
 import json
+
+import six
 
 from osbs.constants import BUILD_TYPE_ORCHESTRATOR
 from osbs.exceptions import OsbsException
@@ -123,17 +126,44 @@ class PluginsTemplate(object):
         return json.dumps(self.template)
 
 
-class PluginsConfiguration(object):
+@six.add_metaclass(abc.ABCMeta)
+class PluginsConfigurationBase(object):
+    """Abstract class for Plugins Configuration
+
+    Following properties must be implemented:
+      * pt_path - path to inner config
+
+    Following methods must be implemented:
+      * render - method generates plugin config JSON
+
+    Class contains methods that configures plugins. These methods should be
+    used only if needed in specific subclass implementation
+    """
     def __init__(self, user_params):
-        # Figure out inner template to use from user_params:
         self.user_params = user_params
 
-        #    <build_type>_inner:<arrangement_version>.json
-        arrangement_version = self.user_params.arrangement_version.value
-        build_type = self.user_params.build_type.value
-        pt_path = '{}_inner:{}.json'.format(build_type, arrangement_version)
-        self.pt = PluginsTemplate(self.user_params.build_json_dir.value, pt_path,
-                                  self.user_params.customize_conf_path.value)
+        self.pt = PluginsTemplate(
+            self.user_params.build_json_dir.value,
+            self.pt_path,
+            self.user_params.customize_conf_path.value
+        )
+
+    @abc.abstractproperty
+    def pt_path(self):
+        """Property returns path to plugins template JSON file
+
+        :return: file path
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def render(self):
+        """Return plugins configuration JSON
+
+        :rval: str
+        :return: JSON
+        """
+        raise NotImplementedError
 
     def has_tag_suffixes_placeholder(self):
         phase = 'postbuild_plugins'
@@ -491,6 +521,17 @@ class PluginsConfiguration(object):
             if self.user_params.triggered_after_koji_task.value:
                 self.pt.set_plugin_arg(phase, plugin, 'triggered_after_koji_task',
                                        self.user_params.triggered_after_koji_task.value)
+
+
+class PluginsConfiguration(PluginsConfigurationBase):
+    """Plugin configuration for image builds"""
+
+    @property
+    def pt_path(self):
+        arrangement_version = self.user_params.arrangement_version.value
+        build_type = self.user_params.build_type.value
+        #    <build_type>_inner:<arrangement_version>.json
+        return '{}_inner:{}.json'.format(build_type, arrangement_version)
 
     def render(self):
         self.user_params.validate()
