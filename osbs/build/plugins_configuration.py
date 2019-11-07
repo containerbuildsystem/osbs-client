@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class PluginsTemplate(object):
-    def __init__(self, build_json_dir, template_path, customize_conf_path):
+    def __init__(self, build_json_dir, template_path, customize_conf_path=None):
         self._template = None
         self._customize_conf = None
         self._build_json_dir = build_json_dir
@@ -44,15 +44,18 @@ class PluginsTemplate(object):
     @property
     def customize_conf(self):
         if self._customize_conf is None:
-            path = os.path.join(self._build_json_dir, self._customize_conf_path)
-            logger.info('loading customize conf from path %s', path)
-            try:
-                with open(path, "r") as fp:
-                    self._customize_conf = json.load(fp)
-            except IOError:
-                # File not found, which is perfectly fine. Set to empty dict
-                logger.info('failed to find customize conf from path %s', path)
+            if self._customize_conf_path is None:
                 self._customize_conf = {}
+            else:
+                path = os.path.join(self._build_json_dir, self._customize_conf_path)
+                logger.info('loading customize conf from path %s', path)
+                try:
+                    with open(path, "r") as fp:
+                        self._customize_conf = json.load(fp)
+                except IOError:
+                    # File not found, which is perfectly fine. Set to empty dict
+                    logger.info('failed to find customize conf from path %s', path)
+                    self._customize_conf = {}
         return self._customize_conf
 
     def remove_plugin(self, phase, name, reason=None):
@@ -142,10 +145,16 @@ class PluginsConfigurationBase(object):
     def __init__(self, user_params):
         self.user_params = user_params
 
+        customize_conf_path = (
+            self.user_params.customize_conf_path.value
+            if hasattr(self.user_params, 'customize_conf_path')
+            else None
+        )
+
         self.pt = PluginsTemplate(
             self.user_params.build_json_dir.value,
             self.pt_path,
-            self.user_params.customize_conf_path.value
+            customize_conf_path,
         )
 
     @abc.abstractproperty
@@ -562,4 +571,24 @@ class PluginsConfiguration(PluginsConfigurationBase):
         self.render_resolve_module_compose()
         self.render_tag_from_config()
         self.render_koji_delegate()
+        return self.pt.to_json()
+
+
+class SourceContainerPluginsConfiguration(PluginsConfigurationBase):
+    """Plugins configuration for source container image builds"""
+
+    @property
+    def pt_path(self):
+        arrangement_version = self.user_params.arrangement_version.value
+        # orchestrator_sources_inner:<arrangement_version>.json
+        return 'orchestrator_sources_inner:{}.json'.format(arrangement_version)
+
+    def render(self):
+        self.user_params.validate()
+        # adjust for custom configuration first
+        self.render_customizations()
+
+        # Set parameters on each plugin as needed
+        # TODO add plugins when they are prepared for source containers
+
         return self.pt.to_json()

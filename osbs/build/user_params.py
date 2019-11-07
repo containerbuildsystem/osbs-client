@@ -17,7 +17,10 @@ import six
 
 from osbs.constants import (DEFAULT_GIT_REF, REACTOR_CONFIG_ARRANGEMENT_VERSION,
                             DEFAULT_CUSTOMIZE_CONF, RAND_DIGITS,
-                            WORKER_MAX_RUNTIME, ORCHESTRATOR_MAX_RUNTIME)
+                            WORKER_MAX_RUNTIME, ORCHESTRATOR_MAX_RUNTIME,
+                            USER_PARAMS_KIND_IMAGE_BUILDS,
+                            USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS,
+                            )
 from osbs.exceptions import OsbsValidationException
 from osbs.utils import (
     get_imagestreamtag_from_image,
@@ -307,7 +310,7 @@ class BuildCommon(object):
 @register_user_params
 class BuildUserParams(BuildCommon):
 
-    KIND = 'build_user_params'
+    KIND = USER_PARAMS_KIND_IMAGE_BUILDS
 
     def __init__(self, build_json_dir=None, customize_conf=None):
         # defines image_tag, koji_target, filesystem_koji_task_id, platform, arrangement_version
@@ -409,7 +412,7 @@ class BuildUserParams(BuildCommon):
 class SourceContainerUserParams(BuildCommon):
     """User params for building source containers"""
 
-    KIND = 'source_containers_user_params'
+    KIND = USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS
 
     def __init__(self, build_json_dir=None):
         super(SourceContainerUserParams, self).__init__(

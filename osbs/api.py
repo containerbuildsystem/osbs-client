@@ -26,7 +26,10 @@ from osbs.build.build_requestv2 import (
     SourceBuildRequest,
 )
 from osbs.build.user_params import load_user_params_from_json
-from osbs.build.plugins_configuration import PluginsConfiguration
+from osbs.build.plugins_configuration import (
+    PluginsConfiguration,
+    SourceContainerPluginsConfiguration,
+)
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
 from osbs.build.config_map_response import ConfigMapResponse
@@ -39,6 +42,8 @@ from osbs.constants import (BUILD_RUNNING_STATES, WORKER_OUTER_TEMPLATE,
                             ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO, FILTER_KEY,
                             RELEASE_LABEL_FORMAT,
                             ORCHESTRATOR_SOURCES_OUTER_TEMPLATE,
+                            USER_PARAMS_KIND_IMAGE_BUILDS,
+                            USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS,
                             )
 from osbs.core import Openshift
 from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsResponseException,
@@ -1441,5 +1446,11 @@ class OSBS(object):
     def render_plugins_configuration(self, user_params_json):
         user_params = load_user_params_from_json(user_params_json)
 
-        # TODO use different plugin configuration
-        return PluginsConfiguration(user_params).render()
+        if user_params.KIND == USER_PARAMS_KIND_IMAGE_BUILDS:
+            return PluginsConfiguration(user_params).render()
+        elif user_params.KIND == USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS:
+            return SourceContainerPluginsConfiguration(user_params).render()
+        else:
+            raise RuntimeError(
+                "Unexpected user params kind: {}".format(user_params.KIND)
+            )
