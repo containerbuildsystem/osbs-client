@@ -2,6 +2,7 @@ language: python
 branches:
   only:
   - master
+  - source-containers-feature
 sudo: "required"
 services:
   - docker
