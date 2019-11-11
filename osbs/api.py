@@ -863,7 +863,7 @@ class OSBS(object):
                 "required argument 'sources_for_koji_build_nvr' can't be None"
             )
 
-        name, version, release = sources_for_koji_build_nvr.split('-', 3)
+        name, _, _ = sources_for_koji_build_nvr.split('-', 3)
 
         build_request.set_params(
             arrangement_version=arrangement_version,
