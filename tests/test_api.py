@@ -3090,6 +3090,7 @@ class TestOSBS(object):
     def test_create_source_container_build(self, osbs):
         response = osbs.create_source_container_build(
             target=TEST_TARGET,
+            signing_intent='signing_intent',
             **REQUIRED_SOURCE_CONTAINER_BUILD_ARGS
         )
         assert isinstance(response, BuildResponse)
