@@ -881,6 +881,6 @@ class TestSourceContainerPluginsConfiguration(object):
         plugins = get_plugins_from_build_json(build_json)
 
         source_container_build = get_plugin(
-            plugins, "buildstep_plugins", "source_container_build"
+            plugins, "buildstep_plugins", "source_container"
         )
         assert source_container_build is not None
