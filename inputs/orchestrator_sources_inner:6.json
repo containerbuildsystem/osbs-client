@@ -6,7 +6,7 @@
   ],
   "buildstep_plugins": [
     {
-      "name": "source_container_build"
+      "name": "source_container"
     }
   ],
   "postbuild_plugins": [],
