@@ -165,6 +165,7 @@ class BuildCommon(object):
         self.reactor_config_map = BuildParam("reactor_config_map", allow_none=True)
         self.reactor_config_override = BuildParam("reactor_config_override", allow_none=True)
         self.scratch = BuildParam('scratch', allow_none=True)
+        self.signing_intent = BuildParam('signing_intent', allow_none=True)
         self.user = UserParam()
         self.worker_deadline = BuildParam('worker_deadline', allow_none=True)
 
@@ -197,6 +198,7 @@ class BuildCommon(object):
         reactor_config_map=None,
         reactor_config_override=None,
         scratch=None,
+        signing_intent=None,
         user=None,
         worker_deadline=None,
         **kwargs
@@ -208,6 +210,7 @@ class BuildCommon(object):
         self.reactor_config_map.value = reactor_config_map
         self.reactor_config_override.value = reactor_config_override
         self.scratch.value = scratch
+        self.signing_intent.value = signing_intent
         self.user.value = user
 
         unique_build_args = (build_imagestream, build_image, build_from)
@@ -333,7 +336,6 @@ class BuildUserParams(BuildCommon):
                                                               allow_none=True)
         self.platforms = BuildParam('platforms', allow_none=True)
         self.release = BuildParam('release', allow_none=True)
-        self.signing_intent = BuildParam('signing_intent', allow_none=True)
         self.trigger_imagestreamtag = BuildParam('trigger_imagestreamtag')
         self.yum_repourls = BuildParam("yum_repourls")
         self.tags_from_yaml = BuildParam('tags_from_yaml', allow_none=True)
@@ -357,7 +359,7 @@ class BuildUserParams(BuildCommon):
                    filesystem_koji_task_id=None,
                    koji_parent_build=None, koji_upload_dir=None,
                    flatpak=None,
-                   yum_repourls=None, signing_intent=None, compose_ids=None,
+                   yum_repourls=None, compose_ids=None,
                    isolated=None, parent_images_digests=None,
                    tags_from_yaml=None, additional_tags=None,
                    git_commit_depth=None,
@@ -396,7 +398,7 @@ class BuildUserParams(BuildCommon):
                 raise OsbsValidationException("name_label must be provided")
             self.imagestream_name.value = name_label.replace('/', '-')
 
-        if signing_intent and compose_ids:
+        if kwargs.get('signing_intent') and compose_ids:
             raise OsbsValidationException(
                 'Please only define signing_intent -OR- compose_ids, not both')
         if not (compose_ids is None or isinstance(compose_ids, list)):
@@ -404,7 +406,6 @@ class BuildUserParams(BuildCommon):
         if not (yum_repourls is None or isinstance(yum_repourls, list)):
             raise OsbsValidationException("yum_repourls must be a list")
         self.yum_repourls.value = yum_repourls or []
-        self.signing_intent.value = signing_intent
         self.compose_ids.value = compose_ids or []
 
 

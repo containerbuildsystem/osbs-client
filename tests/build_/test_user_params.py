@@ -400,6 +400,7 @@ class TestSourceContainerUserParams(object):
             "orchestrator_deadline": 5,
             "platform": "x86_64",
             'scratch': True,
+            "signing_intent": "test-signing-intent",
             "worker_deadline": 3,
         })
 
@@ -426,6 +427,7 @@ class TestSourceContainerUserParams(object):
             "image_tag": "{}/{}:tothepoint-{}-{}-x86_64".format(
                 TEST_USER, TEST_COMPONENT, rand, timestr),
             "kind": "source_containers_user_params",
+            "signing_intent": "test-signing-intent",
             "sources_for_koji_build_nvr": "test-1-123",
             "koji_target": "tothepoint",
             "name": "test-source",
