@@ -373,6 +373,7 @@ def cmd_build_source_container(args, osbs):
         'target': osbs.build_conf.get_koji_target(),
         'scratch': args.scratch,
         'sources_for_koji_build_nvr': args.sources_for_koji_build_nvr,
+        'component': args.component,
     }
     if args.arrangement_version:
         build_kwargs['arrangement_version'] = args.arrangement_version
@@ -727,6 +728,10 @@ def cli():
     build_source_container_parser.add_argument(
         "--sources-for-koji-build-nvr", action='store', required=True,
         metavar='N-V-R',  help="koji build NVR"
+    )
+    build_source_container_parser.add_argument(
+        "-c", "--component", action='store', required=True,
+        help="component for source container"
     )
     build_source_container_parser.add_argument(
         "--build-json-dir", action="store", metavar="PATH",
