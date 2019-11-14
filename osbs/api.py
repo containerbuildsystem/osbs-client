@@ -838,7 +838,8 @@ class OSBS(object):
     @osbsapi
     def create_source_container_build(
         self,
-        sources_for_koji_build_nvr=None,
+        component,
+        sources_for_koji_build_nvr,
         outer_template=None,
         arrangement_version=None,
         scratch=None,
@@ -859,16 +860,17 @@ class OSBS(object):
             arrangement_version=arrangement_version
         )
 
+        error_messages = []
         if not sources_for_koji_build_nvr:
-            raise OsbsValidationException(
-                "required argument 'sources_for_koji_build_nvr' can't be None"
-            )
-
-        name, _, _ = sources_for_koji_build_nvr.split('-', 3)
+            error_messages.append("required argument 'sources_for_koji_build_nvr' can't be empty")
+        if not component:
+            error_messages.append("required argument 'component' can't be empty")
+        if error_messages:
+            raise OsbsValidationException(", ".join(error_messages))
 
         build_request.set_params(
             arrangement_version=arrangement_version,
-            component=name,  # TODO check this
+            component=component,
             build_image=self.build_conf.get_build_image(),
             build_imagestream=self.build_conf.get_build_imagestream(),
             build_from=self.build_conf.get_build_from(),

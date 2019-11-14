@@ -83,6 +83,7 @@ REQUIRED_BUILD_ARGS = {
 REQUIRED_SOURCE_CONTAINER_BUILD_ARGS = {
     'user': TEST_USER,
     'sources_for_koji_build_nvr': 'test-1-123',
+    'component': 'test_component',
 }
 
 TEST_MODULES = ['mod_name:mod_stream:mod_version']
@@ -3094,3 +3095,15 @@ class TestOSBS(object):
             **REQUIRED_SOURCE_CONTAINER_BUILD_ARGS
         )
         assert isinstance(response, BuildResponse)
+
+    @pytest.mark.parametrize(('additional_kwargs'), (  # noqa
+        {'component': None, 'sources_for_koji_build_nvr': 'build_nvr'},
+        {'component': 'build_component', 'sources_for_koji_build_nvr': None},
+        {'component': None, 'sources_for_koji_build_nvr': None},
+    ))
+    def test_create_source_container_build_required_args(self, osbs, additional_kwargs):
+        with pytest.raises(OsbsValidationException):
+            osbs.create_source_container_build(
+                target=TEST_TARGET,
+                signing_intent='signing_intent',
+                **additional_kwargs)
