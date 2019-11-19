@@ -81,11 +81,14 @@
       "required": false
     },
     {
-      "name": "import_image",
-      "required": false
+      "name": "koji_import"
     },
     {
-      "name": "koji_import"
+      "name": "push_floating_tags"
+    },
+    {
+      "name": "import_image",
+      "required": false
     },
     {
       "name": "koji_tag_build"

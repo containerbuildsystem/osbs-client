@@ -299,8 +299,9 @@ class TestArrangementV6(ArrangementBase):
 
             'exit_plugins': [
                 PLUGIN_VERIFY_MEDIA_KEY,
-                'import_image',
                 PLUGIN_KOJI_IMPORT_PLUGIN_KEY,
+                'push_floating_tags',
+                'import_image',
                 'koji_tag_build',
                 'store_metadata_in_osv3',
                 'sendmail',
