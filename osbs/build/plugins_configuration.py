@@ -544,6 +544,33 @@ class PluginsConfigurationBase(object):
                     self.user_params.koji_target.value
                 )
 
+    def render_fetch_sources(self):
+        """Configure fetch_sources"""
+        phase = 'prebuild_plugins'
+        plugin = 'fetch_sources'
+
+        if self.pt.has_plugin_conf(phase, plugin):
+            if self.user_params.sources_for_koji_build_nvr.value:
+                self.pt.set_plugin_arg(
+                    phase, plugin,
+                    'koji_build_nvr',
+                    self.user_params.sources_for_koji_build_nvr.value
+                )
+
+            if self.user_params.sources_for_koji_build_id.value:
+                self.pt.set_plugin_arg(
+                    phase, plugin,
+                    'koji_build_id',
+                    self.user_params.sources_for_koji_build_id.value
+                )
+
+            if self.user_params.signing_intent.value:
+                self.pt.set_plugin_arg(
+                    phase, plugin,
+                    'signing_intent',
+                    self.user_params.signing_intent.value
+                )
+
 
 class PluginsConfiguration(PluginsConfigurationBase):
     """Plugin configuration for image builds"""
@@ -602,6 +629,7 @@ class SourceContainerPluginsConfiguration(PluginsConfigurationBase):
         self.render_customizations()
 
         # Set parameters on each plugin as needed
+        self.render_fetch_sources()
         self.render_tag_and_push()
 
         return self.pt.to_json()

@@ -2,6 +2,9 @@
   "prebuild_plugins": [
     {
       "name": "reactor_config"
+    },
+    {
+      "name": "fetch_sources"
     }
   ],
   "buildstep_plugins": [
