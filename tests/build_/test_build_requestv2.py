@@ -1032,6 +1032,7 @@ class TestSourceBuildRequest(object):
             'user': "john-foo",
             'reactor_config_map': 'reactor-config-map',
             'sources_for_koji_build_nvr': "name-1.0-123",
+            'osbs_api': MockOSBSApi(),
         }
         build_request.set_params(**kwargs)
         build_json = build_request.render()
