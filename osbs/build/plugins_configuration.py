@@ -531,6 +531,19 @@ class PluginsConfigurationBase(object):
                 self.pt.set_plugin_arg(phase, plugin, 'triggered_after_koji_task',
                                        self.user_params.triggered_after_koji_task.value)
 
+    def render_tag_and_push(self):
+        """Configure tag_and_push plugin"""
+        phase = 'postbuild_plugins'
+        plugin = 'tag_and_push'
+
+        if self.pt.has_plugin_conf(phase, plugin):
+            if self.user_params.koji_target.value:
+                self.pt.set_plugin_arg(
+                    phase, plugin,
+                    'koji_target',
+                    self.user_params.koji_target.value
+                )
+
 
 class PluginsConfiguration(PluginsConfigurationBase):
     """Plugin configuration for image builds"""
@@ -589,6 +602,6 @@ class SourceContainerPluginsConfiguration(PluginsConfigurationBase):
         self.render_customizations()
 
         # Set parameters on each plugin as needed
-        # TODO add plugins when they are prepared for source containers
+        self.render_tag_and_push()
 
         return self.pt.to_json()
