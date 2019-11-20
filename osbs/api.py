@@ -879,6 +879,7 @@ class OSBS(object):
             koji_target=target,
             koji_task_id=koji_task_id,
             orchestrator_deadline=self.build_conf.get_orchestor_deadline(),
+            osbs_api=self,
             platform=platform,
             reactor_config_map=self.build_conf.get_reactor_config_map(),
             reactor_config_override=reactor_config_override,

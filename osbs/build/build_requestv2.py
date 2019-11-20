@@ -47,7 +47,10 @@ class BaseBuildRequest(object):
         self._template = None
 
         self.isolated = None
+        self.organization = None
+        self.osbs_api = None
         self.scratch = None
+        self.source_registry = None
         self.user_params = None  # must be initialized in subclasses
 
     def delete_atomic_reactor_placeholder(self):
@@ -60,6 +63,10 @@ class BaseBuildRequest(object):
 
     @abc.abstractmethod
     def render(self, validate=True):
+        # the api is required for build requests
+        # can't check that its an OSBS object because of the circular import
+        if not self.osbs_api:
+            raise OsbsValidationException("OSBS API is not specified")
 
         # Validate BuildUserParams
         if validate:
@@ -76,6 +83,11 @@ class BaseBuildRequest(object):
         self.set_reactor_config()
         self.render_user_params()
         self.delete_atomic_reactor_placeholder()
+
+        # Set required_secrets based on reactor_config
+        # Set worker_token_secrets based on reactor_config, if any
+        data = self.get_reactor_config_data()
+        self.set_data_from_reactor_config(data)
 
         return self.template
 
@@ -160,6 +172,7 @@ class BaseBuildRequest(object):
         # Here we cater to the koji "scratch" build type, this will disable
         # all plugins that might cause importing of data to koji
         self.scratch = kwargs.get('scratch')
+        self.osbs_api = kwargs.pop('osbs_api', None)
 
     def set_reactor_config(self):
         reactor_config_override = self.user_params.reactor_config_override.value
@@ -213,6 +226,83 @@ class BaseBuildRequest(object):
                                     (path, repr(ex)))
         return self._template
 
+    def get_reactor_config_data(self):
+        """
+        Return atomic reactor configuration
+
+        :rval: dict
+        :return: atomic-reactor configuration
+        """
+        reactor_config_override = self.user_params.reactor_config_override.value
+        reactor_config_map = self.user_params.reactor_config_map.value
+        data = {}
+
+        if reactor_config_override:
+            data = reactor_config_override
+        elif reactor_config_map:
+            config_map = self.osbs_api.get_config_map(reactor_config_map)
+            data = config_map.get_data_by_key('config.yaml')
+        return data
+
+    def _set_required_secrets(self, required_secrets):
+        """
+        Sets required secrets
+        """
+        if not required_secrets:
+            return
+
+        secrets = self.template['spec']['strategy']['customStrategy'].setdefault('secrets', [])
+        existing = set(secret_mount['secretSource']['name'] for secret_mount in secrets)
+        required_secrets = set(required_secrets)
+
+        already_set = required_secrets.intersection(existing)
+        if already_set:
+            logger.debug("secrets %s are already set", already_set)
+
+        for secret in required_secrets - existing:
+            secret_path = os.path.join(SECRETS_PATH, secret)
+            logger.info("Configuring %s secret at %s", secret, secret_path)
+
+            secrets.append({
+                'secretSource': {
+                    'name': secret,
+                },
+                'mountPath': secret_path,
+            })
+
+    def set_required_secrets(self, reactor_config_data):
+        """
+        Sets required secrets into build config
+        """
+        req_secrets_key = 'required_secrets'
+        required_secrets = reactor_config_data.get(req_secrets_key, [])
+        self._set_required_secrets(required_secrets)
+
+    def set_source_registry(self, reactor_config_data):
+        """
+        Sets source_registry value
+        """
+        source_registry_key = 'source_registry'
+        if source_registry_key in reactor_config_data:
+            self.source_registry = reactor_config_data[source_registry_key]
+
+    def set_registry_organization(self, reactor_config_data):
+        """
+        Sets registry organization
+        """
+        registry_organization_key = 'registries_organization'
+
+        if registry_organization_key in reactor_config_data:
+            self.organization = reactor_config_data[registry_organization_key]
+
+    def set_data_from_reactor_config(self, reactor_config_data):
+        """
+        Sets data from reactor config
+        """
+        self.set_source_registry(reactor_config_data)
+        self.set_registry_organization(reactor_config_data)
+        self.set_required_secrets(reactor_config_data)
+
 
 class BuildRequestV2(BaseBuildRequest):
     """
@@ -243,9 +333,6 @@ class BuildRequestV2(BaseBuildRequest):
         # forward reference
         self.platform_node_selector = None
         self.user_params = BuildUserParams(self.build_json_store, customize_conf)
-        self.osbs_api = None
-        self.source_registry = None
-        self.organization = None
         self.triggered_after_koji_task = None
 
     # Override
@@ -305,7 +392,6 @@ class BuildRequestV2(BaseBuildRequest):
         # update transient tags in container registry
         self.isolated = kwargs.get('isolated')
 
-        self.osbs_api = kwargs.pop('osbs_api', None)
         self.validate_build_variation()
 
         self.base_image = kwargs.get('base_image')
@@ -338,85 +424,50 @@ class BuildRequestV2(BaseBuildRequest):
     def trigger_imagestreamtag(self):
         return self.user_params.trigger_imagestreamtag.value
 
-    def set_data_from_reactor_config(self):
-        """
-        Sets data from reactor config
-        """
-        reactor_config_override = self.user_params.reactor_config_override.value
-        reactor_config_map = self.user_params.reactor_config_map.value
-        data = None
-
-        if reactor_config_override:
-            data = reactor_config_override
-        elif reactor_config_map:
-            config_map = self.osbs_api.get_config_map(reactor_config_map)
-            data = config_map.get_data_by_key('config.yaml')
-
-        if not data:
-            if self.user_params.flatpak.value:
-                raise OsbsValidationException("flatpak_base_image must be provided")
-            else:
-                return
-
-        source_registry_key = 'source_registry'
-        registry_organization_key = 'registries_organization'
-        req_secrets_key = 'required_secrets'
-        token_secrets_key = 'worker_token_secrets'
+    def _set_flatpak(self, reactor_config_data):
         flatpak_key = 'flatpak'
         flatpak_base_image_key = 'base_image'
 
-        if source_registry_key in data:
-            self.source_registry = data[source_registry_key]
-        if registry_organization_key in data:
-            self.organization = data[registry_organization_key]
-
         if self.user_params.flatpak.value:
-            flatpack_base_image = data.get(flatpak_key, {}).get(flatpak_base_image_key, None)
+            flatpack_base_image = (
+                reactor_config_data
+                .get(flatpak_key, {})
+                .get(flatpak_base_image_key, None)
+            )
             if flatpack_base_image:
                 self.base_image = flatpack_base_image
                 self.user_params.base_image.value = flatpack_base_image
             else:
                 raise OsbsValidationException("flatpak_base_image must be provided")
 
-        required_secrets = data.get(req_secrets_key, [])
-        token_secrets = data.get(token_secrets_key, [])
-        self._set_required_secrets(required_secrets, token_secrets)
+    def set_required_secrets(self, reactor_config_data):
+        """
+        Sets required secrets into build config
+        """
+        req_secrets_key = 'required_secrets'
+        token_secrets_key = 'worker_token_secrets'
+        required_secrets = reactor_config_data.get(req_secrets_key, [])
+        token_secrets = reactor_config_data.get(token_secrets_key, [])
 
-    def _set_required_secrets(self, required_secrets, token_secrets):
-        """
-        Sets required secrets
-        """
         if self.user_params.build_type.value == BUILD_TYPE_ORCHESTRATOR:
             required_secrets += token_secrets
+        self._set_required_secrets(required_secrets)
 
-        if not required_secrets:
-            return
+    def set_data_from_reactor_config(self, reactor_config_data):
+        """
+        Sets data from reactor config
+        """
+        super(BuildRequestV2, self).set_data_from_reactor_config(reactor_config_data)
 
-        secrets = self.template['spec']['strategy']['customStrategy'].setdefault('secrets', [])
-        existing = set(secret_mount['secretSource']['name'] for secret_mount in secrets)
-        required_secrets = set(required_secrets)
+        if not reactor_config_data:
+            if self.user_params.flatpak.value:
+                raise OsbsValidationException("flatpak_base_image must be provided")
+            else:
+                return
 
-        already_set = required_secrets.intersection(existing)
-        if already_set:
-            logger.debug("secrets %s are already set", already_set)
-
-        for secret in required_secrets - existing:
-            secret_path = os.path.join(SECRETS_PATH, secret)
-            logger.info("Configuring %s secret at %s", secret, secret_path)
-
-            secrets.append({
-                'secretSource': {
-                    'name': secret,
-                },
-                'mountPath': secret_path,
-            })
+        self._set_flatpak(reactor_config_data)
 
     def render(self, validate=True):
-        # the api is required for BuildRequestV2
-        # can't check that its an OSBS object because of the circular import
-        if not self.osbs_api:
-            raise OsbsValidationException
-
         super(BuildRequestV2, self).render(validate=validate)
 
         self.template['spec']['source']['git']['uri'] = self.user_params.git_uri.value
@@ -445,10 +496,6 @@ class BuildRequestV2(BaseBuildRequest):
                 self.set_label('original-koji-task-id', str(koji_task_id))
 
         # Set template.spec.strategy.customStrategy.env[] USER_PARAMS
-        # Set required_secrets based on reactor_config
-        # Set worker_token_secrets based on reactor_config, if any
-        self.set_data_from_reactor_config()
-
         # Adjust triggers for custom base image
         if (self.template['spec'].get('triggers', []) and
                 (self.is_custom_base_image() or self.is_from_scratch_image())):
