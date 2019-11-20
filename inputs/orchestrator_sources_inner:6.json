@@ -9,7 +9,11 @@
       "name": "source_container"
     }
   ],
-  "postbuild_plugins": [],
+  "postbuild_plugins": [
+    {
+      "name": "tag_and_push"
+    }
+  ],
   "prepublish_plugins": [],
   "exit_plugins": []
 }
