@@ -373,12 +373,12 @@ class TestBuildUserParams(object):
 class TestSourceContainerUserParams(object):
     """Tests for source container user params"""
 
-    def get_minimal_kwargs(self):
+    def get_minimal_kwargs(self, origin_nvr):
         return {
             # Params needed to avoid exceptions.
             "build_from": "image:buildroot:latest",
             'user': TEST_USER,
-            'sources_for_koji_build_nvr': 'test-1-123',
+            'sources_for_koji_build_nvr': origin_nvr,
         }
 
     def test_validate_missing_required(self):
@@ -392,8 +392,12 @@ class TestSourceContainerUserParams(object):
         with pytest.raises(OsbsValidationException):
             spec.validate()
 
-    def test_all_values_and_json(self):
-        param_kwargs = self.get_minimal_kwargs()
+    @pytest.mark.parametrize('origin_nvr, final_name', [
+        ('test-1-123', 'test-source'),
+        ('test-dashed-nvr-1-123', 'test-dashed-nvr-source'),
+    ])
+    def test_all_values_and_json(self, origin_nvr, final_name):
+        param_kwargs = self.get_minimal_kwargs(origin_nvr)
         param_kwargs.update({
             'component': TEST_COMPONENT,
             "koji_target": "tothepoint",
@@ -428,9 +432,9 @@ class TestSourceContainerUserParams(object):
                 TEST_USER, TEST_COMPONENT, rand, timestr),
             "kind": "source_containers_user_params",
             "signing_intent": "test-signing-intent",
-            "sources_for_koji_build_nvr": "test-1-123",
+            "sources_for_koji_build_nvr": origin_nvr,
             "koji_target": "tothepoint",
-            "name": "test-source",
+            "name": final_name,
             "orchestrator_deadline": 5,
             "platform": "x86_64",
             'scratch': True,

@@ -542,7 +542,7 @@ def make_source_container_name(nvr, limit=51, separator='-'):
     :param separator: str, used to separate the name and 'source' suffix
     :return: str, name representing NVR
     """
-    name, _, _ = nvr.rsplit('-', 3)
+    name, _, _ = nvr.rsplit('-', 2)
     sanitized = sanitize_strings_for_openshift(
         name, limit=limit, separator=separator, label=False)
     return separator.join((sanitized, 'source'))
