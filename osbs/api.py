@@ -840,6 +840,7 @@ class OSBS(object):
         self,
         component,
         sources_for_koji_build_nvr,
+        sources_for_koji_build_id=None,
         outer_template=None,
         arrangement_version=None,
         scratch=None,
@@ -884,6 +885,7 @@ class OSBS(object):
             scratch=self.build_conf.get_scratch(scratch),
             signing_intent=signing_intent,
             sources_for_koji_build_nvr=sources_for_koji_build_nvr,
+            sources_for_koji_build_id=sources_for_koji_build_id,
             user=user,
             worker_deadline=self.build_conf.get_worker_deadline(),
         )

@@ -392,11 +392,12 @@ class TestSourceContainerUserParams(object):
         with pytest.raises(OsbsValidationException):
             spec.validate()
 
-    @pytest.mark.parametrize('origin_nvr, final_name', [
-        ('test-1-123', 'test-source'),
-        ('test-dashed-nvr-1-123', 'test-dashed-nvr-source'),
+    @pytest.mark.parametrize('origin_nvr, final_name, origin_id', [
+        ('test-1-123', 'test-source', 12345),
+        ('test-dashed-nvr-1-123', 'test-dashed-nvr-source', 12345),
+        ('test-dashed-nvr-1-123', 'test-dashed-nvr-source', None),
     ])
-    def test_all_values_and_json(self, origin_nvr, final_name):
+    def test_all_values_and_json(self, origin_nvr, final_name, origin_id):
         param_kwargs = self.get_minimal_kwargs(origin_nvr)
         param_kwargs.update({
             'component': TEST_COMPONENT,
@@ -406,6 +407,7 @@ class TestSourceContainerUserParams(object):
             'scratch': True,
             "signing_intent": "test-signing-intent",
             "worker_deadline": 3,
+            "sources_for_koji_build_id": origin_id,
         })
 
         rand = '12345'
@@ -441,6 +443,8 @@ class TestSourceContainerUserParams(object):
             "user": TEST_USER,
             "worker_deadline": 3,
         }
+        if origin_id:
+            expected_json['sources_for_koji_build_id'] = origin_id
         assert spec.to_json() == json.dumps(expected_json, sort_keys=True)
 
         spec2 = SourceContainerUserParams()

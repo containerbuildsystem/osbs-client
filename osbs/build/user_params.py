@@ -419,6 +419,7 @@ class SourceContainerUserParams(BuildCommon):
         super(SourceContainerUserParams, self).__init__(
             build_json_dir=build_json_dir)
         self.sources_for_koji_build_nvr = BuildParam("sources_for_koji_build_nvr")
+        self.sources_for_koji_build_id = BuildParam("sources_for_koji_build_id", allow_none=True)
 
         self.required_params.extend([
             self.sources_for_koji_build_nvr,
@@ -429,6 +430,7 @@ class SourceContainerUserParams(BuildCommon):
     def set_params(
         self,
         sources_for_koji_build_nvr=None,
+        sources_for_koji_build_id=None,
         **kwargs
     ):
         """
@@ -438,5 +440,6 @@ class SourceContainerUserParams(BuildCommon):
         """
         super(SourceContainerUserParams, self).set_params(**kwargs)
         self.sources_for_koji_build_nvr.value = sources_for_koji_build_nvr
+        self.sources_for_koji_build_id.value = sources_for_koji_build_id
         if sources_for_koji_build_nvr:
             self.name.value = make_source_container_name(sources_for_koji_build_nvr)
