@@ -783,6 +783,7 @@ class OSBS(object):
             tags_from_yaml=repo_info.additional_tags.from_container_yaml,
             additional_tags=repo_info.additional_tags.tags,
             git_commit_depth=repo_info.configuration.depth,
+            release_env_var=self.build_conf.get_release_env(),
             operator_manifests_extract_platform=operator_manifests_extract_platform,
             worker_deadline=self.build_conf.get_worker_deadline(),
             orchestrator_deadline=self.build_conf.get_orchestor_deadline(),

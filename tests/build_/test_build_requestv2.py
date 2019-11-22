@@ -77,6 +77,37 @@ def get_sample_prod_params(osbs_api='blank'):
 
 
 class TestBuildRequestV2(object):
+    @pytest.mark.parametrize(('release_var', 'release', 'expect'), [
+        (None, None, None),
+        (None, 1, None),
+        ('CONTAINER_RELEASE', 1, 'ENV CONTAINER_RELEASE=1'),
+        ('CONTAINER_RELEASE', None, 'ENV CONTAINER_RELEASE=None')
+    ])  # noqa:F811
+    def test_render_with_release_var(self, release_var, release, expect, tmpdir):
+        class MockDfParser(object):
+            labels = {}
+
+            def __init__(self):
+                self.release_var = None
+
+            def add_lines(self, lines, all_stages, skip_scratch, at_start):
+                self.release_var = lines
+
+        repo_info = RepoInfo(MockDfParser())
+
+        build_request_kwargs = get_sample_prod_params()
+        build_request_kwargs['release_env_var'] = release_var
+        build_request_kwargs['release'] = release
+
+        build_request = BuildRequestV2(INPUTS_PATH)
+        build_request.set_params(**build_request_kwargs)
+        build_request.set_repo_info(repo_info)
+        build_request.render()
+        if expect:
+            assert repo_info.dockerfile_parser.release_var == expect
+        else:
+            assert not repo_info.dockerfile_parser.release_var
+
     def test_inner_template(self):
         br = BuildRequestV2('something')
         with pytest.raises(RuntimeError):

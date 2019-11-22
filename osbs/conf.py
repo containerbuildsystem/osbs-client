@@ -621,3 +621,6 @@ class Configuration(object):
     def get_orchestor_deadline(self):
         return self._get_value("orchestrator_max_run_hours", self.conf_section,
                                "orchestrator_max_run_hours", ORCHESTRATOR_MAX_RUNTIME)
+
+    def get_release_env(self):
+        return self._get_value("set_release_env", self.conf_section, "set_release_env")

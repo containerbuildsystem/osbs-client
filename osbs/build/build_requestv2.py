@@ -377,6 +377,7 @@ class BuildRequestV2(BaseBuildRequest):
         :param operator_manifests_extract_platform: str, indicates which platform should upload
                                                     operator manifests to koji
         :param parent_images_digests: dict, mapping image digests to names and platforms
+        :param release_env_var: str, optional name of an ENV variable to hold release data
         :param worker_deadline: int, worker completion deadline in hours
         :param orchestrator_deadline: int, orchestrator deadline in hours
         :param skip_build: bool, if we should skip build and just set buildconfig for autorebuilds
@@ -505,7 +506,7 @@ class BuildRequestV2(BaseBuildRequest):
                 logger.info('removing from request because FROM scratch image')
             del self.template['spec']['triggers']
 
-        self.adjust_for_repo_info()
+        self.adjust_for_repo_info(self.user_params.release_env_var, self.user_params.release)
         self.adjust_for_isolated(self.user_params.release)
         self.render_node_selectors(self.user_params.build_type.value)
 
@@ -571,10 +572,15 @@ class BuildRequestV2(BaseBuildRequest):
 
         self.set_deadline(deadline_hours)
 
-    def adjust_for_repo_info(self):
+    def adjust_for_repo_info(self, release_env_var, release):
         if not self._repo_info:
             logger.warning('repo info not set')
             return
+
+        if release_env_var.value:
+            release_var = "ENV {}={}".format(release_env_var.value, release.value)
+            self._repo_info.dockerfile_parser.add_lines(release_var, all_stages=True,
+                                                        skip_scratch=True, at_start=True)
 
         if not self._repo_info.configuration.is_autorebuild_enabled():
             logger.info('autorebuild is disabled in repo configuration, removing triggers')

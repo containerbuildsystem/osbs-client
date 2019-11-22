@@ -341,6 +341,7 @@ class BuildUserParams(BuildCommon):
         self.tags_from_yaml = BuildParam('tags_from_yaml', allow_none=True)
         self.additional_tags = BuildParam('additional_tags', allow_none=True)
         self.git_commit_depth = BuildParam('git_commit_depth', allow_none=True)
+        self.release_env_var = BuildParam('release_env_var', allow_none=True)
         self.triggered_after_koji_task = BuildParam('triggered_after_koji_task', allow_none=True)
 
         self.required_params.extend([
@@ -363,6 +364,7 @@ class BuildUserParams(BuildCommon):
                    isolated=None, parent_images_digests=None,
                    tags_from_yaml=None, additional_tags=None,
                    git_commit_depth=None,
+                   release_env_var=None,
                    operator_manifests_extract_platform=None,
                    triggered_after_koji_task=None, **kwargs):
         super(BuildUserParams, self).set_params(**kwargs)
@@ -388,6 +390,7 @@ class BuildUserParams(BuildCommon):
         self.flatpak.value = flatpak
         self.isolated.value = isolated
         self.triggered_after_koji_task.value = triggered_after_koji_task
+        self.release_env_var.value = release_env_var
 
         if not flatpak:
             if not base_image:
