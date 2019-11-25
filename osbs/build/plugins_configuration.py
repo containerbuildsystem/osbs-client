@@ -629,7 +629,10 @@ class SourceContainerPluginsConfiguration(PluginsConfigurationBase):
         self.render_customizations()
 
         # Set parameters on each plugin as needed
+        # self.render_bump_release()  # not needed yet
         self.render_fetch_sources()
+        self.render_koji()
+        self.render_koji_tag_build()
         self.render_tag_and_push()
 
         return self.pt.to_json()
