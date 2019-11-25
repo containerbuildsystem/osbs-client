@@ -5,6 +5,9 @@
     },
     {
       "name": "fetch_sources"
+    },
+    {
+      "name": "bump_release"
     }
   ],
   "buildstep_plugins": [
@@ -14,9 +17,30 @@
   ],
   "postbuild_plugins": [
     {
+      "name": "compress",
+      "args": {
+        "load_exported_image": true,
+        "method": "gzip"
+      }
+    },
+    {
       "name": "tag_and_push"
     }
   ],
   "prepublish_plugins": [],
-  "exit_plugins": []
+  "exit_plugins": [
+    {
+      "name": "verify_media",
+      "required": false
+    },
+    {
+      "name": "koji_import"
+    },
+    {
+      "name": "koji_tag_build"
+    },
+    {
+      "name": "remove_built_image"
+    }
+  ]
 }
