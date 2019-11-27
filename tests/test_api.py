@@ -1800,18 +1800,21 @@ class TestOSBS(object):
             .replace_with(mock_get_image_stream))
 
         if existing_is:
-            get_image_stream_tag = (flexmock(osbs_obj.os)
-                                    .should_receive('get_image_stream_tag')
-                                    .times(2 if triggers_bj else 0))
+            get_imstream_tag = (flexmock(osbs_obj.os)
+                                .should_receive('get_image_stream_tag')
+                                .times(1 if triggers_bj else 0))
+            get_imstream_tag_retry = (flexmock(osbs_obj.os)
+                                      .should_receive('get_image_stream_tag_with_retry')
+                                      .times(1 if triggers_bj and skip_build else 0))
 
             if triggers_bj:
                 if existing_ist:
-                    get_image_stream_tag.and_return(flexmock(json=lambda: image_stream_tag_json))
-                    get_image_stream_tag.and_return(flexmock(json=lambda: image_stream_tag_json))
+                    get_imstream_tag.and_return(flexmock(json=lambda: image_stream_tag_json))
+                    get_imstream_tag_retry.and_return(flexmock(json=lambda: image_stream_tag_json))
                 else:
-                    get_image_stream_tag.and_raise(OsbsResponseException('missing ImageStreamTag',
-                                                   status_code=404))
-                    get_image_stream_tag.and_return(flexmock(json=lambda: image_stream_tag_json))
+                    get_imstream_tag.and_raise(OsbsResponseException('missing ImageStreamTag',
+                                                                     status_code=404))
+                    get_imstream_tag_retry.and_return(flexmock(json=lambda: image_stream_tag_json))
 
             ist_tag = trigger_name.split(':')[1]
             (flexmock(osbs_obj.os)
@@ -1823,6 +1826,9 @@ class TestOSBS(object):
         else:
             (flexmock(osbs_obj.os)
                 .should_receive('get_image_stream_tag')
+                .never())
+            (flexmock(osbs_obj.os)
+                .should_receive('get_image_stream_tag_with_retry')
                 .never())
 
         update_build_config_times = 0
@@ -2160,6 +2166,59 @@ class TestOSBS(object):
             })))
 
         response = osbs_obj.get_image_stream_tag(name)
+        ref = response.json()['image']['dockerImageReference']
+        assert ref == 'spam:maps'
+
+    def test_get_image_stream_tag_with_retry(self):
+        config = Configuration(conf_name=None)
+        osbs_obj = OSBS(config, config)
+
+        name = 'buildroot:latest'
+        (flexmock(osbs_obj.os)
+            .should_receive('get_image_stream_tag_with_retry')
+            .with_args(name)
+            .once()
+            .and_return(flexmock(json=lambda: {
+                'image': {
+                    'dockerImageReference': 'spam:maps',
+                }
+            })))
+
+        response = osbs_obj.get_image_stream_tag_with_retry(name)
+        ref = response.json()['image']['dockerImageReference']
+        assert ref == 'spam:maps'
+
+    def test_get_image_stream_tag_with_retry_retries(self):
+        config = Configuration(conf_name=None)
+        osbs_obj = OSBS(config, config)
+
+        name = 'buildroot:latest'
+        (flexmock(osbs_obj.os)
+            .should_call('get_image_stream_tag_with_retry')
+            .with_args(name))
+
+        class MockResponse(object):
+            def __init__(self, status, json=None, content=None):
+                self.status_code = status
+                self._json = json or {}
+                if content:
+                    self.content = content
+
+            def json(self):
+                return self._json
+
+        test_json = {'image': {'dockerImageReference': 'spam:maps'}}
+        bad_response = MockResponse(http_client.NOT_FOUND, None, "not found failure")
+        good_response = MockResponse(http_client.OK, test_json)
+
+        (flexmock(osbs_obj.os)
+            .should_receive('_get')
+            .times(2)
+            .and_return(bad_response)
+            .and_return(good_response))
+
+        response = osbs_obj.get_image_stream_tag_with_retry(name)
+
         ref = response.json()['image']['dockerImageReference']
         assert ref == 'spam:maps'
 
