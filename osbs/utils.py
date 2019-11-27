@@ -518,36 +518,6 @@ def make_name_from_git(repo, branch, limit=53, separator='-', hash_size=5):
     return separator.join(filter(None, (sanitized, hash_str)))
 
 
-def make_source_container_name(nvr, limit=51, separator='-'):
-    """
-    return name string representing the given NVR
-    to be used as a build name for source container.
-
-    NOTE: Build name will be used to generate pods which have a
-    limit of 64 characters and is composed as:
-
-        <buildname>-<buildnumber>-<podsuffix>
-        rhel7-source-build
-
-    Assuming '-source' (7 chars) and '-build' (6 chars) as default
-    suffixes, name should be limited to 51 chars (64 - 13).
-
-    OpenShift is very peculiar in which BuildConfig names it
-    allows. For this reason, only certain characters are allowed.
-    Any disallowed characters will be removed from repo and
-    branch names.
-
-    :param nvr: str, NVR identifier
-    :param limit: int, max name length
-    :param separator: str, used to separate the name and 'source' suffix
-    :return: str, name representing NVR
-    """
-    name, _, _ = nvr.rsplit('-', 2)
-    sanitized = sanitize_strings_for_openshift(
-        name, limit=limit, separator=separator, label=False)
-    return separator.join((sanitized, 'source'))
-
-
 def wrap_name_from_git(prefix, suffix, *args, **kwargs):
     """
     wraps the result of make_name_from_git in a suffix and postfix

@@ -392,12 +392,12 @@ class TestSourceContainerUserParams(object):
         with pytest.raises(OsbsValidationException):
             spec.validate()
 
-    @pytest.mark.parametrize('origin_nvr, final_name, origin_id', [
-        ('test-1-123', 'test-source', 12345),
-        ('test-dashed-nvr-1-123', 'test-dashed-nvr-source', 12345),
-        ('test-dashed-nvr-1-123', 'test-dashed-nvr-source', None),
+    @pytest.mark.parametrize('origin_nvr, origin_id', [
+        ('test-1-123', 12345),
+        ('test-dashed-nvr-1-123', 12345),
+        ('test-dashed-nvr-1-123', None),
     ])
-    def test_all_values_and_json(self, origin_nvr, final_name, origin_id):
+    def test_all_values_and_json(self, origin_nvr, origin_id):
         param_kwargs = self.get_minimal_kwargs(origin_nvr)
         param_kwargs.update({
             'component': TEST_COMPONENT,
@@ -436,7 +436,6 @@ class TestSourceContainerUserParams(object):
             "signing_intent": "test-signing-intent",
             "sources_for_koji_build_nvr": origin_nvr,
             "koji_target": "tothepoint",
-            "name": final_name,
             "orchestrator_deadline": 5,
             "platform": "x86_64",
             'scratch': True,
