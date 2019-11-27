@@ -72,10 +72,7 @@ class BaseBuildRequest(object):
         if validate:
             self.user_params.validate()
 
-        self.render_name(
-            self.user_params.name.value,
-            self.user_params.image_tag.value,
-            self.user_params.platform.value)
+        self.render_name()
         self.render_output_name()
         self.render_custom_strategy()
         self.render_resource_limits()
@@ -100,11 +97,13 @@ class BaseBuildRequest(object):
         else:
             custom_strategy['from']['name'] = self.user_params.build_image.value
 
-    def render_name(self, name, image_tag, platform):
+    def render_name(self):
         """Sets the Build/BuildConfig object name"""
+        name = self.user_params.name.value
+        platform = self.user_params.platform.value
 
         if self.scratch or self.isolated:
-            name = image_tag
+            name = self.user_params.image_tag.value
             # Platform name may contain characters not allowed by OpenShift.
             if platform:
                 platform_suffix = '-{}'.format(platform)
@@ -647,15 +646,13 @@ class SourceBuildRequest(BaseBuildRequest):
     def render(self, validate=True):
         return super(SourceBuildRequest, self).render(validate=validate)
 
-    def render_name(self, name, image_tag, platform):
+    def render_name(self):
         """Sets the Build/BuildConfig object name
 
         Source container builds must have unique names, because we are not
         using buildConfigs just regular builds
-
-        platform is unused for source container images builds
         """
-        name = image_tag
+        name = self.user_params.image_tag.value
 
         _, salt, timestamp = name.rsplit('-', 2)
 

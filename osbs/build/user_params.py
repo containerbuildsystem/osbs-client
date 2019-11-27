@@ -25,7 +25,6 @@ from osbs.exceptions import OsbsValidationException
 from osbs.utils import (
     get_imagestreamtag_from_image,
     make_name_from_git,
-    make_source_container_name,
     RegistryURI,
     utcnow)
 
@@ -159,7 +158,6 @@ class BuildCommon(object):
         self.image_tag = BuildParam("image_tag")
         self.koji_target = BuildParam("koji_target", allow_none=True)
         self.koji_task_id = BuildParam('koji_task_id', allow_none=True)
-        self.name = BuildIDParam()
         self.platform = BuildParam("platform", allow_none=True)
         self.orchestrator_deadline = BuildParam('orchestrator_deadline', allow_none=True)
         self.reactor_config_map = BuildParam("reactor_config_map", allow_none=True)
@@ -334,6 +332,7 @@ class BuildUserParams(BuildCommon):
         self.parent_images_digests = BuildParam('parent_images_digests', allow_none=True)
         self.operator_manifests_extract_platform = BuildParam('operator_manifests_extract_platform',
                                                               allow_none=True)
+        self.name = BuildIDParam()
         self.platforms = BuildParam('platforms', allow_none=True)
         self.release = BuildParam('release', allow_none=True)
         self.trigger_imagestreamtag = BuildParam('trigger_imagestreamtag')
@@ -441,5 +440,3 @@ class SourceContainerUserParams(BuildCommon):
         super(SourceContainerUserParams, self).set_params(**kwargs)
         self.sources_for_koji_build_nvr.value = sources_for_koji_build_nvr
         self.sources_for_koji_build_id.value = sources_for_koji_build_id
-        if sources_for_koji_build_nvr:
-            self.name.value = make_source_container_name(sources_for_koji_build_nvr)
