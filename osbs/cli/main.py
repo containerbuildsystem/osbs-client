@@ -372,6 +372,7 @@ def cmd_build_source_container(args, osbs):
         'user': osbs.build_conf.get_user(),
         'target': osbs.build_conf.get_koji_target(),
         'scratch': args.scratch,
+        'signing_intent': args.signing_intent,
         'sources_for_koji_build_nvr': args.sources_for_koji_build_nvr,
         'sources_for_koji_build_id': args.sources_for_koji_build_id,
         'component': args.component,
@@ -774,6 +775,9 @@ def cli():
         '--arrangement-version', action='store', required=False,
         help='version of inner template to use'
     )
+    build_source_container_parser.add_argument(
+        '--signing-intent', action='store', required=False,
+        help='override signing intent')
     build_source_container_parser.set_defaults(func=cmd_build_source_container)
 
     worker_group = build_parser.add_argument_group(title='arguments for --worker',
