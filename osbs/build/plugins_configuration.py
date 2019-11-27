@@ -623,11 +623,27 @@ class SourceContainerPluginsConfiguration(PluginsConfigurationBase):
         # orchestrator_sources_inner:<arrangement_version>.json
         return 'orchestrator_sources_inner:{}.json'.format(arrangement_version)
 
+    def adjust_for_scratch(self):
+        """
+        Remove certain plugins in order to handle the "scratch build"
+        scenario. Scratch builds must not affect subsequent builds,
+        and should not be imported into Koji.
+        """
+        if self.user_params.scratch.value:
+            remove_plugins = [
+                ("postbuild_plugins", "compress"),  # required only to make an archive for Koji
+                ("exit_plugins", "koji_tag_build"),
+            ]
+
+            for when, which in remove_plugins:
+                self.pt.remove_plugin(when, which, 'removed from scratch build request')
+
     def render(self):
         self.user_params.validate()
         # adjust for custom configuration first
         self.render_customizations()
 
+        self.adjust_for_scratch()
         # Set parameters on each plugin as needed
         # self.render_bump_release()  # not needed yet
         self.render_fetch_sources()
