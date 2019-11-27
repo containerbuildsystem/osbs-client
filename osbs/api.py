@@ -508,7 +508,7 @@ class OSBS(object):
                          build_config_name)
             existing_bc = self.os.create_build_config(json.dumps(build_json)).json()
 
-        imstreamtag = None
+        tag_id = None
         if image_stream:
             source_registry = getattr(build_request, 'source_registry', None)
             organization = getattr(build_request, 'organization', None)
@@ -522,7 +522,6 @@ class OSBS(object):
             logger.debug('Changed parent ImageStreamTag? %s', changed_ist)
 
             tag_id = '{}:{}'.format(image_stream['metadata']['name'], image_stream_tag_name)
-            imstreamtag = self.get_image_stream_tag(tag_id).json()
 
         original_trigger = original_bc['spec']['triggers'] if original_bc else []
         if original_trigger:
@@ -536,7 +535,9 @@ class OSBS(object):
 
         if triggers:
             is_autorebuild = False
-            if build_request.skip_build and imstreamtag:
+            if build_request.skip_build and tag_id:
+                imstreamtag = self.get_image_stream_tag_with_retry(tag_id).json()
+
                 triggers[0]['imageChange']['lastTriggeredImageID'] =\
                     imstreamtag['image']['dockerImageReference']
                 is_autorebuild = True
@@ -1230,6 +1231,10 @@ class OSBS(object):
     @osbsapi
     def get_image_stream_tag(self, tag_id):
         return self.os.get_image_stream_tag(tag_id)
+
+    @osbsapi
+    def get_image_stream_tag_with_retry(self, tag_id):
+        return self.os.get_image_stream_tag_with_retry(tag_id)
 
     @osbsapi
     def ensure_image_stream_tag(self, stream, tag_name, scheduled=False,

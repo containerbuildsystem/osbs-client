@@ -702,6 +702,19 @@ def retry_on_conflict(func):
     return retry
 
 
+def retry_on_not_found(func):
+    @wraps(func)
+    def retry(*args, **kwargs):
+        # Only retry when OsbsResponseException was raised due to not found
+        def should_retry_cb(ex):
+            return ex.status_code == http_client.NOT_FOUND
+
+        retry_func = RetryFunc(OsbsResponseException, should_retry_cb=should_retry_cb)
+        return retry_func.go(func, *args, **kwargs)
+
+    return retry
+
+
 def retry_on_exception(exception_type):
     def do_retry_on_exception(func):
         @wraps(func)
