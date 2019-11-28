@@ -417,12 +417,8 @@ class SourceContainerUserParams(BuildCommon):
     def __init__(self, build_json_dir=None):
         super(SourceContainerUserParams, self).__init__(
             build_json_dir=build_json_dir)
-        self.sources_for_koji_build_nvr = BuildParam("sources_for_koji_build_nvr")
+        self.sources_for_koji_build_nvr = BuildParam("sources_for_koji_build_nvr", allow_none=True)
         self.sources_for_koji_build_id = BuildParam("sources_for_koji_build_id", allow_none=True)
-
-        self.required_params.extend([
-            self.sources_for_koji_build_nvr,
-        ])
 
         self.attrs_finalizer()
 
@@ -435,8 +431,16 @@ class SourceContainerUserParams(BuildCommon):
         """
         :param str sources_for_koji_build_nvr: NVR of build that will be used
                                                to fetch sources
+        :param int sources_for_koji_build_id: ID of build that will be used
+                                              to fetch sources
         :return:
         """
         super(SourceContainerUserParams, self).set_params(**kwargs)
+
+        if sources_for_koji_build_id is None and sources_for_koji_build_nvr is None:
+            raise OsbsValidationException(
+                "At least one param from 'sources_for_koji_build_id' or "
+                "'sources_for_koji_build_nvr' must be specified"
+            )
         self.sources_for_koji_build_nvr.value = sources_for_koji_build_nvr
         self.sources_for_koji_build_id.value = sources_for_koji_build_id

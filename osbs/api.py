@@ -839,7 +839,7 @@ class OSBS(object):
     def create_source_container_build(
         self,
         component,
-        sources_for_koji_build_nvr,
+        sources_for_koji_build_nvr=None,
         sources_for_koji_build_id=None,
         outer_template=None,
         arrangement_version=None,
@@ -862,8 +862,6 @@ class OSBS(object):
         )
 
         error_messages = []
-        if not sources_for_koji_build_nvr:
-            error_messages.append("required argument 'sources_for_koji_build_nvr' can't be empty")
         if not component:
             error_messages.append("required argument 'component' can't be empty")
         if error_messages:
