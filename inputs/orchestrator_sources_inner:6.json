@@ -38,9 +38,6 @@
     },
     {
       "name": "koji_tag_build"
-    },
-    {
-      "name": "remove_built_image"
     }
   ]
 }
