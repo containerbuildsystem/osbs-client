@@ -382,15 +382,15 @@ class TestSourceContainerUserParams(object):
         }
 
     def test_validate_missing_required(self):
+        """Missing 'sources_for_koji_build_id' and
+        `sources_for_koji_build_nvr` params"""
         kwargs = {
             "build_from": "image:buildroot:latest",
             'user': TEST_USER,
         }
         spec = SourceContainerUserParams()
-        spec.set_params(**kwargs)
-
         with pytest.raises(OsbsValidationException):
-            spec.validate()
+            spec.set_params(**kwargs)
 
     @pytest.mark.parametrize('origin_nvr, origin_id', [
         ('test-1-123', 12345),

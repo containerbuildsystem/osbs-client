@@ -727,11 +727,12 @@ def cli():
         help='build a source container image in OSBS'
     )
     build_source_container_parser.add_argument(
-        "--sources-for-koji-build-nvr", action='store', required=True,
+        "--sources-for-koji-build-nvr", action='store',
         metavar='N-V-R',  help="koji build NVR"
     )
     build_source_container_parser.add_argument(
         "--sources-for-koji-build-id", action='store',
+        type=int, metavar='ID',
         help="koji build ID"
     )
     build_source_container_parser.add_argument(
@@ -904,6 +905,14 @@ def cli():
     parser.add_argument("--token-file", metavar="TOKENFILE", action="store",
                         help="Read oauth 2.0 token from file")
     args = parser.parse_args()
+
+    if getattr(args, 'func', None) is cmd_build_source_container:
+        if not (args.sources_for_koji_build_id or args.sources_for_koji_build_nvr):
+            parser.error(
+                "at least one of --sources-for-koji-build-id and "
+                "--sources-for-koji-build-nvr has to be specified"
+            )
+
     return parser, args
 
 
