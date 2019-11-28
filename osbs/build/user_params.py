@@ -154,7 +154,6 @@ class BuildCommon(object):
         self.build_json_dir = BuildParam('build_json_dir', default=build_json_dir)
         self.kind = BuildParam(KIND_KEY, default=self.KIND)
         self.component = BuildParam('component')
-        self.filesystem_koji_task_id = BuildParam("filesystem_koji_task_id", allow_none=True)
         self.image_tag = BuildParam("image_tag")
         self.koji_target = BuildParam("koji_target", allow_none=True)
         self.koji_task_id = BuildParam('koji_task_id', allow_none=True)
@@ -321,6 +320,7 @@ class BuildUserParams(BuildCommon):
         self.compose_ids = BuildParam("compose_ids", allow_none=True)
         self.customize_conf_path = BuildParam("customize_conf", allow_none=True,
                                               default=customize_conf or DEFAULT_CUSTOMIZE_CONF)
+        self.filesystem_koji_task_id = BuildParam("filesystem_koji_task_id", allow_none=True)
         self.flatpak = BuildParam('flatpak', default=False)
         self.git_branch = BuildParam('git_branch')
         self.git_ref = BuildParam('git_ref', default=DEFAULT_GIT_REF)
