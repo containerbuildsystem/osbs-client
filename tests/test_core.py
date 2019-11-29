@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Copyright (c) 2015 Red Hat, Inc
+Copyright (c) 2015, 2019 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -190,12 +190,18 @@ class TestOpenshift(object):
             def iter_lines(self):
                 return []
 
+            def json(self):
+                return {
+                    'metadata': {'name': ''},
+                    'status': {'phase': 'pending'},
+                }
+
         mock_reponse = MockResponse()
         flexmock(openshift).should_receive('_get').and_return(mock_reponse)
         flexmock(time).should_receive('sleep').and_return(None)
-        for _ in openshift.watch_resource("builds", 12):
-            # watch_resource failed and never yielded, so we shouldn't hit the assert
-            assert False
+        for change_type, _ in openshift.watch_resource("builds", 12):
+            # watch_resource only returns a fresh copy, no updates
+            assert change_type is None
 
         with pytest.raises(OsbsWatchBuildNotFound):
             openshift.wait(12, None)
@@ -214,15 +220,18 @@ class TestOpenshift(object):
             def __init__(self, status, lines=None, content=None):
                 self.status_code = status
                 self.lines = lines or []
-                if content:
-                    self.content = content
+                self.content = content
 
             def iter_lines(self):
                 return self.lines
 
+            def json(self):
+                return json.loads(self.content)
+
         test_json = json.dumps({"object": "test", "type": "test"}).encode('utf-8')
         bad_response = MockResponse(http_client.FORBIDDEN, None, "failure")
         good_response = MockResponse(http_client.OK, [test_json])
+        fresh_response = MockResponse(http_client.OK, content='"test"')
         flexmock(time).should_receive('sleep').and_return(None)
         if fail:
             (flexmock(openshift)
@@ -236,12 +245,25 @@ class TestOpenshift(object):
         else:
             (flexmock(openshift)
                 .should_receive('_get')
-                .and_return(good_response, bad_response, good_response)
+                .and_return(good_response, fresh_response,
+                            bad_response,
+                            good_response, fresh_response)
                 .one_by_one())
 
-            for changetype, obj in openshift.watch_resource("builds", 12):
-                assert changetype == 'test'
-                assert obj == 'test'
+            yielded = 0
+            expected = [
+                (None, 'test'),    # fresh object
+                ('test', 'test'),  # update
+                (None, 'test'),    # fresh object after reconnect
+                ('test', 'test'),  # update
+            ]
+            for (changetype, obj), (exp_changetype, exp_obj) in zip(
+                    openshift.watch_resource("builds", 12), expected):
+                yielded += 1
+                assert changetype == exp_changetype
+                assert obj == exp_obj
+
+            assert yielded == len(expected)
 
     def test_watch_build(self, openshift):  # noqa
         response = openshift.wait_for_build_to_finish(TEST_BUILD)

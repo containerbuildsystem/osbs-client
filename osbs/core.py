@@ -1,5 +1,5 @@
 """
-Copyright (c) 2015 Red Hat, Inc
+Copyright (c) 2015, 2019 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -443,7 +443,7 @@ class Openshift(object):
     def wait_for_new_build_config_instance(self, build_config_id, prev_version):
         logger.info("waiting for build config %s to get instantiated", build_config_id)
         for changetype, obj in self.watch_resource("buildconfigs", build_config_id):
-            if changetype == WATCH_MODIFIED:
+            if changetype in (None, WATCH_MODIFIED):
                 version = graceful_chain_get(obj, 'status', 'lastVersion')
                 if not isinstance(version, numbers.Integral):
                     logger.error("BuildConfig %s has unexpected lastVersion: %s", build_config_id,
@@ -645,22 +645,42 @@ class Openshift(object):
         return response
 
     def watch_resource(self, resource_type, resource_name=None, **request_args):
+        """
+        Generator function which yields tuples of (change_type, object)
+        where:
+
+        - change_type is one of:
+          - 'modified', the object was modified
+          - 'deleted', the object was deleted
+          - None, a fresh version of the object was retrieved using
+            GET (only when resource_name is provided)
+
+        - object is the latest version of the object
+        """
         def log_and_sleep():
             logger.debug("connection closed, reconnecting in %ds", WATCH_RETRY_SECS)
             time.sleep(WATCH_RETRY_SECS)
 
-        path = "watch/namespaces/%s/%s/" % (self.namespace, resource_type)
+        watch_path = "watch/namespaces/%s/%s/" % (self.namespace, resource_type)
         if resource_name is not None:
-            path += "%s/" % resource_name
+            watch_path += "%s/" % resource_name
         api_ver = OCP_RESOURCE_API_VERSION_MAP[resource_type]
-        url = self._build_url(
-            api_ver, path, _prepend_namespace=False, **request_args
+        watch_url = self._build_url(
+            api_ver, watch_path, _prepend_namespace=False, **request_args
         )
+
+        get_url = None
+        if resource_name is not None:
+            get_url = self._build_url(api_ver,
+                                      "%s/%s" % (resource_type,
+                                                 resource_name))
 
         bad_responses = 0
         for _ in range(WATCH_RETRY):
+            logger.debug("watching for updates")
             try:
-                response = self._get(url, stream=True, headers={'Connection': 'close'})
+                response = self._get(watch_url, stream=True,
+                                     headers={'Connection': 'close'})
                 check_response(response)
             # we're already retrying, so there's no need to panic just because of a bad response
             except OsbsResponseException as exc:
@@ -674,6 +694,18 @@ class Openshift(object):
                     continue
 
             encoding = None
+
+            # Avoid races. We've already asked the server to tell us
+            # about changes to the object, but now ask for a fresh
+            # copy of the object as well. This is to catch the
+            # situation where the object changed before the call to
+            # this method, or in between retries in this method.
+            if get_url is not None:
+                logger.debug("retrieving fresh version of object")
+                fresh_response = self._get(get_url)
+                check_response(fresh_response)
+                yield None, fresh_response.json()
+
             for line in response.iter_lines():
                 logger.debug('%r', line)
 

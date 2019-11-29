@@ -1,5 +1,5 @@
 """
-Copyright (c) 2015 Red Hat, Inc
+Copyright (c) 2015, 2019 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -84,7 +84,7 @@ def cmd_watch_builds(args, osbs):
                 created = time.ctime(get_time_from_rfc3339(timestamp))
 
             b = {
-                "changetype": changetype,
+                "changetype": changetype or '(none)',
                 "name": name or '',
                 "status": status,
                 "created": created,

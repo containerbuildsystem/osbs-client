@@ -1,5 +1,5 @@
 """
-Copyright (c) 2015 Red Hat, Inc
+Copyright (c) 2015, 2019 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -37,7 +37,12 @@ def test_json_capture_no_watch(osbs_with_capture, tmpdir):
 
 
 def test_json_capture_watch(osbs_with_capture, tmpdir):
-    osbs_with_capture.wait_for_build_to_finish(TEST_BUILD)
+    # Take the first two yielded values (fresh object, update)
+    # PyCQA/pylint#2731 fixed in 2.4.4, so noqa
+    for _ in zip(range(2),  # pylint: disable=W1638
+                 osbs_with_capture.os.watch_resource('builds', TEST_BUILD)):
+        pass
+
     filename = "get-build.openshift.io_v1_watch_namespaces_{n}_builds_{b}_-000-000.json"
     path = os.path.join(str(tmpdir), filename.format(n=DEFAULT_NAMESPACE,
                                                      b=TEST_BUILD))
