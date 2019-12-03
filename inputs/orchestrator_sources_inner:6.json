@@ -38,6 +38,9 @@
     },
     {
       "name": "koji_tag_build"
+    },
+    {
+      "name": "store_metadata_in_osv3"
     }
   ]
 }
