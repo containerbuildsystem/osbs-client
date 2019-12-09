@@ -101,6 +101,12 @@ OS_CONFLICT_MAX_RETRIES = 8
 # number of seconds to wait, before retrying on openshift conflict
 OS_CONFLICT_WAIT = 5
 
+# number of retries on openshift not found
+OS_NOT_FOUND_MAX_RETRIES = 6
+
+# number of seconds to wait, before retrying on openshift not found
+OS_NOT_FOUND_MAX_WAIT = 1
+
 BUILD_TYPE_ORCHESTRATOR = "orchestrator"
 BUILD_TYPE_WORKER = "worker"
 

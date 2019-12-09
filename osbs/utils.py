@@ -27,8 +27,8 @@ from io import BytesIO
 from hashlib import sha256
 from osbs.repo_utils import RepoConfiguration, RepoInfo, AdditionalTagsConfig
 from osbs.constants import (OS_CONFLICT_MAX_RETRIES, OS_CONFLICT_WAIT,
-                            GIT_MAX_RETRIES, GIT_BACKOFF_FACTOR,
-                            GIT_FETCH_RETRY)
+                            GIT_MAX_RETRIES, GIT_BACKOFF_FACTOR, GIT_FETCH_RETRY,
+                            OS_NOT_FOUND_MAX_RETRIES, OS_NOT_FOUND_MAX_WAIT)
 
 
 from six.moves import http_client
@@ -679,7 +679,9 @@ def retry_on_not_found(func):
         def should_retry_cb(ex):
             return ex.status_code == http_client.NOT_FOUND
 
-        retry_func = RetryFunc(OsbsResponseException, should_retry_cb=should_retry_cb)
+        retry_func = RetryFunc(OsbsResponseException, should_retry_cb=should_retry_cb,
+                               retry_times=OS_NOT_FOUND_MAX_RETRIES,
+                               retry_delay=OS_NOT_FOUND_MAX_WAIT)
         return retry_func.go(func, *args, **kwargs)
 
     return retry
@@ -697,12 +699,13 @@ def retry_on_exception(exception_type):
 
 
 class RetryFunc(object):
-    def __init__(self, exception_type, should_retry_cb=None):
+    def __init__(self, exception_type, should_retry_cb=None,
+                 retry_times=OS_CONFLICT_MAX_RETRIES, retry_delay=OS_CONFLICT_WAIT):
         self.exception_type = exception_type
         self.should_retry_cb = should_retry_cb or (lambda ex: True)
 
-        self.retry_times = OS_CONFLICT_MAX_RETRIES
-        self.retry_delay = OS_CONFLICT_WAIT
+        self.retry_times = retry_times
+        self.retry_delay = retry_delay
 
     def go(self, func, *args, **kwargs):
         for counter in range(self.retry_times + 1):

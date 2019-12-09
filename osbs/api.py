@@ -536,10 +536,20 @@ class OSBS(object):
         if triggers:
             is_autorebuild = False
             if build_request.skip_build and tag_id:
-                imstreamtag = self.get_image_stream_tag_with_retry(tag_id).json()
+                imstreamtag = None
+                try:
+                    imstreamtag = self.get_image_stream_tag_with_retry(tag_id).json()
+                except OsbsResponseException as exc:
+                    if exc.status_code == http_client.NOT_FOUND:
+                        logger.info("Imagestream tag doesn't exist yet: %s", tag_id)
+                    else:
+                        raise
 
-                triggers[0]['imageChange']['lastTriggeredImageID'] =\
-                    imstreamtag['image']['dockerImageReference']
+                # when imagestream tag doesn't exist yet, we will just add the trigger,
+                # without setting lastTriggeredImageID
+                if imstreamtag:
+                    triggers[0]['imageChange']['lastTriggeredImageID'] =\
+                        imstreamtag['image']['dockerImageReference']
                 is_autorebuild = True
 
             if build_request.triggered_after_koji_task is not None:
