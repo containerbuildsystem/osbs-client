@@ -1654,7 +1654,7 @@ class TestOSBS(object):
     @pytest.mark.parametrize('triggers_bj', [True, False])
     @pytest.mark.parametrize('existing_bc', [True, False])
     @pytest.mark.parametrize('existing_is', [True, False])
-    @pytest.mark.parametrize('existing_ist', [True, False])
+    @pytest.mark.parametrize('existing_ist', [True, False, None])
     @pytest.mark.parametrize('trigger_name',
                              ['fedora23-python:new_trigger', 'fedora23-python:old_trigger'])
     @pytest.mark.parametrize(('source_registry', 'organization', 'base_image',
@@ -1682,7 +1682,7 @@ class TestOSBS(object):
          'old_registry.com/fedora23/python',
          'source_registry.com/my_org/fedora23-python', True),
     ])
-    def test_create_build_config_auto_start(self, skip_build, triggers_bj, existing_bc,
+    def test_create_build_config_auto_start(self, caplog, skip_build, triggers_bj, existing_bc,
                                             existing_is, existing_ist, trigger_name,
                                             source_registry, organization, base_image,
                                             expected_repo, expected_insecure):
@@ -1811,11 +1811,15 @@ class TestOSBS(object):
                 if existing_ist:
                     get_imstream_tag.and_return(flexmock(json=lambda: image_stream_tag_json))
                     get_imstream_tag_retry.and_return(flexmock(json=lambda: image_stream_tag_json))
-                else:
+                elif existing_ist is not None:
                     get_imstream_tag.and_raise(OsbsResponseException('missing ImageStreamTag',
                                                                      status_code=404))
                     get_imstream_tag_retry.and_return(flexmock(json=lambda: image_stream_tag_json))
-
+                else:
+                    get_imstream_tag.and_raise(OsbsResponseException('missing ImageStreamTag',
+                                                                     status_code=404))
+                    get_imstream_tag_retry.and_raise(OsbsResponseException('missing ImageStreamTag',
+                                                                           status_code=404))
             ist_tag = trigger_name.split(':')[1]
             (flexmock(osbs_obj.os)
                 .should_receive('ensure_image_stream_tag')
@@ -1881,6 +1885,9 @@ class TestOSBS(object):
         build_response = osbs_obj._create_build_config_and_build(build_request)
         if skip_build:
             assert build_response is None
+            if triggers_bj and existing_is and existing_ist is None:
+                msg = "Imagestream tag doesn't exist yet:"
+                assert msg in caplog.text
         else:
             assert build_response.json == {'spam': 'maps'}
 
