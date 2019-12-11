@@ -535,7 +535,6 @@ def osbs(request, openshift):
             koji_hub = http://koji.example.com/kojihub
             flatpak_base_image = registry.fedoraproject.org/fedora:latest
             odcs_url = https://odcs.example.com/odcs/1
-            pdc_url = https://pdc.example.com/rest_api/v1
             use_auth = false
             can_orchestrate = true
             build_from = image:buildroot:latest
