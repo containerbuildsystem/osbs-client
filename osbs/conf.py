@@ -221,13 +221,6 @@ class Configuration(object):
     def get_odcs_ssl_secret(self):
         return self._get_deprecated("odcs_ssl_secret", self.conf_section, "odcs_ssl_secret")
 
-    def get_pdc_url(self):
-        return self._get_deprecated("pdc_url", self.conf_section, "pdc_url")
-
-    def get_pdc_insecure(self):
-        return self._get_deprecated("pdc_insecure", self.conf_section, "pdc_insecure",
-                                    default=False, is_bool_val=True)
-
     def get_kojiroot(self):
         return self._get_deprecated("koji_root", self.conf_section, "koji_root")
 

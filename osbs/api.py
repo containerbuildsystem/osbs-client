@@ -740,8 +740,6 @@ class OSBS(object):
             odcs_insecure=self.build_conf.get_odcs_insecure(),
             odcs_openidc_secret=self.build_conf.get_odcs_openidc_secret(),
             odcs_ssl_secret=self.build_conf.get_odcs_ssl_secret(),
-            pdc_url=self.build_conf.get_pdc_url(),
-            pdc_insecure=self.build_conf.get_pdc_insecure(),
             architecture=architecture,
             platforms=platforms,
             platform=platform,
