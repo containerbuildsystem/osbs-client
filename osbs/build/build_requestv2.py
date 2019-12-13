@@ -86,6 +86,10 @@ class BaseBuildRequest(object):
         data = self.get_reactor_config_data()
         self.set_data_from_reactor_config(data)
 
+        koji_task_id = self.user_params.koji_task_id.value
+        if koji_task_id is not None:
+            self.set_label('koji-task-id', str(koji_task_id))
+
         return self.template
 
     def render_custom_strategy(self):
@@ -486,8 +490,6 @@ class BuildRequestV2(BaseBuildRequest):
 
         koji_task_id = self.user_params.koji_task_id.value
         if koji_task_id is not None:
-            self.set_label('koji-task-id', str(koji_task_id))
-
             # keep also original task for all manual builds with task
             # that way when delegated task for autorebuild will be used
             # we will still keep track of it
