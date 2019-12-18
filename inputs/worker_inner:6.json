@@ -53,6 +53,9 @@
     },
     {
       "name": "distribution_scope"
+    },
+    {
+      "name": "download_remote_source"
     }
   ],
   "prepublish_plugins": [

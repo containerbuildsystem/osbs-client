@@ -280,6 +280,7 @@ class TestArrangementV6(ArrangementBase):
                 'add_labels_in_dockerfile',
                 PLUGIN_KOJI_PARENT_KEY,
                 PLUGIN_RESOLVE_COMPOSES_KEY,
+                'resolve_remote_source',
             ],
 
             'buildstep_plugins': [
@@ -330,6 +331,7 @@ class TestArrangementV6(ArrangementBase):
                 'add_yum_repo_by_url',
                 'inject_yum_repo',
                 'distribution_scope',
+                'download_remote_source',
             ],
 
             'buildstep_plugins': [
