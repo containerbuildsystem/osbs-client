@@ -47,6 +47,9 @@
     },
     {
       "name": "resolve_composes"
+    },
+    {
+      "name": "resolve_remote_source"
     }
   ],
   "buildstep_plugins": [
