@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Copyright (c) 2017 Red Hat, Inc
+Copyright (c) 2017-2019 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -17,7 +17,7 @@ import pytest
 
 import requests
 import six
-from requests.packages.urllib3.util import Retry
+from urllib3.util import Retry
 from osbs.http import HttpSession, HttpStream
 from osbs.exceptions import OsbsNetworkException, OsbsResponseException
 from osbs.constants import HTTP_RETRIES_STATUS_FORCELIST, HTTP_RETRIES_METHODS_WHITELIST

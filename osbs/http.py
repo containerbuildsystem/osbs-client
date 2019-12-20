@@ -1,5 +1,5 @@
 """
-Copyright (c) 2015 Red Hat, Inc
+Copyright (c) 2015-2019 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -24,16 +24,17 @@ from osbs.constants import (
 
 import requests
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util import Retry
 from requests.exceptions import HTTPError, RetryError, Timeout
 from requests.utils import guess_json_utf
 try:
     from requests_kerberos import HTTPKerberosAuth
 except ImportError:
     HTTPKerberosAuth = None
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+from urllib3.exceptions import InsecureRequestWarning
+from urllib3.util import Retry
+from urllib3 import disable_warnings
+disable_warnings(InsecureRequestWarning)
 
 logger = logging.getLogger(__name__)
 
