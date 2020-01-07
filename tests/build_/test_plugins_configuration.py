@@ -872,6 +872,29 @@ class TestPluginsConfiguration(object):
             with pytest.raises(NoSuchPluginException):
                 assert get_plugin(plugins, 'prebuild_plugins', 'koji_delegate')
 
+    @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
+    @pytest.mark.parametrize('remote_source_url', (None, 'some_url'))
+    @pytest.mark.parametrize('remote_source_build_args', (None, 'some_args'))
+    def test_render_download_remote_sources(self, build_type, remote_source_url,
+                                            remote_source_build_args):
+        user_params = get_sample_user_params({'remote_source_url': remote_source_url,
+                                              'remote_source_build_args': remote_source_build_args},
+                                             build_type=build_type)
+        self.mock_repo_info()
+        build_json = PluginsConfiguration(user_params).render()
+        plugins = get_plugins_from_build_json(build_json)
+        if build_type == BUILD_TYPE_WORKER:
+            assert get_plugin(plugins, 'prebuild_plugins', 'download_remote_source')
+            plugin_args = plugin_value_get(plugins, 'prebuild_plugins',
+                                           'download_remote_source', 'args')
+
+            assert plugin_args.get('remote_source_url') == remote_source_url
+            assert plugin_args.get('remote_source_build_args') == remote_source_build_args
+
+        else:
+            with pytest.raises(NoSuchPluginException):
+                assert get_plugin(plugins, 'prebuild_plugins', 'download_remote_source')
+
 
 class TestSourceContainerPluginsConfiguration(object):
 

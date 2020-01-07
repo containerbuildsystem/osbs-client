@@ -325,6 +325,8 @@ class BuildUserParams(BuildCommon):
         self.git_branch = BuildParam('git_branch')
         self.git_ref = BuildParam('git_ref', default=DEFAULT_GIT_REF)
         self.git_uri = BuildParam('git_uri')
+        self.remote_source_url = BuildParam('remote_source_url')
+        self.remote_source_build_args = BuildParam('remote_source_build_args')
         self.imagestream_name = BuildParam('imagestream_name')
         self.isolated = BuildParam('isolated', allow_none=True)
         self.koji_parent_build = BuildParam('koji_parent_build', allow_none=True)
@@ -352,6 +354,7 @@ class BuildUserParams(BuildCommon):
 
     def set_params(self,
                    git_uri=None, git_ref=None, git_branch=None,
+                   remote_source_url=None, remote_source_build_args=None,
                    base_image=None, name_label=None,
                    release=None,
                    platforms=None, build_type=None,
@@ -368,6 +371,8 @@ class BuildUserParams(BuildCommon):
         self.git_uri.value = git_uri
         self.git_ref.value = git_ref
         self.git_branch.value = git_branch
+        self.remote_source_url.value = remote_source_url
+        self.remote_source_build_args.value = remote_source_build_args
         self.git_commit_depth.value = git_commit_depth
         self.tags_from_yaml.value = tags_from_yaml
         self.additional_tags.value = additional_tags or set()

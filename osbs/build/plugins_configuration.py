@@ -571,6 +571,16 @@ class PluginsConfigurationBase(object):
                     self.user_params.signing_intent.value
                 )
 
+    def render_download_remote_source(self):
+        phase = 'prebuild_plugins'
+        plugin = 'download_remote_source'
+
+        if self.pt.has_plugin_conf(phase, plugin):
+            self.pt.set_plugin_arg(phase, plugin, 'remote_source_url',
+                                   self.user_params.remote_source_url.value)
+            self.pt.set_plugin_arg(phase, plugin, 'remote_source_build_args',
+                                   self.user_params.remote_source_build_args.value)
+
 
 class PluginsConfiguration(PluginsConfigurationBase):
     """Plugin configuration for image builds"""
@@ -611,6 +621,7 @@ class PluginsConfiguration(PluginsConfigurationBase):
         self.render_resolve_module_compose()
         self.render_tag_from_config()
         self.render_koji_delegate()
+        self.render_download_remote_source()
         return self.pt.to_json()
 
 
