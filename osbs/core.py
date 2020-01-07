@@ -24,7 +24,7 @@ from osbs.exceptions import (OsbsResponseException, OsbsException,
                              OsbsWatchBuildNotFound, OsbsAuthException,
                              ImportImageFailed, ImportImageFailedServerError)
 from osbs.utils import (graceful_chain_get, retry_on_conflict, retry_on_exception,
-                        retry_on_not_found)
+                        retry_on_not_found, retry_on_gateway_timeout)
 
 import requests
 from requests.utils import guess_json_utf
@@ -1014,17 +1014,8 @@ class Openshift(object):
             logger.debug('No tags to import')
             return False
 
-        import_url = self._build_url(
-            OCP_IMAGE_API_V1,
-            "imagestreamimports/"
-        )
-        import_response = self._post(import_url, data=json.dumps(stream_import),
-                                     use_json=True)
-        self._check_import_image_response(import_response)
+        new_tags = self._get_import_image_response_tags(stream_import)
 
-        new_tags = [
-            image['tag']
-            for image in import_response.json().get('status', {}).get('images', [])]
         logger.debug("tags after import: %r", new_tags)
 
         return True
@@ -1081,22 +1072,21 @@ class Openshift(object):
             }
             stream_import['spec']['images'].append(image_import)
 
+        new_tags = self._get_import_image_response_tags(stream_import)
+
+        logger.debug("tags after import: %r", new_tags)
+
+        return True
+
+    @retry_on_gateway_timeout
+    def _get_import_image_response_tags(self, stream_import):
         import_url = self._build_url(
             OCP_IMAGE_API_V1,
             "imagestreamimports/"
         )
         import_response = self._post(import_url, data=json.dumps(stream_import),
                                      use_json=True)
-        self._check_import_image_response(import_response)
 
-        new_tags = [
-            image['tag']
-            for image in import_response.json().get('status', {}).get('images', [])]
-        logger.debug("tags after import: %r", new_tags)
-
-        return True
-
-    def _check_import_image_response(self, import_response):
         check_response(import_response)
 
         failed_images = []
@@ -1117,6 +1107,9 @@ class Openshift(object):
                 raise ImportImageFailedServerError(error_msg)
             else:
                 raise ImportImageFailed(error_msg)
+        return [
+            image['tag']
+            for image in import_response.json().get('status', {}).get('images', [])]
 
     def dump_resource(self, resource_type):
         api_ver = OCP_RESOURCE_API_VERSION_MAP[resource_type]

@@ -687,6 +687,21 @@ def retry_on_not_found(func):
     return retry
 
 
+def retry_on_gateway_timeout(func):
+    @wraps(func)
+    def retry(*args, **kwargs):
+        # Only retry when OsbsResponseException was raised due to gateway error
+        def should_retry_cb(ex):
+            return ex.status_code == http_client.GATEWAY_TIMEOUT
+
+        retry_func = RetryFunc(OsbsResponseException, should_retry_cb=should_retry_cb,
+                               retry_times=OS_NOT_FOUND_MAX_RETRIES,
+                               retry_delay=OS_NOT_FOUND_MAX_WAIT)
+        return retry_func.go(func, *args, **kwargs)
+
+    return retry
+
+
 def retry_on_exception(exception_type):
     def do_retry_on_exception(func):
         @wraps(func)
