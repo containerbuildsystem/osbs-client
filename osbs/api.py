@@ -684,6 +684,8 @@ class OSBS(object):
                               operator_manifests_extract_platform=None,
                               skip_build=False,
                               triggered_after_koji_task=None,
+                              remote_source_url=None,
+                              remote_source_build_args=None,
                               **kwargs):
 
         if flatpak:
@@ -713,6 +715,8 @@ class OSBS(object):
             git_uri=git_uri,
             git_ref=git_ref,
             git_branch=git_branch,
+            remote_source_url=remote_source_url,
+            remote_source_build_args=remote_source_build_args,
             user=user,
             component=req_labels[utils.Labels.LABEL_TYPE_COMPONENT],
             build_image=self.build_conf.get_build_image(),
