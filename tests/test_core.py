@@ -902,17 +902,39 @@ class TestOpenshift(object):
             "image.openshift.io/v1",
             "imagestreams/%s" % imagestream_name
         )
-        post_url = openshift._build_url(
-            "image.openshift.io/v1",
-            "imagestreamimports/")
         (flexmock(openshift)
             .should_call('_put')
             .times(1 if expect_update else 0)
             .with_args(put_url, data=JsonMatcher(modified_resource_json), use_json=True))
-        (flexmock(openshift)
-            .should_call('_post')
-            .times(1 if expect_import else 0)
-            .with_args(post_url, data=JsonMatcher(stream_import_json), use_json=True))
+
+        # Load example API response
+        this_file = inspect.getfile(TestCheckResponse)
+        this_dir = os.path.dirname(this_file)
+        json_path = os.path.join(this_dir, "mock_jsons", openshift._con.version,
+                                 'imagestreamimport.json')
+        with open(json_path) as f:
+            content_json = json.load(f)
+        good_resp = HttpResponse(200, {}, content=json.dumps(content_json).encode('utf-8'))
+        image_status = {'status': 'Failure', 'code': 504, 'reason': 'TimeOut'}
+        # Create a bad response by marking the first image as failed
+        for key in ('status', 'code', 'reason'):
+            content_json['status']['images'][0]['status'][key] = image_status[key]
+        bad_resp = HttpResponse(504, {}, content=json.dumps(content_json).encode('utf-8'))
+
+        post_url = openshift._build_url("image.openshift.io/v1", "imagestreamimports/")
+        if expect_import:
+            (flexmock(openshift)
+                .should_receive('_post')
+                .times(2)
+                .with_args(post_url, data=JsonMatcher(stream_import_json), use_json=True)
+                .and_return(bad_resp)
+                .and_return(good_resp))
+        else:
+            (flexmock(openshift)
+                .should_call('_post')
+                .times(0)
+                .with_args(post_url, data=JsonMatcher(stream_import_json), use_json=True))
+
         assert openshift.import_image_tags(imagestream_name, stream_import,
                                            tags, source_repo, insecure) is expect_import
 
