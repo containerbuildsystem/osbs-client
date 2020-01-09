@@ -344,46 +344,48 @@ class BuildRequestV2(BaseBuildRequest):
         set parameters in the user parameters
 
         these parameters are accepted:
-        :param git_uri: str, uri of the git repository for the source
-        :param git_ref: str, commit ID of the branch to be pulled
-        :param git_branch: str, branch name of the branch to be pulled
         :param base_image: str, name of the parent image
-        :param name_label: str, label of the parent image
-        :param user: str, name of the user requesting the build
-        :param component: str, name of the component
-        :param release: str,
         :param build_image: str,
         :param build_imagestream: str,
         :param build_from: str,
         :param build_type: str, orchestrator or worker
-        :param platforms: list of str, platforms to build on
-        :param platform: str, platform
-        :param koji_target: str, koji tag with packages used to build the image
-        :param koji_task_id: str, koji ID
-        :param koji_parent_build: str,
-        :param koji_upload_dir: str, koji directory where the completed image will be uploaded
+        :param component: str, name of the component
+        :param compose_ids: list of int, ODCS composes to use instead of generating new ones
+        :param filesystem_koji_task_id: int, Koji Task that created the base filesystem
         :param flatpak: if we should build a Flatpak OCI Image
         :param flatpak_base_image: str, name of the Flatpack OCI Image
+        :param git_branch: str, branch name of the branch to be pulled
+        :param git_ref: str, commit ID of the branch to be pulled
+        :param git_uri: str, uri of the git repository for the source
+        :param koji_parent_build: str,
+        :param koji_target: str, koji tag with packages used to build the image
+        :param koji_task_id: str, koji ID
+        :param koji_upload_dir: str, koji directory where the completed image will be uploaded
+        :param name_label: str, label of the parent image
+        :param user: str, name of the user requesting the build
+        :param auto_build_node_selector: dict, a nodeselector for auto builds
+        :param explicit_build_node_selector: dict, a nodeselector for explicit builds
+        :param isolated_build_node_selector: dict, a nodeselector for isolated builds
+        :param platform_node_selector: dict, a nodeselector for a user_paramsific platform
+        :param scratch_build_node_selector: dict, a nodeselector for scratch builds
+        :param orchestrator_deadline: int, orchestrator deadline in hours
+        :param operator_manifests_extract_platform: str, indicates which platform should upload
+                                                    operator manifests to koji
+        :param parent_images_digests: dict, mapping image digests to names and platforms
+        :param platforms: list of str, platforms to build on
+        :param platform: str, platform
         :param reactor_config_map: str, name of the config map containing the reactor environment
         :param reactor_config_override: dict, data structure for reactor config to be injected as
                                         an environment variable into a worker build;
                                         when used, reactor_config_map is ignored.
-        :param yum_repourls: list of str, uris of the yum repos to pull from
+        :param release: str,
         :param signing_intent: bool, True to sign the resulting image
-        :param compose_ids: list of int, ODCS composes to use instead of generating new ones
-        :param filesystem_koji_task_id: int, Koji Task that created the base filesystem
-        :param platform_node_selector: dict, a nodeselector for a user_paramsific platform
-        :param scratch_build_node_selector: dict, a nodeselector for scratch builds
-        :param explicit_build_node_selector: dict, a nodeselector for explicit builds
-        :param auto_build_node_selector: dict, a nodeselector for auto builds
-        :param isolated_build_node_selector: dict, a nodeselector for isolated builds
-        :param operator_manifests_extract_platform: str, indicates which platform should upload
-                                                    operator manifests to koji
-        :param parent_images_digests: dict, mapping image digests to names and platforms
-        :param worker_deadline: int, worker completion deadline in hours
-        :param orchestrator_deadline: int, orchestrator deadline in hours
         :param skip_build: bool, if we should skip build and just set buildconfig for autorebuilds
         :param triggered_after_koji_task: int, koji task ID from which was autorebuild triggered
+        :param worker_deadline: int, worker completion deadline in hours
+        :param yum_repourls: list of str, uris of the yum repos to pull from
+
+        Please keep the paramater list alphabetized for easier tracking of changes
         """
         super(BuildRequestV2, self).set_params(**kwargs)
         # When true, it indicates build was automatically started by
