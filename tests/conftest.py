@@ -509,13 +509,11 @@ def openshift(request):
     return os_inst
 
 
-@pytest.fixture(params=[{'kwargs': None, 'additional_config': None, 'platform_descriptors': None}])
+@pytest.fixture(params=[{'kwargs': None, 'additional_config': None}])
 def osbs(request, openshift):
     kwargs = request.param['kwargs'] or {}
-    platform_descriptors = request.param.get('platform_descriptors') or {}
 
     kwargs.setdefault('build_json_dir', 'inputs')
-    kwargs.setdefault('registry_uri', 'registry.example.com')
     kwargs.setdefault('additional_general', '')
     with NamedTemporaryFile(mode="wt") as fp:
         config = dedent("""\
@@ -525,32 +523,15 @@ def osbs(request, openshift):
 
             [default]
             openshift_url = /
-            registry_uri = {registry_uri}
-            sources_command = fedpkg sources
-            vendor = Example, Inc.
-            build_host = localhost
-            authoritative_registry = registry.example.com
-            distribution_scope = authoritative-source-only
-            koji_root = http://koji.example.com/kojiroot
-            koji_hub = http://koji.example.com/kojihub
             flatpak_base_image = registry.fedoraproject.org/fedora:latest
-            odcs_url = https://odcs.example.com/odcs/1
-            use_auth = false
             can_orchestrate = true
+            use_auth = false
             build_from = image:buildroot:latest
             """)
 
         if request.param['additional_config'] is not None:
             config += request.param['additional_config']
             config += '\n'
-
-        for platform, platform_info in platform_descriptors.items():
-            if not platform_info:
-                continue
-
-            config += '[platform:{}]\n'.format(platform)
-            for item, value in platform_info.items():
-                config += '{} = {}\n'.format(item, value)
 
         fp.write(config.format(**kwargs))
         fp.flush()
@@ -569,14 +550,6 @@ def osbs_cant_orchestrate(openshift):
 build_json_dir = {build_json_dir}
 [default]
 openshift_url = /
-registry_uri = registry.example.com
-sources_command = fedpkg sources
-vendor = Example, Inc.
-build_host = localhost
-authoritative_registry = registry.example.com
-distribution_scope = authoritative-source-only
-koji_root = http://koji.example.com/kojiroot
-koji_hub = http://koji.example.com/kojihub
 use_auth = false
 """.format(build_json_dir="inputs"))
         fp.flush()
@@ -596,15 +569,6 @@ build_json_dir = {build_json_dir}
 openshift_required_version = 1.0.6
 [default]
 openshift_url = /
-registry_uri = registry.example.com
-sources_command = fedpkg sources
-vendor = Example, Inc.
-build_host = localhost
-authoritative_registry = registry.example.com
-distribution_scope = authoritative-source-only
-koji_root = http://koji.example.com/kojiroot
-koji_hub = http://koji.example.com/kojihub
-use_auth = false
 build_from = image:buildroot:latest
 """.format(build_json_dir="inputs"))
         fp.flush()

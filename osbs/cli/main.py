@@ -343,7 +343,6 @@ def cmd_build(args, osbs):
         'user': osbs.build_conf.get_user(),
         'tag': osbs.build_conf.get_tag(),
         'target': osbs.build_conf.get_koji_target(),
-        'architecture': osbs.build_conf.get_architecture(),
         'yum_repourls': osbs.build_conf.get_yum_repourls(),
         'scratch': args.scratch,
         'platform': args.platform,

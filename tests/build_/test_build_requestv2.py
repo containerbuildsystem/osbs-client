@@ -197,18 +197,13 @@ class TestBuildRequestV2(object):
         assert 'USER_PARAMS' in envs
         assert 'ATOMIC_REACTOR_PLUGINS' not in envs
 
-    @pytest.mark.parametrize('proxy', [  # noqa:F811
-        None,
-        'http://proxy.example.com',
-    ])
     @pytest.mark.parametrize(('build_image', 'build_imagestream', 'valid'), (
         (None, None, False),
         ('ultimate-buildroot:v1.0', None, True),
         (None, 'buildroot-stream:v1.0', True),
         ('ultimate-buildroot:v1.0', 'buildroot-stream:v1.0', False)
     ))
-    def test_render_prod_request_with_repo(self, build_image, build_imagestream,
-                                           proxy, valid):
+    def test_render_prod_request_with_repo(self, build_image, build_imagestream, valid):
         build_request = BuildRequestV2(INPUTS_PATH)
         name_label = "fedora/resultingimage"
         koji_task_id = 4756
@@ -223,7 +218,6 @@ class TestBuildRequestV2(object):
             'name_label': name_label,
             'koji_target': "koji-target",
             'koji_task_id': koji_task_id,
-            'sources_command': "make",
             'yum_repourls': ["http://example.com/my.repo"],
             'build_image': build_image,
             'build_imagestream': build_imagestream,
@@ -285,7 +279,6 @@ class TestBuildRequestV2(object):
             'component': TEST_COMPONENT,
             'base_image': 'fedora:latest',
             'name_label': name_label,
-            'sources_command': "make",
             'build_from': 'image:buildroot:latest',
             'build_type': BUILD_TYPE_WORKER,
             'osbs_api': MockOSBSApi(),
@@ -414,18 +407,15 @@ class TestBuildRequestV2(object):
             json.dump(build_json, prod_json)
             prod_json.truncate()
 
-    @pytest.mark.parametrize('use_auth', (True, False, None))
     @pytest.mark.parametrize(('scratch', 'isolated'), (
         (True, False),
         (False, True),
         (False, False),
     ))
-    def test_render_prod_request_with_trigger(self, tmpdir, use_auth, scratch, isolated):
+    def test_render_prod_request_with_trigger(self, tmpdir, scratch, isolated):
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequestV2(str(tmpdir))
         kwargs = get_sample_prod_params()
-        if use_auth is not None:
-            kwargs['use_auth'] = use_auth
         if scratch:
             kwargs['scratch'] = scratch
         if isolated:
@@ -442,17 +432,14 @@ class TestBuildRequestV2(object):
             assert (build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] ==
                     'fedora:latest')
 
-    @pytest.mark.parametrize('use_auth', (True, False, None))
     @pytest.mark.parametrize('koji_parent_build', ('fedora-26-9', None))
-    def test_render_custom_base_image_with_trigger(self, tmpdir,  use_auth, koji_parent_build):
+    def test_render_custom_base_image_with_trigger(self, tmpdir, koji_parent_build):
         # name_label = "fedora/resultingimage"
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequestV2(str(tmpdir))
 
         kwargs = get_sample_prod_params()
         kwargs['base_image'] = 'koji/image-build'
-        if use_auth is not None:
-            kwargs['use_auth'] = use_auth
         if koji_parent_build:
             kwargs['koji_parent_build'] = koji_parent_build
 
@@ -464,15 +451,12 @@ class TestBuildRequestV2(object):
         # Verify the triggers are now disabled
         assert "triggers" not in build_json["spec"]
 
-    @pytest.mark.parametrize('use_auth', (True, False, None))
-    def test_render_from_scratch_image_with_trigger(self, tmpdir,  use_auth):
+    def test_render_from_scratch_image_with_trigger(self, tmpdir):
         self.create_image_change_trigger_json(str(tmpdir))
         build_request = BuildRequestV2(str(tmpdir))
 
         kwargs = get_sample_prod_params()
         kwargs['base_image'] = 'scratch'
-        if use_auth is not None:
-            kwargs['use_auth'] = use_auth
 
         build_request.set_params(**kwargs)
         build_json = build_request.render()
