@@ -148,7 +148,6 @@ class BuildCommon(object):
             "arrangement_version",
             allow_none=True,
             default=REACTOR_CONFIG_ARRANGEMENT_VERSION)
-        self.build_from = BuildParam('build_from')
         self.build_image = BuildParam('build_image')
         self.build_imagestream = BuildParam('build_imagestream')
         self.build_json_dir = BuildParam('build_json_dir', default=build_json_dir)
