@@ -228,7 +228,6 @@ class TestOSBS(object):
             'user': TEST_USER,
             'component': TEST_COMPONENT,
             'target': TEST_TARGET,
-            'architecture': TEST_ARCH,
             'build_type': BUILD_TYPE_ORCHESTRATOR,
             'yum_repourls': None,
             'koji_task_id': None,
@@ -282,7 +281,6 @@ class TestOSBS(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info(mock_df_parser=MockParser())))
         response = osbs.create_build(target=TEST_TARGET,
-                                     architecture=TEST_ARCH,
                                      **REQUIRED_BUILD_ARGS)
         assert isinstance(response, BuildResponse)
 
@@ -352,7 +350,7 @@ class TestOSBS(object):
             return Response()
 
         config = Configuration(conf_file=None,
-                               openshift_url="www.example.com", registry_uri="www.example2.com",
+                               openshift_url="www.example.com",
                                build_json_dir="inputs", build_from='image:buildroot:latest')
         osbs_obj = OSBS(config, config)
 
@@ -739,7 +737,6 @@ class TestOSBS(object):
             .and_return(self.mock_repo_info(MockParser())))
         with pytest.raises(OsbsValidationException):
             osbs.create_build(target=TEST_TARGET,
-                              architecture=TEST_ARCH,
                               **REQUIRED_BUILD_ARGS)
 
     # osbs is a fixture here
@@ -828,7 +825,6 @@ class TestOSBS(object):
 
         with pytest.raises(OsbsValidationException) as exc:
             osbs.create_build(target=TEST_TARGET,
-                              architecture=TEST_ARCH,
                               **required_args)
         if error_msgs:
             exc_msg = 'required label missing from Dockerfile'
@@ -867,7 +863,6 @@ class TestOSBS(object):
             'user': TEST_USER,
             'component': TEST_COMPONENT,
             'target': TEST_TARGET,
-            'architecture': TEST_ARCH,
             'build_type': BUILD_TYPE_ORCHESTRATOR,
         }
         if should_succeed:
@@ -876,7 +871,6 @@ class TestOSBS(object):
             with pytest.raises(OsbsValidationException):
                 osbs.create_build(**create_build_args)
 
-        del create_build_args['architecture']
         create_build_args['platforms'] = [TEST_ARCH]
         if should_succeed:
             osbs.create_orchestrator_build(**create_build_args)
@@ -907,7 +901,6 @@ class TestOSBS(object):
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
         req = osbs.create_build(component=TEST_COMPONENT,
                                 target=TEST_TARGET,
-                                architecture=TEST_ARCH,
                                 **REQUIRED_BUILD_ARGS)
         assert req.user_params.component.value == component_override
 
@@ -931,7 +924,6 @@ class TestOSBS(object):
             .with_args(parse_version('1.0.6'))
             .once())
         osbs106.create_build(target=TEST_TARGET,
-                             architecture=TEST_ARCH,
                              **REQUIRED_BUILD_ARGS)
 
     # osbs is a fixture here
@@ -1232,12 +1224,6 @@ class TestOSBS(object):
                 build_json_dir = {build_json_dir}
                 [default]
                 openshift_url = /
-                sources_command = /bin/true
-                vendor = Example, Inc
-                registry_uri = registry.example.com
-                build_host = localhost
-                authoritative_registry = localhost
-                distribution_scope = private
                 build_image = {build_image}
                 build_imagestream = {build_imagestream}
                 """.format(build_json_dir='inputs', build_image=build_image,
@@ -1258,12 +1244,10 @@ class TestOSBS(object):
 
         if valid:
             req = osbs_obj.create_build(target=TEST_TARGET,
-                                        architecture=TEST_ARCH,
                                         **REQUIRED_BUILD_ARGS)
         else:
             with pytest.raises(OsbsValidationException):
                 req = osbs_obj.create_build(target=TEST_TARGET,
-                                            architecture=TEST_ARCH,
                                             **REQUIRED_BUILD_ARGS)
             return
 
@@ -1286,12 +1270,6 @@ class TestOSBS(object):
                 build_json_dir = {build_json_dir}
                 [default]
                 openshift_url = /
-                sources_command = /bin/true
-                vendor = Example, Inc
-                registry_uri = registry.example.com
-                build_host = localhost
-                authoritative_registry = localhost
-                distribution_scope = private
                 node_selector.meal = breakfast=bacon.com, lunch=ham.com
                 build_image = {build_image}
                 """.format(build_json_dir='inputs', build_image=build_image)))
@@ -1747,9 +1725,7 @@ class TestOSBS(object):
             # for build request v1
             base_image='old_registry.com/fedora23/python',
             name_label='name_label',
-            source_registry_uri='source_registry_uri',
             git_uri='https://github.com/user/reponame.git',
-            registry_uris=['http://registry.example.com:5000/v2'],
             build_from='image:buildroot:latest',
         )
 
@@ -1911,7 +1887,6 @@ class TestOSBS(object):
             'flatpak': True,
             'user': TEST_USER,
             'component': TEST_COMPONENT,
-            'architecture': TEST_ARCH,
             'yum_repourls': None,
             'koji_task_id': None,
             'scratch': False,
@@ -2067,7 +2042,6 @@ class TestOSBS(object):
             'user': TEST_USER,
             'component': TEST_COMPONENT,
             'target': TEST_TARGET,
-            'architecture': TEST_ARCH,
             'yum_repourls': None,
             'koji_task_id': None,
             variation: True,
@@ -2117,7 +2091,6 @@ class TestOSBS(object):
             'user': TEST_USER,
             'component': TEST_COMPONENT,
             'target': TEST_TARGET,
-            'architecture': TEST_ARCH,
             'yum_repourls': None,
             'koji_task_id': koji_task_id,
             'build_type': BUILD_TYPE_ORCHESTRATOR,
@@ -2390,9 +2363,6 @@ class TestOSBS(object):
                 build_json_dir = inputs
                 [default]
                 openshift_url = /
-                sources_command = /bin/true
-                vendor = Example, Inc
-                authoritative_registry = localhost
                 build_from = image:buildroot:latest
                 """))
             fp.flush()
@@ -2407,7 +2377,7 @@ class TestOSBS(object):
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
 
         reactor_config_override = {'required_secrets': ['mysecret']}
-        req = osbs_obj.create_build(target=TEST_TARGET, architecture=TEST_ARCH,
+        req = osbs_obj.create_build(target=TEST_TARGET,
                                     reactor_config_override=reactor_config_override,
                                     **REQUIRED_BUILD_ARGS)
         secrets = req.json['spec']['strategy']['customStrategy']['secrets']
@@ -2462,7 +2432,6 @@ class TestOSBS(object):
             'user': None,
             'tag': None,
             'target': None,
-            'architecture': None,
             'yum_repourls': None,
             'koji_parent_build': None,
             'signing_intent': 'release',
@@ -2546,7 +2515,6 @@ class TestOSBS(object):
             'user': None,
             'tag': None,
             'target': None,
-            'architecture': None,
             'yum_repourls': None,
             'koji_parent_build': None,
             'signing_intent': None,
@@ -2616,7 +2584,6 @@ class TestOSBS(object):
             'user': None,
             'tag': None,
             'target': None,
-            'architecture': None,
             'yum_repourls': None,
             'koji_parent_build': None,
             'signing_intent': 'release',
@@ -2810,9 +2777,7 @@ class TestOSBS(object):
             user='user',
             base_image='fedora23/python',
             name_label='name_label',
-            source_registry_uri='source_registry_uri',
             git_uri='https://github.com/user/reponame.git',
-            registry_uris=['http://registry.example.com:5000/v2'],
             build_from='image:buildroot:latest',
         )
 
@@ -2956,9 +2921,7 @@ class TestOSBS(object):
             user='user',
             base_image='fedora23/python',
             name_label='name_label',
-            source_registry_uri='source_registry_uri',
             git_uri='https://github.com/user/reponame.git',
-            registry_uris=['http://registry.example.com:5000/v2'],
             build_from='image:buildroot:latest',
         )
 
@@ -3061,11 +3024,9 @@ class TestOSBS(object):
         if exc:
             with pytest.raises(exc):
                 osbs_obj.create_build(target=TEST_TARGET,
-                                      architecture=TEST_ARCH,
                                       **REQUIRED_BUILD_ARGS)
         else:
             osbs_obj.create_build(target=TEST_TARGET,
-                                  architecture=TEST_ARCH,
                                   **REQUIRED_BUILD_ARGS)
 
     def test_do_create_prod_build_isolated_from_scratch(self, osbs):  # noqa

@@ -704,6 +704,7 @@ class TestPluginsConfiguration(object):
         # Alter the plugins configuration so that all code paths are exercised
         sample_params = get_sample_prod_params()
         sample_params['scratch'] = True
+        sample_params['parent_images_digests'] = True
         user_params = BuildUserParams(INPUTS_PATH)
         user_params.set_params(**sample_params)
         plugins_conf = PluginsConfiguration(user_params)
@@ -732,18 +733,30 @@ class TestPluginsConfiguration(object):
                 "bad_plugin_name": "tag_from_config"
             },
         )
-        plugins_conf.render()
+        build_json = plugins_conf.render()
+        plugins = get_plugins_from_build_json(build_json)
 
         log_messages = [l.getMessage() for l in caplog.records]
         assert 'no tag suffix placeholder' in log_messages
         assert 'Invalid custom configuration found for disable_plugins' in log_messages
         assert 'Invalid custom configuration found for enable_plugins' in log_messages
+        assert plugin_value_get(plugins, 'prebuild_plugins', 'pull_base_image', 'args',
+                                'parent_images_digests')
+
+    def test_render_no_inject_parent_image(self, caplog):
+        self.mock_repo_info()
+        user_params = get_sample_user_params()
+        user_params.koji_parent_build.value = None
+        plugins_conf = PluginsConfiguration(user_params)
+        plugins_conf.pt.remove_plugin('prebuild_plugins', 'inject_parent_image')
+        plugins_conf.render()
+        assert 'no koji parent build in user parameters' not in caplog.text
 
     @pytest.mark.parametrize(('koji_parent_build'), (
         ('fedora-26-9'),
         (None),
     ))
-    def test_render_inject_parent_image(self, koji_parent_build):
+    def test_render_inject_parent_image(self, koji_parent_build, caplog):
         plugin_type = "prebuild_plugins"
         plugin_name = "inject_parent_image"
 
@@ -763,6 +776,7 @@ class TestPluginsConfiguration(object):
         else:
             with pytest.raises(NoSuchPluginException):
                 get_plugin(plugins, plugin_type, plugin_name)
+            assert 'no koji parent build in user parameters' in caplog.text
 
     @pytest.mark.parametrize('extract_platform', ('x86_64', 'aarch64'))
     @pytest.mark.parametrize('build_type', (BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR))
@@ -907,3 +921,57 @@ class TestSourceContainerPluginsConfiguration(object):
             plugins, "buildstep_plugins", "source_container"
         )
         assert source_container_build is not None
+
+    @pytest.mark.parametrize(('koji_build_id', 'expected_build_id'), [
+        ('koji_test', 'koji_test'),
+        (None, None),
+    ])
+    @pytest.mark.parametrize(('koji_build_nvr', 'expected_build_nvr'), [
+        ('1.2.3', 'test-1-123'),
+        (None, None),
+    ])
+    @pytest.mark.parametrize(('signing_intent', 'expected_intent'), [
+        ('release', 'release'),
+        (None, None),
+    ])
+    def test_render_fetch_sources(self, koji_build_id, expected_build_id,
+                                  koji_build_nvr, expected_build_nvr,
+                                  signing_intent, expected_intent):
+        plugin_type = 'prebuild_plugins'
+        plugin_name = 'fetch_sources'
+        additional_params = {
+            'source_for_koji_build_nvr': koji_build_nvr,
+            'sources_for_koji_build_id': koji_build_id,
+            'signing_intent': signing_intent,
+        }
+
+        user_params = source_container_user_params(additional_params)
+        build_json = SourceContainerPluginsConfiguration(user_params).render()
+        plugins = get_plugins_from_build_json(build_json)
+        assert get_plugin(plugins, plugin_type, plugin_name)
+        assert plugin_value_get(plugins, plugin_type, plugin_name, 'args')
+        args = plugin_value_get(plugins, plugin_type, plugin_name, 'args')
+        if koji_build_nvr:
+            assert args['koji_build_nvr'] == expected_build_nvr
+        if koji_build_id:
+            assert args['koji_build_id'] == expected_build_id
+        if signing_intent:
+            assert args['signing_intent'] == expected_intent
+
+    def test_source_render_scratch(self):
+        additional_params = {
+            'scratch': True
+        }
+
+        user_params = source_container_user_params(additional_params)
+        build_json = SourceContainerPluginsConfiguration(user_params).render()
+        plugins = get_plugins_from_build_json(build_json)
+
+        remove_plugins = [
+            ("postbuild_plugins", "compress"),
+            ("exit_plugins", "koji_tag_build"),
+        ]
+
+        for (plugin_type, plugin) in remove_plugins:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, plugin_type, plugin)
