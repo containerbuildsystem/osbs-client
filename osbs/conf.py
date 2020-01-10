@@ -10,7 +10,6 @@ from __future__ import print_function, absolute_import, unicode_literals
 import logging
 import os
 import os.path
-import re
 import warnings
 from pkg_resources import parse_version
 
@@ -207,46 +206,8 @@ class Configuration(object):
         return self._get_value("flatpak", self.conf_section, "flatpak",
                                is_bool_val=True)
 
-    def get_odcs_url(self):
-        return self._get_deprecated("odcs_url", self.conf_section, "odcs_url")
-
-    def get_odcs_insecure(self):
-        return self._get_deprecated("odcs_insecure", self.conf_section, "odcs_insecure",
-                                    default=False, is_bool_val=True)
-
-    def get_odcs_openidc_secret(self):
-        return self._get_deprecated("odcs_openidc_secret", self.conf_section,
-                                    "odcs_openidc_secret")
-
-    def get_odcs_ssl_secret(self):
-        return self._get_deprecated("odcs_ssl_secret", self.conf_section, "odcs_ssl_secret")
-
-    def get_kojiroot(self):
-        return self._get_deprecated("koji_root", self.conf_section, "koji_root")
-
-    def get_kojihub(self):
-        return self._get_deprecated("koji_hub", self.conf_section, "koji_hub")
-
     def get_koji_target(self):
         return self._get_value("target", self.conf_section, "target")
-
-    def get_koji_certs_secret(self):
-        return self._get_deprecated("koji_certs_secret", self.conf_section, "koji_certs_secret")
-
-    def get_koji_use_kerberos(self):
-        return self._get_deprecated("koji_use_kerberos", self.conf_section, "koji_use_kerberos",
-                                    is_bool_val=True)
-
-    def get_koji_kerberos_keytab(self):
-        return self._get_deprecated("koji_kerberos_keytab", self.conf_section,
-                                    "koji_kerberos_keytab")
-
-    def get_koji_kerberos_principal(self):
-        return self._get_deprecated("koji_kerberos_principal", self.conf_section,
-                                    "koji_kerberos_principal")
-
-    def get_sources_command(self):
-        return self._get_deprecated("sources_command", self.conf_section, "sources_command")
 
     def get_username(self):
         return self._get_value("username", self.conf_section, "username")
@@ -272,42 +233,6 @@ class Configuration(object):
     def get_kerberos_ccache(self):
         return self._get_value("kerberos_ccache", self.conf_section, "kerberos_ccache")
 
-    def get_registry_uris(self):
-        value = self._get_deprecated("registry_uri", self.conf_section, "registry_uri")
-        if value:
-            return [x.strip() for x in value.split(',')]
-        else:
-            return []
-
-    def get_registry_secrets(self):
-        value = self._get_deprecated("registry_secret", self.conf_section, "registry_secret")
-        if value:
-            return [x.strip() for x in value.split(',')]
-        else:
-            return []
-
-    def get_registry_api_versions(self, platform=None):
-        value = self._get_deprecated("registry_api_versions", self.conf_section,
-                                     "registry_api_versions", default='v2')
-        versions = [x.strip() for x in value.split(',')]
-
-        if 'v2' not in versions:
-            raise OsbsValidationException('v2 must be present in registry_api_versions')
-
-        return ['v2']
-
-    def get_source_registry_uri(self):
-        return self._get_deprecated("source_registry_uri", self.conf_section,
-                                    "source_registry_uri")
-
-    def get_prefer_schema1_digest(self):
-        return self._get_deprecated("prefer_schema1_digest", self.conf_section,
-                                    "prefer_schema1_digest", is_bool_val=True)
-
-    def get_group_manifests(self):
-        return self._get_deprecated("group_manifests", self.conf_section,
-                                    "group_manifests", is_bool_val=True)
-
     def get_build_json_store(self):
         return self._get_value("build_json_dir", GENERAL_CONFIGURATION_SECTION, "build_json_dir")
 
@@ -315,38 +240,8 @@ class Configuration(object):
         return self._get_value("verify_ssl", self.conf_section, "verify_ssl",
                                default=True, is_bool_val=True)
 
-    def get_vendor(self):
-        return self._get_deprecated("vendor", self.conf_section, "vendor")
-
-    def get_build_host(self):
-        return self._get_deprecated("build_host", self.conf_section, "build_host")
-
-    def get_authoritative_registry(self):
-        return self._get_deprecated("authoritative_registry", self.conf_section,
-                                    "authoritative_registry")
-
-    def get_distribution_scope(self):
-        return self._get_deprecated("distribution_scope", self.conf_section, "distribution_scope")
-
-    def get_architecture(self):
-        return self._get_deprecated("arch", self.conf_section, "architecture")
-
     def get_use_auth(self):
         return self._get_value("use_auth", self.conf_section, "use_auth", is_bool_val=True)
-
-    def get_builder_use_auth(self):
-        return self._get_deprecated("builder_use_auth", self.conf_section,
-                                    "builder_use_auth", default=self.get_use_auth(),
-                                    is_bool_val=True)
-
-    def get_builder_openshift_url(self):
-        """ url of OpenShift where builder will connect """
-        key = "builder_openshift_url"
-        url = self._get_deprecated(key, self.conf_section, key)
-        if url is None:
-            logger.warning("%r not found, falling back to get_openshift_base_uri()", key)
-            url = self.get_openshift_base_uri()
-        return url
 
     def get_builder_build_json_store(self):
         key = "builder_build_json_dir"
@@ -355,40 +250,6 @@ class Configuration(object):
             logger.warning("%r not found, falling back to build_json_dir", key)
             builder_build_json_dir = self.get_build_json_store()
         return builder_build_json_dir
-
-    def get_smtp_host(self):
-        return self._get_deprecated("smtp_host", self.conf_section, "smtp_host")
-
-    def get_smtp_from(self):
-        return self._get_deprecated("smtp_from", self.conf_section, "smtp_from")
-
-    def get_smtp_additional_addresses(self):
-        value = self._get_deprecated("smtp_additional_addresses", self.conf_section,
-                                     "smtp_additional_addresses")
-
-        if value:
-            return [x.strip() for x in value.split(',')]
-        else:
-            return []
-
-    def get_smtp_error_addresses(self):
-        value = self._get_deprecated("smtp_error_addresses", self.conf_section,
-                                     "smtp_error_addresses")
-        if value:
-            return [x.strip() for x in value.split(',')]
-        else:
-            return []
-
-    def get_smtp_email_domain(self):
-        return self._get_deprecated("smtp_email_domain", self.conf_section, "smtp_email_domain")
-
-    def get_smtp_to_submitter(self):
-        return self._get_deprecated("smtp_to_submitter", self.conf_section, "smtp_to_submitter",
-                                    is_bool_val=True)
-
-    def get_smtp_to_pkgowner(self):
-        return self._get_deprecated("smtp_to_pkgowner", self.conf_section, "smtp_to_pkgowner",
-                                    is_bool_val=True)
 
     def get_cpu_limit(self):
         return self._get_value("cpu_limit", self.conf_section, "cpu_limit")
@@ -407,9 +268,6 @@ class Configuration(object):
 
     def get_build_from(self):
         return self._get_value("build_from", self.conf_section, "build_from")
-
-    def get_proxy(self):
-        return self._get_deprecated("yum_proxy", self.conf_section, "yum_proxy")
 
     def get_scratch(self, default_value):
         return self._get_value("scratch", self.conf_section, "scratch",
@@ -463,36 +321,6 @@ class Configuration(object):
 
         return value
 
-    def get_reactor_config_secret(self):
-        return self._get_deprecated("reactor_config_secret", self.conf_section,
-                                    "reactor_config_secret")
-
-    def get_client_config_secret(self):
-        return self._get_deprecated("client_config_secret", self.conf_section,
-                                    "client_config_secret")
-
-    def get_token_secrets(self):
-        value = self._get_deprecated("token_secrets", self.conf_section, "token_secrets")
-        token_dict = {}
-        will_raise = False
-        if value:
-            for pairs in value.split():
-                pair = pairs.split(':', 1)
-
-                if len(pair) == 2:
-                    if pair[1] in ["", "/"]:
-                        logger.error("token_secret file path must be valid: %s", pair[1])
-                        will_raise = True
-                        continue
-                    token_dict[pair[0]] = pair[1]
-
-                else:
-                    token_dict[pair[0]] = None
-
-        if will_raise:
-            raise OsbsValidationException("Wrong token_secrets configuration")
-        return token_dict
-
     def get_arrangement_version(self):
         value = self._get_value("arrangement_version", self.conf_section,
                                 "arrangement_version",
@@ -505,37 +333,6 @@ class Configuration(object):
     def get_can_orchestrate(self):
         return self._get_value("can_orchestrate", self.conf_section, "can_orchestrate",
                                default=False, is_bool_val=True)
-
-    def get_info_url_format(self):
-        return self._get_deprecated("info_url_format", self.conf_section, "info_url_format")
-
-    def get_artifacts_allowed_domains(self):
-        value = self._get_deprecated("artifacts_allowed_domains", self.conf_section,
-                                     "artifacts_allowed_domains")
-        if value:
-            return [x.strip() for x in value.split(',')]
-        else:
-            return []
-
-    def get_equal_labels(self):
-        equal_labels = []
-        equal_labels_str = self._get_deprecated("equal_labels", self.conf_section, "equal_labels")
-        if equal_labels_str:
-            # must be in correct format
-            # e.g. `name1:name2:name3, release1:release2, version1:version2`
-            # ',' separator for groups
-            # ':' separator for equal preference labels
-            # there has to be at least 2 labels in equal labels in group
-            if re.match(r'^[^:,\s]+(:[^:,\s]+)+\s*(,\s*[^:,\s]+(:[^:,\s]+\s*)+)*$',
-                        equal_labels_str):
-                label_groups = [x.strip() for x in equal_labels_str.split(',')]
-
-                for label_group in label_groups:
-                    equal_labels.append([label.strip() for label in label_group.split(':')])
-            else:
-                raise OsbsValidationException("Wrong equal_labels configuration")
-
-        return equal_labels
 
     def generate_nodeselector_dict(self, nodeselector_str):
         """
@@ -585,24 +382,6 @@ class Configuration(object):
                                            "isolated_build_node_selector")
         return self.generate_nodeselector_dict(nodeselector_str)
 
-    def get_platform_descriptors(self):
-        platform_descriptors = {}
-        for section in self.scp.sections():
-            if "platform:" not in section:
-                continue
-            platform = section.split("platform:")[1]
-            platform_descriptor = {}
-            logger.warning("user configuration platforms in section %s is ignored in "
-                           "arrangement %s and later",
-                           section, REACTOR_CONFIG_ARRANGEMENT_VERSION)
-            logger.warning("it has been deprecated in favor of the value in the reactor_config_map")
-
-            arch = self._get_value("architecture", section, "architecture") or platform
-            platform_descriptor["architecture"] = arch
-            platform_descriptors[platform] = platform_descriptor
-
-        return platform_descriptors
-
     def get_reactor_config_map(self):
         return self._get_value("reactor_config_map", self.conf_section,
                                "reactor_config_map")
@@ -614,3 +393,7 @@ class Configuration(object):
     def get_orchestor_deadline(self):
         return self._get_value("orchestrator_max_run_hours", self.conf_section,
                                "orchestrator_max_run_hours", ORCHESTRATOR_MAX_RUNTIME)
+
+    # dummy function for use with the unit tests
+    def get_deprecated_key(self):
+        return self._get_deprecated("deprecated_key", self.conf_section, "deprecated_key")

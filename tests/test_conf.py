@@ -203,20 +203,20 @@ class TestConfiguration(object):
                 assert conf.get_oauth2_token() == expected
 
     @pytest.mark.parametrize(('config', 'kwargs', 'cli_args', 'expected'), [
-        ({'default': {'client_config_secret': 'client_secret'}},
+        ({'default': {'client_key': 'client_key'}},
          {},
          {},
-         {'get_client_config_secret': 'client_secret'}),
+         {'get_client_key': 'client_key'}),
 
         ({'default': {}},
-         {'client_config_secret': 'client_secret'},
+         {'client_key': 'client_key'},
          {},
-         {'get_client_config_secret': 'client_secret'}),
+         {'get_client_key': 'client_key'}),
 
         ({'default': {}},
          {},
-         {'client_config_secret': 'client_secret'},
-         {'get_client_config_secret': 'client_secret'}),
+         {'client_key': 'client_key'},
+         {'get_client_key': 'client_key'}),
     ])
     def test_param_retrieval(self, config, kwargs, cli_args, expected):
         with self.build_cli_args(cli_args) as args:
@@ -226,48 +226,6 @@ class TestConfiguration(object):
 
                 for fn, value in expected.items():
                     assert getattr(conf, fn)() == value
-
-    @pytest.mark.parametrize(('config', 'expected'), [
-        ({'default': {'token_secrets': 'secret'}},
-         {'secret': None}),
-
-        ({'default': {'token_secrets': 'secret:'}},
-         OsbsValidationException),
-
-        ({'default': {'token_secrets': 'secret:/'}},
-         OsbsValidationException),
-
-        ({'default': {'token_secrets': 'secret:path'}},
-         {'secret': 'path'}),
-
-        ({'default': {'token_secrets': 'secret:path:with:colons'}},
-         {'secret': 'path:with:colons'}),
-
-        ({'default': {'token_secrets': 'secret:path secret2:path2'}},
-         {'secret': 'path', 'secret2': 'path2'}),
-
-        ({'default': {'token_secrets': 'secret:path secret2:path2 secret3:path3'}},
-         {'secret': 'path', 'secret2': 'path2', 'secret3': 'path3'}),
-
-        ({'default': {'token_secrets': 'secret:path secret2 secret3:path3'}},
-         {'secret': 'path', 'secret2': None, 'secret3': 'path3'}),
-
-        ({'default': {'token_secrets': '\n   secret:path     secret2\n\n secret3:path3'}},
-         {'secret': 'path', 'secret2': None, 'secret3': 'path3'}),
-
-        ({'default': {'token_secrets': '\t\n   secret:path   \t\t  secret2\n\n '
-                      '\tsecret3:path3 \n\t\n'}},
-         {'secret': 'path', 'secret2': None, 'secret3': 'path3'}),
-    ])
-    def test_get_token_secrets(self, config, expected):
-        with self.config_file(config) as config_file:
-            conf = Configuration(conf_file=config_file)
-
-            if expected is not OsbsValidationException:
-                assert conf.get_token_secrets() == expected
-            else:
-                with pytest.raises(OsbsValidationException):
-                    conf.get_token_secrets()
 
     @pytest.mark.parametrize(('config', 'expected'), [
         ({
@@ -300,109 +258,6 @@ class TestConfiguration(object):
                 conf.get_arrangement_version()
         else:
             assert conf.get_arrangement_version() == expected
-
-    @pytest.mark.parametrize(('config', 'expected'), [
-        ({'default': {'smtp_additional_addresses': 'user@example.com'}},
-         ['user@example.com']),
-        ({'default': {'smtp_additional_addresses': 'user@example.com,user2@example.com'}},
-         ['user@example.com', 'user2@example.com']),
-        ({'default': {'smtp_additional_addresses': 'user@example.com, user2@example.com'}},
-         ['user@example.com', 'user2@example.com']),
-        ({'default': {'smtp_additional_addresses': '\tuser@example.com,\tuser2@example.com'}},
-         ['user@example.com', 'user2@example.com']),
-        ({'default': {'smtp_additional_addresses':
-                      '\n  user@example.com,     user2@example.com,\n\n user3@example.com'}},
-         ['user@example.com', 'user2@example.com', 'user3@example.com']),
-    ])
-    def test_get_smtp_additional_addresses(self, config, expected):
-        with self.config_file(config) as config_file:
-            conf = Configuration(conf_file=config_file)
-            assert conf.get_smtp_additional_addresses() == expected
-
-    @pytest.mark.parametrize(('config', 'expected'), [
-        ({'default': {'smtp_error_addresses': 'user@example.com'}},
-         ['user@example.com']),
-        ({'default': {'smtp_error_addresses': 'user@example.com,user2@example.com'}},
-         ['user@example.com', 'user2@example.com']),
-        ({'default': {'smtp_error_addresses': 'user@example.com, user2@example.com'}},
-         ['user@example.com', 'user2@example.com']),
-        ({'default': {'smtp_error_addresses': '\tuser@example.com,\tuser2@example.com'}},
-         ['user@example.com', 'user2@example.com']),
-        ({'default': {'smtp_error_addresses':
-                      '\n  user@example.com,     user2@example.com,\n\n user3@example.com'}},
-         ['user@example.com', 'user2@example.com', 'user3@example.com']),
-    ])
-    def test_get_smtp_error_addresses(self, config, expected):
-        with self.config_file(config) as config_file:
-            conf = Configuration(conf_file=config_file)
-            assert conf.get_smtp_error_addresses() == expected
-
-    @pytest.mark.parametrize(('config', 'expected'), [
-        ({'default': {'artifacts_allowed_domains': 'spam.com'}},
-         ['spam.com']),
-
-        ({'default': {'artifacts_allowed_domains': 'spam.com,eggs.com'}},
-         ['spam.com', 'eggs.com']),
-
-        ({'default': {'artifacts_allowed_domains': 'spam.com, eggs.com'}},
-         ['spam.com', 'eggs.com']),
-
-        ({'default': {'artifacts_allowed_domains': '\tspam.com,\teggs.com'}},
-         ['spam.com', 'eggs.com']),
-
-        ({'default': {'artifacts_allowed_domains': '\n  spam.com,     eggs.com,\n\n bacon.com'}},
-         ['spam.com', 'eggs.com', 'bacon.com']),
-    ])
-    def test_get_allowed_artifacts_domain(self, config, expected):
-        with self.config_file(config) as config_file:
-            conf = Configuration(conf_file=config_file)
-            assert conf.get_artifacts_allowed_domains() == expected
-
-    @pytest.mark.parametrize(('config', 'expected'), [
-        ({'default': {'equal_labels':
-                      'label1:label2, label3:label4:label5, label6:label7'}},
-         [['label1', 'label2'],
-          ['label3', 'label4', 'label5'],
-          ['label6', 'label7']]),
-
-        ({'default': {'equal_labels':
-                      '\t      label1:label2   , label3:label4:label5, label6:label7    '}},
-         [['label1', 'label2'],
-          ['label3', 'label4', 'label5'],
-          ['label6', 'label7']]),
-
-        ({'default': {'equal_labels':
-                      '     label1:label2: \t\t, label3:label4:label5, label6:label7    '}},
-         OsbsValidationException),
-
-        ({'default': {'equal_labels':
-                      'label1:label2,   , label3:label4:label5, label6:label7    '}},
-         OsbsValidationException),
-
-        ({'default': {'equal_labels': 'label1:'}},
-         OsbsValidationException),
-
-        ({'default': {'equal_labels': 'label1,'}},
-         OsbsValidationException),
-
-        ({'default': {'equal_labels': 'label1 '}},
-         OsbsValidationException),
-
-        ({'default': {'equal_labels': ',label1 '}},
-         OsbsValidationException),
-
-        ({'default': {'equal_labels': ':label1 '}},
-         OsbsValidationException),
-    ])
-    def test_get_equal_labels(self, config, expected):
-        with self.config_file(config) as config_file:
-            conf = Configuration(conf_file=config_file)
-
-            if expected is OsbsValidationException:
-                with pytest.raises(OsbsValidationException):
-                    conf.get_equal_labels()
-            else:
-                assert conf.get_equal_labels() == expected
 
     @pytest.mark.parametrize(('platform', 'config', 'kwargs', 'expected'), [
         ('',
@@ -449,52 +304,6 @@ class TestConfiguration(object):
             conf = Configuration(conf_file=config_file, **kwargs)
             assert conf.get_platform_node_selector(platform) == expected
 
-    @pytest.mark.parametrize(('config', 'expected', 'valid'), [
-        ({}, {}, True),
-        ({'platform:ham': {}}, {'ham': {'architecture': 'ham'}}, True),
-        ({'platform:ham': {}, 'platform:eggs': {}},
-         {'ham': {'architecture': 'ham'},
-          'eggs': {'architecture': 'eggs'}}, True),
-        ({'platform:ham': {}, 'platform:eggs': {}, 'fedora': {}},
-         {'ham': {'architecture': 'ham'},
-          'eggs': {'architecture': 'eggs'}}, True),
-        ({'platform:ham': {'architecture': 'bacon'}},
-         {'ham': {'architecture': 'bacon'}}, True),
-        ({'platform:ham': {'architecture': 'bacon'},
-          'platform:eggs': {}, 'fedora': {}},
-         {'ham': {'architecture': 'bacon'},
-          'eggs': {'architecture': 'eggs'}}, True),
-    ])
-    def test_get_platform_descriptors(self, config, expected, valid):
-        with self.config_file(config) as config_file:
-            conf = Configuration(conf_file=config_file)
-            if valid:
-                assert conf.get_platform_descriptors() == expected
-            else:
-                with pytest.raises(OsbsValidationException):
-                    conf.get_platform_descriptors()
-
-    @pytest.mark.parametrize(('platform', 'config', 'expected', 'valid'), [
-        (None, {}, ['v2'], True),
-        (None, {'default': {'registry_api_versions': 'v1'}}, ['v2'], False),
-        (None, {'default': {'registry_api_versions': 'v2'}}, ['v2'], True),
-        (None, {'default': {'registry_api_versions': 'v1,v2'}}, ['v2'], True),
-        (None, {'default': {'registry_api_versions': '  v1,   v2  '}}, ['v2'], True),
-        ('ham', {'default': {'registry_api_versions': 'v1,v2'}}, ['v2'], True),
-        (None, {'platform:ham': {}}, ['v2'], True),
-        ('ham', {'platform:ham': {}}, ['v2'], True),
-        ('ham', {'default': {'registry_api_versions': 'v1'},
-                 'platform:ham': {}}, ['v2'], False),
-    ])
-    def test_get_registry_api_versions(self, platform, config, expected, valid):
-        with self.config_file(config) as config_file:
-            conf = Configuration(conf_file=config_file)
-            if valid:
-                assert conf.get_registry_api_versions(platform) == expected
-            else:
-                with pytest.raises(OsbsValidationException):
-                    conf.get_registry_api_versions(platform)
-
     @pytest.mark.parametrize('nodeselector_type', [
         'scratch_build_node_selector',
         'explicit_build_node_selector',
@@ -523,17 +332,18 @@ class TestConfiguration(object):
 
     def test_deprecated_warnings(self, caplog):  # noqa:F811
         with caplog.at_level(logging.WARNING):
-            self.test_arrangement_version({'default': {}}, DEFAULT_ARRANGEMENT_VERSION)
+            self.test_arrangement_version({'default': {'deprecated_key': 'client_secret'}},
+                                          DEFAULT_ARRANGEMENT_VERSION)
             assert "it has been deprecated" not in caplog.text
             # kwargs don't get warnings
             self.test_param_retrieval(config={'default': {}},
-                                      kwargs={'client_config_secret': 'client_secret'},
+                                      kwargs={'deprecated_key': 'client_secret'},
                                       cli_args={},
-                                      expected={'get_client_config_secret': 'client_secret'})
+                                      expected={'get_deprecated_key': 'client_secret'})
             assert "it has been deprecated" not in caplog.text
             # cli arguments get warnings
             self.test_param_retrieval(config={'default': {}},
                                       kwargs={},
-                                      cli_args={'client_config_secret': 'client_secret'},
-                                      expected={'get_client_config_secret': 'client_secret'})
+                                      cli_args={'deprecated_key': 'client_secret'},
+                                      expected={'get_deprecated_key': 'client_secret'})
             assert "it has been deprecated" in caplog.text
