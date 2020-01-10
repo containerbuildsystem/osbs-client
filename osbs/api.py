@@ -25,7 +25,11 @@ from osbs.build.build_requestv2 import (
     BuildRequestV2,
     SourceBuildRequest,
 )
-from osbs.build.user_params import load_user_params_from_json
+from osbs.build.user_params import (
+    load_user_params_from_json,
+    BuildUserParams,
+    SourceContainerUserParams
+)
 from osbs.build.plugins_configuration import (
     PluginsConfiguration,
     SourceContainerPluginsConfiguration,
@@ -216,9 +220,11 @@ class OSBS(object):
     @osbsapi
     def get_build_request(self, build_type=None, inner_template=None,
                           outer_template=None, customize_conf=None,
-                          arrangement_version=DEFAULT_ARRANGEMENT_VERSION):
+                          arrangement_version=DEFAULT_ARRANGEMENT_VERSION,
+                          user_params=None,
+                          ):
         """
-        return instance of BuildRequest or BuildRequestV2
+        return instance of BuildRequestV2
 
         :param build_type: str, unused
         :param inner_template: str, name of inner template for BuildRequest
@@ -226,16 +232,20 @@ class OSBS(object):
         :param customize_conf: str, name of customization config for BuildRequest
         :param arrangement_version: int, value of the arrangement version
 
-        :return: instance of BuildRequest or BuildRequestV2
+        :return: instance of BuildRequestV2
         """
         if build_type is not None:
             warnings.warn("build types are deprecated, do not use the build_type argument")
 
         validate_arrangement_version(arrangement_version)
 
-        build_request = BuildRequestV2(build_json_store=self.os_conf.get_build_json_store(),
-                                       outer_template=outer_template,
-                                       customize_conf=customize_conf)
+        build_request = BuildRequestV2(
+                build_json_store=self.os_conf.get_build_json_store(),
+                osbs_api=self,
+                outer_template=outer_template,
+                customize_conf=customize_conf,
+                user_params=user_params,
+        )
 
         self._set_build_request_resource_limits(build_request)
         return build_request
@@ -244,6 +254,7 @@ class OSBS(object):
     def get_source_container_build_request(
             self, outer_template=None,
             arrangement_version=DEFAULT_ARRANGEMENT_VERSION,
+            user_params=None,
     ):
         """
         return instance of SourceBuildRequest
@@ -254,8 +265,9 @@ class OSBS(object):
         validate_arrangement_version(arrangement_version)
 
         build_request = SourceBuildRequest(
-            build_json_store=self.os_conf.get_build_json_store(),
+            osbs_api=self,
             outer_template=outer_template,
+            user_params=user_params,
         )
 
         self._set_build_request_resource_limits(build_request)
@@ -654,38 +666,29 @@ class OSBS(object):
             utils.Labels.LABEL_TYPE_COMPONENT: module.name
         }, None
 
-    def _do_create_prod_build(self, git_uri, git_ref,
-                              git_branch,
-                              user,
-                              component=None,
-                              target=None,
-                              yum_repourls=None,
-                              koji_task_id=None,
-                              scratch=None,
-                              platform=None,
-                              platforms=None,
-                              build_type=None,
-                              release=None,
+    # Gives flexmock something to mock
+    def get_user_params(self, component=None, req_labels=None, **kwargs):
+        req_labels = req_labels or {}
+        user_component = component or req_labels[utils.Labels.LABEL_TYPE_COMPONENT]
+        user_params = BuildUserParams(build_json_store=self.os_conf.get_build_json_store())
+        user_params.set_params(build_conf=self.build_conf,
+                               component=user_component,
+                               name_label=req_labels[utils.Labels.LABEL_TYPE_NAME],
+                               **kwargs)
+        return user_params
+
+    def _do_create_prod_build(self,
+                              git_uri, git_ref, git_branch,
                               inner_template=None,
                               outer_template=None,
                               customize_conf=None,
-                              arrangement_version=None,
-                              filesystem_koji_task_id=None,
-                              koji_upload_dir=None,
-                              is_auto=False,
-                              koji_parent_build=None,
-                              isolated=None,
-                              flatpak=False,
-                              signing_intent=None,
-                              compose_ids=None,
-                              reactor_config_override=None,
-                              parent_images_digests=None,
+                              build_type=None,
+                              component=None,
+                              flatpak=None,
                               git_commit_depth=None,
-                              operator_manifests_extract_platform=None,
-                              skip_build=False,
-                              triggered_after_koji_task=None,
-                              remote_source_url=None,
-                              remote_source_build_args=None,
+                              isolated=None,
+                              koji_task_id=None,
+                              target=None,
                               **kwargs):
 
         if flatpak:
@@ -696,71 +699,32 @@ class OSBS(object):
                 # fix for module requires will have to be determined from experience.
                 raise ValueError("Flatpak build cannot be isolated")
 
+        if not git_branch:
+            raise OsbsValidationException("required argument 'git_branch' can't be None")
+
         repo_info = utils.get_repo_info(git_uri, git_ref, git_branch=git_branch,
                                         depth=git_commit_depth)
-        build_request = self.get_build_request(inner_template=inner_template,
-                                               outer_template=outer_template,
-                                               customize_conf=customize_conf,
-                                               arrangement_version=arrangement_version)
-
         if flatpak:
             req_labels, base_image = self._get_flatpak_labels(repo_info)
         else:
             req_labels, base_image = self._check_labels(repo_info)
 
-        if not git_branch:
-            raise OsbsValidationException("required argument 'git_branch' can't be None")
+        user_params = self.get_user_params(base_image=base_image,
+                                           build_type=build_type,
+                                           component=component,
+                                           flatpak=flatpak,
+                                           isolated=isolated,
+                                           koji_target=target,
+                                           koji_task_id=koji_task_id,
+                                           req_labels=req_labels,
+                                           repo_info=repo_info,
+                                           **kwargs)
 
-        build_request.set_params(
-            additional_tags=repo_info.additional_tags.tags,
-            arrangement_version=arrangement_version,
-            base_image=base_image,
-            build_from=self.build_conf.get_build_from(),
-            build_image=self.build_conf.get_build_image(),
-            build_imagestream=self.build_conf.get_build_imagestream(),
-            build_type=build_type,
-            component=req_labels[utils.Labels.LABEL_TYPE_COMPONENT],
-            compose_ids=compose_ids,
-            filesystem_koji_task_id=filesystem_koji_task_id,
-            flatpak=flatpak,
-            git_branch=git_branch,
-            git_commit_depth=repo_info.configuration.depth,
-            git_ref=git_ref,
-            git_uri=git_uri,
-            is_auto=is_auto,
-            isolated=isolated,
-            koji_parent_build=koji_parent_build,
-            koji_target=target,
-            koji_task_id=koji_task_id,
-            koji_upload_dir=koji_upload_dir,
-            name_label=req_labels[utils.Labels.LABEL_TYPE_NAME],
-            auto_build_node_selector=self.build_conf.get_auto_build_node_selector(),
-            explicit_build_node_selector=self.build_conf.get_explicit_build_node_selector(),
-            isolated_build_node_selector=self.build_conf.get_isolated_build_node_selector(),
-            platform_node_selector=self.build_conf.get_platform_node_selector(platform),
-            scratch_build_node_selector=self.build_conf.get_scratch_build_node_selector(),
-            operator_manifests_extract_platform=operator_manifests_extract_platform,
-            orchestrator_deadline=self.build_conf.get_orchestor_deadline(),
-            osbs_api=self,
-            parent_images_digests=parent_images_digests,
-            platform=platform,
-            platforms=platforms,
-            reactor_config_map=self.build_conf.get_reactor_config_map(),
-            reactor_config_override=reactor_config_override,
-            release=release,
-            remote_source_build_args=remote_source_build_args,
-            remote_source_url=remote_source_url,
-            scratch=self.build_conf.get_scratch(scratch),
-            signing_intent=signing_intent,
-            skip_build=skip_build,
-            tags_from_yaml=repo_info.additional_tags.from_container_yaml,
-            triggered_after_koji_task=triggered_after_koji_task,
-            user=user,
-            worker_deadline=self.build_conf.get_worker_deadline(),
-            yum_repourls=yum_repourls,
-        )
+        build_request = self.get_build_request(inner_template=inner_template,
+                                               outer_template=outer_template,
+                                               customize_conf=customize_conf,
+                                               user_params=user_params)
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
-        build_request.set_repo_info(repo_info)
 
         if isolated:
             if build_request.is_from_scratch_image():
@@ -808,60 +772,37 @@ class OSBS(object):
         return self._do_create_prod_build(**kwargs)
 
     @osbsapi
-    def create_source_container_build(
-        self,
-        component,
-        sources_for_koji_build_nvr=None,
-        sources_for_koji_build_id=None,
-        outer_template=None,
-        arrangement_version=None,
-        scratch=None,
-        signing_intent=None,
-        user=None,
-        platform=None,
-        koji_task_id=None,
-        reactor_config_override=None,
-        target=None,
-    ):
+    def create_source_container_build(self,
+                                      outer_template=None,
+                                      arrangement_version=None,
+                                      component=None,
+                                      koji_task_id=None,
+                                      target=None,
+                                      **kwargs):
         """
         Take input args, create build request and submit the source image build
 
         :return: instance of BuildRequest
         """
+        build_json_store = self.os_conf.get_build_json_store()
+        user_params = SourceContainerUserParams(build_json_store=build_json_store)
+        user_params.set_params(arrangement_version=arrangement_version,
+                               build_conf=self.build_conf,
+                               component=component,
+                               koji_target=target,
+                               koji_task_id=koji_task_id,
+                               **kwargs)
         build_request = self.get_source_container_build_request(
             outer_template=outer_template or ORCHESTRATOR_SOURCES_OUTER_TEMPLATE,
-            arrangement_version=arrangement_version
+            user_params=user_params
         )
+        build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
 
         error_messages = []
         if not component:
             error_messages.append("required argument 'component' can't be empty")
         if error_messages:
             raise OsbsValidationException(", ".join(error_messages))
-
-        build_request.set_params(
-            arrangement_version=arrangement_version,
-            component=component,
-            build_image=self.build_conf.get_build_image(),
-            build_imagestream=self.build_conf.get_build_imagestream(),
-            build_from=self.build_conf.get_build_from(),
-            koji_target=target,
-            koji_task_id=koji_task_id,
-            orchestrator_deadline=self.build_conf.get_orchestor_deadline(),
-            osbs_api=self,
-            platform=platform,
-            reactor_config_map=self.build_conf.get_reactor_config_map(),
-            reactor_config_override=reactor_config_override,
-            scratch=self.build_conf.get_scratch(scratch),
-            signing_intent=signing_intent,
-            sources_for_koji_build_nvr=sources_for_koji_build_nvr,
-            sources_for_koji_build_id=sources_for_koji_build_id,
-            user=user,
-            worker_deadline=self.build_conf.get_worker_deadline(),
-        )
-        build_request.set_openshift_required_version(
-            self.os_conf.get_openshift_required_version()
-        )
 
         builds_for_koji_task = []
         if koji_task_id:

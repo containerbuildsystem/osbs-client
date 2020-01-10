@@ -39,19 +39,25 @@ class BaseBuildRequest(object):
       * implement `render` method which returns builds input
       * initialize proper user_params class
     """
-    def __init__(self, build_json_store, outer_template):
-        self.build_json_store = build_json_store
+    def __init__(self, osbs_api, outer_template, user_params, build_json_store=None):
         self._openshift_required_version = parse_version('3.6.0')
         self._outer_template_path = outer_template
         self._resource_limits = None
         self._template = None
 
-        self.isolated = None
         self.organization = None
-        self.osbs_api = None
-        self.scratch = None
+        self.osbs_api = osbs_api
         self.source_registry = None
-        self.user_params = None  # must be initialized in subclasses
+        self.user_params = user_params
+        if user_params and user_params.build_json_dir.value:
+            self._build_json_store = user_params.build_json_dir.value
+        else:
+            self._build_json_store = build_json_store
+
+    def set_params(self, user_params):
+        self.user_params = user_params
+        if self._build_json_store and not user_params.build_json_dir.value:
+            self.user_params.build_json_dir.value = self._build_json_store
 
     def delete_atomic_reactor_placeholder(self):
         """Delete the ATOMIC_REACTOR_PLUGINS placeholder"""
@@ -106,7 +112,7 @@ class BaseBuildRequest(object):
         name = self.user_params.name.value
         platform = self.user_params.platform.value
 
-        if self.scratch or self.isolated:
+        if self.user_params.scratch.value or self.user_params.isolated.value:
             name = self.user_params.image_tag.value
             # Platform name may contain characters not allowed by OpenShift.
             if platform:
@@ -116,9 +122,9 @@ class BaseBuildRequest(object):
 
             _, salt, timestamp = name.rsplit('-', 2)
 
-            if self.scratch:
+            if self.user_params.scratch.value:
                 name = 'scratch-{}-{}'.format(salt, timestamp)
-            elif self.isolated:
+            elif self.user_params.isolated.value:
                 name = 'isolated-{}-{}'.format(salt, timestamp)
 
         # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
@@ -148,7 +154,7 @@ class BaseBuildRequest(object):
         Scratch builds must not affect subsequent builds,
         and should not be imported into Koji.
         """
-        if self.scratch:
+        if self.user_params.scratch.value:
             self.template['spec'].pop('triggers', None)
             self.set_label('scratch', 'true')
 
@@ -170,12 +176,6 @@ class BaseBuildRequest(object):
     def set_openshift_required_version(self, openshift_required_version):
         if openshift_required_version is not None:
             self._openshift_required_version = openshift_required_version
-
-    def set_params(self, **kwargs):
-        # Here we cater to the koji "scratch" build type, this will disable
-        # all plugins that might cause importing of data to koji
-        self.scratch = kwargs.get('scratch')
-        self.osbs_api = kwargs.pop('osbs_api', None)
 
     def set_reactor_config(self):
         reactor_config_override = self.user_params.reactor_config_override.value
@@ -219,7 +219,7 @@ class BaseBuildRequest(object):
     @property
     def template(self):
         if self._template is None:
-            path = os.path.join(self.build_json_store, self._outer_template_path)
+            path = os.path.join(self.user_params.build_json_dir.value, self._outer_template_path)
             logger.debug("loading template from path %s", path)
             try:
                 with open(path, "r") as fp:
@@ -311,118 +311,47 @@ class BuildRequestV2(BaseBuildRequest):
     """
     Wraps logic for creating build inputs
     """
-    def __init__(self, build_json_store, outer_template=None, customize_conf=None):
+    def __init__(self, osbs_api, outer_template=None, customize_conf=None, user_params=None,
+                 build_json_store=None):
         """
         :param build_json_store: str, path to directory with JSON build files
         :param outer_template: str, path to outer template JSON
         :param customize_conf: str, path to customize configuration JSON
         """
+        if user_params:
+            assert isinstance(user_params, BuildUserParams)
+        else:
+            user_params = BuildUserParams()
         super(BuildRequestV2, self).__init__(
-            build_json_store,
-            outer_template=outer_template or DEFAULT_OUTER_TEMPLATE
+            osbs_api,
+            outer_template=outer_template or DEFAULT_OUTER_TEMPLATE,
+            user_params=user_params,
+            build_json_store=build_json_store,
         )
+
         self._customize_conf_path = customize_conf or DEFAULT_CUSTOMIZE_CONF
         self.build_json = None       # rendered template
-        self._repo_info = None
-        self.isolated = None
-        self.is_auto = None
-        self.skip_build = None
-        self.base_image = None
-        self.scratch_build_node_selector = None
-        self.explicit_build_node_selector = None
-        self.auto_build_node_selector = None
-        self.isolated_build_node_selector = None
-        self.is_auto = None
-        # forward reference
-        self.platform_node_selector = None
-        self.user_params = BuildUserParams(self.build_json_store, customize_conf)
-        self.triggered_after_koji_task = None
-
-    # Override
-    def set_params(self, **kwargs):
-        """
-        set parameters in the user parameters
-
-        these parameters are accepted:
-        :param base_image: str, name of the parent image
-        :param build_image: str,
-        :param build_imagestream: str,
-        :param build_from: str,
-        :param build_type: str, orchestrator or worker
-        :param component: str, name of the component
-        :param compose_ids: list of int, ODCS composes to use instead of generating new ones
-        :param filesystem_koji_task_id: int, Koji Task that created the base filesystem
-        :param flatpak: if we should build a Flatpak OCI Image
-        :param flatpak_base_image: str, name of the Flatpack OCI Image
-        :param git_branch: str, branch name of the branch to be pulled
-        :param git_ref: str, commit ID of the branch to be pulled
-        :param git_uri: str, uri of the git repository for the source
-        :param koji_parent_build: str,
-        :param koji_target: str, koji tag with packages used to build the image
-        :param koji_task_id: str, koji ID
-        :param koji_upload_dir: str, koji directory where the completed image will be uploaded
-        :param name_label: str, label of the parent image
-        :param user: str, name of the user requesting the build
-        :param auto_build_node_selector: dict, a nodeselector for auto builds
-        :param explicit_build_node_selector: dict, a nodeselector for explicit builds
-        :param isolated_build_node_selector: dict, a nodeselector for isolated builds
-        :param platform_node_selector: dict, a nodeselector for a user_paramsific platform
-        :param scratch_build_node_selector: dict, a nodeselector for scratch builds
-        :param orchestrator_deadline: int, orchestrator deadline in hours
-        :param operator_manifests_extract_platform: str, indicates which platform should upload
-                                                    operator manifests to koji
-        :param parent_images_digests: dict, mapping image digests to names and platforms
-        :param platforms: list of str, platforms to build on
-        :param platform: str, platform
-        :param reactor_config_map: str, name of the config map containing the reactor environment
-        :param reactor_config_override: dict, data structure for reactor config to be injected as
-                                        an environment variable into a worker build;
-                                        when used, reactor_config_map is ignored.
-        :param release: str,
-        :param signing_intent: bool, True to sign the resulting image
-        :param skip_build: bool, if we should skip build and just set buildconfig for autorebuilds
-        :param triggered_after_koji_task: int, koji task ID from which was autorebuild triggered
-        :param worker_deadline: int, worker completion deadline in hours
-        :param yum_repourls: list of str, uris of the yum repos to pull from
-
-        Please keep the paramater list alphabetized for easier tracking of changes
-        """
-        super(BuildRequestV2, self).set_params(**kwargs)
-        # When true, it indicates build was automatically started by
-        # OpenShift via a trigger, for instance ImageChangeTrigger
-        self.is_auto = kwargs.pop('is_auto', False)
-        self.triggered_after_koji_task = kwargs.get('triggered_after_koji_task')
-        self.skip_build = kwargs.pop('skip_build', False)
-        # An isolated build is meant to patch a certain release and not
-        # update transient tags in container registry
-        self.isolated = kwargs.get('isolated')
-
-        self.validate_build_variation()
-
-        self.base_image = kwargs.get('base_image')
-        self.platform_node_selector = kwargs.get('platform_node_selector', {})
-        self.scratch_build_node_selector = kwargs.get('scratch_build_node_selector', {})
-        self.explicit_build_node_selector = kwargs.get('explicit_build_node_selector', {})
-        self.auto_build_node_selector = kwargs.get('auto_build_node_selector', {})
-        self.isolated_build_node_selector = kwargs.get('isolated_build_node_selector', {})
-
-        logger.debug("now setting params '%s' for user_params", kwargs)
-        self.user_params.set_params(**kwargs)
-
-    # Override
-    @property
-    def inner_template(self):
-        raise RuntimeError('inner_template not supported in BuildRequestV2')
 
     # Override
     @property
     def customize_conf(self):
         raise RuntimeError('customize_conf not supported in BuildRequestV2')
 
-    # Override
+    def set_params(self, user_params):
+        super(BuildRequestV2, self).set_params(user_params)
+        assert isinstance(user_params, BuildUserParams)
+
     @property
-    def dj(self):
-        raise RuntimeError('DockJson not supported in BuildRequestV2')
+    def isolated(self):
+        return self.user_params.isolated.value
+
+    @property
+    def scratch(self):
+        return self.user_params.scratch.value
+
+    @property
+    def skip_build(self):
+        return self.user_params.skip_build.value
 
     # Override
     @property
@@ -435,12 +364,9 @@ class BuildRequestV2(BaseBuildRequest):
 
         if self.user_params.flatpak.value:
             flatpack_base_image = (
-                reactor_config_data
-                .get(flatpak_key, {})
-                .get(flatpak_base_image_key, None)
+                reactor_config_data.get(flatpak_key, {}).get(flatpak_base_image_key, None)
             )
             if flatpack_base_image:
-                self.base_image = flatpack_base_image
                 self.user_params.base_image.value = flatpack_base_image
             else:
                 raise OsbsValidationException("flatpak_base_image must be provided")
@@ -480,7 +406,7 @@ class BuildRequestV2(BaseBuildRequest):
 
         if self.has_ist_trigger():
             imagechange = self.template['spec']['triggers'][0]['imageChange']
-            imagechange['from']['name'] = self.user_params.trigger_imagestreamtag.value
+            imagechange['from']['name'] = self.trigger_imagestreamtag
 
         # Set git-repo-name and git-full-name labels
         repo_name = git_repo_humanish_part_from_uri(self.user_params.git_uri.value)
@@ -495,7 +421,7 @@ class BuildRequestV2(BaseBuildRequest):
             # keep also original task for all manual builds with task
             # that way when delegated task for autorebuild will be used
             # we will still keep track of it
-            if self.triggered_after_koji_task is None:
+            if self.user_params.triggered_after_koji_task.value is None:
                 self.set_label('original-koji-task-id', str(koji_task_id))
 
         # Set template.spec.strategy.customStrategy.env[] USER_PARAMS
@@ -520,16 +446,6 @@ class BuildRequestV2(BaseBuildRequest):
         logger.debug(self.build_json)
         return self.build_json
 
-    def validate_build_variation(self):
-        variations = (self.scratch, self.is_auto, self.isolated)
-        if variations.count(True) > 1:
-            raise OsbsValidationException(
-                'Build variations are mutually exclusive. '
-                'Must set either scratch, is_auto, isolated, or none. ')
-
-    def set_repo_info(self, repo_info):
-        self._repo_info = repo_info
-
     @property
     def build_id(self):
         return self.build_json['metadata']['name']
@@ -550,21 +466,24 @@ class BuildRequestV2(BaseBuildRequest):
         if build_type == BUILD_TYPE_WORKER:
 
             # auto or explicit build selector
-            if self.is_auto:
-                self.template['spec']['nodeSelector'] = self.auto_build_node_selector
+            if self.user_params.is_auto.value:
+                node_selector = self.user_params.auto_build_node_selector
             # scratch build nodeselector
-            elif self.scratch:
-                self.template['spec']['nodeSelector'] = self.scratch_build_node_selector
+            elif self.user_params.scratch.value:
+                node_selector = self.user_params.scratch_build_node_selector
             # isolated build nodeselector
-            elif self.isolated:
-                self.template['spec']['nodeSelector'] = self.isolated_build_node_selector
+            elif self.user_params.isolated.value:
+                node_selector = self.user_params.isolated_build_node_selector
             # explicit build nodeselector
             else:
-                self.template['spec']['nodeSelector'] = self.explicit_build_node_selector
+                node_selector = self.user_params.explicit_build_node_selector
+
+            platform_ns = self.user_params.platform_node_selector
 
             # platform nodeselector
-            if self.platform_node_selector:
-                self.template['spec']['nodeSelector'].update(self.platform_node_selector)
+            if platform_ns:
+                node_selector.update(platform_ns)
+            self.template['spec']['nodeSelector'] = node_selector
 
     def _set_deadline(self):
         if self.user_params.build_type.value == BUILD_TYPE_WORKER:
@@ -575,18 +494,18 @@ class BuildRequestV2(BaseBuildRequest):
         self.set_deadline(deadline_hours)
 
     def adjust_for_repo_info(self):
-        if not self._repo_info:
+        if not self.user_params.repo_info:
             logger.warning('repo info not set')
             return
 
-        if not self._repo_info.configuration.is_autorebuild_enabled():
+        if not self.user_params.repo_info.configuration.is_autorebuild_enabled():
             logger.info('autorebuild is disabled in repo configuration, removing triggers')
             self.template['spec'].pop('triggers', None)
 
         else:
-            labels = Labels(self._repo_info.dockerfile_parser.labels)
+            labels = Labels(self.user_params.repo_info.dockerfile_parser.labels)
 
-            add_timestamp = self._repo_info.configuration.autorebuild.\
+            add_timestamp = self.user_params.repo_info.configuration.autorebuild.\
                 get('add_timestamp_to_release', False)
 
             if add_timestamp:
@@ -604,7 +523,7 @@ class BuildRequestV2(BaseBuildRequest):
                                    '"release" label must not be set in Dockerfile')
 
     def adjust_for_isolated(self, release):
-        if not self.isolated:
+        if not self.user_params.isolated.value:
             return
 
         self.template['spec'].pop('triggers', None)
@@ -625,27 +544,35 @@ class BuildRequestV2(BaseBuildRequest):
         Returns whether or not this is a build from a custom base image
         """
         return bool(re.match('^koji/image-build(:.*)?$',
-                             self.base_image or ''))
+                             self.user_params.base_image.value or ''))
 
     def is_from_scratch_image(self):
         """
         Returns whether or not this is a build `FROM scratch`
         """
-        return self.base_image == 'scratch'
+        return self.user_params.base_image.value == 'scratch'
 
 
 class SourceBuildRequest(BaseBuildRequest):
     """Build request for source containers"""
-    def __init__(self, build_json_store, outer_template=None):
+    def __init__(self, osbs_api, outer_template=None, user_params=None):
         """
         :param build_json_store: str, path to directory with JSON build files
         :param outer_template: str, path to outer template JSON
         """
+        if user_params:
+            assert isinstance(user_params, SourceContainerUserParams)
+        else:
+            user_params = SourceContainerUserParams()
         super(SourceBuildRequest, self).__init__(
-            build_json_store,
-            outer_template=outer_template or DEFAULT_SOURCES_OUTER_TEMPLATE
+            osbs_api,
+            outer_template=outer_template or DEFAULT_SOURCES_OUTER_TEMPLATE,
+            user_params=user_params,
         )
-        self.user_params = SourceContainerUserParams(self.build_json_store)
+
+    def set_params(self, user_params):
+        super(SourceBuildRequest, self).set_params(user_params)
+        assert isinstance(user_params, SourceContainerUserParams)
 
     def render(self, validate=True):
         return super(SourceBuildRequest, self).render(validate=validate)
@@ -661,14 +588,8 @@ class SourceBuildRequest(BaseBuildRequest):
         _, salt, timestamp = name.rsplit('-', 2)
 
         name = 'sources-{}-{}'.format(salt, timestamp)
-        if self.scratch:
+        if self.user_params.scratch.value:
             name = 'scratch-{}'.format(name)
 
         # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
         self.template['metadata']['name'] = name
-
-    def set_params(self, **kwargs):
-        super(SourceBuildRequest, self).set_params(**kwargs)
-
-        logger.debug("now setting params '%s' for user_params", kwargs)
-        self.user_params.set_params(**kwargs)

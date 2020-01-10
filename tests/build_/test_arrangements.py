@@ -19,6 +19,7 @@ from osbs import utils
 from osbs.repo_utils import RepoInfo, ModuleSpec
 from osbs.build.build_requestv2 import BuildRequestV2
 from osbs.build.plugins_configuration import PluginsConfiguration
+from osbs.build.user_params import BuildUserParams
 from tests.constants import (TEST_GIT_URI,
                              TEST_GIT_REF,
                              TEST_GIT_BRANCH,
@@ -130,24 +131,29 @@ class ArrangementBase(object):
             baseimage = base_image
 
         class MockConfiguration(object):
-            container = {
-                'tags': additional_tags or [],
-                'compose': {
-                    'modules': ['mod_name:mod_stream:mod_version']
+            def __init__(self, git_uri, git_ref, git_branch, depth):
+                self.container = {
+                    'tags': additional_tags or [],
+                    'compose': {
+                        'modules': ['mod_name:mod_stream:mod_version']
+                    }
                 }
-            }
 
-            module = container['compose']['modules'][0]
-            container_module_specs = [ModuleSpec.from_str(module)]
-            depth = 0
+                self.module = self.container['compose']['modules'][0]
+                self.container_module_specs = [ModuleSpec.from_str(self.module)]
+                self.depth = int(depth) if depth else 0
+                self.git_uri = git_uri
+                self.git_ref = git_ref
+                self.git_branch = git_branch
 
             def is_autorebuild_enabled(self):
                 return False
 
+        mock_conf = MockConfiguration(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH, None)
         (flexmock(utils)
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
-            .and_return(RepoInfo(MockParser(), MockConfiguration())))
+            .and_return(RepoInfo(MockParser(), mock_conf)))
 
         # Trick create_orchestrator_build into return the *request* JSON
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
@@ -188,7 +194,8 @@ class ArrangementBase(object):
 
     def get_build_request(self, build_type, osbs,  # noqa:F811
                           additional_params=None):
-        self.mock_env(base_image=additional_params.get('base_image'),
+        base_image = additional_params.pop('base_image', None)
+        self.mock_env(base_image=base_image,
                       additional_tags=additional_params.get('additional_tags'))
         params = self.COMMON_PARAMS.copy()
         assert build_type in ('orchestrator', 'worker')
@@ -248,8 +255,7 @@ class TestArrangementV6(ArrangementBase):
         'git_branch': TEST_GIT_BRANCH,
         'user': 'john-foo',
         'build_image': 'test',
-        'base_image': 'test',
-        'name_label': 'test',
+        'reactor_config_map': 'special-config',
     }
 
     ORCHESTRATOR_ADD_PARAMS = {
@@ -371,11 +377,18 @@ class TestArrangementV6(ArrangementBase):
             'base_image': 'test',
             'name_label': 'test',
         }
-        build_request.set_params(**kwargs)
+        user_params = BuildUserParams()
+        user_params.set_params(**kwargs)
+        build_request.set_params(user_params)
         return PluginsConfiguration(build_request.user_params).pt.template
 
     def get_build_request(self, build_type, osbs,  # noqa:F811
                           additional_params=None):
+        if not additional_params.get('reactor_config_override'):
+            (flexmock(BuildRequestV2)
+                .should_receive('get_reactor_config_data')
+                .and_return({}))
+
         params, build_json = super(TestArrangementV6, self).get_build_request(build_type, osbs,
                                                                               additional_params)
         # Make the REACTOR_CONFIG return look like previous returns
@@ -384,6 +397,14 @@ class TestArrangementV6(ArrangementBase):
             if entry['name'] == 'USER_PARAMS':
                 user_params = entry['value']
                 break
+        else:
+            raise KeyError('USER_PARAMS not set in env')
+
+        for entry in env:
+            if entry['name'] == 'REACTOR_CONFIG':
+                break
+        else:
+            raise KeyError('REACTOR_CONFIG not set in env')
 
         plugins_json = osbs.render_plugins_configuration(user_params)
         for entry in env:

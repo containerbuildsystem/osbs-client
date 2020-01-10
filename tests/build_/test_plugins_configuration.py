@@ -75,6 +75,8 @@ def get_sample_source_container_params():
         "platform": "x86_64",
         'user': TEST_USER,
         "sources_for_koji_build_nvr": "test-1-123",
+        "sources_for_koji_build_id": 12345,
+        "signing_intent": "release",
     }
 
 

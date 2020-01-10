@@ -13,6 +13,7 @@ import json
 import os
 import fnmatch
 import shutil
+from textwrap import dedent
 import yaml
 from copy import deepcopy
 
@@ -20,11 +21,15 @@ from osbs.build.build_requestv2 import (
     BuildRequestV2,
     SourceBuildRequest,
 )
+from osbs.build.user_params import BuildUserParams, SourceContainerUserParams
+from osbs.conf import Configuration
 from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             ORCHESTRATOR_OUTER_TEMPLATE, BUILD_TYPE_WORKER,
-                            BUILD_TYPE_ORCHESTRATOR, SECRETS_PATH)
+                            BUILD_TYPE_ORCHESTRATOR, SECRETS_PATH,
+                            REPO_CONFIG_FILE, REPO_CONTAINER_CONFIG)
 from osbs.exceptions import OsbsValidationException, OsbsException
 from osbs.repo_utils import RepoInfo, RepoConfiguration
+from osbs.utils import Labels
 from osbs.api import OSBS
 
 from flexmock import flexmock
@@ -56,13 +61,31 @@ def MockOSBSApi(config_map_data=None):
     return mock_osbs
 
 
-def get_sample_prod_params(osbs_api='blank'):
-    if osbs_api == 'blank':
-        osbs_api = MockOSBSApi()
-    return {
-        'git_uri': TEST_GIT_URI,
-        'git_ref': TEST_GIT_REF,
-        'git_branch': TEST_GIT_BRANCH,
+class MockDFParser(object):
+    def __init__(self, labels=None):
+        self.labels = labels or {}
+
+
+def get_sample_user_params(build_json_store=INPUTS_PATH, conf_args=None, git_args=None,
+                           update_args=None, labels=None):
+    if not git_args:
+        git_args = {}
+    git_args.setdefault('git_uri', TEST_GIT_URI)
+    git_args.setdefault('git_branch', TEST_GIT_BRANCH)
+    git_args.setdefault('git_ref', TEST_GIT_REF)
+
+    if not conf_args:
+        conf_args = {'build_from': 'image:buildroot:latest'}
+    # scratch handling is tricky
+    if update_args:
+        conf_args.setdefault('scratch', update_args.get('scratch'))
+
+    user_params = BuildUserParams(build_json_store)
+    repo_conf = RepoConfiguration(**git_args)
+    repo_info = RepoInfo(dockerfile_parser=MockDFParser(labels), configuration=repo_conf)
+
+    build_conf = Configuration(conf_file=None, **conf_args)
+    kwargs = {
         'user': 'john-foo',
         'component': TEST_COMPONENT,
         'base_image': 'fedora:latest',
@@ -70,45 +93,60 @@ def get_sample_prod_params(osbs_api='blank'):
         'koji_target': 'koji-target',
         'platforms': ['x86_64'],
         'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID,
-        'build_from': 'image:buildroot:latest',
+        'build_conf': build_conf,
         'build_type': BUILD_TYPE_WORKER,
-        'osbs_api': osbs_api,
+        'repo_info': repo_info,
     }
+    if update_args:
+        kwargs.update(update_args)
+    user_params.set_params(**kwargs)
+    return user_params
+
+
+def get_autorebuild_git_args(tmpdir, add_timestamp=None):
+    with open(os.path.join(str(tmpdir), REPO_CONFIG_FILE), 'w') as f:
+        f.write(dedent("""\
+            [autorebuild]
+            enabled=true"""))
+    if add_timestamp:
+        with open(os.path.join(str(tmpdir), REPO_CONTAINER_CONFIG), 'w') as f:
+            f.write(dedent("""\
+                compose:
+                    modules:
+                    - mod_name:mod_stream:mod_version
+                autorebuild:
+                    add_timestamp_to_release: true
+                """))
+    git_args = {'dir_path': str(tmpdir)}
+    return git_args
 
 
 class TestBuildRequestV2(object):
-    def test_inner_template(self):
-        br = BuildRequestV2('something')
-        with pytest.raises(RuntimeError):
-            br.inner_template   # pylint: disable=pointless-statement; is a property
-
     def test_customize_conf(self):
         br = BuildRequestV2('something')
         with pytest.raises(RuntimeError):
             br.customize_conf   # pylint: disable=pointless-statement; is a property
 
-    def test_dock_json(self):
-        br = BuildRequestV2('something')
-        with pytest.raises(RuntimeError):
-            br.dj   # pylint: disable=pointless-statement; is a property
-
     def test_build_request_has_ist_trigger(self):
         build_json = copy.deepcopy(TEST_BUILD_JSON)
-        br = BuildRequestV2('something')
+        user_params = get_sample_user_params()
+        br = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
         flexmock(br).should_receive('template').and_return(build_json)
         assert br.has_ist_trigger() is True
-        assert br.trigger_imagestreamtag is None
+        assert br.trigger_imagestreamtag == 'fedora:latest'
 
     def test_build_request_isnt_auto_instantiated(self):
         build_json = copy.deepcopy(TEST_BUILD_JSON)
         build_json['spec']['triggers'] = []
-        br = BuildRequestV2('something')
+        user_params = get_sample_user_params()
+        br = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
         flexmock(br).should_receive('template').and_return(build_json)
         assert br.has_ist_trigger() is False
 
     def test_set_label(self):
         build_json = copy.deepcopy(TEST_BUILD_JSON)
-        br = BuildRequestV2('something')
+        user_params = get_sample_user_params()
+        br = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
         flexmock(br).should_receive('template').and_return(build_json)
         assert br.template['metadata'].get('labels') is None
 
@@ -122,64 +160,52 @@ class TestBuildRequestV2(object):
         }
 
     def test_render_no_api(self):
-        build_request = BuildRequestV2('something')
-        kwargs = get_sample_prod_params(osbs_api=None)
-        build_request.set_params(**kwargs)
+        user_params = get_sample_user_params()
+        br = BuildRequestV2(osbs_api=None, user_params=user_params)
         with pytest.raises(OsbsValidationException):
-            build_request.render()
+            br.render()
 
     @pytest.mark.parametrize(('extra_kwargs', 'valid'), (  # noqa:F811
         ({'scratch': True}, True),
-        ({'is_auto': True}, True),
-        ({'isolated': True, 'release': '1.0'}, True),
+        ({'is_auto': True, 'scratch': False}, True),
+        ({'isolated': True, 'release': '1.0', 'scratch': False}, True),
         ({'scratch': True, 'isolated': True, 'release': '1.0'}, False),
         ({'scratch': True, 'is_auto': True}, False),
         ({'is_auto': True, 'isolated': True, 'release': '1.0'}, False),
     ))
     def test_mutually_exclusive_build_variation(self, extra_kwargs, valid):  # noqa:F811
-        kwargs = get_sample_prod_params()
-        kwargs.update(extra_kwargs)
-        build_request = BuildRequestV2(INPUTS_PATH)
-
         if valid:
-            build_request.set_params(**kwargs)
+            user_params = get_sample_user_params(update_args=extra_kwargs)
+            build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
             build_request.render()
         else:
             with pytest.raises(OsbsValidationException) as exc_info:
-                build_request.set_params(**kwargs)
+                get_sample_user_params(update_args=extra_kwargs)
             assert 'mutually exclusive' in str(exc_info.value)
 
     def test_render_simple_request(self):
-        build_request = BuildRequestV2(INPUTS_PATH)
-        triggered_after_koji_task = '12345'
-        kwargs = {
-            'git_uri': TEST_GIT_URI,
-            'git_ref': TEST_GIT_REF,
-            'user': "john-foo",
-            'component': TEST_COMPONENT,
-            'build_image': 'fancy_buildroot:latestest',
-            'base_image': 'fedora:latest',
-            'name_label': 'fedora/resultingimage',
-            'build_type': BUILD_TYPE_WORKER,
-            'osbs_api': MockOSBSApi(),
+        trigger_after_koji_task = '12345'
+        extra_kwargs = {
             'reactor_config_map': 'reactor-config-map',
-            'triggered_after_koji_task': triggered_after_koji_task,
+            'triggered_after_koji_task': trigger_after_koji_task,
         }
-        build_request.set_params(**kwargs)
+
+        user_params = get_sample_user_params(update_args=extra_kwargs)
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
         build_json = build_request.render()
 
-        assert build_request.triggered_after_koji_task == triggered_after_koji_task
+        assert build_request.user_params.triggered_after_koji_task.value == trigger_after_koji_task
 
         assert build_json["metadata"]["name"] is not None
         assert "triggers" not in build_json["spec"]
         assert build_json["spec"]["source"]["git"]["uri"] == TEST_GIT_URI
         assert build_json["spec"]["source"]["git"]["ref"] == TEST_GIT_REF
 
-        expected_output = "john-foo/component:none-"
+        expected_output = "john-foo/component:koji-target-"
         assert build_json["spec"]["output"]["to"]["name"].startswith(expected_output)
 
         rendered_build_image = build_json["spec"]["strategy"]["customStrategy"]["from"]["name"]
-        assert rendered_build_image == 'fancy_buildroot:latestest'
+        assert rendered_build_image == 'buildroot:latest'
 
         json_env = build_json['spec']['strategy']['customStrategy']['env']
         envs = {}
@@ -204,34 +230,27 @@ class TestBuildRequestV2(object):
         ('ultimate-buildroot:v1.0', 'buildroot-stream:v1.0', False)
     ))
     def test_render_prod_request_with_repo(self, build_image, build_imagestream, valid):
-        build_request = BuildRequestV2(INPUTS_PATH)
         name_label = "fedora/resultingimage"
-        koji_task_id = 4756
-        assert isinstance(build_request, BuildRequestV2)
-        kwargs = {
-            'git_uri': TEST_GIT_URI,
-            'git_ref': TEST_GIT_REF,
-            'git_branch': TEST_GIT_BRANCH,
-            'user': "john-foo",
-            'component': TEST_COMPONENT,
-            'base_image': 'fedora:latest',
+        koji_task_id = 4567
+        extra_kwargs = {
             'name_label': name_label,
-            'koji_target': "koji-target",
             'koji_task_id': koji_task_id,
             'yum_repourls': ["http://example.com/my.repo"],
+        }
+        conf_args = {
             'build_image': build_image,
             'build_imagestream': build_imagestream,
-            'build_type': BUILD_TYPE_WORKER,
-            'osbs_api': MockOSBSApi(),
+            'build_from': None,
         }
 
-        if valid:
-            build_request.set_params(**kwargs)
-        else:
+        if not valid:
             with pytest.raises(OsbsValidationException):
-                build_request.set_params(**kwargs)
+                user_params = get_sample_user_params(conf_args=conf_args, update_args=extra_kwargs)
             return
 
+        user_params = get_sample_user_params(conf_args=conf_args, update_args=extra_kwargs)
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
+        assert isinstance(build_request, BuildRequestV2)
         build_json = build_request.render()
 
         assert fnmatch.fnmatch(build_json["metadata"]["name"], TEST_BUILD_CONFIG)
@@ -251,10 +270,17 @@ class TestBuildRequestV2(object):
             assert build_json["spec"]["strategy"]["customStrategy"]["from"]["kind"] == \
                 "ImageStreamTag"
 
+    def test_render_prod_request_without_repo(self, caplog):
+        user_params = get_sample_user_params()
+        user_params.repo_info = None
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
+        build_request.render()
+        assert 'repo info not set' in caplog.text
+
     def test_render_prod_request(self):
-        build_request = BuildRequestV2(INPUTS_PATH)
-        kwargs = get_sample_prod_params()
-        build_request.set_params(**kwargs)
+        user_params = get_sample_user_params()
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
+        assert isinstance(build_request, BuildRequestV2)
         build_json = build_request.render()
 
         assert fnmatch.fnmatch(build_json["metadata"]["name"], TEST_BUILD_CONFIG)
@@ -268,22 +294,13 @@ class TestBuildRequestV2(object):
         assert build_json["metadata"]["labels"]["git-branch"] == TEST_GIT_BRANCH
 
     def test_render_prod_without_koji_request(self):
-        build_request = BuildRequestV2(INPUTS_PATH)
-        name_label = "fedora/resultingimage"
-        assert isinstance(build_request, BuildRequestV2)
-        kwargs = {
-            'git_uri': TEST_GIT_URI,
-            'git_ref': TEST_GIT_REF,
-            'git_branch': TEST_GIT_BRANCH,
-            'user': "john-foo",
-            'component': TEST_COMPONENT,
-            'base_image': 'fedora:latest',
-            'name_label': name_label,
-            'build_from': 'image:buildroot:latest',
-            'build_type': BUILD_TYPE_WORKER,
-            'osbs_api': MockOSBSApi(),
+        extra_kwargs = {
+            'koji_target': None,
         }
-        build_request.set_params(**kwargs)
+
+        user_params = get_sample_user_params(update_args=extra_kwargs)
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
+        assert isinstance(build_request, BuildRequestV2)
         build_json = build_request.render()
 
         assert fnmatch.fnmatch(build_json["metadata"]["name"], TEST_BUILD_CONFIG)
@@ -297,24 +314,14 @@ class TestBuildRequestV2(object):
     @pytest.mark.parametrize('platform', [None, 'x86_64'])
     @pytest.mark.parametrize('scratch', [False, True])
     def test_render_prod_request_v1_v2(self, platform, scratch):
-        build_request = BuildRequestV2(INPUTS_PATH)
-        name_label = "fedora/resultingimage"
-        kwargs = {
-            'build_from': 'image:buildroot:latest',
-            'git_uri': TEST_GIT_URI,
-            'git_ref': TEST_GIT_REF,
-            'git_branch': TEST_GIT_BRANCH,
-            'user': "john-foo",
-            'component': TEST_COMPONENT,
-            'base_image': 'fedora:latest',
-            'name_label': name_label,
-            'koji_target': "koji-target",
-            'scratch': scratch,
+        extra_kwargs = {
             'platform': platform,
-            'build_type': BUILD_TYPE_WORKER,
-            'osbs_api': MockOSBSApi(),
+            'scratch': scratch,
         }
-        build_request.set_params(**kwargs)
+
+        user_params = get_sample_user_params(update_args=extra_kwargs)
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
+        assert isinstance(build_request, BuildRequestV2)
         build_json = build_request.render()
 
         expected_name = TEST_SCRATCH_BUILD_NAME if scratch else TEST_BUILD_CONFIG
@@ -333,42 +340,20 @@ class TestBuildRequestV2(object):
         ({}, TEST_BUILD_CONFIG),
     ))
     def test_render_build_name(self, tmpdir, extra_kwargs, expected_name):
-        build_request = BuildRequestV2(INPUTS_PATH)
-
-        kwargs = get_sample_prod_params()
-        kwargs.update(extra_kwargs)
-        build_request.set_params(**kwargs)
-
+        user_params = get_sample_user_params(update_args=extra_kwargs)
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
+        assert isinstance(build_request, BuildRequestV2)
         build_json = build_request.render()
+
         assert fnmatch.fnmatch(build_json['metadata']['name'], expected_name)
 
     def test_render_with_yum_repourls(self):
-        kwargs = get_sample_prod_params()
-        build_request = BuildRequestV2(INPUTS_PATH)
+        extra_kwargs = {
+            'yum_repourls': 'should be a list',
+        }
 
-        # Test validation for yum_repourls parameter
-        kwargs['yum_repourls'] = 'should be a list'
         with pytest.raises(OsbsValidationException):
-            build_request.set_params(**kwargs)
-
-    @pytest.mark.parametrize('triggers', [  # noqa:F811
-        None,
-        [],
-        [{
-            "type": "Generic",
-            "generic": {
-                "secret": "secret101",
-                "allowEnv": True
-            }
-        }]
-    ])
-    def test_render_prod_with_falsey_triggers(self, tmpdir, triggers):
-
-        self.create_image_change_trigger_json(str(tmpdir), custom_triggers=triggers)
-        build_request = BuildRequestV2(str(tmpdir))
-        kwargs = get_sample_prod_params()
-        build_request.set_params(**kwargs)
-        build_request.render()
+            get_sample_user_params(update_args=extra_kwargs)
 
     @staticmethod
     def create_image_change_trigger_json(outdir, custom_triggers=USE_DEFAULT_TRIGGERS):
@@ -407,6 +392,23 @@ class TestBuildRequestV2(object):
             json.dump(build_json, prod_json)
             prod_json.truncate()
 
+    @pytest.mark.parametrize('triggers', [  # noqa:F811
+        None,
+        [],
+        [{
+            "type": "Generic",
+            "generic": {
+                "secret": "secret101",
+                "allowEnv": True
+            }
+        }]
+    ])
+    def test_render_prod_with_falsey_triggers(self, tmpdir, triggers):
+        self.create_image_change_trigger_json(str(tmpdir), custom_triggers=triggers)
+        user_params = get_sample_user_params(build_json_store=str(tmpdir))
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
+        build_request.render()
+
     @pytest.mark.parametrize(('scratch', 'isolated'), (
         (True, False),
         (False, True),
@@ -414,51 +416,49 @@ class TestBuildRequestV2(object):
     ))
     def test_render_prod_request_with_trigger(self, tmpdir, scratch, isolated):
         self.create_image_change_trigger_json(str(tmpdir))
-        build_request = BuildRequestV2(str(tmpdir))
-        kwargs = get_sample_prod_params()
+        kwargs = {'is_autorebuild': True}
         if scratch:
             kwargs['scratch'] = scratch
         if isolated:
             kwargs['isolated'] = isolated
             kwargs['release'] = '1.1'
 
-        build_request.set_params(**kwargs)
+        git_args = get_autorebuild_git_args(tmpdir)
+        user_params = get_sample_user_params(build_json_store=str(tmpdir), update_args=kwargs,
+                                             git_args=git_args)
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
+        assert isinstance(build_request, BuildRequestV2)
         build_json = build_request.render()
 
         if scratch or isolated:
             assert "triggers" not in build_json["spec"]
         else:
             assert "triggers" in build_json["spec"]
-            assert (build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] ==
-                    'fedora:latest')
+            from_name = build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"]
+            assert from_name == 'fedora:latest'
 
     @pytest.mark.parametrize('koji_parent_build', ('fedora-26-9', None))
     def test_render_custom_base_image_with_trigger(self, tmpdir, koji_parent_build):
-        # name_label = "fedora/resultingimage"
-        self.create_image_change_trigger_json(str(tmpdir))
-        build_request = BuildRequestV2(str(tmpdir))
-
-        kwargs = get_sample_prod_params()
-        kwargs['base_image'] = 'koji/image-build'
+        kwargs = {'base_image': 'koji/image-build'}
         if koji_parent_build:
             kwargs['koji_parent_build'] = koji_parent_build
 
-        build_request.set_params(**kwargs)
+        user_params = get_sample_user_params(update_args=kwargs)
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
+        assert isinstance(build_request, BuildRequestV2)
         build_json = build_request.render()
 
         assert build_request.is_custom_base_image() is True
-
         # Verify the triggers are now disabled
         assert "triggers" not in build_json["spec"]
 
     def test_render_from_scratch_image_with_trigger(self, tmpdir):
         self.create_image_change_trigger_json(str(tmpdir))
-        build_request = BuildRequestV2(str(tmpdir))
+        kwargs = {'base_image': 'scratch'}
 
-        kwargs = get_sample_prod_params()
-        kwargs['base_image'] = 'scratch'
-
-        build_request.set_params(**kwargs)
+        user_params = get_sample_user_params(update_args=kwargs, build_json_store=str(tmpdir))
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
+        assert isinstance(build_request, BuildRequestV2)
         build_json = build_request.render()
 
         assert build_request.is_from_scratch_image() is True
@@ -473,17 +473,15 @@ class TestBuildRequestV2(object):
     ))
     def test_adjust_for_isolated(self, tmpdir, extra_kwargs, expected_error):
         self.create_image_change_trigger_json(str(tmpdir))
-        build_request = BuildRequestV2(str(tmpdir))
 
-        kwargs = get_sample_prod_params()
-        kwargs.update(extra_kwargs)
-        build_request.set_params(**kwargs)
+        user_params = get_sample_user_params(update_args=extra_kwargs, build_json_store=str(tmpdir))
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
+        assert isinstance(build_request, BuildRequestV2)
 
         if expected_error:
             with pytest.raises(OsbsValidationException) as exc_info:
                 build_request.render()
             assert expected_error in str(exc_info.value)
-
         else:
             build_json = build_request.render()
 
@@ -507,23 +505,16 @@ class TestBuildRequestV2(object):
     def test_render_prod_request_with_repo_info(self, tmpdir,
                                                 autorebuild_enabled, release_label,
                                                 add_timestamp, expected):
+        labels = None
+        if release_label:
+            labels = {Labels.LABEL_TYPE_RELEASE: release_label}
         self.create_image_change_trigger_json(str(tmpdir))
+        git_args = get_autorebuild_git_args(tmpdir, add_timestamp) if autorebuild_enabled else None
+        user_params = get_sample_user_params(build_json_store=str(tmpdir),
+                                             git_args=git_args, labels=labels)
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
+        base_image = user_params.base_image.value
 
-        class MockDfParser(object):
-            labels = {release_label: '13'} if release_label else {}
-
-        (flexmock(RepoConfiguration)
-            .should_receive('is_autorebuild_enabled')
-            .and_return(autorebuild_enabled))
-
-        repo_info = RepoInfo(MockDfParser())
-        repo_info.configuration.autorebuild['add_timestamp_to_release'] = add_timestamp
-
-        build_request_kwargs = get_sample_prod_params()
-        base_image = build_request_kwargs['base_image']
-        build_request = BuildRequestV2(str(tmpdir))
-        build_request.set_params(**build_request_kwargs)
-        build_request.set_repo_info(repo_info)
         if isinstance(expected, type):
             with pytest.raises(expected):
                 build_json = build_request.render()
@@ -543,14 +534,10 @@ class TestBuildRequestV2(object):
         ('koji/image-build', True),
         ('koji/image-build:spam.conf', True),
     ])
-    def test_prod_is_custom_base_image(self, tmpdir, base_image, is_custom):
-        build_request = BuildRequestV2(INPUTS_PATH)
-        # Safe to call prior to build image being set
-        assert build_request.is_custom_base_image() is False
-
-        kwargs = get_sample_prod_params()
-        kwargs['base_image'] = base_image
-        build_request.set_params(**kwargs)
+    def test_prod_is_custom_base_image(self, base_image, is_custom):
+        update_args = {'base_image': base_image}
+        user_params = get_sample_user_params(update_args=update_args)
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
         build_request.render()
 
         assert build_request.is_custom_base_image() == is_custom
@@ -563,14 +550,10 @@ class TestBuildRequestV2(object):
         ('scratch', True),
     ])
     def test_prod_is_from_scratch_image(self, base_image, is_from_scratch):
-        build_request = BuildRequestV2(INPUTS_PATH)
-        # Safe to call prior to build image being set
-        assert build_request.is_from_scratch_image() is False
-
-        kwargs = get_sample_prod_params()
-        kwargs['base_image'] = base_image
-        build_request.set_params(**kwargs)
-        build_request.render()  # noqa
+        update_args = {'base_image': base_image}
+        user_params = get_sample_user_params(update_args=update_args)
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
+        build_request.render()
 
         assert build_request.is_from_scratch_image() == is_from_scratch
 
@@ -582,12 +565,13 @@ class TestBuildRequestV2(object):
     def test_adjust_for_triggers_base_builds(self, tmpdir, caplog, base_image, msg, keep_triggers):
         """Test if triggers are properly adjusted for base and FROM scratch builds"""
         self.create_image_change_trigger_json(str(tmpdir))
-        build_request = BuildRequestV2(str(tmpdir))
+        git_args = get_autorebuild_git_args(tmpdir)
 
-        kwargs = get_sample_prod_params()
-        kwargs['base_image'] = base_image
-        build_request.set_params(**kwargs)
-        build_request.render()  # triggers are adjusted in render method
+        update_args = {'base_image': base_image}
+        user_params = get_sample_user_params(build_json_store=str(tmpdir), update_args=update_args,
+                                             git_args=git_args)
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
+        build_request.render()
 
         assert bool(build_request.template['spec'].get('triggers', [])) == keep_triggers
 
@@ -645,57 +629,40 @@ class TestBuildRequestV2(object):
     def test_check_set_nodeselectors(self, platform, platforms, is_auto, scratch,
                                      isolated, expected):
         platform_nodeselectors = {
-            'x86': {
-                'plx86a': 'yes',
-                'plx86b': 'yes'
-            },
-            'ppc': {
-                'plppc1': 'yes',
-                'plppc2': 'yes'
-            }
-        }
-        built_type_nodeselectors = {
-            'auto': {
-                'auto1': 'yes',
-                'auto2': 'yes'
-            },
-            'explicit': {
-                'explicit1': 'yes',
-                'explicit2': 'yes'
-            },
-            'scratch': {
-                'scratch1': 'yes',
-                'scratch2': 'yes'
-            },
-            'isolated': {
-                'isolated1': 'yes',
-                'isolated2': 'yes'
-            }
+            'x86': 'plx86a=yes, plx86b=yes',
+            'ppc': 'plppc1=yes, plppc2=yes',
         }
 
-        br = BuildRequestV2(INPUTS_PATH)
-        kwargs = get_sample_prod_params()
         if platforms:
-            kwargs['platforms'] = [platforms]
-            kwargs['build_type'] = BUILD_TYPE_ORCHESTRATOR
+            update_args = {
+                'platforms': [platforms],
+                'build_type': BUILD_TYPE_ORCHESTRATOR,
+            }
         else:
-            kwargs['platforms'] = None
-            kwargs['build_type'] = BUILD_TYPE_WORKER
+            update_args = {
+                'platforms': None,
+                'build_type': BUILD_TYPE_WORKER,
+            }
 
-        if platform:
-            kwargs['platform_node_selector'] = platform_nodeselectors[platform]
-
-        kwargs['is_auto'] = is_auto
-        kwargs['scratch'] = scratch
-        kwargs['isolated'] = isolated
+        update_args['is_auto'] = is_auto
+        update_args['scratch'] = scratch
+        update_args['isolated'] = isolated
         if isolated:
-            kwargs['release'] = '1.0'
-        kwargs['scratch_build_node_selector'] = built_type_nodeselectors['scratch']
-        kwargs['explicit_build_node_selector'] = built_type_nodeselectors['explicit']
-        kwargs['auto_build_node_selector'] = built_type_nodeselectors['auto']
-        kwargs['isolated_build_node_selector'] = built_type_nodeselectors['isolated']
-        br.set_params(**kwargs)
-        build_json = br.render()
+            update_args['release'] = '1.0'
+        conf_args = {
+            'build_from': 'image:buildroot:latest',
+            'auto_build_node_selector': 'auto1=yes, auto2=yes',
+            'explicit_build_node_selector': 'explicit1=yes, explicit2=yes',
+            'isolated_build_node_selector': 'isolated1=yes, isolated2=yes',
+            'scratch_build_node_selector': 'scratch1=yes, scratch2=yes',
+        }
+        if platform:
+            conf_args['node_selector.' + platform] = platform_nodeselectors[platform]
+            update_args['platform'] = platform
+
+        user_params = get_sample_user_params(conf_args=conf_args, update_args=update_args)
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
+        build_json = build_request.render()
 
         if expected:
             assert build_json['spec']['nodeSelector'] == expected
@@ -719,13 +686,15 @@ class TestBuildRequestV2(object):
         outer_template = WORKER_OUTER_TEMPLATE
         if build_type == BUILD_TYPE_ORCHESTRATOR:
             outer_template = ORCHESTRATOR_OUTER_TEMPLATE
-        build_request = BuildRequestV2(INPUTS_PATH, outer_template)
-        kwargs = get_sample_prod_params()
-        kwargs['reactor_config_map'] = reactor_config_map
-        kwargs['reactor_config_override'] = reactor_config_override
-        kwargs['build_type'] = build_type
 
-        build_request.set_params(**kwargs)
+        update_args = {
+            'reactor_config_map': reactor_config_map,
+            'reactor_config_override': reactor_config_override,
+            'build_type': build_type,
+        }
+        user_params = get_sample_user_params(update_args=update_args)
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params,
+                                       outer_template=outer_template)
         build_json = build_request.render()
 
         json_env = build_json['spec']['strategy']['customStrategy']['env']
@@ -797,17 +766,21 @@ class TestBuildRequestV2(object):
         outer_template = WORKER_OUTER_TEMPLATE
         if build_type == BUILD_TYPE_ORCHESTRATOR:
             outer_template = ORCHESTRATOR_OUTER_TEMPLATE
-        build_request = BuildRequestV2(INPUTS_PATH, outer_template)
-        reactor_config_name = 'REACTOR_CONFIG'
+
+        update_args = {
+            'reactor_config_map': reactor_config_map,
+            'reactor_config_override': reactor_config_override,
+            'build_type': build_type,
+        }
+        user_params = get_sample_user_params(update_args=update_args)
+
         all_secrets = deepcopy(reactor_config_map)
-
         mock_api = MockOSBSApi(all_secrets)
-        kwargs = get_sample_prod_params(osbs_api=mock_api)
-        kwargs['reactor_config_map'] = reactor_config_name
-        kwargs['reactor_config_override'] = reactor_config_override
-        kwargs['build_type'] = build_type
 
-        build_request.set_params(**kwargs)
+        build_request = BuildRequestV2(osbs_api=mock_api, user_params=user_params,
+                                       outer_template=outer_template)
+        build_json = build_request.render()
+
         expect_secrets = {}
         secrets = build_request.template['spec']['strategy']['customStrategy'].\
             setdefault('secrets', [])
@@ -821,8 +794,6 @@ class TestBuildRequestV2(object):
                 'mountPath': secret_path,
             })
             expect_secrets[secret] = secret_path
-
-        build_json = build_request.render()
 
         json_custom = build_json['spec']['strategy']['customStrategy']
 
@@ -873,18 +844,23 @@ class TestBuildRequestV2(object):
     ])
     def test_set_data_from_reactor_config(self, build_type, flatpak, reactor_config_map,
                                           reactor_config_override):
-        build_request = BuildRequestV2(INPUTS_PATH)
-        reactor_config_name = 'REACTOR_CONFIG'
+        outer_template = WORKER_OUTER_TEMPLATE
+        if build_type == BUILD_TYPE_ORCHESTRATOR:
+            outer_template = ORCHESTRATOR_OUTER_TEMPLATE
+
+        update_args = {
+            'reactor_config_map': reactor_config_map,
+            'reactor_config_override': reactor_config_override,
+            'build_type': build_type,
+            'flatpak': flatpak,
+        }
+        user_params = get_sample_user_params(update_args=update_args)
+
         all_secrets = deepcopy(reactor_config_map)
-
         mock_api = MockOSBSApi(all_secrets)
-        kwargs = get_sample_prod_params(osbs_api=mock_api)
-        kwargs['reactor_config_map'] = reactor_config_name
-        kwargs['reactor_config_override'] = reactor_config_override
-        kwargs['build_type'] = build_type
-        kwargs['flatpak'] = flatpak
 
-        build_request.set_params(**kwargs)
+        build_request = BuildRequestV2(osbs_api=mock_api, user_params=user_params,
+                                       outer_template=outer_template)
 
         flatpak_raises = False
         if flatpak:
@@ -924,11 +900,9 @@ class TestBuildRequestV2(object):
     @pytest.mark.parametrize('memory', ['None', 50])
     @pytest.mark.parametrize('storage', ['None', 25])
     def test_set_resource_limits(self, cpu, memory, storage):
-        build_request = BuildRequestV2(INPUTS_PATH)
+        user_params = get_sample_user_params()
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
 
-        kwargs = get_sample_prod_params()
-        kwargs['base_image'] = 'base_image'
-        build_request.set_params(**kwargs)
         build_request.set_resource_limits(cpu, memory, storage)
         assert build_request._resource_limits['cpu'] == cpu
         assert build_request._resource_limits['memory'] == memory
@@ -948,28 +922,23 @@ class TestBuildRequestV2(object):
 
     @pytest.mark.parametrize('openshift_version', ['None', 25])
     def test_set_os_version(self, openshift_version):
-        build_request = BuildRequestV2(INPUTS_PATH)
+        user_params = get_sample_user_params()
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
 
-        kwargs = get_sample_prod_params()
-        kwargs['base_image'] = 'base_image'
-        build_request.set_params(**kwargs)
         build_request.set_openshift_required_version(openshift_version)
         assert build_request._openshift_required_version == openshift_version
 
     def test_build_id(self):
-        build_request = BuildRequestV2(INPUTS_PATH)
+        user_params = get_sample_user_params()
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
 
-        kwargs = get_sample_prod_params()
-        kwargs['base_image'] = 'base_image'
-        build_request.set_params(**kwargs)
         build_request.render()
         assert build_request.build_id == 'path-master-cd1e4'
 
     def test_bad_template_path(self):
-        build_request = BuildRequestV2('nowhere', 'nothing', 'invald')
-        kwargs = get_sample_prod_params()
-        kwargs['base_image'] = 'base_image'
-        build_request.set_params(**kwargs)
+        user_params = get_sample_user_params()
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params,
+                                       outer_template='invalid')
         with pytest.raises(OsbsException):
             build_request.render()
 
@@ -988,14 +957,17 @@ class TestBuildRequestV2(object):
         ("0", "7", BUILD_TYPE_WORKER, None),
     ])
     def test_set_deadlines(self, worker_max, orchestrator_max, build_type, expected):
-        build_request = BuildRequestV2(INPUTS_PATH)
+        conf_args = {
+           'worker_max_run_hours': worker_max,
+           'orchestrator_max_run_hours': orchestrator_max,
+           'build_from': 'image:fedora:latest',
+        }
+        update_args = {
+           'build_type': build_type,
+        }
+        user_params = get_sample_user_params(update_args=update_args, conf_args=conf_args)
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
 
-        kwargs = get_sample_prod_params()
-        kwargs['worker_deadline'] = worker_max
-        kwargs['orchestrator_deadline'] = orchestrator_max
-        kwargs['build_type'] = build_type
-
-        build_request.set_params(**kwargs)
         build_json = build_request.render()
         if expected:
             expected_hours = expected * 3600
@@ -1005,26 +977,49 @@ class TestBuildRequestV2(object):
                 assert build_json['spec']['completionDeadlineSeconds']
 
 
+def get_sample_source_params(build_json_store=INPUTS_PATH, conf_args=None,
+                             update_args=None, labels=None):
+    if not conf_args:
+        conf_args = {'build_from': 'image:buildroot:latest'}
+    # scratch handling is tricky
+    if update_args:
+        conf_args.setdefault('scratch', update_args.get('scratch'))
+
+    user_params = SourceContainerUserParams(build_json_store)
+
+    build_conf = Configuration(conf_file=None, **conf_args)
+    kwargs = {
+        'user': 'john-foo',
+        'component': TEST_COMPONENT,
+        'base_image': 'fedora:latest',
+        'name_label': 'fedora/resultingimage',
+        'koji_target': 'koji-target',
+        'platforms': ['x86_64'],
+        'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID,
+        'build_conf': build_conf,
+        'build_type': BUILD_TYPE_WORKER,
+        'reactor_config_map': 'reactor-config-map',
+        'sources_for_koji_build_nvr': "name-1.0-123",
+    }
+    if update_args:
+        kwargs.update(update_args)
+    user_params.set_params(**kwargs)
+    return user_params
+
+
 class TestSourceBuildRequest(object):
     """Test suite for SourceBuildRequest"""
+    def test_render_simple_source_request(self):
+        user_params = get_sample_source_params()
+        build_request = SourceBuildRequest(osbs_api=MockOSBSApi())
+        build_request.set_params(user_params=user_params)
 
-    def test_render_simple_request(self):
-        build_request = SourceBuildRequest(INPUTS_PATH)
-        kwargs = {
-            'build_from': 'image:buildroot:latest',
-            'component': TEST_COMPONENT,
-            'user': "john-foo",
-            'reactor_config_map': 'reactor-config-map',
-            'sources_for_koji_build_nvr': "name-1.0-123",
-            'osbs_api': MockOSBSApi(),
-        }
-        build_request.set_params(**kwargs)
         build_json = build_request.render()
 
         assert build_json["metadata"]["name"] is not None
         assert "triggers" not in build_json["spec"]
 
-        expected_output = "john-foo/component:none-"
+        expected_output = "john-foo/component:koji-target-"
         assert build_json["spec"]["output"]["to"]["name"].startswith(expected_output)
 
         rendered_build_image = build_json["spec"]["strategy"]["customStrategy"]["from"]["name"]
@@ -1044,3 +1039,10 @@ class TestSourceBuildRequest(object):
         assert envs['REACTOR_CONFIG'][0]['configMapKeyRef'] == configmapkeyref
 
         assert 'USER_PARAMS' in envs
+
+    def test_render_scratch_source_request(self):
+        user_params = get_sample_source_params(update_args={'scratch': True})
+        user_params.image_tag.value = 'test-salt-time'
+        build_request = SourceBuildRequest(osbs_api=MockOSBSApi(), user_params=user_params)
+        build_request.render()
+        assert build_request.template['metadata']['name'] == 'scratch-sources-salt-time'
