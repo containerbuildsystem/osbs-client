@@ -35,6 +35,22 @@ class RepoInfo(object):
         self.additional_tags = additional_tags or AdditionalTagsConfig(
             tags=self.configuration.container.get('tags', set()))
 
+    @property
+    def git_branch(self):
+        return self.configuration.git_branch
+
+    @property
+    def git_ref(self):
+        return self.configuration.git_ref
+
+    @property
+    def git_uri(self):
+        return self.configuration.git_uri
+
+    @property
+    def git_commit_depth(self):
+        return self.configuration.depth
+
 
 class RepoConfiguration(object):
     """
@@ -46,12 +62,16 @@ class RepoConfiguration(object):
         enabled = false
         """)
 
-    def __init__(self, dir_path='', file_name=REPO_CONFIG_FILE, depth=None):
-
+    def __init__(self, dir_path='', file_name=REPO_CONFIG_FILE, depth=None,
+                 git_uri=None, git_branch=None, git_ref=None):
         self._config_parser = ConfigParser()
         self.container = {}
         self.depth = depth or 0
         self.autorebuild = {}
+        # Keep track of the repo metadata in the repo configuration
+        self.git_uri = git_uri
+        self.git_branch = git_branch
+        self.git_ref = git_ref
 
         # Set default options
         self._config_parser.readfp(StringIO(self.DEFAULT_CONFIG))   # pylint: disable=W1505; py2

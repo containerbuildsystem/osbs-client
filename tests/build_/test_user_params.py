@@ -21,11 +21,13 @@ from osbs.build.user_params import (
     SourceContainerUserParams,
     load_user_params_from_json,
 )
+from osbs.conf import Configuration
+from osbs.repo_utils import RepoInfo, RepoConfiguration
 from osbs.exceptions import OsbsValidationException
 from osbs.constants import BUILD_TYPE_WORKER, REACTOR_CONFIG_ARRANGEMENT_VERSION
 from tests.constants import (TEST_COMPONENT, TEST_FILESYSTEM_KOJI_TASK_ID,
                              TEST_GIT_BRANCH, TEST_GIT_REF, TEST_GIT_URI,
-                             TEST_IMAGESTREAM, TEST_KOJI_TASK_ID, TEST_USER)
+                             TEST_KOJI_TASK_ID, TEST_USER)
 
 
 class TestBuildIDParam(object):
@@ -44,35 +46,60 @@ class TestBuildIDParam(object):
 
 
 class TestBuildUserParams(object):
-    def test_validate_missing_required(self):
-        kwargs = {
+    def get_minimal_kwargs(self, git_args=None, conf_args=None):
+        if not git_args:
+            git_args = {}
+        git_args.setdefault('git_uri', TEST_GIT_URI)
+        if not conf_args:
+            conf_args = {'build_from': 'image:buildroot:latest'}
+        repo_conf = RepoConfiguration(**git_args)
+        return {
+            # Params needed to avoid exceptions.
             'base_image': 'base_image',
-            'git_uri': TEST_GIT_URI,
+            'build_conf': Configuration(**conf_args),
             'name_label': 'name_label',
-            'build_from': 'image:buildroot:latest',
+            'repo_info': RepoInfo(configuration=repo_conf),
+            'user': TEST_USER,
+        }
+
+    @pytest.mark.parametrize(('skip_param', 'message'), [
+        ('base_image', 'base_image must be provided'),
+        ('name_label', 'name_label must be provided'),
+        ('repo_info', 'no repo_info passed to BuildUserParams'),
+    ])
+    def test_incomplete_set_params(self, skip_param, message):
+        spec = BuildUserParams()
+        kwargs = self.get_minimal_kwargs()
+        kwargs[skip_param] = None
+        with pytest.raises(OsbsValidationException) as exc:
+            spec.set_params(**kwargs)
+            assert message in exc.message
+
+    def test_missing_build_opts(self):
+        conf_args = {
+            'build_from': None,
+            'build_image': None,
+            'build_imagestream': None,
         }
         spec = BuildUserParams()
+        kwargs = self.get_minimal_kwargs(conf_args=conf_args)
+
+        with pytest.raises(OsbsValidationException):
+            spec.set_params(**kwargs)
+            spec.validate()
+
+    def test_validate_missing_required(self):
+        spec = BuildUserParams()
+        kwargs = self.get_minimal_kwargs()
+        kwargs['user'] = None
         spec.set_params(**kwargs)
 
         with pytest.raises(OsbsValidationException):
             spec.validate()
 
-    def get_minimal_kwargs(self):
-        return {
-            # Params needed to avoid exceptions.
-            'user': TEST_USER,
-            'base_image': 'base_image',
-            'name_label': 'name_label',
-            'git_uri': TEST_GIT_URI,
-            'build_from': 'image:buildroot:latest',
-        }
-
     def test_v2_spec_name2(self):
-        kwargs = self.get_minimal_kwargs()
-        kwargs.update({
-            'git_uri': TEST_GIT_URI,
-            'git_branch': TEST_GIT_BRANCH,
-        })
+        git_args = {'git_branch': TEST_GIT_BRANCH}
+        kwargs = self.get_minimal_kwargs(git_args=git_args)
 
         spec = BuildUserParams()
         spec.set_params(**kwargs)
@@ -151,9 +178,9 @@ class TestBuildUserParams(object):
             spec.set_params(**kwargs)
 
     def test_user_params_bad_build_from(self):
-        kwargs = self.get_minimal_kwargs()
         # does not have an "image:" prefix:
-        kwargs['build_from'] = 'registry.example.com/buildroot'
+        conf_args = {'build_from': 'registry.example.com/buildroot'}
+        kwargs = self.get_minimal_kwargs(conf_args=conf_args)
         spec = BuildUserParams()
 
         with pytest.raises(OsbsValidationException) as e:
@@ -201,13 +228,19 @@ class TestBuildUserParams(object):
                 assert spec.compose_ids.value == compose_ids
 
     def test_v2_all_values_and_json(self):
+        repo_conf = RepoConfiguration(git_branch=TEST_GIT_BRANCH, git_ref=TEST_GIT_REF,
+                                      git_uri=TEST_GIT_URI)
+        repo_info = RepoInfo(configuration=repo_conf)
+        build_conf = Configuration(build_from='image:buildroot:latest', orchestrator_deadline=4,
+                                   scratch=False, worker_deadline=3)
+
         # all values that BuildUserParams stores
         param_kwargs = {
             # 'arrangement_version': self.arrangement_version,  # calculated value
             'base_image': 'buildroot:old',
             # 'build_from': 'buildroot:old',  # only one of build_*
             # 'build_json_dir': self.build_json_dir,  # init paramater
-            'build_image': 'buildroot:latest',
+            # 'build_image': 'buildroot:latest',
             # 'build_imagestream': 'buildroot:name_label',
             'build_type': BUILD_TYPE_WORKER,
             'component': TEST_COMPONENT,
@@ -215,15 +248,15 @@ class TestBuildUserParams(object):
             'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID,
             'flatpak': False,
             # 'flatpak_base_image': self.flatpak_base_image,  # not used with false flatpack
-            'git_branch': TEST_GIT_BRANCH,
-            'git_ref': TEST_GIT_REF,
-            'git_uri': TEST_GIT_URI,
+            # 'git_branch': TEST_GIT_BRANCH,
+            # 'git_ref': TEST_GIT_REF,
+            # 'git_uri': TEST_GIT_URI,
             'image_tag': 'user/None:none-0-0',
-            'imagestream_name': TEST_IMAGESTREAM,
+            # 'imagestream_name': TEST_IMAGESTREAM,
             'isolated': False,
             'koji_parent_build': 'fedora-26-9',
             'koji_target': 'tothepoint',
-            "orchestrator_deadline": 4,
+            # "orchestrator_deadline": 4,
             'parent_images_digests': {
                 'registry.fedorahosted.org/fedora:29': {
                     'x86_64': 'registry.fedorahosted.org/fedora@sha256:8b96f2f9f88179a065738b2b37'
@@ -236,17 +269,19 @@ class TestBuildUserParams(object):
             'reactor_config_map': 'reactor-config-map',
             'reactor_config_override': 'reactor-config-override',
             'release': '29',
-            'scratch': False,
+            # 'scratch': False,
             'signing_intent': False,
             'task_id': TEST_KOJI_TASK_ID,
-            'trigger_imagestreamtag': 'base_image:latest',
+            # 'trigger_imagestreamtag': 'base_image:latest',  # generated from base_image
             'user': TEST_USER,
             # 'yum_repourls': ,  # not used with compose_ids
-            "worker_deadline": 3,
+            # "worker_deadline": 3,
         }
         # additional values that BuildUserParams requires but stores under different names
         param_kwargs.update({
+            'build_conf': build_conf,
             'name_label': 'name_label',
+            'repo_info': repo_info,
         })
         rand = '12345'
         timestr = '20170731111111'
@@ -348,10 +383,12 @@ class TestBuildUserParams(object):
 class TestSourceContainerUserParams(object):
     """Tests for source container user params"""
 
-    def get_minimal_kwargs(self, origin_nvr):
+    def get_minimal_kwargs(self, origin_nvr, conf_args=None):
+        if not conf_args:
+            conf_args = {'build_from': 'image:buildroot:latest'}
         return {
             # Params needed to avoid exceptions.
-            "build_from": "image:buildroot:latest",
+            'build_conf': Configuration(**conf_args),
             'user': TEST_USER,
             'sources_for_koji_build_nvr': origin_nvr,
         }
@@ -373,15 +410,19 @@ class TestSourceContainerUserParams(object):
         ('test-dashed-nvr-1-123', None),
     ])
     def test_all_values_and_json(self, origin_nvr, origin_id):
-        param_kwargs = self.get_minimal_kwargs(origin_nvr)
+        conf_args = {
+            "build_from": "image:buildroot:latest",
+            'orchestrator_max_run_hours': 5,
+            'reactor_config_map': 'reactor-config-map-scratch',
+            'scratch': True,
+            'worker_max_run_hours': 3,
+        }
+        param_kwargs = self.get_minimal_kwargs(origin_nvr, conf_args=conf_args)
         param_kwargs.update({
             'component': TEST_COMPONENT,
             "koji_target": "tothepoint",
-            "orchestrator_deadline": 5,
             "platform": "x86_64",
-            'scratch': True,
             "signing_intent": "test-signing-intent",
-            "worker_deadline": 3,
             "sources_for_koji_build_id": origin_id,
         })
 
@@ -413,6 +454,7 @@ class TestSourceContainerUserParams(object):
             "koji_target": "tothepoint",
             "orchestrator_deadline": 5,
             "platform": "x86_64",
+            'reactor_config_map': 'reactor-config-map-scratch',
             'scratch': True,
             "user": TEST_USER,
             "worker_deadline": 3,

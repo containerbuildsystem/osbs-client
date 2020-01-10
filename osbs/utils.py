@@ -350,10 +350,12 @@ def get_repo_info(git_uri, git_ref, git_branch=None, depth=None):
         code_dir = code_dir_info.repo_path
         depth = code_dir_info.commit_depth
         dfp = DockerfileParser(os.path.join(code_dir), cache_content=True)
-        config = RepoConfiguration(dir_path=code_dir, depth=depth)
+        config = RepoConfiguration(git_uri=git_uri, git_ref=git_ref, git_branch=git_branch,
+                                   dir_path=code_dir, depth=depth)
         tags_config = AdditionalTagsConfig(dir_path=code_dir,
                                            tags=config.container.get('tags', set()))
-    return RepoInfo(dfp, config, tags_config)
+    repo_info = RepoInfo(dfp, config, tags_config)
+    return repo_info
 
 
 def git_repo_humanish_part_from_uri(git_uri):

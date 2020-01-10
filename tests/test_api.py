@@ -138,6 +138,9 @@ class MockConfiguration(object):
         safe_modules = modules or []
         self.container_module_specs = [ModuleSpec.from_str(module) for module in safe_modules]
         self.depth = 0
+        self.git_uri = TEST_GIT_URI
+        self.git_ref = TEST_GIT_REF
+        self.git_branch = TEST_GIT_BRANCH
 
     def is_autorebuild_enabled(self):
         return False
@@ -226,7 +229,6 @@ class TestOSBS(object):
             'git_ref': TEST_GIT_REF,
             'git_branch': TEST_GIT_BRANCH,
             'user': TEST_USER,
-            'component': TEST_COMPONENT,
             'target': TEST_TARGET,
             'build_type': BUILD_TYPE_ORCHESTRATOR,
             'yum_repourls': None,
@@ -293,17 +295,27 @@ class TestOSBS(object):
     ))
     def test_create_build_build_request(self, osbs, inner_template,
                                         outer_template, customize_conf, version):
+        repo_info = self.mock_repo_info()
+
+        user_params = BuildUserParams(build_json_store=osbs.os_conf.get_build_json_store())
+        user_params.set_params(base_image='fedora23/python', build_image='image:whatever',
+                               name_label='whatever', repo_info=repo_info, **REQUIRED_BUILD_ARGS)
+
         (flexmock(utils)
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
-            .and_return(self.mock_repo_info()))
+            .and_return(repo_info))
+
+        (flexmock(osbs)
+            .should_receive('get_user_params')
+            .and_return(user_params))
 
         (flexmock(osbs)
             .should_call('get_build_request')
             .with_args(inner_template=inner_template,
                        outer_template=outer_template,
                        customize_conf=customize_conf,
-                       arrangement_version=None)
+                       user_params=user_params)
             .once())
 
         response = osbs.create_build(inner_template=inner_template,
@@ -816,11 +828,12 @@ class TestOSBS(object):
 
         required_args = copy.deepcopy(REQUIRED_BUILD_ARGS)
         # just so we stop right after checking labels when error_msgs are empty
-        required_args['git_branch'] = None
+        required_args['signing_intent'] = 'release'
+        required_args['compose_ids'] = [1, 2, 3, 4]
 
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=None, depth=None)
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info(MockParser())))
 
         with pytest.raises(OsbsValidationException) as exc:
@@ -832,7 +845,7 @@ class TestOSBS(object):
             for error in error_msgs:
                 assert error in caplog.text
         else:
-            exc_msg = "required argument 'git_branch' can't be None"
+            exc_msg = "Please only define signing_intent -OR- compose_ids, not both"
             assert exc_msg in str(exc.value)
 
     # osbs is a fixture here
@@ -861,7 +874,6 @@ class TestOSBS(object):
             'git_ref': TEST_GIT_REF,
             'git_branch': TEST_GIT_BRANCH,
             'user': TEST_USER,
-            'component': TEST_COMPONENT,
             'target': TEST_TARGET,
             'build_type': BUILD_TYPE_ORCHESTRATOR,
         }
@@ -899,8 +911,7 @@ class TestOSBS(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info(mock_df_parser=MockParser())))
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
-        req = osbs.create_build(component=TEST_COMPONENT,
-                                target=TEST_TARGET,
+        req = osbs.create_build(target=TEST_TARGET,
                                 **REQUIRED_BUILD_ARGS)
         assert req.user_params.component.value == component_override
 
@@ -2339,8 +2350,7 @@ class TestOSBS(object):
             stream = json.loads(stream_json)
             assert stream['metadata']['name'] == image_stream_name
 
-            assert (stream['metadata']['annotations'][ANNOTATION_SOURCE_REPO] ==
-                    image_repository)
+            assert stream['metadata']['annotations'][ANNOTATION_SOURCE_REPO] == image_repository
             if insecure:
                 assert stream['metadata']['annotations'][ANNOTATION_INSECURE_REPO] == 'true'
             else:
@@ -2626,26 +2636,36 @@ class TestOSBS(object):
     ])
     @pytest.mark.parametrize('skip_build', [True, False])
     def test_do_create_prod_build_branch_required(self, osbs, branch_name, skip_build):
-        (flexmock(utils)
-            .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=branch_name, depth=None)
-            .and_return(self.mock_repo_info()))
-
         inner_template = DEFAULT_INNER_TEMPLATE
         outer_template = DEFAULT_OUTER_TEMPLATE
         customize_conf = DEFAULT_CUSTOMIZE_CONF
+        repo_info = self.mock_repo_info()
+
+        user_params = BuildUserParams(build_json_store=osbs.os_conf.get_build_json_store())
+        user_params.set_params(base_image='fedora23/python', build_image='image:whatever',
+                               name_label='whatever', repo_info=repo_info, user=TEST_USER,
+                               build_type=BUILD_TYPE_ORCHESTRATOR,
+                               skip_build=skip_build)
+
+        (flexmock(utils)
+            .should_receive('get_repo_info')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=branch_name, depth=None)
+            .and_return(repo_info))
+
+        (flexmock(osbs)
+            .should_receive('get_user_params')
+            .and_return(user_params))
 
         (flexmock(osbs)
             .should_call('get_build_request')
             .with_args(inner_template=inner_template,
                        outer_template=outer_template,
                        customize_conf=customize_conf,
-                       arrangement_version=None)
-            .once())
+                       user_params=user_params))
 
         if branch_name:
             response = osbs._do_create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                                  branch_name, TEST_USER,
+                                                  branch_name, user=TEST_USER,
                                                   inner_template=inner_template,
                                                   outer_template=outer_template,
                                                   customize_conf=customize_conf,
@@ -2658,7 +2678,7 @@ class TestOSBS(object):
         else:
             with pytest.raises(OsbsException):
                 osbs._do_create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                           branch_name, TEST_USER,
+                                           branch_name, user=TEST_USER,
                                            inner_template=inner_template,
                                            outer_template=outer_template,
                                            customize_conf=customize_conf,
@@ -3030,26 +3050,36 @@ class TestOSBS(object):
                                   **REQUIRED_BUILD_ARGS)
 
     def test_do_create_prod_build_isolated_from_scratch(self, osbs):  # noqa
-        (flexmock(utils)
-         .should_receive('get_repo_info')
-         .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
-         .and_return(self.mock_repo_info(mock_df_parser=MockDfParserFromScratch())))
-
         inner_template = DEFAULT_INNER_TEMPLATE
         outer_template = DEFAULT_OUTER_TEMPLATE
         customize_conf = DEFAULT_CUSTOMIZE_CONF
+        repo_info = self.mock_repo_info(mock_df_parser=MockDfParserFromScratch())
+
+        user_params = BuildUserParams(build_json_store=osbs.os_conf.get_build_json_store())
+        user_params.set_params(base_image='scratch', build_image='image:python',
+                               name_label='scratch', repo_info=repo_info, user=TEST_USER,
+                               isolated=True, build_type=BUILD_TYPE_ORCHESTRATOR, release='0.1')
+
+        (flexmock(utils)
+            .should_receive('get_repo_info')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
+            .and_return(repo_info))
 
         (flexmock(osbs)
-         .should_call('get_build_request')
-         .with_args(inner_template=inner_template,
-                    outer_template=outer_template,
-                    customize_conf=customize_conf,
-                    arrangement_version=None)
-         .once())
+            .should_receive('get_user_params')
+            .and_return(user_params))
+
+        (flexmock(osbs)
+            .should_call('get_build_request')
+            .with_args(inner_template=inner_template,
+                       outer_template=outer_template,
+                       customize_conf=customize_conf,
+                       user_params=user_params)
+            .once())
 
         with pytest.raises(ValueError) as exc:
             osbs._do_create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                       TEST_GIT_BRANCH, TEST_USER,
+                                       TEST_GIT_BRANCH, user=TEST_USER,
                                        inner_template=inner_template,
                                        outer_template=outer_template,
                                        customize_conf=customize_conf,
