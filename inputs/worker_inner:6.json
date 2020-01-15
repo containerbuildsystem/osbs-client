@@ -56,6 +56,9 @@
     },
     {
       "name": "download_remote_source"
+    },
+    {
+      "name": "add_buildargs_in_dockerfile"
     }
   ],
   "prepublish_plugins": [

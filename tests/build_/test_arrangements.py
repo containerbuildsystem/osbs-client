@@ -332,6 +332,7 @@ class TestArrangementV6(ArrangementBase):
                 'inject_yum_repo',
                 'distribution_scope',
                 'download_remote_source',
+                'add_buildargs_in_dockerfile'
             ],
 
             'buildstep_plugins': [
