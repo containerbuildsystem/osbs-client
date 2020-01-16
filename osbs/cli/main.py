@@ -317,12 +317,17 @@ def _print_build_logs(args, osbs, build):
             logger.error("Error during fetching logs for build %s: %s", build_id, repr(ex))
 
         osbs.wait_for_build_to_finish(build_id)
-        _display_build_summary(osbs.get_build(build_id))
+        return _display_build_summary(osbs.get_build(build_id))
     else:
         if args.output == 'json':
             print_json_nicely(build.json)
         elif args.output == 'text':
             print(build_id)
+
+        if osbs.get_build(build_id).is_succeeded():
+            return 0
+        else:
+            return -1
 
 
 def cmd_build(args, osbs):
@@ -364,7 +369,7 @@ def cmd_build(args, osbs):
         print("Build skipped")
         return
 
-    _print_build_logs(args, osbs, build)
+    return _print_build_logs(args, osbs, build)
 
 
 def cmd_build_source_container(args, osbs):
@@ -382,7 +387,7 @@ def cmd_build_source_container(args, osbs):
 
     build = osbs.create_source_container_build(**build_kwargs)
 
-    _print_build_logs(args, osbs, build)
+    return _print_build_logs(args, osbs, build)
 
 
 def _display_build_summary(build):
@@ -390,8 +395,10 @@ def _display_build_summary(build):
         "",  # Empty line for cleaner display
         "build {} is {}".format(build.get_build_name(), build.status),
     ]
+    return_val = -1
 
     if build.is_succeeded():
+        return_val = 0
         all_repositories = build.get_repositories() or {}
 
         for kind, repositories in all_repositories.items():
@@ -403,6 +410,8 @@ def _display_build_summary(build):
 
     for line in output:
         print(line)
+
+    return return_val
 
 
 def cmd_build_logs(args, osbs):
@@ -948,8 +957,9 @@ def main():
     if args.capture_dir is not None:
         setup_json_capture(osbs, os_conf, args.capture_dir)
 
+    return_value = -1
     try:
-        args.func(args, osbs)
+        return_value = args.func(args, osbs)
     except AttributeError as ex:
         if hasattr(args, 'func'):
             raise
@@ -987,6 +997,7 @@ def main():
         else:
             logger.error("Exception caught: %s", repr(ex))
             return -1
+    return return_value
 
 
 if __name__ == '__main__':
