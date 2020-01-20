@@ -17,7 +17,6 @@ import json
 
 from osbs.build.user_params import (
     BuildIDParam,
-    RegistryURIsParam,
     BuildUserParams,
     SourceContainerUserParams,
     load_user_params_from_json,
@@ -42,30 +41,6 @@ class TestBuildIDParam(object):
         p = BuildIDParam()
         with pytest.raises(OsbsValidationException):
             p.value = r"\\\\@@@@||||"
-
-
-class TestRegistryURIsParam(object):
-    @pytest.mark.parametrize('suffix', ['', '/'])
-    def test_registry_uris_param_api_implicit(self, suffix):
-        p = RegistryURIsParam()
-        p.value = ['registry.example.com:5000{suffix}'.format(suffix=suffix)]
-
-        assert p.value[0].uri == 'registry.example.com:5000'  # pylint: disable=no-member
-        assert p.value[0].docker_uri == 'registry.example.com:5000'  # pylint: disable=no-member
-        assert p.value[0].version == 'v2'  # pylint: disable=no-member
-
-    def test_registry_uris_param_v2(self):
-        p = RegistryURIsParam()
-        p.value = ['registry.example.com:5000/v2']
-
-        assert p.value[0].uri == 'registry.example.com:5000'  # pylint: disable=no-member
-        assert p.value[0].docker_uri == 'registry.example.com:5000'  # pylint: disable=no-member
-        assert p.value[0].version == 'v2'  # pylint: disable=no-member
-
-    def test_registry_uris_param_v1(self):
-        p = RegistryURIsParam()
-        with pytest.raises(OsbsValidationException):
-            p.value = ['registry.example.com:5000/v1']
 
 
 class TestBuildUserParams(object):

@@ -25,7 +25,6 @@ from osbs.exceptions import OsbsValidationException
 from osbs.utils import (
     get_imagestreamtag_from_image,
     make_name_from_git,
-    RegistryURI,
     utcnow)
 
 
@@ -100,24 +99,6 @@ class BuildIDParam(BuildParam):
             raise OsbsValidationException("Build ID '%s', doesn't match regex '%s'" %
                                           (val, build_id_re))
         BuildParam.value.fset(self, val)  # pylint: disable=no-member
-
-
-class RegistryURIsParam(BuildParam):
-    """
-    Build parameter for a list of registry URIs
-
-    Each registry has a full URI, a docker URI, and a version (str).
-    """
-
-    name = "registry_uris"
-
-    def __init__(self):
-        super(RegistryURIsParam, self).__init__(self.name)
-
-    @BuildParam.value.setter  # pylint: disable=no-member
-    def value(self, val):  # pylint: disable=W0221
-        registry_uris = [RegistryURI(uri) for uri in val]
-        BuildParam.value.fset(self, registry_uris)  # pylint: disable=no-member
 
 
 def load_user_params_from_json(user_params_json):
