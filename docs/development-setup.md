@@ -97,7 +97,6 @@ build_json_dir = inputs/
 
 [local]
 openshift_url = https://localhost:8443/
-builder_openshift_url = https://<not-localhost-ip-address>:8443/
 namespace = myproject
 use_kerberos = false
 verify_ssl = false
@@ -107,7 +106,7 @@ token = <enter-the-token-here>
 
 Copy the content and place it to a file named `osbs.conf`.
 
-There are two values which you need to fill in:
+You must fill in the following value:
 
 1. `token`
 
@@ -125,29 +124,6 @@ There are two values which you need to fill in:
     ...
     token = hb1WN2Tx8yV4s4slFxhSRm24Hk_Pwma5wZiW0iadP4c
     ```
-
-2. `builder_openshift_url`
-
-    After the build is done, `atomic-reactor` wants to submit build metadata
-    back to OpenShift. So it needs to connect from build container to OpenShift
-    master, which is running in a different container. Hence this IP address
-    *cannot* be `localhost`. You can either specify IP address of container
-    where OpenShift is running, or IP address of your physical interface.
-
-    You also need to add permissions to build service account to submit results back:
-
-    ```
-    $ oc policy add-role-to-user edit system:serviceaccount:myproject:builder
-    ```
-
-    If you chose to go through public interface, firewall may be in your way:
-
-
-    ```
-    $ firewall-cmd --permanent --add-port 8443/tcp
-    $ firewall-cmd --add-port 8443/tcp
-    ```
-
 
 #### Registry
 
@@ -242,7 +218,6 @@ build_json_dir = <path to inputs in the build image>
 
 [worker01]
 openshift_url = https://<not-localhost-ip-address>:8443/
-builder_openshift_url = https://<not-localhost-ip-address>:8443/
 namespace = worker01
 use_kerberos = false
 verify_ssl = false
@@ -265,8 +240,6 @@ Finally, edit the main `osbs.conf` and add to the [local] section
 
 ```
 can_orchestrate = true
-reactor_config_secret = reactor-conf
-client_config_secret = osbs-client-conf
 ```
 
 You are now ready to perform an orchestrated build:

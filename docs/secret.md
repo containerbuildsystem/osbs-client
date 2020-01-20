@@ -24,16 +24,6 @@ You also have to allow the build pod service account to [access the secret](http
 $ oc secrets add serviceaccount/builder secrets/mysecret --for=mount
 ```
 
-## Configuring OSBS
-
-In your OSBS build instance configuration, use the following values:
-
-```
-koji_certs_secret = myothersecret
-```
-
-`koji_certs_secret` name must match the resource name specified in the JSON.
-
 ## Fetching the secrets within the build root
 
 In your `atomic-reactor` plugin which needs the secret values, provide a configuration parameter to specify the location of the Secret Volume mount. The files in that directory will match the keys from the secret resource's data (`key` and `cert`, from the JSON shown above).
