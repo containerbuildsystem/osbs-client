@@ -34,22 +34,6 @@ This document mentions several components that communicate with each other:
 Since in v2 there is no file-like representation of an image, you can transport image only via registry protocol.
 
 In order to create a v2 form, you need an instance of [distribution](https://github.com/docker/distribution) registry.
- * upstream docker registry — can be configured with `registry_uri`:
-
-```ini
-registry_uri = registry.example.com
-```
-
-   if registry requires authentication, a dockercfg should be stored in the secret:
-   ```ini
-   registry_secret = dockercfg_secret
-   ```
-
- * for backwards compatibility reasons, it is possible to suffix `registry_uri` with `/v2`.
-
-```ini
-registry_uri = registry.example.com/v2
-```
 
 
 ### About v1 builds

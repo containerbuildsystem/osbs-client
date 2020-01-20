@@ -47,31 +47,9 @@ Some options are also mandatory.
 
 * `namespace` (*optional*, `string`) — name of [kubernetes namespace](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/namespaces.md) to use
 
-* `koji_root` (*optional*, `string`) — URL of koji root (for Fedora it is `http://koji.fedoraproject.org/`)
-
-* `koji_hub` (*optional*, `string`) — URL of koji hub — XMLRPC (for Fedora it is `http://koji.fedoraproject.org/kojihub`)
-
 * `koji_target` (*optional*, `string`) — name of koji target from which packages should be fetched
 
-* `koji_certs_secret` (*optional*, `string`) — name of [kubernetes secret](https://github.com/kubernetes/kubernetes/blob/master/docs/design/secrets.md) to use for koji authentication
-
-* `koji_use_kerberos` (*optional*, `boolean`) — will set [atomic-reactor](https://github.com/containerbuildsystem/atomic-reactor) plugins to use kerberos to authenticate to koji.
-
-* `koji_kerberos_keytab` (*optional*, `string`) - location of the keytab that will be used to initialize kerberos credentials for [atomic-reactor](https://github.com/containerbuildsystem/atomic-reactor) plugins - usually in the form `FILE:<absolute_path>`, see [kerberos documentation](http://web.mit.edu/Kerberos/krb5-latest/doc/basic/keytab_def.html) for other possible values
-
-* `koji_kerberos_principal` (*optional*, `string`) - kerberos principal for the keytab provided in `koji_kerberos_keytab`
-
 * `flatpak_base_image` (*optional*, `string`) - Docker image to use when installing RPMs to create a Flatpak. This does not have to match the version of the RPMs being installed.
-
-* `odcs_url` (*optional*, `string`) - URL for API requests for the On Demand Compose Service. Needed for building Flatpaks, optional otherwise.
-
-* `odcs_insecure` (*optional*, `boolean`) - If set, valid SSL certificates will not be required for requests to `odcs_url`
-
-* `odcs_openidc_secret` (*optional*, `string`) - name of [kubernetes secret](https://github.com/kubernetes/kubernetes/blob/master/docs/design/secrets.md) to use for authenticating to the ODCS instance via OpenID. The secret must contain one key, called 'token'.
-
-* `odcs_ssl_secret` (*optional*, `string`) - name of [kubernetes secret](https://github.com/kubernetes/kubernetes/blob/master/docs/design/secrets.md) to use for authenticating to the ODCS instance via SSL Certificate. The secret must contain one key, called 'cert'.
-
-* `sources_command` (*optional*, `string`) — command to use to get dist-git artifacts from lookaside cache (e.g. `fedpkg sources`)
 
 * `username`, `password` (*optional*, `string`) — when OpenShift is hidden behind authentication proxy, you can specify username and password for basic authentication
 
@@ -85,45 +63,11 @@ Some options are also mandatory.
 
 * `kerberos_ccache` (*optional*, `string`) - location of credential cache to use when `kerberos_keytab` is set (please refer to [kerberos documentation](http://web.mit.edu/Kerberos/krb5-latest/doc/basic/ccache_def.html) for list of credential cache types)
 
-* `registry_uri` (*optional*, `string`) — docker registry URI to use for pulling and pushing images. More than one can be specified by separating them with commas. While it is possible to affix '/v2' onto the end of the registry URI for historical reasons, the `/v1` suffix is not supported. `v2` is assumed if no version suffix is provided.
-
-* `registry_api_versions` (*optional*, `string`) — comma-separated list of docker registry HTTP API versions to support, defaults to `v2`. `v1` registries are no longer supported; if 'v1' is listed, it will be ignored.
-
-* `source_registry_uri` (*optional*, `string`) — URI of docker registry from which image is pulled
-
-* `verify_ssl` (*optional*, `boolean`) — verify SSL certificates during secure connection?
-
-* `vendor` (*optional*, `string`) — content of `vendor` label to be set
-
-* `build_host` (*optional*, `string`) — content of `com.redhat.build-host` label to be set
-
-* `architecture` (*optional*, `string`) — content of `architecture` label to be set
-
-* `authoritative_registry` (*optional*, `string`) — content of `authoritative-source` label to be set
-
-* `distribution_scope` (*optional*, `string`) - content of `distribution-scope` label to be set - possible values are `private`, `authoritative-source-only`, `restricted`, and `public`
-
 * `use_auth` (*optional*, `boolean`) — by default, osbs-client is trying to authenticate against OpenShift master to get OAuth token; you may disable the process with this option
 
 * `token` (*optional*, `string`) - OAuth token used to authenticate against OpenShift
 
 * `builder_use_auth` (*optional*, `boolean`) — whether atomic-reactor plugins which in turn use osbs-client from within the build pod should try to authenticate against OpenShift master; defaults to `use_auth`
-
-* `builder_openshift_url` (*optional*, `string`) — url of OpenShift where builder will connect
-
-* `smtp_host` (*optional*, `string`) - SMTP server host, e.g. `smtp.mycompany.com`
-
-* `smtp_from` (*optional*, `string`) - Address to send notifications from, e.g. `user@mycompany.com`
-
-* `smtp_additional_addresses` (*optional*, `string`) - A comma-separated list of additional addresses to include in notifications, e.g. `user1@mycompany.com, user2@mycompany.com`
-
-* `smtp_error_addresses` (*optional*, `string`) - if the plugin has encountered an error the notification will be sent to this list of comma-separated addresses, e.g. `osbs-admin@mycompany.com, osbs-contact@mycompany.com`
-
-* `smtp_email_domain` (*optional*, `string`) - construct email for users if it cannot be guessed from Koji's kerberos principals, e.g. `mycompany.com`
-
-* `smtp_to_submitter` (*optional*, `boolean`) - whether Atomic Reactor should send a notification to koji task submitter
-
-* `smtp_to_pkgowner` (*optional*, `boolean`) - whether Atomic Reactor should send a notification to koji package owner
 
 * `cpu_limit` (*optional*, `string`) — CPU limit to apply to build (for more info, see [documentation for resources](https://github.com/containerbuildsystem/osbs-client/blob/master/docs/resource.md)
 
@@ -131,21 +75,13 @@ Some options are also mandatory.
 
 * `storage_limit` (*optional*, `string`) — storage limit to apply to build (for more info, see [documentation for resources](https://github.com/containerbuildsystem/osbs-client/blob/master/docs/resource.md)
 
-* `reactor_config_secret` (*optional*, `string`) — name of Kubernetes secret holding [atomic-reactor configuration file](https://github.com/containerbuildsystem/atomic-reactor/blob/master/docs/config.md)
-
 * `reactor_config_map` (*optional*, `string`) — name of Kubernetes ConfigMap holding [atomic-reactor configuration file](https://github.com/containerbuildsystem/atomic-reactor/blob/master/docs/config.md)
-
-* `client_config_secret` (*optional*, `string`) — name of Kubernetes secret holding osbs.conf to be used by atomic-reactor in the builder image (this is provided to the orchestrate_build plugin if present)
 
 * `token_secrets` (*optional*, `string`) — whitespace-separated list of secret names with optional mount path in the format secret[:path], which can be used to hold service account tokens referenced by token_file in the osbs_client_secret osbs.conf
 
 * `arrangement_version` (*optional*, `integer`) — default version of inner template to use when creating orchestrator build
 
 * `can_orchestrate` (*optional*, `boolean`) — allows using orchestrator build, default is false
-
-* `info_url_format` (*optional*, `string`) — format for `url` Dockerfile label, used as a Python format string; replacement field keywords are label names, and they will be replaced with the value of the named label
-
-* `artifacts_allowed_domains` (*optional*, `string`) — list of domains allowed to be used when fetching artifacts via URL. When not specified, all domains are allowed.
 
 * `scratch_build_node_selector` (*optional*, `string`) — a node selector to be applied to the scratch builds
 
@@ -156,12 +92,6 @@ Some options are also mandatory.
 * `isolated_build_node_selector` (*optional*, `string`) — a node selector to be applied to isolated builds
 
 * `node_selector.`*platform* (*optional*, `string`) — a node selector to be used for worker builds for the specified platform, or "none"
-
-* `equal_labels` (*optional*, `string`) — list of equal-preference label groups; if any of each set is missing, aliases will be added to complete the set; label delimiter ':', group delimiter ',' (e.g. `name1:name2:name3, release1:release2, version1:version2`)
-
-* `group_manifests` (*optional*, `boolean`) — whether Atomic Reactor should create manifest lists, default is false
-
-* `prefer_schema1_digest` (*optional*, `boolean`) — used by Atomic Reactor's koji_upload plugin when deciding which digest should be used in the image output files for a Koji build
 
 * `build_from` (*optional*, `string`) — build source to use, consists of 2 parts separated with delimiter ':', first part can be : image or imagestream, and second part is corresponding image or imagestream
 
