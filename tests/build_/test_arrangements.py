@@ -16,6 +16,7 @@ from osbs.constants import (DEFAULT_ARRANGEMENT_VERSION,
                             WORKER_INNER_TEMPLATE,
                             ORCHESTRATOR_OUTER_TEMPLATE)
 from osbs import utils
+from osbs.conf import Configuration
 from osbs.repo_utils import RepoInfo, ModuleSpec
 from osbs.build.build_requestv2 import BuildRequestV2
 from osbs.build.plugins_configuration import PluginsConfiguration
@@ -207,6 +208,8 @@ class ArrangementBase(object):
 
         params.update(additional_params or {})
         params['arrangement_version'] = self.ARRANGEMENT_VERSION
+        osbs.build_conf = osbs.build_conf or Configuration(params)
+
         return params, fn(**params).json
 
     def get_orchestrator_build_request(self, osbs,  # noqa:F811
@@ -253,7 +256,7 @@ class TestArrangementV6(ArrangementBase):
         'git_ref': TEST_GIT_REF,
         'git_branch': TEST_GIT_BRANCH,
         'user': 'john-foo',
-        'build_image': 'test',
+        'build_from': 'image:test',
         'reactor_config_map': 'special-config',
     }
 
@@ -377,7 +380,7 @@ class TestArrangementV6(ArrangementBase):
             'git_branch': TEST_GIT_BRANCH,
             'user': 'john-foo',
             'build_type': template.split('_')[0],
-            'build_image': 'test',
+            'build_from': 'image:test',
             'base_image': 'test',
             'name_label': 'test',
         }

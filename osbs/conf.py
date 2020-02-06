@@ -264,12 +264,6 @@ class Configuration(object):
     def get_storage_limit(self):
         return self._get_value("storage_limit", self.conf_section, "storage_limit")
 
-    def get_build_image(self):
-        return self._get_value("build_image", self.conf_section, "build_image")
-
-    def get_build_imagestream(self):
-        return self._get_value("build_imagestream", self.conf_section, "build_imagestream")
-
     def get_build_from(self):
         return self._get_value("build_from", self.conf_section, "build_from")
 

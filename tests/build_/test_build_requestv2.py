@@ -225,13 +225,13 @@ class TestBuildRequestV2(object):
         assert 'USER_PARAMS' in envs
         assert 'ATOMIC_REACTOR_PLUGINS' not in envs
 
-    @pytest.mark.parametrize(('build_image', 'build_imagestream', 'valid'), (
-        (None, None, False),
-        ('ultimate-buildroot:v1.0', None, True),
-        (None, 'buildroot-stream:v1.0', True),
-        ('ultimate-buildroot:v1.0', 'buildroot-stream:v1.0', False)
+    @pytest.mark.parametrize(('build_from', 'is_image', 'valid'), (
+        (None, False, False),
+        ('image:ultimate-buildroot:v1.0', True, 'ultimate-buildroot:v1.0'),
+        ('imagestream:buildroot-stream:v1.0', False, 'buildroot-stream:v1.0'),
+        ('buildroot-stream:v1.0', False, False)
     ))
-    def test_render_prod_request_with_repo(self, build_image, build_imagestream, valid):
+    def test_render_prod_request_with_repo(self, build_from, is_image, valid):
         name_label = "fedora/resultingimage"
         koji_task_id = 4567
         extra_kwargs = {
@@ -240,9 +240,7 @@ class TestBuildRequestV2(object):
             'yum_repourls': ["http://example.com/my.repo"],
         }
         conf_args = {
-            'build_image': build_image,
-            'build_imagestream': build_imagestream,
-            'build_from': None,
+            'build_from': build_from,
         }
 
         if not valid:
@@ -265,10 +263,8 @@ class TestBuildRequestV2(object):
         )
 
         rendered_build_image = build_json["spec"]["strategy"]["customStrategy"]["from"]["name"]
-        if not build_imagestream:
-            assert rendered_build_image == build_image
-        else:
-            assert rendered_build_image == build_imagestream
+        assert rendered_build_image == valid
+        if not is_image:
             assert build_json["spec"]["strategy"]["customStrategy"]["from"]["kind"] == \
                 "ImageStreamTag"
 

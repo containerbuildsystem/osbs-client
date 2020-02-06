@@ -165,8 +165,6 @@ class BuildCommon(object):
     def set_params(self,
                    build_conf=None,
                    build_from=None,
-                   build_image=None,
-                   build_imagestream=None,
                    component=None,
                    koji_target=None,
                    koji_task_id=None,
@@ -201,17 +199,13 @@ class BuildCommon(object):
         Please keep the paramater list alphabetized for easier tracking of changes
 
         the following parameters can be pulled from the BuildConfiguration (ie, build_conf)
-        :param build_image: str,
-        :param build_imagestream: str,
         :param build_from: str,
         :param orchestrator_deadline: int, orchestrator deadline in hours
         :param reactor_config_map: str, name of the config map containing the reactor environment
         :param worker_deadline: int, worker completion deadline in hours
         """
         if build_conf:
-            build_image = build_conf.get_build_image()
-            build_imagestream = build_conf.get_build_imagestream()
-            build_from = build_conf.get_build_from()
+            build_from = build_from or build_conf.get_build_from()
             self.scratch.value = build_conf.get_scratch(scratch)
             orchestrator_deadline = build_conf.get_orchestor_deadline()
             worker_deadline = build_conf.get_worker_deadline()
@@ -228,33 +222,19 @@ class BuildCommon(object):
         self.signing_intent.value = signing_intent
         self.user.value = user
 
-        count = 0
-        for build_arg in (build_imagestream, build_image, build_from):
-            count += 1 if build_arg else 0
-        if count == 0:
-            raise OsbsValidationException(
-                'Please define one of build_from, build_image, build_imagestream')
-        elif count > 1:
-            raise OsbsValidationException(
-                'Please only define one of build_from, build_image, build_imagestream')
-        self.build_image.value = build_image
-        self.build_imagestream.value = build_imagestream
-        if self.build_image.value or self.build_imagestream.value:
-            logger.warning("build_image or build_imagestream is defined, they are deprecated,"
-                           "use build_from instead")
+        if not build_from:
+            raise OsbsValidationException('build_from must be defined')
 
-        if build_from:
-            if ':' not in build_from:
-                raise OsbsValidationException(
-                        'build_from must be "source_type:source_value"')
-            source_type, source_value = build_from.split(':', 1)
-            if source_type not in ('image', 'imagestream'):
-                raise OsbsValidationException(
-                    'first part in build_from, may be only image or imagestream')
-            if source_type == 'image':
-                self.build_image.value = source_value
-            else:
-                self.build_imagestream.value = source_value
+        if ':' not in build_from:
+            raise OsbsValidationException('build_from must be "source_type:source_value"')
+        source_type, source_value = build_from.split(':', 1)
+        if source_type not in ('image', 'imagestream'):
+            raise OsbsValidationException(
+                'first part in build_from, may be only image or imagestream')
+        if source_type == 'image':
+            self.build_image.value = source_value
+        else:
+            self.build_imagestream.value = source_value
 
         try:
             self.orchestrator_deadline.value = int(orchestrator_deadline)
