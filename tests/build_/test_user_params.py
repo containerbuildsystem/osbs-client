@@ -231,8 +231,8 @@ class TestBuildUserParams(object):
         repo_conf = RepoConfiguration(git_branch=TEST_GIT_BRANCH, git_ref=TEST_GIT_REF,
                                       git_uri=TEST_GIT_URI)
         repo_info = RepoInfo(configuration=repo_conf)
-        build_conf = Configuration(build_from='image:buildroot:latest', orchestrator_deadline=4,
-                                   scratch=False, worker_deadline=3)
+        build_conf = Configuration(conf_file=None, build_from='image:buildroot:latest',
+                                   orchestrator_deadline=4, scratch=False, worker_deadline=3)
 
         # all values that BuildUserParams stores
         param_kwargs = {
@@ -259,7 +259,7 @@ class TestBuildUserParams(object):
             'operator_bundle_replacement_pullspecs': {
                 'foo/fedora:30': 'bar/fedora@sha256:deadbeef'
             },
-            # "orchestrator_deadline": 4,
+            # "orchestrator_deadline": 4,  # set in config
             'parent_images_digests': {
                 'registry.fedorahosted.org/fedora:29': {
                     'x86_64': 'registry.fedorahosted.org/fedora@sha256:8b96f2f9f88179a065738b2b37'
@@ -269,16 +269,16 @@ class TestBuildUserParams(object):
             # 'name': self.name,  # calculated value
             'platform': 'x86_64',
             'platforms': ['x86_64', ],
-            'reactor_config_map': 'reactor-config-map',
+            # 'reactor_config_map': 'reactor-config-map',  # set in config
             'reactor_config_override': 'reactor-config-override',
             'release': '29',
-            # 'scratch': False,
+            # 'scratch': True,  # set in config
             'signing_intent': False,
             'task_id': TEST_KOJI_TASK_ID,
             # 'trigger_imagestreamtag': 'base_image:latest',  # generated from base_image
             'user': TEST_USER,
             # 'yum_repourls': ,  # not used with compose_ids
-            # "worker_deadline": 3,
+            # "worker_deadline": 3,  # set in config
         }
         # additional values that BuildUserParams requires but stores under different names
         param_kwargs.update({
@@ -332,7 +332,6 @@ class TestBuildUserParams(object):
             },
             "platform": "x86_64",
             "platforms": ["x86_64"],
-            "reactor_config_map": "reactor-config-map",
             "reactor_config_override": "reactor-config-override",
             "release": "29",
             "trigger_imagestreamtag": "buildroot:old",

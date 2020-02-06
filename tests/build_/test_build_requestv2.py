@@ -185,12 +185,15 @@ class TestBuildRequestV2(object):
 
     def test_render_simple_request(self):
         trigger_after_koji_task = '12345'
-        extra_kwargs = {
+        conf_args = {
+            'build_from': 'image:buildroot:latest',
             'reactor_config_map': 'reactor-config-map',
+        }
+        extra_kwargs = {
             'triggered_after_koji_task': trigger_after_koji_task,
         }
 
-        user_params = get_sample_user_params(update_args=extra_kwargs)
+        user_params = get_sample_user_params(conf_args=conf_args, update_args=extra_kwargs)
         build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
         build_json = build_request.render()
 
@@ -685,12 +688,15 @@ class TestBuildRequestV2(object):
         if build_type == BUILD_TYPE_ORCHESTRATOR:
             outer_template = ORCHESTRATOR_OUTER_TEMPLATE
 
-        update_args = {
+        conf_args = {
+            'build_from': 'image:buildroot:latest',
             'reactor_config_map': reactor_config_map,
+        }
+        update_args = {
             'reactor_config_override': reactor_config_override,
             'build_type': build_type,
         }
-        user_params = get_sample_user_params(update_args=update_args)
+        user_params = get_sample_user_params(conf_args=conf_args, update_args=update_args)
         build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params,
                                        outer_template=outer_template)
         build_json = build_request.render()
@@ -765,12 +771,15 @@ class TestBuildRequestV2(object):
         if build_type == BUILD_TYPE_ORCHESTRATOR:
             outer_template = ORCHESTRATOR_OUTER_TEMPLATE
 
-        update_args = {
+        conf_args = {
+            'build_from': 'image:buildroot:latest',
             'reactor_config_map': reactor_config_map,
+        }
+        update_args = {
             'reactor_config_override': reactor_config_override,
             'build_type': build_type,
         }
-        user_params = get_sample_user_params(update_args=update_args)
+        user_params = get_sample_user_params(conf_args=conf_args, update_args=update_args)
 
         all_secrets = deepcopy(reactor_config_map)
         mock_api = MockOSBSApi(all_secrets)
@@ -846,13 +855,16 @@ class TestBuildRequestV2(object):
         if build_type == BUILD_TYPE_ORCHESTRATOR:
             outer_template = ORCHESTRATOR_OUTER_TEMPLATE
 
-        update_args = {
+        conf_args = {
+            'build_from': 'image:buildroot:latest',
             'reactor_config_map': reactor_config_map,
+        }
+        update_args = {
             'reactor_config_override': reactor_config_override,
             'build_type': build_type,
             'flatpak': flatpak,
         }
-        user_params = get_sample_user_params(update_args=update_args)
+        user_params = get_sample_user_params(conf_args=conf_args, update_args=update_args)
 
         all_secrets = deepcopy(reactor_config_map)
         mock_api = MockOSBSApi(all_secrets)
@@ -982,6 +994,7 @@ def get_sample_source_params(build_json_store=INPUTS_PATH, conf_args=None,
     # scratch handling is tricky
     if update_args:
         conf_args.setdefault('scratch', update_args.get('scratch'))
+    conf_args.setdefault('reactor_config_map', 'reactor-config-map')
 
     user_params = SourceContainerUserParams(build_json_store)
 
@@ -996,7 +1009,6 @@ def get_sample_source_params(build_json_store=INPUTS_PATH, conf_args=None,
         'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID,
         'build_conf': build_conf,
         'build_type': BUILD_TYPE_WORKER,
-        'reactor_config_map': 'reactor-config-map',
         'sources_for_koji_build_nvr': "name-1.0-123",
     }
     if update_args:

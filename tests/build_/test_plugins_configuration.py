@@ -41,8 +41,17 @@ class NoSuchPluginException(Exception):
     pass
 
 
-def get_sample_prod_params(build_type=BUILD_TYPE_ORCHESTRATOR):
-    return {
+def get_sample_build_conf(conf_args=None):
+    conf_params = {
+        'build_from': 'image:buildroot:latest',
+    }
+    if conf_args:
+        conf_params.update(conf_args)
+    return Configuration(conf_file=None, **conf_params)
+
+
+def get_sample_prod_params(build_type=BUILD_TYPE_ORCHESTRATOR, conf_args=None, extra_args=None):
+    sample_params = {
         'git_uri': TEST_GIT_URI,
         'git_ref': TEST_GIT_REF,
         'git_branch': TEST_GIT_BRANCH,
@@ -53,23 +62,24 @@ def get_sample_prod_params(build_type=BUILD_TYPE_ORCHESTRATOR):
         'koji_target': 'koji-target',
         'platforms': ['x86_64'],
         'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID,
-        'build_from': 'image:buildroot:latest',
+        'build_conf': get_sample_build_conf(conf_args),
         'build_type': build_type,
     }
-
-
-def get_sample_user_params(extra_args=None, build_type=BUILD_TYPE_ORCHESTRATOR):
-    sample_params = get_sample_prod_params(build_type)
     if extra_args:
         sample_params.update(extra_args)
+    return sample_params
+
+
+def get_sample_user_params(build_type=BUILD_TYPE_ORCHESTRATOR, conf_args=None, extra_args=None):
+    sample_params = get_sample_prod_params(build_type, conf_args, extra_args)
     user_params = BuildUserParams(INPUTS_PATH)
     user_params.set_params(**sample_params)
     return user_params
 
 
-def get_sample_source_container_params():
-    return {
-        'build_from': 'image:buildroot:latest',
+def get_sample_source_container_params(conf_args=None, extra_args=None):
+    sample_params = {
+        'build_conf': get_sample_build_conf(conf_args),
         'component': TEST_COMPONENT,
         'koji_target': 'tothepoint',
         "platform": "x86_64",
@@ -78,12 +88,13 @@ def get_sample_source_container_params():
         "sources_for_koji_build_id": 12345,
         "signing_intent": "release",
     }
-
-
-def source_container_user_params(extra_args=None):
-    sample_params = get_sample_source_container_params()
     if extra_args:
         sample_params.update(extra_args)
+    return sample_params
+
+
+def source_container_user_params(build_args=None, extra_args=None):
+    sample_params = get_sample_source_container_params(build_args, extra_args)
     user_params = SourceContainerUserParams(INPUTS_PATH)
     user_params.set_params(**sample_params)
     return user_params
@@ -148,7 +159,7 @@ class TestPluginsConfiguration(object):
 
     @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
     def test_render_koji_upload(self, build_type):
-        user_params = get_sample_user_params({'koji_upload_dir': 'test'},
+        user_params = get_sample_user_params(extra_args={'koji_upload_dir': 'test'},
                                              build_type=build_type)
         self.mock_repo_info()
         build_json = PluginsConfiguration(user_params).render()
@@ -169,7 +180,7 @@ class TestPluginsConfiguration(object):
         extra_args = []
         if not enabled:
             extra_args = {'koji_target': None}
-        user_params = get_sample_user_params(extra_args)
+        user_params = get_sample_user_params(extra_args=extra_args)
         self.mock_repo_info()
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
@@ -205,20 +216,23 @@ class TestPluginsConfiguration(object):
         ('ultimate-buildroot:v1.0', False, False)
     ))
     def test_render_request_with_yum(self, build_from, is_imagestream, valid, build_type):
+        conf_args = {
+            'build_from': build_from,
+        }
+
         extra_args = {
             'name_label': "fedora/resultingimage",
-            'build_from': build_from,
             'yum_repourls': ["http://example.com/my.repo"],
             'build_type': build_type,
         }
 
         self.mock_repo_info()
         if valid:
-            user_params = get_sample_user_params(extra_args)
+            user_params = get_sample_user_params(conf_args=conf_args, extra_args=extra_args)
             build_json = PluginsConfiguration(user_params).render()
         else:
             with pytest.raises(OsbsValidationException):
-                user_params = get_sample_user_params(extra_args)
+                user_params = get_sample_user_params(conf_args=conf_args, extra_args=extra_args)
                 build_json = PluginsConfiguration(user_params).render()
             return
 
@@ -257,7 +271,7 @@ class TestPluginsConfiguration(object):
         ({}, TEST_BUILD_CONFIG),
     ))
     def test_render_build_name(self, tmpdir, extra_args, expected_name):
-        user_params = get_sample_user_params(extra_args)
+        user_params = get_sample_user_params(extra_args=extra_args)
         self.mock_repo_info()
         build_json = PluginsConfiguration(user_params).render()
 
@@ -305,7 +319,7 @@ class TestPluginsConfiguration(object):
             'build_type': build_type,
         }
 
-        user_params = get_sample_user_params(extra_args)
+        user_params = get_sample_user_params(extra_args=extra_args)
 
         self.mock_repo_info()
         build_json = PluginsConfiguration(user_params).render()
@@ -363,7 +377,7 @@ class TestPluginsConfiguration(object):
             'flatpak_base_image': flatpak_base_image,
             'build_type': build_type,
         }
-        user_params = get_sample_user_params(extra_args)
+        user_params = get_sample_user_params(extra_args=extra_args)
         self.mock_repo_info()
         build_json = PluginsConfiguration(user_params).render()
 
@@ -386,7 +400,7 @@ class TestPluginsConfiguration(object):
             'flatpak_base_image': TEST_FLATPAK_BASE_IMAGE,
         }
 
-        user_params = get_sample_user_params(extra_args)
+        user_params = get_sample_user_params(extra_args=extra_args)
         self.mock_repo_info()
         build_json = PluginsConfiguration(user_params).render()
 
@@ -480,47 +494,34 @@ class TestPluginsConfiguration(object):
         ('imagestream:buildroot-stream:v1.0', 'imagestream:buildroot-stream:v1.0', True, False),
         (None, KeyError, False, False),
     ))
-    @pytest.mark.parametrize('additional_kwargs', (
-        {
-            'flatpak': True,
-        },
-        {},
-    ))
+    @pytest.mark.parametrize('is_flatpak', (True, False))
     def test_render_orchestrate_build(self, tmpdir, platforms,
                                       build_from, worker_build_image,
-                                      additional_kwargs, koji_parent_build, valid, image_only):
+                                      is_flatpak, koji_parent_build, valid, image_only):
         phase = 'buildstep_plugins'
         plugin = 'orchestrate_build'
 
-        kwargs = {
-            'git_uri': TEST_GIT_URI,
-            'git_ref': TEST_GIT_REF,
-            'git_branch': TEST_GIT_BRANCH,
-            'user': "john-foo",
-            'component': TEST_COMPONENT,
-            'base_image': 'fedora:latest',
+        conf_args = {
             'build_from': build_from,
+            'reactor_config_map': 'reactor-config-map',
+        }
+        extra_args = {
+            'base_image': 'fedora:latest',
+            'flatpak': is_flatpak,
             'name_label': 'fedora/resultingimage',
             'platforms': platforms,
-            'build_type': BUILD_TYPE_ORCHESTRATOR,
-            'reactor_config_map': 'reactor-config-map',
             'reactor_config_override': 'reactor-config-override',
+            'user': "john-foo",
         }
-        if build_from:
-            kwargs['build_from'] = build_from
         if koji_parent_build:
-            kwargs['koji_parent_build'] = koji_parent_build
-        kwargs.update(additional_kwargs)
-
-        self.mock_repo_info()
-        user_params = BuildUserParams(INPUTS_PATH)
+            extra_args['koji_parent_build'] = koji_parent_build
 
         if valid:
-            user_params.set_params(**kwargs)
+            user_params = get_sample_user_params(conf_args=conf_args, extra_args=extra_args)
             build_json = PluginsConfiguration(user_params).render()
         else:
             with pytest.raises(OsbsValidationException):
-                user_params.set_params(**kwargs)
+                user_params = get_sample_user_params(conf_args=conf_args, extra_args=extra_args)
                 build_json = PluginsConfiguration(user_params).render()
             return
 
@@ -550,8 +551,8 @@ class TestPluginsConfiguration(object):
                 assert 'build_from' not in worker_config_kwargs
                 assert not worker_config.get_build_from()
 
-        if kwargs.get('flatpak', False):
-            assert kwargs.get('flatpak') is True
+        if is_flatpak:
+            assert user_params.flatpak.value
 
     def test_prod_custom_base_image(self, tmpdir):
         kwargs = get_sample_prod_params()
@@ -764,7 +765,7 @@ class TestPluginsConfiguration(object):
         }
 
         self.mock_repo_info()
-        user_params = get_sample_user_params(extra_args)
+        user_params = get_sample_user_params(extra_args=extra_args)
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
 
@@ -789,7 +790,7 @@ class TestPluginsConfiguration(object):
         }
 
         self.mock_repo_info()
-        user_params = get_sample_user_params(extra_args)
+        user_params = get_sample_user_params(extra_args=extra_args)
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
 
@@ -808,7 +809,7 @@ class TestPluginsConfiguration(object):
         }
 
         self.mock_repo_info()
-        user_params = get_sample_user_params(extra_args, build_type)
+        user_params = get_sample_user_params(build_type, extra_args=extra_args)
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
         if build_type == BUILD_TYPE_WORKER:
@@ -832,7 +833,7 @@ class TestPluginsConfiguration(object):
         plugin_name = 'resolve_composes'
 
         self.mock_repo_info()
-        user_params = get_sample_user_params(additional_params)
+        user_params = get_sample_user_params(extra_args=additional_params)
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
 
@@ -845,7 +846,7 @@ class TestPluginsConfiguration(object):
         }
 
         self.mock_repo_info()
-        user_params = get_sample_user_params(additional_params)
+        user_params = get_sample_user_params(extra_args=additional_params)
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
 
@@ -864,7 +865,7 @@ class TestPluginsConfiguration(object):
         }
 
         self.mock_repo_info()
-        user_params = get_sample_user_params(additional_params)
+        user_params = get_sample_user_params(extra_args=additional_params)
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
 
@@ -886,8 +887,8 @@ class TestPluginsConfiguration(object):
     @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
     @pytest.mark.parametrize('triggered_task', (None, 12345))
     def test_render_koji_delegate(self, build_type, triggered_task):
-        user_params = get_sample_user_params({'triggered_after_koji_task': triggered_task},
-                                             build_type=build_type)
+        extra_args = {'triggered_after_koji_task': triggered_task}
+        user_params = get_sample_user_params(extra_args=extra_args, build_type=build_type)
         self.mock_repo_info()
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
@@ -909,9 +910,11 @@ class TestPluginsConfiguration(object):
     @pytest.mark.parametrize('remote_source_build_args', (None, 'some_args'))
     def test_render_download_remote_sources(self, build_type, remote_source_url,
                                             remote_source_build_args):
-        user_params = get_sample_user_params({'remote_source_url': remote_source_url,
-                                              'remote_source_build_args': remote_source_build_args},
-                                             build_type=build_type)
+        extra_args = {
+            'remote_source_url': remote_source_url,
+            'remote_source_build_args': remote_source_build_args
+        }
+        user_params = get_sample_user_params(extra_args=extra_args, build_type=build_type)
         self.mock_repo_info()
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
@@ -930,8 +933,8 @@ class TestPluginsConfiguration(object):
     @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
     @pytest.mark.parametrize('dependency_replacements', (None, ['gomod:forge.none/project:v1.0']))
     def test_render_resolve_remote_sources(self, build_type, dependency_replacements):
-        user_params = get_sample_user_params({'dependency_replacements': dependency_replacements},
-                                             build_type=build_type)
+        extra_args = {'dependency_replacements': dependency_replacements}
+        user_params = get_sample_user_params(build_type=build_type, extra_args=extra_args)
         self.mock_repo_info()
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
@@ -986,7 +989,7 @@ class TestSourceContainerPluginsConfiguration(object):
             'signing_intent': signing_intent,
         }
 
-        user_params = source_container_user_params(additional_params)
+        user_params = source_container_user_params(extra_args=additional_params)
         build_json = SourceContainerPluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
         assert get_plugin(plugins, plugin_type, plugin_name)
@@ -1004,7 +1007,7 @@ class TestSourceContainerPluginsConfiguration(object):
             'scratch': True
         }
 
-        user_params = source_container_user_params(additional_params)
+        user_params = source_container_user_params(extra_args=additional_params)
         build_json = SourceContainerPluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
 
