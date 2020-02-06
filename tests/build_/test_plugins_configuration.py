@@ -198,18 +198,16 @@ class TestPluginsConfiguration(object):
                 not pull_base_image['args']['parent_registry'])
 
     @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
-    @pytest.mark.parametrize(('build_image', 'imagestream_name', 'valid'), (
-        (None, None, False),
-        ('ultimate-buildroot:v1.0', None, True),
-        (None, 'buildroot-stream:v1.0', True),
-        ('ultimate-buildroot:v1.0', 'buildroot-stream:v1.0', False)
+    @pytest.mark.parametrize(('build_from', 'is_imagestream', 'valid'), (
+        (None, False, False),
+        ('image:ultimate-buildroot:v1.0', False, 'ultimate-buildroot:v1.0'),
+        ('imagestream:buildroot-stream:v1.0', True, 'buildroot-stream:v1.0'),
+        ('ultimate-buildroot:v1.0', False, False)
     ))
-    def test_render_request_with_yum(self, build_image, imagestream_name, valid, build_type):
+    def test_render_request_with_yum(self, build_from, is_imagestream, valid, build_type):
         extra_args = {
-            'build_image': build_image,
-            'build_imagestream': imagestream_name,
             'name_label': "fedora/resultingimage",
-            'build_from': None,
+            'build_from': build_from,
             'yum_repourls': ["http://example.com/my.repo"],
             'build_type': build_type,
         }
@@ -233,7 +231,7 @@ class TestPluginsConfiguration(object):
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "koji")
 
-        if imagestream_name and build_type == BUILD_TYPE_ORCHESTRATOR:
+        if is_imagestream and build_type == BUILD_TYPE_ORCHESTRATOR:
             assert get_plugin(plugins, "exit_plugins", "import_image")
         else:
             with pytest.raises(NoSuchPluginException):
@@ -474,19 +472,13 @@ class TestPluginsConfiguration(object):
         (None),
     ))
     @pytest.mark.parametrize('koji_parent_build', ['fedora-26-9', None])
-    @pytest.mark.parametrize(('build_from', 'build_image', 'build_imagestream',
-                              'worker_build_image', 'valid'), (
+    @pytest.mark.parametrize(('build_from', 'worker_build_image', 'valid', 'image_only'), (
 
-        ('image:fedora:latest', 'fedora:latest', None, 'fedora:latest', False),
-        ('image:fedora:latest', 'fedora:latest', 'buildroot-stream:v1.0', 'fedora:latest', False),
-        ('image:fedora:latest', None, 'buildroot-stream:v1.0', 'fedora:latest', False),
-        (None, 'fedora:latest', None, 'fedora:latest', True),
-        ('image:fedora:latest', None, None, 'fedora:latest', True),
-        ('wrong:fedora:latest', None, None, KeyError, False),
-        (None, None, 'buildroot-stream:v1.0', KeyError, True),
-        ('imagestream:buildroot-stream:v1.0', None, None, KeyError, True),
-        ('wrong:buildroot-stream:v1.0', None, None, KeyError, False),
-        (None, 'fedora:latest', 'buildroot-stream:v1.0', KeyError, False),
+        ('fedora:latest', None, False, False),
+        ('image:fedora:latest', 'image:fedora:latest', True, True),
+        ('wrong:fedora:latest', KeyError, False, False),
+        ('imagestream:buildroot-stream:v1.0', 'imagestream:buildroot-stream:v1.0', True, False),
+        (None, KeyError, False, False),
     ))
     @pytest.mark.parametrize('additional_kwargs', (
         {
@@ -495,9 +487,8 @@ class TestPluginsConfiguration(object):
         {},
     ))
     def test_render_orchestrate_build(self, tmpdir, platforms,
-                                      build_from, build_image,
-                                      build_imagestream, worker_build_image,
-                                      additional_kwargs, koji_parent_build, valid):
+                                      build_from, worker_build_image,
+                                      additional_kwargs, koji_parent_build, valid, image_only):
         phase = 'buildstep_plugins'
         plugin = 'orchestrate_build'
 
@@ -508,16 +499,13 @@ class TestPluginsConfiguration(object):
             'user': "john-foo",
             'component': TEST_COMPONENT,
             'base_image': 'fedora:latest',
+            'build_from': build_from,
             'name_label': 'fedora/resultingimage',
             'platforms': platforms,
             'build_type': BUILD_TYPE_ORCHESTRATOR,
             'reactor_config_map': 'reactor-config-map',
             'reactor_config_override': 'reactor-config-override',
         }
-        if build_image:
-            kwargs['build_image'] = build_image
-        if build_imagestream:
-            kwargs['build_imagestream'] = build_imagestream
         if build_from:
             kwargs['build_from'] = build_from
         if koji_parent_build:
@@ -553,11 +541,14 @@ class TestPluginsConfiguration(object):
         worker_config = Configuration(conf_file=None, **worker_config_kwargs)
 
         if worker_build_image is KeyError:
-            assert 'build_image' not in worker_config_kwargs
-            assert not worker_config.get_build_image()
+            assert not worker_config.get_build_from()
         else:
-            assert worker_config_kwargs['build_image'] == worker_build_image
-            assert worker_config.get_build_image() == worker_build_image
+            if image_only:
+                assert worker_config_kwargs['build_from'] == worker_build_image
+                assert worker_config.get_build_from() == worker_build_image
+            else:
+                assert 'build_from' not in worker_config_kwargs
+                assert not worker_config.get_build_from()
 
         if kwargs.get('flatpak', False):
             assert kwargs.get('flatpak') is True

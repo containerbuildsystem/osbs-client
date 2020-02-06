@@ -236,6 +236,7 @@ class TestOSBS(object):
             # Stuff that should be ignored and not cause erros
             'labels': {'Release': 'bacon'},
             'spam': 'maps',
+            'build_from': 'image:test',
         }
 
         response = osbs.create_build(**kwargs)
@@ -297,7 +298,7 @@ class TestOSBS(object):
         repo_info = self.mock_repo_info()
 
         user_params = BuildUserParams(build_json_store=osbs.os_conf.get_build_json_store())
-        user_params.set_params(base_image='fedora23/python', build_image='image:whatever',
+        user_params.set_params(base_image='fedora23/python', build_from='image:whatever',
                                name_label='whatever', repo_info=repo_info, **REQUIRED_BUILD_ARGS)
 
         (flexmock(utils)
@@ -1222,28 +1223,25 @@ class TestOSBS(object):
         }
         osbs.restore_resource("builds", {"items": [build], "kind": "BuildList", "apiVersion": "v1"})
 
-    @pytest.mark.parametrize(('build_image', 'build_imagestream', 'valid'), (
-        ('registry.example.com/buildroot:2.0', '', True),
-        ('', 'buildroot-stream:v1.0', True),
-        ('registry.example.com/buildroot:2.0', 'buildroot-stream:v1.0', False)
+    @pytest.mark.parametrize(('build_from', 'is_image', 'valid'), (
+        ('image:registry.example.com/buildroot:2.0', True, 'registry.example.com/buildroot:2.0'),
+        ('imagestream:buildroot-stream:v1.0', False, 'buildroot-stream:v1.0'),
+        ('registry.example.com/buildroot:2.0', False, False)
     ))
-    def test_build_image(self, build_image, build_imagestream, valid):
+    def test_build_image(self, build_from, is_image, valid):
         with NamedTemporaryFile(mode='wt') as fp:
             fp.write(dedent("""\
                 [general]
                 build_json_dir = {build_json_dir}
                 [default]
                 openshift_url = /
-                build_image = {build_image}
-                build_imagestream = {build_imagestream}
-                """.format(build_json_dir='inputs', build_image=build_image,
-                           build_imagestream=build_imagestream)))
+                build_from = {build_from}
+                """.format(build_json_dir='inputs', build_from=build_from)))
             fp.flush()
             config = Configuration(fp.name)
             osbs_obj = OSBS(config, config)
 
-        assert config.get_build_image() == build_image
-        assert config.get_build_imagestream() == build_imagestream
+        assert config.get_build_from() == build_from
 
         (flexmock(utils)
             .should_receive('get_repo_info')
@@ -1264,16 +1262,15 @@ class TestOSBS(object):
         img = req.json['spec']['strategy']['customStrategy']['from']['name']
         kind = req.json['spec']['strategy']['customStrategy']['from']['kind']
 
-        if build_image:
+        assert img == valid
+        if is_image:
             assert kind == 'DockerImage'
-            assert img == build_image
-
-        if build_imagestream:
+        else:
             assert kind == 'ImageStreamTag'
-            assert img == build_imagestream
 
     def test_worker_build_image_with_platform_node(self):
         build_image = 'registry.example.com/buildroot:2.0'
+        build_from = 'image:' + build_image
         with NamedTemporaryFile(mode='wt') as fp:
             fp.write(dedent("""\
                 [general]
@@ -1281,13 +1278,13 @@ class TestOSBS(object):
                 [default]
                 openshift_url = /
                 node_selector.meal = breakfast=bacon.com, lunch=ham.com
-                build_image = {build_image}
-                """.format(build_json_dir='inputs', build_image=build_image)))
+                build_from = {build_from}
+                """.format(build_json_dir='inputs', build_from=build_from)))
             fp.flush()
             config = Configuration(fp.name)
             osbs_obj = OSBS(config, config)
 
-        assert config.get_build_image() == build_image
+        assert config.get_build_from() == build_from
 
         arrangement = DEFAULT_ARRANGEMENT_VERSION
         kwargs = {
@@ -2644,7 +2641,7 @@ class TestOSBS(object):
         repo_info = self.mock_repo_info()
 
         user_params = BuildUserParams(build_json_store=osbs.os_conf.get_build_json_store())
-        user_params.set_params(base_image='fedora23/python', build_image='image:whatever',
+        user_params.set_params(base_image='fedora23/python', build_from='image:whatever',
                                name_label='whatever', repo_info=repo_info, user=TEST_USER,
                                build_type=BUILD_TYPE_ORCHESTRATOR,
                                skip_build=skip_build)
@@ -3096,7 +3093,7 @@ class TestOSBS(object):
         repo_info = self.mock_repo_info(mock_df_parser=MockDfParserFromScratch())
 
         user_params = BuildUserParams(build_json_store=osbs.os_conf.get_build_json_store())
-        user_params.set_params(base_image='scratch', build_image='image:python',
+        user_params.set_params(base_image='scratch', build_from='image:python',
                                name_label='scratch', repo_info=repo_info, user=TEST_USER,
                                isolated=True, build_type=BUILD_TYPE_ORCHESTRATOR, release='0.1')
 

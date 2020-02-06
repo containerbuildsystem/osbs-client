@@ -42,7 +42,7 @@ build_host=localhost
         f.seek(0)
         os_conf = Configuration(conf_file=f.name,
                                 conf_section="default")
-        assert os_conf.get_build_image() is None
+        assert os_conf.get_build_from() is None
 
 
 def test_no_inputs():
