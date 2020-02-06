@@ -224,12 +224,11 @@ class TestOSBS(object):
             .and_return(self.mock_repo_info()))
 
         kwargs = {
-            'git_uri': TEST_GIT_URI,
+            'git_url': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
             'git_branch': TEST_GIT_BRANCH,
             'user': TEST_USER,
             'target': TEST_TARGET,
-            'build_type': BUILD_TYPE_ORCHESTRATOR,
             'yum_repourls': None,
             'koji_task_id': None,
             'scratch': False,
@@ -299,6 +298,7 @@ class TestOSBS(object):
 
         user_params = BuildUserParams(build_json_store=osbs.os_conf.get_build_json_store())
         user_params.set_params(base_image='fedora23/python', build_from='image:whatever',
+                               build_conf=osbs.build_conf,
                                name_label='whatever', repo_info=repo_info, **REQUIRED_BUILD_ARGS)
 
         (flexmock(utils)
@@ -1731,6 +1731,7 @@ class TestOSBS(object):
             user='user',
             # for build request v1
             base_image='old_registry.com/fedora23/python',
+            build_conf=osbs_obj.build_conf,
             name_label='name_label',
             git_uri='https://github.com/user/reponame.git',
             build_from='image:buildroot:latest',
@@ -2642,6 +2643,7 @@ class TestOSBS(object):
 
         user_params = BuildUserParams(build_json_store=osbs.os_conf.get_build_json_store())
         user_params.set_params(base_image='fedora23/python', build_from='image:whatever',
+                               build_conf=osbs.build_conf,
                                name_label='whatever', repo_info=repo_info, user=TEST_USER,
                                build_type=BUILD_TYPE_ORCHESTRATOR,
                                skip_build=skip_build)
@@ -2833,6 +2835,7 @@ class TestOSBS(object):
         spec.set_params(
             user='user',
             base_image='fedora23/python',
+            build_conf=osbs_obj.build_conf,
             name_label='name_label',
             git_uri='https://github.com/user/reponame.git',
             build_from='image:buildroot:latest',
@@ -2980,6 +2983,7 @@ class TestOSBS(object):
             name_label='name_label',
             git_uri='https://github.com/user/reponame.git',
             build_from='image:buildroot:latest',
+            build_conf=osbs_obj.build_conf,
         )
 
         build_request = flexmock(
@@ -3094,6 +3098,7 @@ class TestOSBS(object):
 
         user_params = BuildUserParams(build_json_store=osbs.os_conf.get_build_json_store())
         user_params.set_params(base_image='scratch', build_from='image:python',
+                               build_conf=osbs.build_conf,
                                name_label='scratch', repo_info=repo_info, user=TEST_USER,
                                isolated=True, build_type=BUILD_TYPE_ORCHESTRATOR, release='0.1')
 

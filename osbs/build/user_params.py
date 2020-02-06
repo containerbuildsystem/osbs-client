@@ -168,14 +168,11 @@ class BuildCommon(object):
                    component=None,
                    koji_target=None,
                    koji_task_id=None,
-                   orchestrator_deadline=None,
                    platform=None,
-                   reactor_config_map=None,
                    reactor_config_override=None,
                    scratch=None,
                    signing_intent=None,
                    user=None,
-                   worker_deadline=None,
                    **kwargs):
         """
         set parameters in the user parameters.
@@ -198,26 +195,25 @@ class BuildCommon(object):
 
         Please keep the paramater list alphabetized for easier tracking of changes
 
-        the following parameters can be pulled from the BuildConfiguration (ie, build_conf)
+        the following parameters are pulled from the BuildConfiguration (ie, build_conf)
         :param build_from: str,
         :param orchestrator_deadline: int, orchestrator deadline in hours
         :param reactor_config_map: str, name of the config map containing the reactor environment
         :param worker_deadline: int, worker completion deadline in hours
         """
-        if build_conf:
-            build_from = build_from or build_conf.get_build_from()
-            self.scratch.value = build_conf.get_scratch(scratch)
-            orchestrator_deadline = build_conf.get_orchestor_deadline()
-            worker_deadline = build_conf.get_worker_deadline()
-            reactor_config_map = reactor_config_map or build_conf.get_reactor_config_map()
-        else:
-            self.scratch.value = scratch
+        if not build_conf:
+            raise OsbsValidationException('build_conf must be defined')
+
+        build_from = build_from or build_conf.get_build_from()
+        self.scratch.value = build_conf.get_scratch(scratch)
+        orchestrator_deadline = build_conf.get_orchestor_deadline()
+        worker_deadline = build_conf.get_worker_deadline()
 
         self.component.value = component
         self.koji_target.value = koji_target
         self.koji_task_id.value = koji_task_id
         self.platform.value = platform
-        self.reactor_config_map.value = reactor_config_map
+        self.reactor_config_map.value = build_conf.get_reactor_config_map()
         self.reactor_config_override.value = reactor_config_override
         self.signing_intent.value = signing_intent
         self.user.value = user
@@ -448,7 +444,7 @@ class BuildUserParams(BuildCommon):
 
         Please keep the paramater list alphabetized for easier tracking of changes
 
-        the following parameters can be pulled from the BuildConfiguration (ie, build_conf)
+        the following parameters are pulled from the BuildConfiguration (ie, build_conf)
         :param auto_build_node_selector: dict, a nodeselector for auto builds
         :param explicit_build_node_selector: dict, a nodeselector for explicit builds
         :param isolated_build_node_selector: dict, a nodeselector for isolated builds
@@ -473,12 +469,11 @@ class BuildUserParams(BuildCommon):
         elif not git_uri:
             raise OsbsValidationException('no repo_info passed to BuildUserParams')
 
-        if build_conf:
-            auto_build_node_selector = build_conf.get_auto_build_node_selector()
-            explicit_build_node_selector = build_conf.get_explicit_build_node_selector()
-            isolated_build_node_selector = build_conf.get_isolated_build_node_selector()
-            platform_node_selector = build_conf.get_platform_node_selector(platform)
-            scratch_build_node_selector = build_conf.get_scratch_build_node_selector()
+        auto_build_node_selector = build_conf.get_auto_build_node_selector()
+        explicit_build_node_selector = build_conf.get_explicit_build_node_selector()
+        isolated_build_node_selector = build_conf.get_isolated_build_node_selector()
+        platform_node_selector = build_conf.get_platform_node_selector(platform)
+        scratch_build_node_selector = build_conf.get_scratch_build_node_selector()
 
         self.additional_tags.value = additional_tags or set()
         self.git_branch.value = git_branch

@@ -374,13 +374,17 @@ class TestArrangementV6(ArrangementBase):
 
     # override
     def get_plugins_from_buildrequest(self, build_request, template):
+        conf_kwargs = {
+           'build_from': 'image:test',
+           'reactor_config_map': 'reactor-config-map',
+        }
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
             'git_branch': TEST_GIT_BRANCH,
             'user': 'john-foo',
             'build_type': template.split('_')[0],
-            'build_from': 'image:test',
+            'build_conf': Configuration(conf_file=None, **conf_kwargs),
             'base_image': 'test',
             'name_label': 'test',
         }
@@ -406,12 +410,6 @@ class TestArrangementV6(ArrangementBase):
                 break
         else:
             raise KeyError('USER_PARAMS not set in env')
-
-        for entry in env:
-            if entry['name'] == 'REACTOR_CONFIG':
-                break
-        else:
-            raise KeyError('REACTOR_CONFIG not set in env')
 
         plugins_json = osbs.render_plugins_configuration(user_params)
         for entry in env:
