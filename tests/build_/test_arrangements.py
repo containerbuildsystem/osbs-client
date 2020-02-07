@@ -283,6 +283,7 @@ class TestArrangementV6(ArrangementBase):
                 'inject_parent_image',
                 'pull_base_image',
                 'bump_release',
+                'add_flatpak_labels',
                 'add_labels_in_dockerfile',
                 PLUGIN_KOJI_PARENT_KEY,
                 PLUGIN_RESOLVE_COMPOSES_KEY,
@@ -326,6 +327,7 @@ class TestArrangementV6(ArrangementBase):
                 PLUGIN_ADD_FILESYSTEM_KEY,
                 'inject_parent_image',
                 'pull_base_image',
+                'add_flatpak_labels',
                 'add_labels_in_dockerfile',
                 'change_from_in_dockerfile',
                 'add_help',
@@ -746,6 +748,8 @@ class TestArrangementV6(ArrangementBase):
 
         with pytest.raises(KeyError):
             plugin_value_get(plugins, 'prebuild_plugins', 'flatpak_create_dockerfile', 'args')
+        with pytest.raises(KeyError):
+            plugin_value_get(plugins, 'prebuild_plugins', 'add_flatpak_labels', 'args')
 
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "postbuild_plugins", "import_image")
@@ -767,6 +771,8 @@ class TestArrangementV6(ArrangementBase):
             get_plugin(plugins, "prebuild_plugins", "resolve_module_compose")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins", "add_flatpak_labels")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
 

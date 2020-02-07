@@ -252,6 +252,15 @@ class PluginsConfigurationBase(object):
             self.pt.set_plugin_arg_valid(phase, plugin, 'koji_target',
                                          self.user_params.koji_target.value)
 
+    def render_add_flatpak_labels(self):
+        phase = 'prebuild_plugins'
+        plugin = 'add_flatpak_labels'
+
+        if self.pt.has_plugin_conf(phase, plugin):
+            if not self.user_params.flatpak.value:
+                self.pt.remove_plugin(phase, plugin)
+                return
+
     def render_add_labels_in_dockerfile(self):
         phase = 'prebuild_plugins'
         plugin = 'add_labels_in_dockerfile'
@@ -603,6 +612,7 @@ class PluginsConfiguration(PluginsConfigurationBase):
 
         # Set parameters on each plugin as needed
         self.render_add_filesystem()
+        self.render_add_flatpak_labels()
         self.render_add_labels_in_dockerfile()
         self.render_add_yum_repo_by_url()
         self.render_bump_release()
