@@ -353,6 +353,14 @@ class BuildRequestV2(BaseBuildRequest):
     def skip_build(self):
         return self.user_params.skip_build.value
 
+    @property
+    def triggered_after_koji_task(self):
+        return self.user_params.triggered_after_koji_task.value
+
+    @property
+    def base_image(self):
+        return self.user_params.base_image.value
+
     # Override
     @property
     def trigger_imagestreamtag(self):

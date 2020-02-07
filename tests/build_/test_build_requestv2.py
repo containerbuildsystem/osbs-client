@@ -195,6 +195,8 @@ class TestBuildRequestV2(object):
         build_json = build_request.render()
 
         assert build_request.user_params.triggered_after_koji_task.value == trigger_after_koji_task
+        assert build_request.triggered_after_koji_task == trigger_after_koji_task
+        assert build_request.base_image == user_params.base_image.value
 
         assert build_json["metadata"]["name"] is not None
         assert "triggers" not in build_json["spec"]
