@@ -268,6 +268,7 @@ class TestPluginsConfiguration(object):
     flatpak_plugins = [
         ("ow", "prebuild_plugins", "resolve_module_compose"),
         ("ow", "prebuild_plugins", "flatpak_create_dockerfile"),
+        ("ow", "prebuild_plugins", "add_flatpak_labels"),
         ("w", "prepublish_plugins", "flatpak_create_oci"),
     ]
 
@@ -333,6 +334,8 @@ class TestPluginsConfiguration(object):
             assert args['signing_intent'] == signing_intent
 
         plugin = get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
+        assert plugin
+        plugin = get_plugin(plugins, "prebuild_plugins", "add_flatpak_labels")
         assert plugin
 
         if build_type == BUILD_TYPE_ORCHESTRATOR:

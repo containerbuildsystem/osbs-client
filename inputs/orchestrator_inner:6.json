@@ -40,6 +40,9 @@
       "name": "bump_release"
     },
     {
+      "name": "add_flatpak_labels"
+    },
+    {
       "name": "add_labels_in_dockerfile"
     },
     {
