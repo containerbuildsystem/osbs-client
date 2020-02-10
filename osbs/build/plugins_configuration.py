@@ -229,7 +229,6 @@ class PluginsConfigurationBase(object):
         """
         if self.user_params.flatpak.value:
             remove_plugins = [
-                ("prebuild_plugins", "resolve_composes"),
                 # We'll extract the filesystem anyways for a Flatpak instead of exporting
                 # the docker image directly, so squash just slows things down.
                 ("prepublish_plugins", "squash"),
@@ -318,6 +317,19 @@ class PluginsConfigurationBase(object):
 
         if not self.user_params.flatpak.value:
             self.pt.remove_plugin(phase, plugin)
+
+    def render_flatpak_update_dockerfile(self):
+        phase = 'prebuild_plugins'
+        plugin = 'flatpak_update_dockerfile'
+
+        if self.pt.has_plugin_conf(phase, plugin):
+
+            if not self.user_params.flatpak.value:
+                self.pt.remove_plugin(phase, plugin)
+                return
+
+            self.pt.set_plugin_arg_valid(phase, plugin, 'compose_ids',
+                                         self.user_params.compose_ids.value)
 
     def render_koji(self):
         """
@@ -478,21 +490,6 @@ class PluginsConfigurationBase(object):
         self.pt.set_plugin_arg_valid(phase, plugin, 'repourls',
                                      self.user_params.yum_repourls.value)
 
-    def render_resolve_module_compose(self):
-        phase = 'prebuild_plugins'
-        plugin = 'resolve_module_compose'
-
-        if self.pt.has_plugin_conf(phase, plugin):
-            if not self.user_params.flatpak.value:
-                self.pt.remove_plugin(phase, plugin)
-                return
-
-            self.pt.set_plugin_arg_valid(phase, plugin, 'compose_ids',
-                                         self.user_params.compose_ids.value)
-
-            self.pt.set_plugin_arg_valid(phase, plugin, 'signing_intent',
-                                         self.user_params.signing_intent.value)
-
     def render_tag_from_config(self):
         """Configure tag_from_config plugin"""
         phase = 'postbuild_plugins'
@@ -626,6 +623,7 @@ class PluginsConfiguration(PluginsConfigurationBase):
         self.render_check_and_set_platforms()
         self.render_flatpak_create_dockerfile()
         self.render_flatpak_create_oci()
+        self.render_flatpak_update_dockerfile()
         self.render_import_image()
         self.render_inject_parent_image()
         self.render_koji()
@@ -635,7 +633,6 @@ class PluginsConfiguration(PluginsConfigurationBase):
         self.render_orchestrate_build()
         self.render_pull_base_image()
         self.render_resolve_composes()
-        self.render_resolve_module_compose()
         self.render_tag_from_config()
         self.render_koji_delegate()
         self.render_download_remote_source()

@@ -266,14 +266,13 @@ class TestPluginsConfiguration(object):
         assert get_plugins_from_build_json(build_json)
 
     flatpak_plugins = [
-        ("ow", "prebuild_plugins", "resolve_module_compose"),
         ("ow", "prebuild_plugins", "flatpak_create_dockerfile"),
+        ("ow", "prebuild_plugins", "flatpak_update_dockerfile"),
         ("ow", "prebuild_plugins", "add_flatpak_labels"),
         ("w", "prepublish_plugins", "flatpak_create_oci"),
     ]
 
     not_flatpak_plugins = [
-        ("o", "prebuild_plugins", "resolve_composes"),
         ("w", "prepublish_plugins", "squash"),
         ("o", "exit_plugins", "import_image"),
     ]
@@ -318,7 +317,14 @@ class TestPluginsConfiguration(object):
         self.check_plugin_presence(build_type, plugins,
                                    self.flatpak_plugins, self.not_flatpak_plugins)
 
-        plugin = get_plugin(plugins, "prebuild_plugins", "resolve_module_compose")
+        if build_type == BUILD_TYPE_ORCHESTRATOR:
+            plugin = get_plugin(plugins, "prebuild_plugins", "resolve_composes")
+            assert plugin
+
+        plugin = get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
+        assert plugin
+
+        plugin = get_plugin(plugins, "prebuild_plugins", "flatpak_update_dockerfile")
         assert plugin
 
         args = plugin['args']
@@ -328,13 +334,6 @@ class TestPluginsConfiguration(object):
         else:
             assert args['compose_ids'] == compose_ids
 
-        if signing_intent is None:
-            assert 'signing_intent' not in args
-        else:
-            assert args['signing_intent'] == signing_intent
-
-        plugin = get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
-        assert plugin
         plugin = get_plugin(plugins, "prebuild_plugins", "add_flatpak_labels")
         assert plugin
 
