@@ -23,7 +23,7 @@ def test_missing_config():
 
 
 def test_no_config():
-    os_conf = Configuration(conf_file=None, openshift_uri='https://example:8443')
+    os_conf = Configuration(conf_file=None, openshift_url='https://example:8443')
     assert os_conf.get_openshift_oauth_api_uri() == 'https://example:8443/oauth/authorize'
 
 
@@ -52,7 +52,7 @@ def test_no_inputs():
 build_json_dir=/nonexistent/path/
 
 [default]
-openshift_uri=https://172.0.0.1:8443/
+openshift_url=https://172.0.0.1:8443/
 registry_uri=127.0.0.1:5000
 """)
         f.flush()
