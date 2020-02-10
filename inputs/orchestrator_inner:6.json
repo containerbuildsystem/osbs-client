@@ -37,6 +37,12 @@
       }
     },
     {
+      "name": "koji_parent"
+    },
+    {
+      "name": "resolve_composes"
+    },
+    {
       "name": "bump_release"
     },
     {
@@ -44,12 +50,6 @@
     },
     {
       "name": "add_labels_in_dockerfile"
-    },
-    {
-      "name": "koji_parent"
-    },
-    {
-      "name": "resolve_composes"
     },
     {
       "name": "resolve_remote_source"
