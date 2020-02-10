@@ -277,13 +277,13 @@ class TestArrangementV6(ArrangementBase):
                 'check_and_set_rebuild',
                 'koji_delegate',
                 PLUGIN_CHECK_AND_SET_PLATFORMS_KEY,
-                'resolve_module_compose',
                 'flatpak_create_dockerfile',
                 PLUGIN_ADD_FILESYSTEM_KEY,
                 'inject_parent_image',
                 'pull_base_image',
                 PLUGIN_KOJI_PARENT_KEY,
                 PLUGIN_RESOLVE_COMPOSES_KEY,
+                'flatpak_update_dockerfile',
                 'bump_release',
                 'add_flatpak_labels',
                 'add_labels_in_dockerfile',
@@ -322,8 +322,8 @@ class TestArrangementV6(ArrangementBase):
         WORKER_INNER_TEMPLATE: {
             'prebuild_plugins': [
                 'reactor_config',
-                'resolve_module_compose',
                 'flatpak_create_dockerfile',
+                'flatpak_update_dockerfile',
                 PLUGIN_ADD_FILESYSTEM_KEY,
                 'inject_parent_image',
                 'pull_base_image',
@@ -480,8 +480,6 @@ class TestArrangementV6(ArrangementBase):
 
         assert get_plugin(plugins, 'prebuild_plugins', 'reactor_config')
         assert get_plugin(plugins, 'prebuild_plugins', PLUGIN_RESOLVE_COMPOSES_KEY)
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, 'prebuild_plugins', 'resolve_module_compose')
 
     @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
     def test_import_image_renders(self, osbs, scratch):
@@ -731,16 +729,21 @@ class TestArrangementV6(ArrangementBase):
         plugins = get_plugins_from_build_json(build_json)
 
         if worker:
-            args = plugin_value_get(plugins, 'prebuild_plugins', 'resolve_module_compose', 'args')
-            match_args = {'compose_ids': [42]}
-            assert match_args == args
-
             plugin = get_plugin(plugins, "prebuild_plugins", "koji")
             assert plugin
 
             args = plugin['args']
             assert args['target'] == "koji-target"
+
+            plugin = get_plugin(plugins, "prebuild_plugins", "flatpak_update_dockerfile")
+            assert plugin
+
+            args = plugin['args']
+            assert args['compose_ids'] == [42]
         else:
+            with pytest.raises(KeyError):
+                plugin_value_get(plugins, 'prebuild_plugins', 'flatpak_update_dockerfile', 'args')
+
             args = plugin_value_get(plugins, 'buildstep_plugins', PLUGIN_BUILD_ORCHESTRATE_KEY,
                                     'args')
             build_kwargs = args['build_kwargs']
@@ -768,9 +771,9 @@ class TestArrangementV6(ArrangementBase):
         plugins = get_plugins_from_build_json(build_json)
 
         with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "prebuild_plugins", "resolve_module_compose")
-        with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
+        with pytest.raises(NoSuchPluginException):
+            get_plugin(plugins, "prebuild_plugins", "flatpak_update_dockerfile")
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, "prebuild_plugins", "add_flatpak_labels")
         with pytest.raises(NoSuchPluginException):

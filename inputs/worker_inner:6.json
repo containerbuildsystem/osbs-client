@@ -4,10 +4,10 @@
       "name": "reactor_config"
     },
     {
-      "name": "resolve_module_compose"
+      "name": "flatpak_create_dockerfile"
     },
     {
-      "name": "flatpak_create_dockerfile"
+      "name": "flatpak_update_dockerfile"
     },
     {
       "name": "add_filesystem"
