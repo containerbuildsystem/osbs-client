@@ -220,10 +220,10 @@ class OSBS(object):
                                               storage=storage_limit)
 
     @osbsapi
-    def get_build_request(self, build_type=None, inner_template=None,
+    def get_build_request(self, inner_template=None,
                           outer_template=None, customize_conf=None,
                           arrangement_version=DEFAULT_ARRANGEMENT_VERSION,
-                          user_params=None,
+                          user_params=None, **kwargs
                           ):
         """
         return instance of BuildRequestV2
@@ -236,9 +236,6 @@ class OSBS(object):
 
         :return: instance of BuildRequestV2
         """
-        if build_type is not None:
-            warnings.warn("build types are deprecated, do not use the build_type argument")
-
         validate_arrangement_version(arrangement_version)
 
         build_request = BuildRequestV2(

@@ -224,7 +224,7 @@ class TestOSBS(object):
             .and_return(self.mock_repo_info()))
 
         kwargs = {
-            'git_url': TEST_GIT_URI,
+            'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
             'git_branch': TEST_GIT_BRANCH,
             'user': TEST_USER,
@@ -232,6 +232,7 @@ class TestOSBS(object):
             'yum_repourls': None,
             'koji_task_id': None,
             'scratch': False,
+            'build_type': BUILD_TYPE_ORCHESTRATOR,
             # Stuff that should be ignored and not cause erros
             'labels': {'Release': 'bacon'},
             'spam': 'maps',
