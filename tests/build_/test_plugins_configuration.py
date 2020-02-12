@@ -911,6 +911,29 @@ class TestPluginsConfiguration(object):
             with pytest.raises(NoSuchPluginException):
                 assert get_plugin(plugins, 'prebuild_plugins', 'download_remote_source')
 
+    @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
+    @pytest.mark.parametrize('dependency_replacements', (None, ['gomod:forge.none/project:v1.0']))
+    def test_render_resolve_remote_sources(self, build_type, dependency_replacements):
+        user_params = get_sample_user_params({'dependency_replacements': dependency_replacements},
+                                             build_type=build_type)
+        self.mock_repo_info()
+        build_json = PluginsConfiguration(user_params).render()
+        plugins = get_plugins_from_build_json(build_json)
+        if build_type == BUILD_TYPE_ORCHESTRATOR:
+            assert get_plugin(plugins, 'prebuild_plugins', 'resolve_remote_source')
+            plugin_args = plugin_value_get(plugins, 'prebuild_plugins',
+                                           'resolve_remote_source', 'args')
+
+            if plugin_args.get('dependency_replacements'):
+                assert plugin_args.get('dependency_replacements') == dependency_replacements
+            else:
+                assert isinstance(plugin_args.get('dependency_replacements'), list)
+                assert not len(plugin_args.get('dependency_replacements'))
+
+        else:
+            with pytest.raises(NoSuchPluginException):
+                assert get_plugin(plugins, 'prebuild_plugins', 'resolve_remote_source')
+
 
 class TestSourceContainerPluginsConfiguration(object):
 

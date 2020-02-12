@@ -344,6 +344,7 @@ def cmd_build(args, osbs):
         'tag': osbs.build_conf.get_tag(),
         'target': osbs.build_conf.get_koji_target(),
         'yum_repourls': osbs.build_conf.get_yum_repourls(),
+        'dependency_replacements': osbs.build_conf.get_dependency_replacements(),
         'scratch': args.scratch,
         'platform': args.platform,
         'platforms': args.platforms,
@@ -730,6 +731,10 @@ def cli():
     build_parser.add_argument("--compose-id", action='append', required=False,
                               dest="compose_ids", type=int, help="ODCS compose"
                               "used, may be used multiple times")
+    build_parser.add_argument("--replace-dependency", action='append',
+                              metavar="pkg_manager:name:version[:new_name]",
+                              dest="dependency_replacements",
+                              help="Cachito dependency replacement")
 
     build_source_container_parser = subparsers.add_parser(
         str_on_2_unicode_on_3('build-source-container'),

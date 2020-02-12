@@ -344,6 +344,7 @@ class BuildUserParams(BuildCommon):
         self.compose_ids = BuildParam("compose_ids", allow_none=True)
         self.customize_conf_path = BuildParam("customize_conf", allow_none=True,
                                               default=customize_conf or DEFAULT_CUSTOMIZE_CONF)
+        self.dependency_replacements = BuildParam("dependency_replacements")
         self.filesystem_koji_task_id = BuildParam("filesystem_koji_task_id", allow_none=True)
         self.flatpak = BuildParam('flatpak', default=False)
         self.git_branch = BuildParam('git_branch')
@@ -390,6 +391,7 @@ class BuildUserParams(BuildCommon):
                    build_conf=None,
                    build_type=None,
                    compose_ids=None,
+                   dependency_replacements=None,
                    filesystem_koji_task_id=None,
                    flatpak=None,
                    git_branch=None,
@@ -426,6 +428,8 @@ class BuildUserParams(BuildCommon):
         :param build_conf: BuildConfiguration, optional build configuration
         :param build_type: str, orchestrator or worker
         :param compose_ids: list of int, ODCS composes to use instead of generating new ones
+        :param dependency_replacements: list of str, dependencies to be replaced by cachito, as
+        pkg_manager:name:version[:new_name]
         :param filesystem_koji_task_id: int, Koji Task that created the base filesystem
         :param flatpak: if we should build a Flatpak OCI Image
         :param git_branch: str, branch name of the branch to be pulled
@@ -530,9 +534,12 @@ class BuildUserParams(BuildCommon):
                 'Please only define signing_intent -OR- compose_ids, not both')
         if not (compose_ids is None or isinstance(compose_ids, list)):
             raise OsbsValidationException("compose_ids must be a list")
+        if not (dependency_replacements is None or isinstance(dependency_replacements, list)):
+            raise OsbsValidationException("dependency_replacements must be a list")
         if not (yum_repourls is None or isinstance(yum_repourls, list)):
             raise OsbsValidationException("yum_repourls must be a list")
         self.compose_ids.value = compose_ids or []
+        self.dependency_replacements.value = dependency_replacements or []
         self.yum_repourls.value = yum_repourls or []
 
         if (self.scratch.value, self.is_auto.value, self.isolated.value).count(True) > 1:
