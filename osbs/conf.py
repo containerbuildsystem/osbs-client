@@ -198,6 +198,10 @@ class Configuration(object):
     def get_yum_repourls(self):
         return self._get_value("yum_repourls", self.conf_section, "yum_repourls")
 
+    def get_dependency_replacements(self):
+        return self._get_value("dependency_replacements", self.conf_section,
+                               "dependency_replacements")
+
     def get_namespace(self):
         return self._get_value("namespace", self.conf_section, "namespace",
                                default=DEFAULT_NAMESPACE)
