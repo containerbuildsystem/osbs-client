@@ -129,8 +129,12 @@ class BuildCommon(object):
             "arrangement_version",
             allow_none=True,
             default=REACTOR_CONFIG_ARRANGEMENT_VERSION)
+        # build_from contains the full build_from string, including the source type prefix
+        self.build_from = BuildParam('build_from')
+        # build_image contains the buildroot name, whether the buildroot is a straight image or an
+        # imagestream.  buildroot_is_imagestream indicates what type of buildroot
         self.build_image = BuildParam('build_image')
-        self.build_imagestream = BuildParam('build_imagestream')
+        self.buildroot_is_imagestream = BuildParam('buildroot_is_imagestream', default=False)
         self.build_json_dir = BuildParam('build_json_dir', default=build_json_store)
         self.kind = BuildParam(KIND_KEY, default=self.KIND)
         self.component = BuildParam('component')
@@ -227,10 +231,10 @@ class BuildCommon(object):
         if source_type not in ('image', 'imagestream'):
             raise OsbsValidationException(
                 'first part in build_from, may be only image or imagestream')
-        if source_type == 'image':
-            self.build_image.value = source_value
-        else:
-            self.build_imagestream.value = source_value
+        if source_type == 'imagestream':
+            self.buildroot_is_imagestream.value = True
+        self.build_from.value = build_from
+        self.build_image.value = source_value
 
         try:
             self.orchestrator_deadline.value = int(orchestrator_deadline)

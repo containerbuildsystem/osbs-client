@@ -482,7 +482,7 @@ class PluginsConfigurationBase(object):
 
         config_kwargs = {}
 
-        if not self.user_params.build_imagestream.value:
+        if not self.user_params.buildroot_is_imagestream.value:
             config_kwargs['build_from'] = 'image:' + self.user_params.build_image.value
 
         self.pt.set_plugin_arg(phase, plugin, 'config_kwargs', config_kwargs)
