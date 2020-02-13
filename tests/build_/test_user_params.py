@@ -303,6 +303,7 @@ class TestBuildUserParams(object):
         expected_json = {
             "arrangement_version": REACTOR_CONFIG_ARRANGEMENT_VERSION,
             "base_image": "buildroot:old",
+            "build_from": "image:buildroot:latest",
             "build_image": "buildroot:latest",
             "build_json_dir": build_json_dir,
             "build_type": "worker",
@@ -448,6 +449,7 @@ class TestSourceContainerUserParams(object):
 
         expected_json = {
             "arrangement_version": REACTOR_CONFIG_ARRANGEMENT_VERSION,
+            "build_from": "image:buildroot:latest",
             "build_image": "buildroot:latest",
             "build_json_dir": build_json_dir,
             'component': TEST_COMPONENT,

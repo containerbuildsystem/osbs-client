@@ -101,11 +101,9 @@ class BaseBuildRequest(object):
     def render_custom_strategy(self):
         """Render data about buildroot used for custom strategy"""
         custom_strategy = self.template['spec']['strategy']['customStrategy']
-        if self.user_params.build_imagestream.value:
+        if self.user_params.buildroot_is_imagestream.value:
             custom_strategy['from']['kind'] = 'ImageStreamTag'
-            custom_strategy['from']['name'] = self.user_params.build_imagestream.value
-        else:
-            custom_strategy['from']['name'] = self.user_params.build_image.value
+        custom_strategy['from']['name'] = self.user_params.build_image.value
 
     def render_name(self):
         """Sets the Build/BuildConfig object name"""
