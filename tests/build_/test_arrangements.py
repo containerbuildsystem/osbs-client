@@ -39,7 +39,6 @@ import pytest
 # of osbs-client
 # But we need to verify the input json against the actual keys, so keeping this list
 # up to date is the best solution.
-PLUGIN_KOJI_PROMOTE_PLUGIN_KEY = 'koji_promote'
 PLUGIN_KOJI_IMPORT_PLUGIN_KEY = 'koji_import'
 PLUGIN_KOJI_UPLOAD_PLUGIN_KEY = 'koji_upload'
 PLUGIN_KOJI_TAG_BUILD_KEY = 'koji_tag_build'

@@ -197,7 +197,6 @@ class PluginsConfigurationBase(object):
                 ("postbuild_plugins", "compress"),  # required only to make an archive for Koji
                 ("postbuild_plugins", "compare_components"),
                 ("postbuild_plugins", "import_image"),
-                ("exit_plugins", "koji_promote"),
                 ("exit_plugins", "koji_tag_build"),
                 ("exit_plugins", "import_image"),
                 ("prebuild_plugins", "check_and_set_rebuild"),
