@@ -856,7 +856,6 @@ class TestPluginsConfiguration(object):
             ("postbuild_plugins", "compress"),
             ("postbuild_plugins", "compare_components"),
             ("postbuild_plugins", "import_image"),
-            ("exit_plugins", "koji_promote"),
             ("exit_plugins", "koji_tag_build"),
             ("exit_plugins", "import_image"),
             ("prebuild_plugins", "check_and_set_rebuild"),
