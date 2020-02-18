@@ -89,6 +89,8 @@ def osbsapi(func):
     return catch_exceptions
 
 
+_REQUIRED_PARAM = object()
+
 logger = logging.getLogger(__name__)
 
 LogEntry = namedtuple('LogEntry', ['platform', 'line'])
@@ -678,7 +680,8 @@ class OSBS(object):
         return user_params
 
     def _do_create_prod_build(self,
-                              git_uri, git_ref, git_branch,
+                              git_uri=_REQUIRED_PARAM, git_ref=_REQUIRED_PARAM,
+                              git_branch=_REQUIRED_PARAM,
                               inner_template=None,
                               outer_template=None,
                               customize_conf=None,
@@ -690,6 +693,14 @@ class OSBS(object):
                               koji_task_id=None,
                               target=None,
                               **kwargs):
+
+        required_params = {"git_uri": git_uri, "git_ref": git_ref, "git_branch": git_branch}
+        missing_params = []
+        for param_name, param_arg in required_params.items():
+            if param_arg is _REQUIRED_PARAM:
+                missing_params.append(param_name)
+        if missing_params:
+            raise OsbsException('required parameter {} missing'.format(", ".join(missing_params)))
 
         if flatpak:
             if isolated:
