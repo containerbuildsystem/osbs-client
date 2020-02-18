@@ -2688,6 +2688,44 @@ class TestOSBS(object):
                                            build_type=BUILD_TYPE_ORCHESTRATOR,
                                            skip_build=skip_build)
 
+    def test_do_create_prod_build_missing_params(self, osbs, caplog):  # noqa
+        with pytest.raises(OsbsException):
+            osbs._do_create_prod_build(user=TEST_USER,
+                                       inner_template=DEFAULT_INNER_TEMPLATE,
+                                       outer_template=DEFAULT_OUTER_TEMPLATE,
+                                       customize_conf=DEFAULT_CUSTOMIZE_CONF,
+                                       build_type=BUILD_TYPE_ORCHESTRATOR)
+            assert 'git_uri' in caplog.text
+
+        with pytest.raises(OsbsException):
+            osbs._do_create_prod_build(TEST_GIT_URI, user=TEST_USER,
+                                       inner_template=DEFAULT_INNER_TEMPLATE,
+                                       outer_template=DEFAULT_OUTER_TEMPLATE,
+                                       customize_conf=DEFAULT_CUSTOMIZE_CONF,
+                                       build_type=BUILD_TYPE_ORCHESTRATOR)
+            assert 'git_uri' not in caplog.text
+            assert 'git_ref' in caplog.text
+
+        with pytest.raises(OsbsException):
+            osbs._do_create_prod_build(TEST_GIT_URI, TEST_GIT_REF, user=TEST_USER,
+                                       inner_template=DEFAULT_INNER_TEMPLATE,
+                                       outer_template=DEFAULT_OUTER_TEMPLATE,
+                                       customize_conf=DEFAULT_CUSTOMIZE_CONF,
+                                       build_type=BUILD_TYPE_ORCHESTRATOR)
+            assert 'git_uri' not in caplog.text
+            assert 'git_ref' not in caplog.text
+            assert 'git_branch' in caplog.text
+
+        with pytest.raises(OsbsException):
+            osbs._do_create_prod_build(user=TEST_USER,
+                                       inner_template=DEFAULT_INNER_TEMPLATE,
+                                       outer_template=DEFAULT_OUTER_TEMPLATE,
+                                       customize_conf=DEFAULT_CUSTOMIZE_CONF,
+                                       build_type=BUILD_TYPE_ORCHESTRATOR)
+            assert 'git_uri' in caplog.text
+            assert 'git_ref' in caplog.text
+            assert 'git_branch' in caplog.text
+
     # osbs is a fixture here
     def test_config_map(self, osbs):  # noqa
         with open(os.path.join(INPUTS_PATH, "config_map.json")) as fp:
