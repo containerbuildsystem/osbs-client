@@ -7,14 +7,18 @@ of the BSD license. See the LICENSE file for details.
 """
 
 
-from __future__ import absolute_import
+from __future__ import print_function, absolute_import, unicode_literals
 
 from osbs.exceptions import OsbsException
 from osbs.constants import REPO_CONFIG_FILE, ADDITIONAL_TAGS_FILE, REPO_CONTAINER_CONFIG
 from six import StringIO
 from six.moves.configparser import ConfigParser
+from pkg_resources import resource_stream
 from textwrap import dedent
 
+import codecs
+import json
+import jsonschema
 import logging
 import os
 import re
@@ -22,6 +26,52 @@ import yaml
 
 
 logger = logging.getLogger(__name__)
+
+
+def read_yaml_from_file_path(file_path, schema):
+    with open(file_path) as f:
+        yaml_data = f.read()
+    return read_yaml(yaml_data, schema)
+
+
+def read_yaml(yaml_data, schema):
+    """
+    :param yaml_data: string, yaml content
+    """
+    try:
+        resource = resource_stream('osbs', schema)
+        schema = codecs.getreader('utf-8')(resource)
+    except (IOError, TypeError):
+        logger.error('unable to extract JSON schema, cannot validate')
+        raise
+
+    try:
+        schema = json.load(schema)
+    except ValueError:
+        logger.error('unable to decode JSON schema, cannot validate')
+        raise
+    data = yaml.safe_load(yaml_data)
+    validator = jsonschema.Draft4Validator(schema=schema)
+    try:
+        jsonschema.Draft4Validator.check_schema(schema)
+        validator.validate(data)
+    except jsonschema.SchemaError:
+        logger.error('invalid schema, cannot validate')
+        raise
+    except jsonschema.ValidationError:
+        for error in validator.iter_errors(data):
+            path = "".join(
+                ('[{}]' if isinstance(element, int) else '.{}').format(element)
+                for element in error.path
+            )
+
+            if path.startswith('.'):
+                path = path[1:]
+
+            logger.error('validation error (%s): %s', path or 'at top level', error.message)
+        raise
+
+    return data
 
 
 class RepoInfo(object):
