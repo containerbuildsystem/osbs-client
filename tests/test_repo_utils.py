@@ -116,14 +116,10 @@ class TestRepoConfiguration(object):
         with pytest.raises(OsbsException) as exc_info:
             RepoConfiguration(dir_path=str(tmpdir))
 
-        err_msg = (
-            'Failed to parse YAML file "{file_basename}": while scanning a simple key\n'
-            '  in "{file}", line 2, column 1\n'
-            "could not find expected ':'\n"
-            '  in "{file}", line 2, column 4'
-        ).format(file=yaml_file, file_basename=REPO_CONTAINER_CONFIG)
-
-        assert str(exc_info.value) == err_msg
+        err_msg = str(exc_info.value)
+        assert 'Failed to load or validate container file "{}"'.format(yaml_file) in err_msg
+        assert "could not find expected ':'" in err_msg
+        assert 'line 2, column 4:' in err_msg
 
     @pytest.mark.parametrize(('config_value', 'expected_value'), (
         (None, False),
