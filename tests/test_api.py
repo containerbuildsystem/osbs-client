@@ -263,7 +263,7 @@ class TestOSBS(object):
         with pytest.raises(OsbsException) as exc_info:
             osbs.create_build(**kwargs)
 
-        err_msg = 'Failed to parse YAML file "{file}"'.format(file=REPO_CONTAINER_CONFIG)
+        err_msg = 'Failed to load or validate container file "{}"'.format(repo_config)
         assert err_msg in str(exc_info.value)
 
     # osbs is a fixture here

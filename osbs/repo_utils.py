@@ -132,13 +132,12 @@ class RepoConfiguration(object):
 
         file_path = os.path.join(dir_path, REPO_CONTAINER_CONFIG)
         if os.path.exists(file_path):
-            with open(file_path) as f:
-                try:
-                    self.container = yaml.safe_load(f) or {}
-                except yaml.scanner.ScannerError as e:
-                    msg = ('Failed to parse YAML file "{file}": {reason}'
-                           .format(file=REPO_CONTAINER_CONFIG, reason=e))
-                    raise OsbsException(msg)
+            try:
+                self.container = read_yaml_from_file_path(file_path, 'schemas/container.json') or {}
+            except Exception as e:
+                msg = ('Failed to load or validate container file "{file}": {reason}'
+                       .format(file=file_path, reason=e))
+                raise OsbsException(msg)
 
         # container values may be set to None
         container_compose = self.container.get('compose') or {}
