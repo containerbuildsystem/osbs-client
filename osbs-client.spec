@@ -98,6 +98,7 @@ Summary:        Python 3 module for OpenShift Build Service
 Group:          Development/Tools
 License:        BSD
 Requires:       python3-dockerfile-parse
+Requires:       python3-jsonschema
 Requires:       python3-requests
 Requires:       python3-requests-kerberos
 Requires:       python3-dateutil
@@ -122,6 +123,7 @@ Summary:        Python 2 module for OpenShift Build Service
 Group:          Development/Tools
 License:        BSD
 Requires:       python-dockerfile-parse
+Requires:       python-jsonschema
 Requires:       python-requests
 Requires:       python-requests-kerberos
 Requires:       python-setuptools
