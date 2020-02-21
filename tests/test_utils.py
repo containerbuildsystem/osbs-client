@@ -474,6 +474,9 @@ def test_get_instance_token_file_name():
     ({"com.redhat.delivery.appregistry": "true"},
      ("get_name_and_value", Labels.LABEL_TYPE_OPERATOR_MANIFESTS),
      ("com.redhat.delivery.appregistry", "true")),
+    ({"com.redhat.delivery.operator.bundle": "true"},
+     ("get_name_and_value", Labels.LABEL_TYPE_OPERATOR_BUNDLE_MANIFESTS),
+     ("com.redhat.delivery.operator.bundle", "true")),
 ])
 def test_labels(labels, fnc, expect):
     label = Labels(labels)
