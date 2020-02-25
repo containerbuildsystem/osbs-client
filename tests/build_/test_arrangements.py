@@ -273,6 +273,7 @@ class TestArrangementV6(ArrangementBase):
         ORCHESTRATOR_INNER_TEMPLATE: {
             'prebuild_plugins': [
                 'reactor_config',
+                'check_user_settings',
                 'check_and_set_rebuild',
                 'koji_delegate',
                 PLUGIN_CHECK_AND_SET_PLATFORMS_KEY,
