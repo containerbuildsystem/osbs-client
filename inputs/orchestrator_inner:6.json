@@ -27,9 +27,6 @@
       "name": "flatpak_create_dockerfile"
     },
     {
-      "name": "add_filesystem"
-    },
-    {
       "name": "inject_parent_image"
     },
     {
@@ -53,6 +50,9 @@
     },
     {
       "name": "resolve_composes"
+    },
+    {
+      "name": "add_filesystem"
     },
     {
       "name": "resolve_remote_source"

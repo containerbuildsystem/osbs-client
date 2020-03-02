@@ -279,7 +279,6 @@ class TestArrangementV6(ArrangementBase):
                 PLUGIN_CHECK_AND_SET_PLATFORMS_KEY,
                 'resolve_module_compose',
                 'flatpak_create_dockerfile',
-                PLUGIN_ADD_FILESYSTEM_KEY,
                 'inject_parent_image',
                 'pull_base_image',
                 'bump_release',
@@ -287,6 +286,7 @@ class TestArrangementV6(ArrangementBase):
                 'add_labels_in_dockerfile',
                 PLUGIN_KOJI_PARENT_KEY,
                 PLUGIN_RESOLVE_COMPOSES_KEY,
+                PLUGIN_ADD_FILESYSTEM_KEY,
                 'resolve_remote_source',
             ],
 
