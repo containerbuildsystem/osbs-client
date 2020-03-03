@@ -319,6 +319,12 @@ class TestPluginsConfiguration(object):
                                    self.flatpak_plugins, self.not_flatpak_plugins)
 
         plugin = get_plugin(plugins, "prebuild_plugins", "resolve_module_compose")
+        if build_type == BUILD_TYPE_ORCHESTRATOR:
+
+            plugin = get_plugin(plugins, "prebuild_plugins", "check_user_settings")
+            assert plugin
+            assert plugin['args']['flatpak'], "Plugin has not set flatpak arg to True"
+
         assert plugin
 
         args = plugin['args']
