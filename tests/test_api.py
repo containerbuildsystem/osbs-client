@@ -102,7 +102,6 @@ class CustomTestException(Exception):
     """
     Custom Exception used to prematurely end function call
     """
-    pass
 
 
 class MockDfParser(object):

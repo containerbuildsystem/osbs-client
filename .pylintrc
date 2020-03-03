@@ -35,6 +35,7 @@ disable=I,
         comprehension-escape, # throws false positives on 1.9.0 (Fedora 29)
         exception-escape, # throws false positives on 1.9.0 (Fedora 29)
         fixme,
+        import-outside-toplevel,
         invalid-name,
         keyword-arg-before-vararg,  # nice to have
         len-as-condition,  # nice to have
