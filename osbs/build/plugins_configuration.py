@@ -302,6 +302,13 @@ class PluginsConfigurationBase(object):
                     # Malformed config
                     logger.info('Invalid custom configuration found for enable_plugins')
 
+    def render_check_user_settings(self):
+        phase = 'prebuild_plugins'
+        plugin = 'check_user_settings'
+        if self.pt.has_plugin_conf(phase, plugin):
+            self.pt.set_plugin_arg_valid(phase, plugin, 'flatpak',
+                                         self.user_params.flatpak.value)
+
     def render_flatpak_create_dockerfile(self):
         phase = 'prebuild_plugins'
         plugin = 'flatpak_create_dockerfile'
@@ -624,6 +631,7 @@ class PluginsConfiguration(PluginsConfigurationBase):
         self.render_add_yum_repo_by_url()
         self.render_bump_release()
         self.render_check_and_set_platforms()
+        self.render_check_user_settings()
         self.render_flatpak_create_dockerfile()
         self.render_flatpak_create_oci()
         self.render_import_image()
