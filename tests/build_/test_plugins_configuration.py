@@ -321,6 +321,10 @@ class TestPluginsConfiguration(object):
             plugin = get_plugin(plugins, "prebuild_plugins", "resolve_composes")
             assert plugin
 
+            plugin = get_plugin(plugins, "prebuild_plugins", "check_user_settings")
+            assert plugin
+            assert plugin['args']['flatpak'], "Plugin has not set flatpak arg to True"
+
         plugin = get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
         assert plugin
 
