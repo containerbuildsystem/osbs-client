@@ -424,6 +424,15 @@ class PluginsConfigurationBase(object):
         set_arg('platform', self.user_params.platform.value)
         set_arg('report_multiple_digests', True)
 
+    def render_pin_operator_digest(self):
+        phase = 'prebuild_plugins'
+        name = 'pin_operator_digest'
+
+        replacement_pullspecs = self.user_params.operator_bundle_replacement_pullspecs.value
+
+        if replacement_pullspecs and self.pt.has_plugin_conf(phase, name):
+            self.pt.set_plugin_arg(phase, name, 'replacement_pullspecs', replacement_pullspecs)
+
     def render_export_operator_manifests(self):
         phase = 'postbuild_plugins'
         name = 'export_operator_manifests'
@@ -637,6 +646,7 @@ class PluginsConfiguration(PluginsConfigurationBase):
         self.render_koji()
         self.render_koji_tag_build()
         self.render_koji_upload()
+        self.render_pin_operator_digest()
         self.render_export_operator_manifests()
         self.render_orchestrate_build()
         self.render_pull_base_image()

@@ -62,6 +62,9 @@
     },
     {
       "name": "add_buildargs_in_dockerfile"
+    },
+    {
+      "name": "pin_operator_digest"
     }
   ],
   "prepublish_plugins": [

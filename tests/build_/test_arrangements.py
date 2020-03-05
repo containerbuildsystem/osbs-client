@@ -288,6 +288,7 @@ class TestArrangementV6(ArrangementBase):
                 'add_flatpak_labels',
                 'add_labels_in_dockerfile',
                 'resolve_remote_source',
+                'pin_operator_digest',
             ],
 
             'buildstep_plugins': [
@@ -340,7 +341,8 @@ class TestArrangementV6(ArrangementBase):
                 'inject_yum_repo',
                 'distribution_scope',
                 'download_remote_source',
-                'add_buildargs_in_dockerfile'
+                'add_buildargs_in_dockerfile',
+                'pin_operator_digest',
             ],
 
             'buildstep_plugins': [

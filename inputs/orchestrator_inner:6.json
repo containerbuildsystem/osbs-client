@@ -56,6 +56,9 @@
     },
     {
       "name": "resolve_remote_source"
+    },
+    {
+      "name": "pin_operator_digest"
     }
   ],
   "buildstep_plugins": [
