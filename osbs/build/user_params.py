@@ -357,6 +357,9 @@ class BuildUserParams(BuildCommon):
         self.koji_parent_build = BuildParam('koji_parent_build', allow_none=True)
         self.koji_upload_dir = BuildParam('koji_upload_dir', allow_none=True)
         self.name = BuildIDParam()
+        self.operator_bundle_replacement_pullspecs = BuildParam(
+            'operator_bundle_replacement_pullspecs', allow_none=True
+        )
         self.operator_manifests_extract_platform = BuildParam('operator_manifests_extract_platform',
                                                               allow_none=True)
         self.parent_images_digests = BuildParam('parent_images_digests', allow_none=True)
@@ -403,6 +406,7 @@ class BuildUserParams(BuildCommon):
                    koji_parent_build=None,
                    koji_upload_dir=None,
                    name_label=None,
+                   operator_bundle_replacement_pullspecs=None,
                    operator_manifests_extract_platform=None,
                    auto_build_node_selector=None,
                    explicit_build_node_selector=None,
@@ -441,6 +445,9 @@ class BuildUserParams(BuildCommon):
         :param koji_upload_dir: str, koji directory where the completed image will be uploaded
         :param name_label: str, label of the parent image
         :param user: str, name of the user requesting the build
+        :param operator_bundle_replacement_pullspecs: dict, mapping of original pullspecs to
+                                                      replacement pullspecs for operator manifest
+                                                      bundle builds
         :param operator_manifests_extract_platform: str, indicates which platform should upload
                                                     operator manifests to koji
         :param parent_images_digests: dict, mapping image digests to names and platforms
@@ -516,6 +523,7 @@ class BuildUserParams(BuildCommon):
         self.parent_images_digests.value = parent_images_digests
         self.platforms.value = platforms
         self.operator_manifests_extract_platform.value = operator_manifests_extract_platform
+        self.operator_bundle_replacement_pullspecs.value = operator_bundle_replacement_pullspecs
         self.skip_build.value = skip_build
         self.tags_from_yaml.value = tags_from_yaml
         self.triggered_after_koji_task.value = triggered_after_koji_task

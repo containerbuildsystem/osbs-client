@@ -256,6 +256,9 @@ class TestBuildUserParams(object):
             'isolated': False,
             'koji_parent_build': 'fedora-26-9',
             'koji_target': 'tothepoint',
+            'operator_bundle_replacement_pullspecs': {
+                'foo/fedora:30': 'bar/fedora@sha256:deadbeef'
+            },
             # "orchestrator_deadline": 4,
             'parent_images_digests': {
                 'registry.fedorahosted.org/fedora:29': {
@@ -317,6 +320,9 @@ class TestBuildUserParams(object):
             "koji_parent_build": "fedora-26-9",
             "koji_target": "tothepoint",
             "name": "path-master-cd1e4",
+            'operator_bundle_replacement_pullspecs': {
+                'foo/fedora:30': 'bar/fedora@sha256:deadbeef'
+            },
             "orchestrator_deadline": 4,
             'parent_images_digests': {
                 'registry.fedorahosted.org/fedora:29': {
