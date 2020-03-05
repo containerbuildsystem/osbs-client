@@ -88,6 +88,10 @@ class OsbsWatchBuildNotFound(OsbsException):
     """ watch stream ended and build was not found """
 
 
+class OsbsCommitNotFound(OsbsException):
+    """Commit was not found in repo"""
+
+
 class ImportImageFailed(OsbsException):
     """Import image via ImageStream failed"""
 

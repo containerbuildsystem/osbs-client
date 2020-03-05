@@ -31,7 +31,7 @@ from osbs.utils import (buildconfig_update,
                         get_instance_token_file_name, Labels, sanitize_version,
                         has_triggers, strip_registry_and_tag_from_image,
                         clone_git_repo, get_repo_info)
-from osbs.exceptions import OsbsException
+from osbs.exceptions import OsbsException, OsbsCommitNotFound
 from tests.constants import (TEST_DOCKERFILE_GIT, TEST_DOCKERFILE_SHA1, TEST_DOCKERFILE_INIT_SHA1,
                              TEST_DOCKERFILE_BRANCH)
 import osbs.kerberos_ccache
@@ -579,10 +579,10 @@ def test_calc_depth_git_repo(tmpdir):
 @requires_internet
 def test_clone_git_repo_commit_failure(tmpdir, commit, branch, depth):
     tmpdir_path = str(tmpdir.realpath())
-    with pytest.raises(OsbsException) as exc:
+    with pytest.raises(OsbsCommitNotFound) as exc:
         clone_git_repo(TEST_DOCKERFILE_GIT, tmpdir_path, commit=commit, retry_times=1,
                        branch=branch, depth=depth)
-    assert 'cannot find commit' in exc.value.message
+    assert 'Commit {} is not reachable in branch {}'.format(commit, branch) in str(exc)
 
 
 def test_clone_git_repo_total_failure(tmpdir):
