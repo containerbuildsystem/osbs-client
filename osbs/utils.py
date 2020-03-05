@@ -46,7 +46,8 @@ except ImportError:
     from calendar import timegm
 
 from dockerfile_parse import DockerfileParser
-from osbs.exceptions import OsbsException, OsbsResponseException, OsbsValidationException
+from osbs.exceptions import (OsbsException, OsbsResponseException,
+                             OsbsValidationException, OsbsCommitNotFound)
 
 logger = logging.getLogger(__name__)
 ClonedRepoData = namedtuple('ClonedRepoData', ['repo_path', 'commit_id', 'commit_depth'])
@@ -256,7 +257,11 @@ def clone_git_repo(git_url, target_dir=None, commit=None, retry_times=GIT_MAX_RE
             # we are using check_output, even though we aren't using
             # the return value, but we will get 'output' in exception
             subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-            repo_commit, repo_depth = reset_git_repo(target_dir, commit, depth)
+            try:
+                repo_commit, repo_depth = reset_git_repo(target_dir, commit, depth)
+            except OsbsCommitNotFound as exc:
+                raise OsbsCommitNotFound("Commit {} is not reachable in branch {}, reason: {}"
+                                         .format(commit, branch, exc))
             break
         except subprocess.CalledProcessError as exc:
             if counter != retry_times:
@@ -293,15 +298,16 @@ def reset_git_repo(target_dir, git_reference, retry_depth=None):
             break
         except subprocess.CalledProcessError:
             if not deepen:
-                raise OsbsException('cannot find commit %s in repo %s' %
-                                    (git_reference, target_dir))
+                raise OsbsCommitNotFound('cannot find commit {} in repo {}'.format(
+                                         git_reference, target_dir))
             deepen *= 2
             cmd = ["git", "fetch", "--depth", str(deepen)]
             subprocess.check_call(cmd, cwd=target_dir)
             logger.debug("Couldn't find commit %s, increasing depth with '%s'", git_reference,
                          cmd)
     else:
-        raise OsbsException('cannot find commit %s in repo %s' % (git_reference, target_dir))
+        raise OsbsCommitNotFound('cannot find commit {} in repo {}'.format(
+                                  git_reference, target_dir))
 
     cmd = ["git", "rev-parse", "HEAD"]
     logger.debug("getting SHA-1 of provided ref '%s'", git_reference)
