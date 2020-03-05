@@ -922,15 +922,17 @@ class TestBuildRequestV2(object):
                 'flatpak': {'base_image': config_override}
             }
 
-        update_args = {
+        conf_args = {
+            'build_from': 'image:buildroot:latest',
             'reactor_config_map': reactor_config_map,
+        }
+        update_args = {
             'reactor_config_override': reactor_config_override,
             'base_image': user_params,
             'build_type': build_type,
             'flatpak': True,
         }
-
-        user_params = get_sample_user_params(update_args=update_args)
+        user_params = get_sample_user_params(conf_args=conf_args, update_args=update_args)
 
         all_secrets = deepcopy(reactor_config_map)
         mock_api = MockOSBSApi(all_secrets)

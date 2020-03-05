@@ -144,6 +144,8 @@ class ArrangementBase(object):
                 self.depth = int(depth) if depth else 0
                 self.is_flatpak = False
                 self.flatpak_base_image = None
+                self.flatpak_component = None
+                self.flatpak_name = None
                 self.git_uri = git_uri
                 self.git_ref = git_ref
                 self.git_branch = git_branch
