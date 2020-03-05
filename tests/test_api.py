@@ -139,6 +139,7 @@ class MockConfiguration(object):
         safe_modules = modules or []
         self.container_module_specs = [ModuleSpec.from_str(module) for module in safe_modules]
         self.depth = 0
+        self.flatpak_base_image = None
         self.is_flatpak = is_flatpak
         self.git_uri = TEST_GIT_URI
         self.git_ref = TEST_GIT_REF
@@ -2596,7 +2597,7 @@ class TestOSBS(object):
         (flexmock(utils)
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
-            .and_return(self.mock_repo_info(mock_config=MockConfiguration(TEST_MODULES))))
+            .and_return(self.mock_repo_info(mock_config=MockConfiguration(modules=TEST_MODULES))))
 
         args = MockArgs(isolated)
         # Some of the command line arguments are pulled through the config

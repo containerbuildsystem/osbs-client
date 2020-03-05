@@ -369,14 +369,15 @@ class BuildRequestV2(BaseBuildRequest):
         flatpak_key = 'flatpak'
         flatpak_base_image_key = 'base_image'
 
-        if self.user_params.flatpak.value:
+        if self.user_params.flatpak.value and not self.user_params.base_image.value:
             flatpack_base_image = (
                 reactor_config_data.get(flatpak_key, {}).get(flatpak_base_image_key, None)
             )
             if flatpack_base_image:
                 self.user_params.base_image.value = flatpack_base_image
             else:
-                raise OsbsValidationException("flatpak_base_image must be provided")
+                raise OsbsValidationException(
+                    "Flatpak base_image must be be set in container.yaml or reactor config")
 
     def set_required_secrets(self, reactor_config_data):
         """
@@ -398,8 +399,9 @@ class BuildRequestV2(BaseBuildRequest):
         super(BuildRequestV2, self).set_data_from_reactor_config(reactor_config_data)
 
         if not reactor_config_data:
-            if self.user_params.flatpak.value:
-                raise OsbsValidationException("flatpak_base_image must be provided")
+            if self.user_params.flatpak.value and not self.user_params.base_image.value:
+                raise OsbsValidationException(
+                    "Flatpak base_image must be be set in container.yaml or reactor config")
             else:
                 return
 
