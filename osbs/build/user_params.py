@@ -512,9 +512,9 @@ class BuildUserParams(BuildCommon):
                 raise OsbsValidationException("base_image must be provided")
             self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
 
-            if not name_label:
-                raise OsbsValidationException("name_label must be provided")
-            self.imagestream_name.value = name_label.replace('/', '-')
+        if not name_label:
+            raise OsbsValidationException("name_label must be provided")
+        self.imagestream_name.value = name_label.replace('/', '-')
 
         if kwargs.get('signing_intent') and compose_ids:
             raise OsbsValidationException(

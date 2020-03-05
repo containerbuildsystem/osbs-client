@@ -1903,6 +1903,17 @@ class TestOSBS(object):
             'reactor_config_override': {'flatpak': {'base_image': 'base_image'}},
         }
 
+        # Sanity check the user params we create
+        old = osbs.get_user_params
+
+        def get_user_params(**kwargs):
+            user_params = old(**kwargs)
+            assert user_params.base_image.value is None
+            assert user_params.component.value == 'mod_name'
+            assert user_params.imagestream_name.value == 'mod_name'
+            return user_params
+        osbs.get_user_params = get_user_params
+
         response = osbs.create_build(**kwargs)
         assert isinstance(response, BuildResponse)
 

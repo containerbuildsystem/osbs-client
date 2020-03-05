@@ -286,7 +286,6 @@ class TestPluginsConfiguration(object):
 
     not_flatpak_plugins = [
         ("w", "prepublish_plugins", "squash"),
-        ("o", "exit_plugins", "import_image"),
     ]
 
     def check_plugin_presence(self, build_type, plugins, invited_plugins, uninvited_plugins):
