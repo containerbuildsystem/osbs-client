@@ -761,11 +761,6 @@ class TestArrangementV6(ArrangementBase):
         with pytest.raises(KeyError):
             plugin_value_get(plugins, 'prebuild_plugins', 'add_flatpak_labels', 'args')
 
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "postbuild_plugins", "import_image")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "exit_plugins", "import_image")
-
     @pytest.mark.parametrize('worker', [True, False])  # noqa:F811
     def test_not_flatpak(self, osbs, worker):
         additional_params = {
