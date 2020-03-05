@@ -140,14 +140,17 @@ class TestRepoInfo(object):
             assert value == 'image1'
             assert repo_info.base_image == 'fedora:latest'
 
-    @pytest.mark.parametrize('modules,expected_name,expected_component', (
-        (None, None, None),
-        ([], None, None),
-        (['mod_name:mod_stream:mod_version'], 'mod_name', 'mod_name'),
-        (['mod_name:mod_stream:mod_version', 'mod_name2:mod_stream2:mod_version2'],
+    @pytest.mark.parametrize('modules,name,component,expected_name,expected_component', (
+        (None, None, None, None, None),
+        ([], None, None, None, None),
+        (['mod_name:mod_stream:mod_version'], None, None, 'mod_name', 'mod_name'),
+        (['mod_name:mod_stream:mod_version', 'mod_name2:mod_stream2:mod_version2'], None, None,
          'mod_name', 'mod_name'),
+        (['mod_name:mod_stream:mod_version'], 'name2', None, 'name2', 'mod_name'),
+        (['mod_name:mod_stream:mod_version'], None, 'component2', 'mod_name', 'component2'),
     ))
-    def test_image_labels_flatpak(self, tmpdir, modules, expected_name, expected_component):
+    def test_image_labels_flatpak(self, tmpdir, modules, name, component,
+                                  expected_name, expected_component):
         config_yaml = {
             'compose': {
                 'modules': modules
@@ -156,17 +159,22 @@ class TestRepoInfo(object):
                 'id': 'org.gnome.Eog'
             }
         }
+        if name:
+            config_yaml['flatpak']['name'] = name
+        if component:
+            config_yaml['flatpak']['component'] = component
+
         yaml_file = tmpdir.join(REPO_CONTAINER_CONFIG)
         yaml_file.write(yaml.dump(config_yaml))
 
         repo_info = RepoInfo(configuration=RepoConfiguration(str(tmpdir)))
 
         if modules:
-            _, name = repo_info.labels.get_name_and_value(Labels.LABEL_TYPE_NAME)
-            _, component = repo_info.labels.get_name_and_value(Labels.LABEL_TYPE_COMPONENT)
+            _, name_label = repo_info.labels.get_name_and_value(Labels.LABEL_TYPE_NAME)
+            _, component_label = repo_info.labels.get_name_and_value(Labels.LABEL_TYPE_COMPONENT)
 
-            assert name == expected_name
-            assert component == expected_component
+            assert name_label == expected_name
+            assert component_label == expected_component
         else:
             with pytest.raises(OsbsValidationException) as exc_info:
                 assert repo_info.labels is None  # .labels access raises
@@ -345,6 +353,37 @@ class TestRepoConfiguration(object):
             assert config.flatpak_base_image == "fedora:28"
         else:
             assert config.flatpak_base_image is None
+
+    @pytest.mark.parametrize('set_component', (True, False))
+    def test_flatpak_component(self, tmpdir, set_component):
+        with open(os.path.join(str(tmpdir), REPO_CONTAINER_CONFIG), 'w') as f:
+            if set_component:
+                f.write(dedent("""\
+                    flatpak:
+                        component: mycomponent
+                    """))
+
+        config = RepoConfiguration(dir_path=str(tmpdir))
+        if set_component:
+            assert config.flatpak_component == "mycomponent"
+        else:
+            assert config.flatpak_component is None
+
+    @pytest.mark.parametrize('set_name', (True, False))
+    def test_flatpak_name(self, tmpdir, set_name):
+        with open(os.path.join(str(tmpdir), REPO_CONTAINER_CONFIG), 'w') as f:
+            if set_name:
+                f.write(dedent("""\
+                    flatpak:
+                        name: myname
+                    """))
+
+        config = RepoConfiguration(dir_path=str(tmpdir))
+        if set_name:
+            assert config.flatpak_name == "myname"
+        else:
+            assert config.flatpak_name is None
+
 
 class TestModuleSpec(object):
     @pytest.mark.parametrize(('as_str', 'as_str_no_profile'), [

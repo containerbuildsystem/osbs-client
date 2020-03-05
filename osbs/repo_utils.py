@@ -122,9 +122,15 @@ class RepoInfo(object):
                 raise OsbsValidationException('"compose" config is missing "modules",'
                                               ' required for Flatpak')
 
+            # modules is always required for a Flatpak build, but is only used
+            # for the name and component labels if they aren't explicitly set
+            # in container.yaml
+            name = self.configuration.flatpak_name or module.name
+            component = self.configuration.flatpak_component or module.name
+
             self._labels = Labels({
-                Labels.LABEL_TYPE_NAME: module.name,
-                Labels.LABEL_TYPE_COMPONENT: module.name,
+                Labels.LABEL_TYPE_NAME: name,
+                Labels.LABEL_TYPE_COMPONENT: component,
                 Labels.LABEL_TYPE_VERSION: module.stream,
             })
 
@@ -209,6 +215,8 @@ class RepoConfiguration(object):
         flatpak = self.container.get('flatpak') or {}
         self.is_flatpak = bool(flatpak)
         self.flatpak_base_image = flatpak.get('base_image')
+        self.flatpak_component = flatpak.get('component')
+        self.flatpak_name = flatpak.get('name')
 
     def is_autorebuild_enabled(self):
         return self._config_parser.getboolean('autorebuild', 'enabled')

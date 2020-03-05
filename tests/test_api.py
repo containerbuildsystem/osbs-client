@@ -139,8 +139,10 @@ class MockConfiguration(object):
         safe_modules = modules or []
         self.container_module_specs = [ModuleSpec.from_str(module) for module in safe_modules]
         self.depth = 0
-        self.flatpak_base_image = None
         self.is_flatpak = is_flatpak
+        self.flatpak_base_image = None
+        self.flatpak_component = None
+        self.flatpak_name = None
         self.git_uri = TEST_GIT_URI
         self.git_ref = TEST_GIT_REF
         self.git_branch = TEST_GIT_BRANCH
@@ -1894,7 +1896,6 @@ class TestOSBS(object):
             'git_branch': TEST_GIT_BRANCH,
             'flatpak': True,
             'user': TEST_USER,
-            'component': TEST_COMPONENT,
             'yum_repourls': None,
             'koji_task_id': None,
             'scratch': False,
