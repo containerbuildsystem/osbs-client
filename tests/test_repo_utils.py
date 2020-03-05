@@ -162,8 +162,6 @@ class TestRepoInfo(object):
         repo_info = RepoInfo(configuration=RepoConfiguration(str(tmpdir)))
 
         if modules:
-            assert repo_info.base_image is None
-
             _, name = repo_info.labels.get_name_and_value(Labels.LABEL_TYPE_NAME)
             _, component = repo_info.labels.get_name_and_value(Labels.LABEL_TYPE_COMPONENT)
 
@@ -175,6 +173,27 @@ class TestRepoInfo(object):
 
             assert '"compose" config is missing "modules", required for Flatpak' in \
                    exc_info.value.message
+
+    @pytest.mark.parametrize('base_image', (None, 'fedora:latest'))
+    def test_base_image_flatpak(self, tmpdir, base_image):
+        config_yaml = {
+            'compose': {
+                'modules': ['mod_name:mod_stream'],
+            },
+            'flatpak': {
+                'id': 'org.gnome.Eog'
+            }
+        }
+        if base_image:
+            config_yaml['flatpak']['base_image'] = base_image
+
+        yaml_file = tmpdir.join(REPO_CONTAINER_CONFIG)
+        yaml_file.write(yaml.dump(config_yaml))
+
+        repo_info = RepoInfo(configuration=RepoConfiguration(str(tmpdir)))
+
+        assert repo_info.base_image == base_image
+
 
 class TestRepoConfiguration(object):
 
@@ -312,6 +331,20 @@ class TestRepoConfiguration(object):
         assert conf.container['compose'] == {'modules': None}
         assert conf.container_module_specs == []
 
+    @pytest.mark.parametrize('set_base_image', (True, False))
+    def test_flatpak_base_image(self, tmpdir, set_base_image):
+        with open(os.path.join(str(tmpdir), REPO_CONTAINER_CONFIG), 'w') as f:
+            if set_base_image:
+                f.write(dedent("""\
+                    flatpak:
+                        base_image: fedora:28
+                    """))
+
+        config = RepoConfiguration(dir_path=str(tmpdir))
+        if set_base_image:
+            assert config.flatpak_base_image == "fedora:28"
+        else:
+            assert config.flatpak_base_image is None
 
 class TestModuleSpec(object):
     @pytest.mark.parametrize(('as_str', 'as_str_no_profile'), [

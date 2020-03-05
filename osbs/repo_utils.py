@@ -128,7 +128,7 @@ class RepoInfo(object):
                 Labels.LABEL_TYPE_VERSION: module.stream,
             })
 
-            self._base_image = None
+            self._base_image = self.configuration.flatpak_base_image
         else:
             df_parser = self.dockerfile_parser
 
@@ -208,6 +208,7 @@ class RepoConfiguration(object):
 
         flatpak = self.container.get('flatpak') or {}
         self.is_flatpak = bool(flatpak)
+        self.flatpak_base_image = flatpak.get('base_image')
 
     def is_autorebuild_enabled(self):
         return self._config_parser.getboolean('autorebuild', 'enabled')

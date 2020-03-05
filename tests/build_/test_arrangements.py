@@ -142,8 +142,8 @@ class ArrangementBase(object):
                 self.module = self.container['compose']['modules'][0]
                 self.container_module_specs = [ModuleSpec.from_str(self.module)]
                 self.depth = int(depth) if depth else 0
-
                 self.is_flatpak = False
+                self.flatpak_base_image = None
                 self.git_uri = git_uri
                 self.git_ref = git_ref
                 self.git_branch = git_branch

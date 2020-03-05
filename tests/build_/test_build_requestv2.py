@@ -835,22 +835,19 @@ class TestBuildRequestV2(object):
         BUILD_TYPE_WORKER,
         BUILD_TYPE_ORCHESTRATOR,
     ])
-    @pytest.mark.parametrize('flatpak', [True, False])
     @pytest.mark.parametrize('reactor_config_map', [
         None,
         {},
         {'registries_organization': 'organization_in_cm',
          'source_registry': {'url': 'registry_in_cm'}},
-        {'flatpak': {'base_image': 'flatpak_base_image'}},
     ])
     @pytest.mark.parametrize('reactor_config_override', [
         None,
         {},
         {'registries_organization': 'organization_in_override',
          'source_registry': {'url': 'registry_in_override'}},
-        {'flatpak': {'base_image': 'flatpak_base_image'}},
     ])
-    def test_set_data_from_reactor_config(self, build_type, flatpak, reactor_config_map,
+    def test_set_data_from_reactor_config(self, build_type, reactor_config_map,
                                           reactor_config_override):
         outer_template = WORKER_OUTER_TEMPLATE
         if build_type == BUILD_TYPE_ORCHESTRATOR:
@@ -863,7 +860,6 @@ class TestBuildRequestV2(object):
         update_args = {
             'reactor_config_override': reactor_config_override,
             'build_type': build_type,
-            'flatpak': flatpak,
         }
         user_params = get_sample_user_params(conf_args=conf_args, update_args=update_args)
 
@@ -873,23 +869,7 @@ class TestBuildRequestV2(object):
         build_request = BuildRequestV2(osbs_api=mock_api, user_params=user_params,
                                        outer_template=outer_template)
 
-        flatpak_raises = False
-        if flatpak:
-            if reactor_config_override:
-                if 'flatpak' not in reactor_config_override:
-                    flatpak_raises = True
-            elif reactor_config_map:
-                if 'flatpak' not in reactor_config_map:
-                    flatpak_raises = True
-            else:
-                flatpak_raises = True
-
-        if flatpak_raises:
-            with pytest.raises(OsbsValidationException):
-                build_request.render()
-            return
-        else:
-            build_request.render()
+        build_request.render()
 
         expected_registry = None
         expected_organization = None
@@ -906,6 +886,66 @@ class TestBuildRequestV2(object):
 
         assert expected_registry == build_request.source_registry
         assert expected_organization == build_request.organization
+
+    @pytest.mark.parametrize('build_type', [
+        BUILD_TYPE_WORKER,
+        BUILD_TYPE_ORCHESTRATOR,
+    ])
+    @pytest.mark.parametrize('user_params,config_map,config_override,expected', [
+        (None, None, None, None),
+        (None, '', None, None),  # config map exists, but doesn't set a value
+        ('base_image1', None, None, 'base_image1'),
+        ('base_image2', '', None, 'base_image2'),
+        ('base_image2', 'base_image1', None, 'base_image2'),
+        (None, 'base_image1', None, 'base_image1'),
+        (None, 'base_image1', 'base_image2', 'base_image2'),
+    ])
+    def test_set_flatpak_base_image(self,
+                                    build_type,
+                                    user_params,
+                                    config_map,
+                                    config_override,
+                                    expected):
+        outer_template = WORKER_OUTER_TEMPLATE
+        if build_type == BUILD_TYPE_ORCHESTRATOR:
+            outer_template = ORCHESTRATOR_OUTER_TEMPLATE
+
+        reactor_config_map = None
+        if config_map is not None:
+            reactor_config_map = {
+                'flatpak': {'base_image': config_map}
+            }
+
+        reactor_config_override = None
+        if config_override is not None:
+            reactor_config_override = {
+                'flatpak': {'base_image': config_override}
+            }
+
+        update_args = {
+            'reactor_config_map': reactor_config_map,
+            'reactor_config_override': reactor_config_override,
+            'base_image': user_params,
+            'build_type': build_type,
+            'flatpak': True,
+        }
+
+        user_params = get_sample_user_params(update_args=update_args)
+
+        all_secrets = deepcopy(reactor_config_map)
+        mock_api = MockOSBSApi(all_secrets)
+
+        build_request = BuildRequestV2(osbs_api=mock_api, user_params=user_params,
+                                       outer_template=outer_template)
+
+        if expected is None:
+            with pytest.raises(OsbsValidationException):
+                build_request.render()
+            return
+        else:
+            build_request.render()
+
+        assert user_params.base_image.value == expected
 
     @pytest.mark.parametrize('cpu', ['None', 100])
     @pytest.mark.parametrize('memory', ['None', 50])
