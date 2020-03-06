@@ -9,8 +9,9 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import absolute_import
 
 from flexmock import flexmock
-from osbs.exceptions import OsbsException
+from osbs.exceptions import OsbsException, OsbsValidationException
 from osbs.constants import REPO_CONFIG_FILE, ADDITIONAL_TAGS_FILE, REPO_CONTAINER_CONFIG
+from osbs.utils.labels import Labels
 from osbs.repo_utils import (RepoInfo, RepoConfiguration, AdditionalTagsConfig, ModuleSpec,
                              read_yaml, read_yaml_from_file_path)
 from textwrap import dedent
@@ -102,6 +103,78 @@ class TestRepoInfo(object):
         assert repo_info.configuration is configuration
         assert repo_info.additional_tags is tags_config
 
+    @pytest.mark.parametrize('dockerfile_missing', (False, True))
+    def test_image_labels_not_flatpak(self, dockerfile_missing):
+        labels = {
+            'name': 'image1',
+        }
+
+        class MockParser(object):
+            @property
+            def labels(self):
+                if dockerfile_missing:
+                    raise IOError("Can't read")
+                else:
+                    return labels
+
+            @property
+            def baseimage(self):
+                if dockerfile_missing:
+                    raise IOError("Can't read")
+                else:
+                    return 'fedora:latest'
+
+            @property
+            def dockerfile_path(self):
+                return '/foo/bar'
+
+        repo_info = RepoInfo(MockParser())
+
+        if dockerfile_missing:
+            with pytest.raises(RuntimeError) as exc_info:
+                assert repo_info.labels is None  # .labels access raises
+
+            assert 'Could not parse Dockerfile' in str(exc_info.value)
+        else:
+            _, value = repo_info.labels.get_name_and_value(Labels.LABEL_TYPE_NAME)
+            assert value == 'image1'
+            assert repo_info.base_image == 'fedora:latest'
+
+    @pytest.mark.parametrize('modules,expected_name,expected_component', (
+        (None, None, None),
+        ([], None, None),
+        (['mod_name:mod_stream:mod_version'], 'mod_name', 'mod_name'),
+        (['mod_name:mod_stream:mod_version', 'mod_name2:mod_stream2:mod_version2'],
+         'mod_name', 'mod_name'),
+    ))
+    def test_image_labels_flatpak(self, tmpdir, modules, expected_name, expected_component):
+        config_yaml = {
+            'compose': {
+                'modules': modules
+            },
+            'flatpak': {
+                'id': 'org.gnome.Eog'
+            }
+        }
+        yaml_file = tmpdir.join(REPO_CONTAINER_CONFIG)
+        yaml_file.write(yaml.dump(config_yaml))
+
+        repo_info = RepoInfo(configuration=RepoConfiguration(str(tmpdir)))
+
+        if modules:
+            assert repo_info.base_image is None
+
+            _, name = repo_info.labels.get_name_and_value(Labels.LABEL_TYPE_NAME)
+            _, component = repo_info.labels.get_name_and_value(Labels.LABEL_TYPE_COMPONENT)
+
+            assert name == expected_name
+            assert component == expected_component
+        else:
+            with pytest.raises(OsbsValidationException) as exc_info:
+                assert repo_info.labels is None  # .labels access raises
+
+            assert '"compose" config is missing "modules", required for Flatpak' in \
+                   exc_info.value.message
 
 class TestRepoConfiguration(object):
 

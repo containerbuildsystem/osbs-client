@@ -64,6 +64,7 @@ def MockOSBSApi(config_map_data=None):
 class MockDFParser(object):
     def __init__(self, labels=None):
         self.labels = labels or {}
+        self.baseimage = 'fedora:latest'
 
 
 def get_sample_user_params(build_json_store=INPUTS_PATH, conf_args=None, git_args=None,

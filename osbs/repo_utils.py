@@ -9,8 +9,9 @@ of the BSD license. See the LICENSE file for details.
 
 from __future__ import print_function, absolute_import, unicode_literals
 
-from osbs.exceptions import OsbsException
+from osbs.exceptions import OsbsException, OsbsValidationException
 from osbs.constants import REPO_CONFIG_FILE, ADDITIONAL_TAGS_FILE, REPO_CONTAINER_CONFIG
+from osbs.utils.labels import Labels
 from six import StringIO
 from six.moves.configparser import ConfigParser
 from pkg_resources import resource_stream
@@ -84,6 +85,9 @@ class RepoInfo(object):
         self.configuration = configuration or RepoConfiguration()
         self.additional_tags = additional_tags or AdditionalTagsConfig(
             tags=self.configuration.container.get('tags', set()))
+        self._parsed = False
+        self._base_image = None
+        self._labels = None
 
     @property
     def git_branch(self):
@@ -100,6 +104,53 @@ class RepoInfo(object):
     @property
     def git_commit_depth(self):
         return self.configuration.depth
+
+    def _ensure_parsed(self):
+        """Parse the Dockerfile and set self._labels and self._base_image."""
+
+        if self._parsed:
+            return
+
+        self._parsed = True
+
+        if self.configuration.is_flatpak:
+            modules = self.configuration.container_module_specs
+
+            if modules:
+                module = modules[0]
+            else:
+                raise OsbsValidationException('"compose" config is missing "modules",'
+                                              ' required for Flatpak')
+
+            self._labels = Labels({
+                Labels.LABEL_TYPE_NAME: module.name,
+                Labels.LABEL_TYPE_COMPONENT: module.name,
+                Labels.LABEL_TYPE_VERSION: module.stream,
+            })
+
+            self._base_image = None
+        else:
+            df_parser = self.dockerfile_parser
+
+            # DockerfileParse does not ensure a Dockerfile exists during initialization
+            try:
+                self._labels = Labels(df_parser.labels)
+                self._base_image = df_parser.baseimage
+            except IOError as e:
+                raise RuntimeError('Could not parse Dockerfile in {}: {}'
+                                   .format(df_parser.dockerfile_path, e))
+
+    @property
+    def labels(self):
+        self._ensure_parsed()
+
+        return self._labels
+
+    @property
+    def base_image(self):
+        self._ensure_parsed()
+
+        return self._base_image
 
 
 class RepoConfiguration(object):
@@ -154,6 +205,9 @@ class RepoConfiguration(object):
                 value_errors.append(e)
         if value_errors:
             raise ValueError(value_errors)
+
+        flatpak = self.container.get('flatpak') or {}
+        self.is_flatpak = bool(flatpak)
 
     def is_autorebuild_enabled(self):
         return self._config_parser.getboolean('autorebuild', 'enabled')
