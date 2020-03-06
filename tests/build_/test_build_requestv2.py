@@ -29,7 +29,7 @@ from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             REPO_CONFIG_FILE, REPO_CONTAINER_CONFIG)
 from osbs.exceptions import OsbsValidationException, OsbsException
 from osbs.utils.labels import Labels
-from osbs.repo_utils import RepoInfo, RepoConfiguration
+from osbs.repo_utils import ModuleSpec, RepoInfo, RepoConfiguration
 from osbs.api import OSBS
 
 from flexmock import flexmock
@@ -906,9 +906,32 @@ class TestBuildRequestV2(object):
                                     config_map,
                                     config_override,
                                     expected):
+
         outer_template = WORKER_OUTER_TEMPLATE
         if build_type == BUILD_TYPE_ORCHESTRATOR:
             outer_template = ORCHESTRATOR_OUTER_TEMPLATE
+
+        # autorebuild only has an effect on orchestrator builds,
+        # so combine testing both into one branch
+        autorebuild = build_type == BUILD_TYPE_ORCHESTRATOR
+
+        mock_configuration = flexmock(
+            autorebuild={},
+            container={},
+            container_module_specs=[
+                ModuleSpec.from_str('eog:stable')
+            ],
+            depth=0,
+            is_autorebuild_enabled=lambda: autorebuild,
+            is_flatpak=True,
+            flatpak_base_image=user_params,
+            flatpak_name=None,
+            flatpak_component=None,
+            git_branch=TEST_GIT_BRANCH,
+            git_ref=TEST_GIT_REF,
+            git_uri=TEST_GIT_URI)
+
+        repo_info = RepoInfo(configuration=mock_configuration)
 
         reactor_config_map = None
         if config_map is not None:
@@ -931,6 +954,7 @@ class TestBuildRequestV2(object):
             'base_image': user_params,
             'build_type': build_type,
             'flatpak': True,
+            'repo_info': repo_info,
         }
         user_params = get_sample_user_params(conf_args=conf_args, update_args=update_args)
 
@@ -948,6 +972,11 @@ class TestBuildRequestV2(object):
             build_request.render()
 
         assert user_params.base_image.value == expected
+        assert user_params.trigger_imagestreamtag.value == expected + ':latest'
+
+        if autorebuild:
+            trigger = build_request.build_json['spec']['triggers'][0]
+            assert trigger['imageChange']['from']['name'] == expected + ':latest'
 
     @pytest.mark.parametrize('cpu', ['None', 100])
     @pytest.mark.parametrize('memory', ['None', 50])

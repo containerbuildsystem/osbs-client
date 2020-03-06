@@ -374,7 +374,7 @@ class BuildRequestV2(BaseBuildRequest):
                 reactor_config_data.get(flatpak_key, {}).get(flatpak_base_image_key, None)
             )
             if flatpack_base_image:
-                self.user_params.base_image.value = flatpack_base_image
+                self.user_params.set_base_image(flatpack_base_image)
             else:
                 raise OsbsValidationException(
                     "Flatpak base_image must be be set in container.yaml or reactor config")
