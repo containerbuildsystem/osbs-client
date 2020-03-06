@@ -586,13 +586,7 @@ class OSBS(object):
         return build
 
     def _check_labels(self, repo_info):
-        df_parser = repo_info.dockerfile_parser
-        # DockerfileParse does not ensure a Dockerfile exists during initialization
-        try:
-            labels = Labels(df_parser.labels)
-        except IOError as e:
-            raise RuntimeError('Could not parse Dockerfile in {}: {}'
-                               .format(df_parser.dockerfile_path, e))
+        labels = repo_info.labels
 
         required_missing = False
         req_labels = {}
@@ -650,21 +644,7 @@ class OSBS(object):
             raise OsbsValidationException("initial image name component "
                                           "must not contain '.'")
 
-        return req_labels, df_parser.baseimage
-
-    def _get_flatpak_labels(self, repo_info):
-        modules = repo_info.configuration.container_module_specs
-
-        if modules:
-            module = modules[0]
-        else:
-            raise OsbsValidationException('"compose" config is missing "modules",'
-                                          ' required for Flatpak')
-
-        return {
-            Labels.LABEL_TYPE_NAME: module.name,
-            Labels.LABEL_TYPE_COMPONENT: module.name
-        }, None
+        return req_labels
 
     # Gives flexmock something to mock
     def get_user_params(self, component=None, req_labels=None, **kwargs):
@@ -713,12 +693,9 @@ class OSBS(object):
 
         repo_info = utils.get_repo_info(git_uri, git_ref, git_branch=git_branch,
                                         depth=git_commit_depth)
-        if flatpak:
-            req_labels, base_image = self._get_flatpak_labels(repo_info)
-        else:
-            req_labels, base_image = self._check_labels(repo_info)
+        req_labels = self._check_labels(repo_info)
 
-        user_params = self.get_user_params(base_image=base_image,
+        user_params = self.get_user_params(base_image=repo_info.base_image,
                                            build_type=build_type,
                                            component=component,
                                            flatpak=flatpak,

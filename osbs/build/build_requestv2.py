@@ -510,7 +510,7 @@ class BuildRequestV2(BaseBuildRequest):
             self.template['spec'].pop('triggers', None)
 
         else:
-            labels = Labels(self.user_params.repo_info.dockerfile_parser.labels)
+            labels = self.user_params.repo_info.labels
 
             add_timestamp = self.user_params.repo_info.configuration.autorebuild.\
                 get('add_timestamp_to_release', False)

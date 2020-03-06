@@ -132,11 +132,14 @@ class MockDfParserBaseImage(object):
 
 
 class MockConfiguration(object):
-    def __init__(self, modules=None):
+    def __init__(self,
+                 is_flatpak=False,
+                 modules=None):
         self.container = {'compose': {'modules': modules}}
         safe_modules = modules or []
         self.container_module_specs = [ModuleSpec.from_str(module) for module in safe_modules]
         self.depth = 0
+        self.is_flatpak = is_flatpak
         self.git_uri = TEST_GIT_URI
         self.git_ref = TEST_GIT_REF
         self.git_branch = TEST_GIT_BRANCH
@@ -1877,17 +1880,12 @@ class TestOSBS(object):
             assert build_response.json == {'spam': 'maps'}
 
     # osbs is a fixture here
-    @pytest.mark.parametrize('modules', (  # noqa
-        None,
-        [],
-        ['mod_name:mod_stream:mod_version'],
-        ['mod_name:mod_stream:mod_version', 'mod_name2:mod_stream2:mod_version2'],
-    ))
-    def test_create_build_flatpak(self, osbs, modules):
+    def test_create_build_flatpak(self, osbs):  # noqa
+        mock_config = MockConfiguration(is_flatpak=True, modules=TEST_MODULES)
         (flexmock(utils)
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
-            .and_return(self.mock_repo_info(mock_config=MockConfiguration(modules))))
+            .and_return(self.mock_repo_info(mock_config=mock_config)))
 
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -1903,15 +1901,8 @@ class TestOSBS(object):
             'reactor_config_override': {'flatpak': {'base_image': 'base_image'}},
         }
 
-        if modules:
-            response = osbs.create_build(**kwargs)
-            assert isinstance(response, BuildResponse)
-        else:
-            with pytest.raises(OsbsValidationException) as exc_info:
-                osbs.create_build(**kwargs)
-
-            assert '"compose" config is missing "modules", required for Flatpak' in \
-                   exc_info.value.message
+        response = osbs.create_build(**kwargs)
+        assert isinstance(response, BuildResponse)
 
     @pytest.mark.parametrize(('kind', 'expect_name'), [
         ('ImageStreamTag', 'registry:5000/buildroot:latest'),
@@ -3142,7 +3133,8 @@ class TestOSBS(object):
          .should_receive('get_repo_info')
          .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
          .and_return(self.mock_repo_info(mock_df_parser=MockDfParserNoDf(),
-                                         mock_config=MockConfiguration(TEST_MODULES))))
+                                         mock_config=MockConfiguration(is_flatpak=flatpak,
+                                                                       modules=TEST_MODULES))))
 
         kwargs = {
             'git_uri': TEST_GIT_URI,
