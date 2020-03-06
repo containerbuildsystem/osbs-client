@@ -25,7 +25,8 @@ from osbs.constants import (SECRETS_PATH, DEFAULT_OUTER_TEMPLATE,
                             DEFAULT_CUSTOMIZE_CONF, BUILD_TYPE_ORCHESTRATOR,
                             BUILD_TYPE_WORKER, ISOLATED_RELEASE_FORMAT)
 from osbs.exceptions import OsbsException, OsbsValidationException
-from osbs.utils import git_repo_humanish_part_from_uri, sanitize_strings_for_openshift, Labels
+from osbs.utils.labels import Labels
+from osbs.utils import git_repo_humanish_part_from_uri, sanitize_strings_for_openshift
 
 logger = logging.getLogger(__name__)
 

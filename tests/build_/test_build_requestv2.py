@@ -28,8 +28,8 @@ from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             BUILD_TYPE_ORCHESTRATOR, SECRETS_PATH,
                             REPO_CONFIG_FILE, REPO_CONTAINER_CONFIG)
 from osbs.exceptions import OsbsValidationException, OsbsException
+from osbs.utils.labels import Labels
 from osbs.repo_utils import RepoInfo, RepoConfiguration
-from osbs.utils import Labels
 from osbs.api import OSBS
 
 from flexmock import flexmock

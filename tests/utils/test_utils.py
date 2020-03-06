@@ -27,7 +27,7 @@ from osbs.utils import (buildconfig_update,
                         git_repo_humanish_part_from_uri, sanitize_strings_for_openshift,
                         get_time_from_rfc3339, strip_registry_from_image,
                         TarWriter, TarReader, make_name_from_git, wrap_name_from_git,
-                        get_instance_token_file_name, Labels, sanitize_version,
+                        get_instance_token_file_name, sanitize_version,
                         has_triggers, strip_registry_and_tag_from_image,
                         clone_git_repo, get_repo_info)
 from osbs.exceptions import OsbsException, OsbsCommitNotFound
@@ -432,66 +432,6 @@ def test_get_instance_token_file_name():
     expected = os.path.join(os.path.expanduser('~'), '.osbs', 'spam.token')
 
     assert get_instance_token_file_name('spam') == expected
-
-
-@pytest.mark.parametrize(('labels', 'fnc', 'expect'), [
-    ({},
-     ("get_name", Labels.LABEL_TYPE_COMPONENT),
-     "com.redhat.component"),
-    ({},
-     ("get_name", "doesnt_exist"),
-     Exception),
-    ({"Name": "old",
-      "name": "new"},
-     ("get_name", Labels.LABEL_TYPE_NAME),
-     "name"),
-    ({"Name": "old"},
-     ("get_name", Labels.LABEL_TYPE_NAME),
-     "Name"),
-    ({"Name": "old"},
-     ("get_name", None),
-     TypeError),  # arg is required
-    ({},
-     ("get_new_names_by_old", None),
-     {"Vendor": "vendor", "Name": "name", "Build_Host": "com.redhat.build-host",
-      "Version": "version", "Architecture": "architecture",
-      "Release": "release", "BZComponent": "com.redhat.component",
-      "Authoritative_Registry": "authoritative-source-url",
-      "RUN": "run",
-      "INSTALL": "install",
-      "UNINSTALL": "uninstall"}),
-    ({"Name": "old",
-      "name": "new"},
-     ("get_name_and_value", Labels.LABEL_TYPE_NAME),
-     ("name", "new")),
-    ({},
-     ("get_name_and_value", Labels.LABEL_TYPE_NAME),
-     KeyError),
-    ({},
-     ("get_name_and_value", "doest_exist"),
-     Exception),
-    ({"com.redhat.delivery.appregistry": "true"},
-     ("get_name_and_value", Labels.LABEL_TYPE_OPERATOR_MANIFESTS),
-     ("com.redhat.delivery.appregistry", "true")),
-    ({"com.redhat.delivery.operator.bundle": "true"},
-     ("get_name_and_value", Labels.LABEL_TYPE_OPERATOR_BUNDLE_MANIFESTS),
-     ("com.redhat.delivery.operator.bundle", "true")),
-])
-def test_labels(labels, fnc, expect):
-    label = Labels(labels)
-
-    fn, arg = fnc
-    if isinstance(expect, type):
-        with pytest.raises(expect):
-            if arg is not None:
-                assert getattr(label, fn)(arg) == expect
-            else:
-                assert getattr(label, fn)() == expect
-    else:
-        if arg is not None:
-            assert getattr(label, fn)(arg) == expect
-        else:
-            assert getattr(label, fn)() == expect
 
 
 vstr_re = re.compile(r'\d+\.\d+\.\d+')

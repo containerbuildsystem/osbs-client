@@ -52,6 +52,7 @@ from osbs.constants import (BUILD_RUNNING_STATES, WORKER_OUTER_TEMPLATE,
 from osbs.core import Openshift
 from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsResponseException,
                              OsbsOrchestratorNotEnabled)
+from osbs.utils.labels import Labels
 # import utils in this way, so that we can mock standalone functions with flexmock
 from osbs import utils
 from osbs.utils import (retry_on_conflict, graceful_chain_get, RegistryURI,
@@ -588,7 +589,7 @@ class OSBS(object):
         df_parser = repo_info.dockerfile_parser
         # DockerfileParse does not ensure a Dockerfile exists during initialization
         try:
-            labels = utils.Labels(df_parser.labels)
+            labels = Labels(df_parser.labels)
         except IOError as e:
             raise RuntimeError('Could not parse Dockerfile in {}: {}'
                                .format(df_parser.dockerfile_path, e))
@@ -596,14 +597,14 @@ class OSBS(object):
         required_missing = False
         req_labels = {}
         # required labels which needs to have explicit value (not from env variable)
-        explicit_labels = [utils.Labels.LABEL_TYPE_NAME,
-                           utils.Labels.LABEL_TYPE_COMPONENT]
+        explicit_labels = [Labels.LABEL_TYPE_NAME,
+                           Labels.LABEL_TYPE_COMPONENT]
         # version label isn't used here, but is required label in Dockerfile
         # and is used and required for atomic reactor
         # if we don't catch error here, it will fail in atomic reactor later
-        for label in [utils.Labels.LABEL_TYPE_NAME,
-                      utils.Labels.LABEL_TYPE_COMPONENT,
-                      utils.Labels.LABEL_TYPE_VERSION]:
+        for label in [Labels.LABEL_TYPE_NAME,
+                      Labels.LABEL_TYPE_COMPONENT,
+                      Labels.LABEL_TYPE_VERSION]:
             try:
                 _, req_labels[label] = labels.get_name_and_value(label)
 
@@ -617,7 +618,7 @@ class OSBS(object):
                              labels.get_name(label))
 
         try:
-            _, release_value = labels.get_name_and_value(utils.Labels.LABEL_TYPE_RELEASE)
+            _, release_value = labels.get_name_and_value(Labels.LABEL_TYPE_RELEASE)
             if release_value and not RELEASE_LABEL_FORMAT.match(release_value):
                 logger.error("release label '%s' doesn't match regex : %s", release_value,
                              RELEASE_LABEL_FORMAT.pattern)
@@ -644,7 +645,7 @@ class OSBS(object):
         #
         # Avoid this awkwardness by forbidding '.' in the initial
         # component of the image name.
-        name_components = req_labels[utils.Labels.LABEL_TYPE_NAME].split('/', 1)
+        name_components = req_labels[Labels.LABEL_TYPE_NAME].split('/', 1)
         if '.' in name_components[0]:
             raise OsbsValidationException("initial image name component "
                                           "must not contain '.'")
@@ -661,18 +662,18 @@ class OSBS(object):
                                           ' required for Flatpak')
 
         return {
-            utils.Labels.LABEL_TYPE_NAME: module.name,
-            utils.Labels.LABEL_TYPE_COMPONENT: module.name
+            Labels.LABEL_TYPE_NAME: module.name,
+            Labels.LABEL_TYPE_COMPONENT: module.name
         }, None
 
     # Gives flexmock something to mock
     def get_user_params(self, component=None, req_labels=None, **kwargs):
         req_labels = req_labels or {}
-        user_component = component or req_labels[utils.Labels.LABEL_TYPE_COMPONENT]
+        user_component = component or req_labels[Labels.LABEL_TYPE_COMPONENT]
         user_params = BuildUserParams(build_json_store=self.os_conf.get_build_json_store())
         user_params.set_params(build_conf=self.build_conf,
                                component=user_component,
-                               name_label=req_labels[utils.Labels.LABEL_TYPE_NAME],
+                               name_label=req_labels[Labels.LABEL_TYPE_NAME],
                                **kwargs)
         return user_params
 
