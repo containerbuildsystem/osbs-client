@@ -489,7 +489,6 @@ class BuildUserParams(BuildCommon):
         self.remote_source_build_args.value = remote_source_build_args
         self.release.value = release
         self.build_type.value = build_type
-        self.base_image.value = base_image
 
         self.name.value = make_name_from_git(self.git_uri.value, self.git_branch.value)
 
@@ -507,10 +506,12 @@ class BuildUserParams(BuildCommon):
         self.tags_from_yaml.value = tags_from_yaml
         self.triggered_after_koji_task.value = triggered_after_koji_task
 
-        if not flatpak:
-            if not base_image:
+        if not base_image:
+            # For flatpaks, we can set this later from the reactor config
+            if not flatpak:
                 raise OsbsValidationException("base_image must be provided")
-            self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
+        else:
+            self.set_base_image(base_image)
 
         if not name_label:
             raise OsbsValidationException("name_label must be provided")
@@ -538,6 +539,10 @@ class BuildUserParams(BuildCommon):
         self.isolated_build_node_selector = isolated_build_node_selector or {}
         self.platform_node_selector = platform_node_selector or {}
         self.scratch_build_node_selector = scratch_build_node_selector or {}
+
+    def set_base_image(self, base_image):
+        self.base_image.value = base_image
+        self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
 
 
 @register_user_params
