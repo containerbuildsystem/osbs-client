@@ -72,6 +72,7 @@ BuildRequires:  python3-dockerfile-parse
 BuildRequires:  python3-requests
 BuildRequires:  python3-requests-kerberos
 BuildRequires:  python3-PyYAML
+BuildRequires:  python3-jsonschema
 %else
 BuildRequires:  pytest
 BuildRequires:  python-flexmock
