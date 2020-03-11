@@ -44,6 +44,7 @@ setup(
           'console_scripts': ['osbs=osbs.cli.main:main'],
     },
     install_requires=_install_requirements(),
+    package_data={'osbs': ['schemas/*.json']},
     data_files=data_files.items(),
     setup_requires=[],
     tests_require=_get_requirements('tests/requirements.txt'),
