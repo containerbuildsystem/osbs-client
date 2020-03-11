@@ -1,6 +1,5 @@
 # OSBS
 
-[![Code Health](https://landscape.io/github/containerbuildsystem/osbs-client/master/landscape.svg?style=flat)](https://landscape.io/github/containerbuildsystem/osbs-client/master)
 [![Build Status](https://travis-ci.org/containerbuildsystem/osbs-client.svg?branch=master)](https://travis-ci.org/containerbuildsystem/osbs-client)
 [![Coverage
 Status](https://coveralls.io/repos/containerbuildsystem/osbs-client/badge.svg?branch=master&service=github)](https://coveralls.io/github/containerbuildsystem/osbs-client?branch=master)
