@@ -15,35 +15,17 @@
 %global with_check 1
 %endif
 
-%global commit e9b9042bacfc366d7ea4bd82fc0458e8918a928e
-%global shortcommit %(c=%{commit}; echo ${c:0:7})
-
-# set to 0 to create a normal release
-%global dev_release 1
-
-%if 0%{?dev_release}
-%global postrelease dev
-%global release 0
-%else
-%global postrelease 0
-%global release 1
-%endif
-
 %global osbs_obsolete_vr 0.14-2
 
 Name:           osbs-client
-Version:        0.65
-%if "x%{postrelease}" != "x0"
-Release:        %{release}.%{postrelease}.git.%{shortcommit}%{?dist}
-%else
-Release:        %{release}%{?dist}
-%endif
+Version:        0.64.1
+Release:        1%{?dist}
 
 Summary:        Python command line client for OpenShift Build Service
 Group:          Development/Tools
 License:        BSD
 URL:            https://github.com/containerbuildsystem/osbs-client
-Source0:        https://github.com/containerbuildsystem/osbs-client/archive/%{commit}/osbs-client-%{commit}.tar.gz
+Source0:        https://github.com/containerbuildsystem/osbs-client/archive/%{version}.tar.gz
 
 BuildArch:      noarch
 
@@ -145,7 +127,7 @@ This package contains osbs Python 2 bindings.
 
 
 %prep
-%setup -qn %{name}-%{commit}
+%setup -q
 
 %build
 %if 0%{?with_python3}
