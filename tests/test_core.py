@@ -32,7 +32,7 @@ from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_LABEL,
                              TEST_IMAGESTREAM_WITH_ANNOTATION,
                              TEST_IMAGESTREAM_WITHOUT_IMAGEREPOSITORY)
 from tests.conftest import APIS_PREFIX
-from tests.test_utils import JsonMatcher
+from tests.util import JsonMatcher
 
 import requests
 import pytest
