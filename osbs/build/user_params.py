@@ -332,6 +332,7 @@ class BuildUserParams(BuildCommon):
         self.git_ref = BuildParam('git_ref', default=DEFAULT_GIT_REF)
         self.git_uri = BuildParam('git_uri')
         self.imagestream_name = BuildParam('imagestream_name')
+        self.include_koji_repo = BuildParam('include_koji_repo', default=False)
         self.is_auto = BuildParam('is_auto', allow_none=True)
         self.isolated = BuildParam('isolated', allow_none=True)
         self.koji_parent_build = BuildParam('koji_parent_build', allow_none=True)
@@ -381,6 +382,7 @@ class BuildUserParams(BuildCommon):
                    git_commit_depth=None,
                    git_ref=None,
                    git_uri=None,
+                   include_koji_repo=None,
                    is_auto=None,
                    isolated=None,
                    koji_parent_build=None,
@@ -419,6 +421,8 @@ class BuildUserParams(BuildCommon):
         :param git_branch: str, branch name of the branch to be pulled
         :param git_ref: str, commit ID of the branch to be pulled
         :param git_uri: str, uri of the git repository for the source
+        :param include_koji_repo: include the repo from the target build tag, even if other
+                                                   repourls are provided.
         :param is_auto: bool, build as a automatic build
         :param isolated: bool, build as an isolated build
         :param koji_parent_build: str,
@@ -496,6 +500,7 @@ class BuildUserParams(BuildCommon):
         self.is_auto.value = is_auto
         self.isolated.value = isolated
         self.flatpak.value = flatpak
+        self.include_koji_repo.value = include_koji_repo
         self.koji_parent_build.value = koji_parent_build
         self.koji_upload_dir.value = koji_upload_dir
         self.parent_images_digests.value = parent_images_digests

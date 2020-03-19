@@ -347,7 +347,7 @@ class PluginsConfigurationBase(object):
         if not self.pt.has_plugin_conf(phase, plugin):
             return
 
-        if self.user_params.yum_repourls.value:
+        if not self.user_params.include_koji_repo.value and self.user_params.yum_repourls.value:
             self.pt.remove_plugin(phase, plugin, 'there is a yum repo user parameter')
         elif not self.pt.set_plugin_arg_valid(phase, plugin, "target",
                                               self.user_params.koji_target.value):
