@@ -386,6 +386,35 @@ class TestPluginsConfiguration(object):
         self.check_plugin_presence(build_type, plugins,
                                    self.not_flatpak_plugins, self.flatpak_plugins)
 
+    @pytest.mark.parametrize('koji_target,yum_repourls,include_koji_repo,expect_plugin', [
+        ("koji-target", None, False, True),
+        ("koji-target", ["http://example.com/my.repo"], False, False),
+        ("koji-target", ["http://example.com/my.repo"], True, True),
+        (None, None, False, False),
+    ])
+    def test_render_koji(self, koji_target, yum_repourls, include_koji_repo, expect_plugin):
+        extra_args = {
+            'include_koji_repo': include_koji_repo,
+            'koji_target': koji_target,
+            'yum_repourls': yum_repourls,
+            'build_type': BUILD_TYPE_WORKER,
+        }
+
+        user_params = get_sample_user_params(extra_args=extra_args)
+        self.mock_repo_info()
+        build_json = PluginsConfiguration(user_params).render()
+
+        plugins = get_plugins_from_build_json(build_json)
+
+        if expect_plugin:
+            args = plugin_value_get(plugins, "prebuild_plugins", "koji", "args")
+            assert args == {
+                'target': koji_target
+            }
+        else:
+            with pytest.raises(NoSuchPluginException):
+                get_plugin(plugins, "prebuild_plugins", "koji")
+
     @pytest.mark.parametrize(('disabled', 'release'), (
         (False, None),
         (True, '1.2.1'),
