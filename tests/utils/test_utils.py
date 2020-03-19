@@ -13,7 +13,6 @@ import os.path
 import subprocess
 import pytest
 import datetime
-import json
 import re
 import sys
 import requests
@@ -621,17 +620,3 @@ def initialize_git_repo(rpath, files=None):
             first_commit_ref = first_commit_ref.strip()
     subprocess.Popen(['git', 'commit', '--allow-empty', '-m', 'code additions'], cwd=rpath)
     return first_commit_ref
-
-
-class JsonMatcher(object):
-    """Match python object to json string"""
-
-    def __init__(self, expected):
-        self.expected = expected
-
-    def __eq__(self, json_str):
-        # Assert to provide a more meaningful error
-        assert self.expected == json.loads(json_str)
-        return self.expected == json.loads(json_str)
-
-    __hash__ = None     # py2 compatibility
