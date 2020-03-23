@@ -7,7 +7,7 @@ of the BSD license. See the LICENSE file for details.
 """
 
 
-from __future__ import absolute_import
+from __future__ import absolute_import, unicode_literals
 
 
 class Labels(object):
