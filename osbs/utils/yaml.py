@@ -21,24 +21,30 @@ import yaml
 logger = logging.getLogger(__name__)
 
 
-def read_yaml_from_file_path(file_path, schema):
+def read_yaml_from_file_path(file_path, schema, package=None):
     """
     :param yaml_data: string, yaml content
     :param schema: string, file path to the JSON schema
+    :package: string, package name containing the schema
     """
     with open(file_path) as f:
         yaml_data = f.read()
-    return read_yaml(yaml_data, schema)
+    return read_yaml(yaml_data, schema, package)
 
 
-def read_yaml(yaml_data, schema):
+def read_yaml(yaml_data, schema, package=None):
     """
     :param yaml_data: string, yaml content
     :param schema: string, file path to the JSON schema
+    :package: string, package name containing the schema
     """
+    package = package or 'osbs'
     try:
-        resource = resource_stream('osbs', schema)
+        resource = resource_stream(package, schema)
         schema = codecs.getreader('utf-8')(resource)
+    except (ImportError):
+        logger.error('Unable to find package %s', package)
+        raise
     except (IOError, TypeError):
         logger.error('unable to extract JSON schema, cannot validate')
         raise
