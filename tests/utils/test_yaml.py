@@ -46,6 +46,12 @@ def test_read_yaml_file_or_yaml(tmpdir, from_file, config):
     assert output == expected
 
 
+def test_read_yaml_bad_package(caplog):
+    with pytest.raises(ImportError):
+        read_yaml("", 'schemas/container.json', package='bad_package')
+    assert 'Unable to find package bad_package' in caplog.text
+
+
 def test_read_yaml_file_bad_extract(tmpdir, caplog):
     class FakeProvider(object):
         def get_resource_stream(self, pkg, rsc):
