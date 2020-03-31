@@ -55,3 +55,6 @@ target/
 # RPMs, tars
 *.rpm
 *.tar.gz
+
+# Tito
+!rel-eng/lib/
