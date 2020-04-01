@@ -255,6 +255,21 @@
           "type": "string",
           "pattern": "^[^/].*$"
         },
+        "enable_digest_pinning": {
+          "description": "Replace floating tags with manifest list digests?",
+          "type": "boolean",
+          "default": true
+        },
+        "enable_repo_replacements": {
+          "description": "Replace namespace/repo based on component label in image?",
+          "type": "boolean",
+          "default": true
+        },
+        "enable_registry_replacements": {
+          "description": "Replace registry based on OSBS site configuration?",
+          "type": "boolean",
+          "default": true
+        },
         "repo_replacements": {
           "description": "Additional replacements for repos not available in OSBS site config",
           "type": "array",
