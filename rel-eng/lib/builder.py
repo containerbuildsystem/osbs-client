@@ -3,6 +3,10 @@ from tito.builder import Builder
 
 class OsbsClientBuilder(Builder):
 
-    def _get_tgz_name_and_ver(self):
-        """ Returns name of tgz created by tito """
-        return "%s" % self.display_version
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # tarball has to represent Source0
+        # but internal structure should remain same
+        # i.e. {name}-{version} otherwise %setup -q
+        # will fail
+        self.tgz_filename = self.display_version + ".tar.gz"
