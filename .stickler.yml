@@ -4,3 +4,6 @@ linters:
   shellcheck:
     shell: bash
   remarklint:
+    fixer: true
+fixers:
+  enable: true
