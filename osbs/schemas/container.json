@@ -210,6 +210,10 @@
           "description": "enable inheritance of yum repourls and composes from baseimage build (disabled by default)",
           "type": "boolean"
         },
+        "ignore_absent_pulp_repos": {
+          "description": "ignore absent content sets",
+          "type": "boolean"
+        },
         "include_unpublished_pulp_repos": {
           "description": "include unpublished repos in pulp input content-sets",
           "type": "boolean"
