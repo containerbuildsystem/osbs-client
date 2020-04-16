@@ -1,35 +1,35 @@
 # Deploying OpenShift Build System
 
-OSBS consists of several components, namely:
+OSBS consists of several components
 
- * operating system - RHEL 7, Centos 7 or Fedora (latest greatest) should work out of the box
- * [Docker](https://www.docker.com/)
- * [OpenShift 3](https://www.openshift.org/) - Enterprise and Origin both work
- * [atomic-reactor](https://github.com/containerbuildsystem/atomic-reactor)
- * (optional) authenticating proxy based on Apache httpd
- * (optional) docker registry where built images are going to be pushed
+- Operating system ― RHEL 7, Centos 7 or Fedora (latest greatest) should work
+  out of the box
+- [docker][]
+- [OpenShift 3][] ― Enterprise and Origin both work
+- [atomic-reactor][]
+- (optional) Authenticating proxy based on Apache httpd
+- (optional) docker registry where built images are going to be pushed
 
-The recommended way to install OSBS is to use our
-[ansible playbook](https://github.com/projectatomic/ansible-osbs).
-Please note that the playbook may not be in sync with this guide - feel free to
-report any issues.
+The recommended way to install OSBS is to use our [ansible playbook][]. Please
+note that the playbook may not be in sync with this guide ― feel free to report
+any issues.
 
 ## Docker
 
 Use the docker shipped with your operating system. Consult OpenShift
-documentation - there might be restrictions on what versions of Docker you can
+documentation ― there might be restrictions on what versions of Docker you can
 use.
 
-```
-$ dnf install docker
+```shell
+dnf install docker
 ```
 
 ### Docker storage
 
-Before using docker it is necessary to set up its storage. Refer to
-[this guide](http://developerblog.redhat.com/2014/09/30/overview-storage-scalability-docker/)
-and the manual page of docker-storage-setup for more information. On RPM-based
-distros it's most likely that you want to use the direct-lvm method.
+Before using docker it is necessary to set up its storage. Refer to the docker
+[storage scalability][] guide and the manual page of docker-storage-setup for
+more information. On RPM-based distros it's most likely that you want to use the
+direct-lvm method.
 
 ## OpenShift
 
@@ -37,127 +37,127 @@ Both OpenShift Origin or OpenShift Enterprise can be used to host OSBS.
 
 ### Installing OpenShift Origin
 
-See the [upstream documentation](https://docs.openshift.org/latest/welcome/index.html)
-for installation instructions.
+See the [Openshift documentation][] for installation instructions.
 
 Origin is available in Fedora, you can install it by running
 
-```
-$ dnf install origin-master origin-node
+```shell
+dnf install origin-master origin-node
 ```
 
-Other option is to install OpenShift [from its source](https://github.com/openshift/origin).
+Other option is to install OpenShift from [source][].
 
 ### Installing OpenShift Enterprise
 
-See
-[OpenShift Enterprise documentation](https://docs.openshift.com/enterprise/latest/welcome/index.html)
-for installation instructions.
+See the [OpenShift Enterprise documentation][] for installation instructions.
 
-```
+```shell
 # correct repositories have to be enabled
-$ yum install atomic-openshift-master atomic-openshift-node atomic-openshift-sdn-ovs
+yum install atomic-openshift-master atomic-openshift-node atomic-openshift-sdn-ovs
 ```
 
 ### Configuration
 
 OpenShift uses various files for master and node that are generated when RPMs
-are installed:
+are installed
 
- * SSL certificates
- * policies
- * master and node configs
-  * `/etc/origin/master/master-config.yaml`
-  * `/etc/origin/node-$hostname/node-config.yaml`
- * init scripts configuration (e.g. log level)
-  * `/etc/sysconfig/origin-master`
-  * `/etc/sysconfig/origin-node`
+- SSL certificates
+- policies
+- master and node configs
+  - '/etc/origin/master/master-config.yaml'
+  - '/etc/origin/node-$hostname/node-config.yaml'
+- init scripts configuration (e.g. log level)
+  - '/etc/sysconfig/origin-master'
+  - '/etc/sysconfig/origin-node'
 
-Data will be stored in `/var/lib/origin`. Inspect the configs and change them
+Data will be stored in '/var/lib/origin'. Inspect the configs and change them
 accordingly. In case of more drastic changes you may want to re-generate the
-configuration using different parameters with `openshift start master
---write-config` and `oadm create-node-config` commands.
+configuration using different parameters with the
+`openshift start master --write-config` and `oadm create-node-config` commands.
 
 ### Management
 
 Starting OpenShift:
 
-```
-$ systemctl start origin-master && systemctl start origin-node
+```shell
+systemctl start origin-master && systemctl start origin-node
 ```
 
 Wiping all runtime data:
 
-```
-$ systemctl stop origin-master origin-node
-$ rm -rf /var/lib/origin/*
-$ systemctl start origin-master origin-node
+```shell
+systemctl stop origin-master origin-node
+rm -rf /var/lib/origin/*
+systemctl start origin-master origin-node
 ```
 
 ### Talking to OpenShift via command line
 
-All communication with OpenShift is performed via executable `oc` (the
-OpenShift Client). The binary needs to authenticate, otherwise all the requests
-will be denied.  Authentication is handled via configuration file for `oc`. You
-need to set an environment variable to point `oc` to the admin config:
+All communication with OpenShift is performed via executable `oc` (the OpenShift
+Client). The binary needs to authenticate, otherwise all the requests will be
+denied.  Authentication is handled via configuration file for `oc`. You need to
+set an environment variable to point `oc` to the admin config:
 
-```
-$ export KUBECONFIG=/etc/origin/master/admin.kubeconfig
+```shell
+export KUBECONFIG=/etc/origin/master/admin.kubeconfig
 ```
 
 OpenShift client is available in Fedora through the `origin-clients` package.
 
-```
-$ dnf install origin-clients
+```shell
+dnf install origin-clients
 ```
 
 #### Useful Commands
 
-* `oc get builds` — list builds
-* `oc get pods` — list pods
-* `oc describe policyBindings :default` — show authorization setup
-* `oc describe build <build>` — get info about build
-* `oc build-logs <build>` — get build logs (or `docker logs <container>`), -f to follow
+- `oc get builds`
+  - list builds
+- `oc get pods`
+  - list pods
+- `oc describe policyBindings :default`
+  - show authorization setup
+- `oc describe build <build>`
+  - get info about build
+- `oc build-logs <build>`
+  - get build logs (or `docker logs <container>`), -f to follow
 
-For more information see
-[OpenShift's documentation](http://docs.openshift.org/latest/welcome/index.html).
-Good starting point is also
-[this guide](https://github.com/openshift/origin/blob/master/examples/sample-app/README.md).
+For more information see the [Openshift documentation][]. A good starting point
+is the sample app [README][].
 
 ### Namespaces and projects
 
-OpenShift and Kubernetes use namespaces for isolation. OpenShift extends
-[namespace](https://docs.openshift.org/latest/architecture/core_concepts/projects_and_users.html#namespaces)
-concept to
-[project](https://docs.openshift.org/latest/architecture/core_concepts/projects_and_users.html#projects).
+OpenShift and Kubernetes use namespaces for isolation. OpenShift extends its
+[namespaces][] concept to [projects][] as well.
 
 In order to build images in OpenShift, you don't need to create new
-project/namespace. There is namespace called `default` and it's present after
+project/namespace. There is namespace called 'default' and it's present after
 installation. If your OpenShift instance is being used by other people, make
 sure that everyone is using their own project/namespace. Do not ever share your
 namespace with others.
 
 ### Authentication and authorization
 
-In case you would like to turn the authentication off (which is not
-recommended, but should be fine for testing), run following in your namespace:
+In case you would like to turn the authentication off (which is not recommended,
+but should be fine for testing), run following in your namespace:
 
-```
-$ oadm policy add-role-to-group edit system:unauthenticated system:authenticated
+```shell
+oadm policy add-role-to-group edit system:unauthenticated system:authenticated
 ```
 
 In production, you most likely want to set up some form of
-[authentication](https://docs.openshift.org/latest/install_config/configuring_authentication.html)
-and then configure suitable [authorization policy](https://docs.openshift.org/latest/admin_guide/manage_authorization_policy.html).
+[authentication][]
+and then configure a suitable [authorization policy][].
 
 #### Certificates based authentication setup
 
-In order to be able to submit builds, your user needs to have at least `edit` role on the chosen namespace.
+In order to be able to submit builds, your user needs to have at least 'edit'
+role on the chosen namespace.
 
-The easiest way to access OpenShift is to create a dedicated user and set just enough rights for the user:
+The easiest way to access OpenShift is to create a dedicated user and set just
+enough rights for the user:
 
-```
-$ oadm create-api-client-config \
+```shell
+oadm create-api-client-config \
   --certificate-authority='/etc/origin/master/ca.crt' \
   --client-dir='/etc/origin/master/user-builder' \
   --signer-cert='/etc/origin/master/ca.crt' \
@@ -166,57 +166,59 @@ $ oadm create-api-client-config \
   --user='system:builder'
 ```
 
-This will create `kubeconfig` and certificates at `/etc/origin/master/user-builder`. All we need now is to set proper permissions for the user:
+This will create 'kubeconfig' and certificates at
+'/etc/origin/master/user-builder'. All we need now is to set proper permissions
+for the user:
 
-```
-$ oadm policy add-role-to-user -n default edit system:builder
+```shell
+oadm policy add-role-to-user -n default edit system:builder
 ```
 
 #### htpasswd based authentication setup
 
-This is very well [documented](https://docs.openshift.org/latest/admin_guide/configuring_authentication.html#HTPasswdPasswordIdentityProvider) in OpenShift's documentation.
+This is documented very well in OpenShift's [HTPasswdPasswordIdentityProvider][]
+documentation.
 
+1. Create the 'htpasswd' file
 
-1. create `htpasswd` file:
+    ```shell
+    htpasswd -c /etc/origin/htpasswd builder
+    ```
 
- ```
- htpasswd -c /etc/origin/htpasswd builder
- ```
+1. Update the master config at '/etc/origin/master/master-config.yaml'
 
-2. update master config at `/etc/origin/master/master-config.yaml`:
+    ```yaml
+    oauthConfig:
+      ...
+      identityProviders:
+      - name: htpasswd_provider
+        challenge: true
+        login: true
+        provider:
+          apiVersion: v1
+          kind: HTPasswdPasswordIdentityProvider
+          file: /etc/origin/htpasswd
+    ```
 
- ```
- oauthConfig:
-   ...
-   identityProviders:
-   - name: htpasswd_provider
-     challenge: true
-     login: true
-     provider:
-       apiVersion: v1
-       kind: HTPasswdPasswordIdentityProvider
-       file: /etc/origin/htpasswd
- ```
+1. Set the correct permissions for the builder user
 
-3. set correct permissions for the builder user:
+    ```shell
+    oadm policy add-role-to-user -n default edit htpasswd_provider:builder
+    ```
 
- ```
- $ oadm policy add-role-to-user -n default edit htpasswd_provider:builder
- ```
+1. Put the username and password in osbs-client's config
 
-4. put username and password to config of osbs-client:
-
- ```
- [the-instance]
- openshift_uri = https://localhost:8443/
- username = builder
- password = ...
- ```
+    ```conf
+    [the-instance]
+    openshift_uri = https://localhost:8443/
+    username = builder
+    password = ...
+    ```
 
 #### kerberos based authentication setup
 
-OpenShift itself cannot use Kerberos authentication, however it can delegate
-the authentication to reverse proxy. See the corresponding section below for
+OpenShift itself cannot use Kerberos authentication, however it can delegate the
+authentication to reverse proxy. See the corresponding section below for
 details.
 
 ## Apache-based authenticating proxy
@@ -225,28 +227,26 @@ You can setup OpenShift with a proxy in front of it. This proxy may have an
 authentication, e.g. kerberos or basic auth. The proxy should then forward
 username to OpenShift via `X-Remote-User` http header.
 
-Communication between proxy and OpenShift needs to be secure. Proxy needs to
-use specific SSL client certificate signed by CA which is known (and
-preconfigured) in OpenShift. We can use self-signed certificate for this
-because it won't be exposed to the outside world.
+Communication between proxy and OpenShift needs to be secure. Proxy needs to use
+specific SSL client certificate signed by CA which is known (and preconfigured)
+in OpenShift. We can use self-signed certificate for this because it won't be
+exposed to the outside world.
 
-For more information, see the
-[upstream guide](https://docs.openshift.org/latest/admin_guide/configuring_authentication.html).
+For more information, see the upstream authentication [configuration guide][].
 
-Here's how to do it:
+Execute
 
+```shell
+cd /var/lib/origin
+openssl req -new -nodes -x509 -days 3650 -extensions v3_ca -keyout proxy_auth.key -out proxy_auth.crt
+openssl rsa -in proxy_auth.key -out proxy_auth.key
+cp /etc/origin/master/ca.crt /etc/pki/tls/certs/openshift_ca.crt
+cat proxy_auth.{crt,key} > /etc/pki/tls/private/openshift_certkey.crt
 ```
-$ cd /var/lib/origin
-$ openssl req -new -nodes -x509 -days 3650 -extensions v3_ca -keyout proxy_auth.key -out proxy_auth.crt
-$ openssl rsa -in proxy_auth.key -out proxy_auth.key
-$ cp /etc/origin/master/ca.crt /etc/pki/tls/certs/openshift_ca.crt
-$ cat proxy_auth.{crt,key} > /etc/pki/tls/private/openshift_certkey.crt
-```
 
-OpenShift master configuration snippet (it uses
-[RequestHeaderIdentityProvider](http://docs.openshift.org/latest/admin_guide/configuring_authentication.html#RequestHeaderIdentityProvider)):
+OpenShift master configuration snippet (using [RequestHeaderIdentityProvider][])
 
-```
+```yaml
   oauthConfig:
     identityProviders:
     - name: my_request_header_provider
@@ -265,7 +265,7 @@ self-signed and is thus its own CA.
 
 ### Kerberos authentication example
 
-```
+```xml
 <VirtualHost *:9443>
     SSLProxyEngine On
     SSLProxyCACertificateFile /etc/pki/tls/certs/openshift_ca.crt
@@ -306,67 +306,92 @@ self-signed and is thus its own CA.
 </VirtualHost>
 ```
 
-With this configuration run the following to allow all authenticated users to start builds:
+With this configuration run the following to allow all authenticated users to
+start builds:
 
-```
-$ oadm policy add-role-to-group edit system:authenticated
+```shell
+oadm policy add-role-to-group edit system:authenticated
 ```
 
 ## atomic-reactor
 
 In order to build images, you need to have a build image. It is the image used
 by OpenShift to perform builds. The image has installed component called
-[atomic-reactor](https://github.com/containerbuildsystem/atomic-reactor), which
+[atomic-reactor][], which
 performs the build itself.
 
 Please see the project's documentation for more complete information. There's
-also [ansible role](https://github.com/projectatomic/ansible-role-atomic-reactor)
-that can be used to pull or build the image.
+also an [ansible role][] which can be used to pull or build the image.
 
-Unless configured otherwise in osbs-client, build image is expected to be
-tagged as `buildroot:latest` on the build host. If you are using multinode
-setup you should set up [integrated docker
-registry](https://docs.openshift.org/latest/install_config/install/docker_registry.html)
-and refer to the build image by it's ImageStream tag.
+Unless configured otherwise in osbs-client, build image is expected to be tagged
+as 'buildroot:latest' on the build host. If you are using multinode setup you
+should set up the integrated [docker registry][] and refer to the build image by
+its ImageStream tag.
 
 ### Pulling build image
 
-The latest development version of the build image is available at docker hub:
-```
-$ docker pull slavek/atomic-reactor
+The latest development version of the build image is available at docker hub
+
+```shell
+docker pull slavek/atomic-reactor
 ```
 
 ### Building build image
 
-You can also build the image yourself using Dockerfile from root of this repository.
+You can also build the image yourself using Dockerfile from root of this
+repository.
 
-*Optional packages*
+#### Optional packages
 
- * **osbs-client** — if you would like to submit results back to OpenShift (requires `atomic-reactor-metadata`)
- * **atomic-reactor-koji** — [atomic-reactor plugin](https://github.com/containerbuildsystem/atomic-reactor/blob/master/atomic_reactor/plugins/pre_koji.py) for getting packages from koji targets
- * **fedpkg** — atomic-reactor can fetch artifacts from lookaside cache of dist-git
+- osbs-client
+  - if you would like to submit results back to OpenShift (requires
+    'atomic-reactor-metadata')
+- atomic-reactor-koji
+  - atomic-reactor's [koji][] plugin for getting packages from koji targets
+- fedpkg
+  - atomic-reactor can fetch artifacts from the lookaside cache of dist-git
 
+Time to build it
 
-Time to build it:
-
-```
-$ docker build --no-cache=true --tag=buildroot .
+```shell
+docker build --no-cache=true --tag=buildroot .
 ```
 
 ## Docker registry
 
-The built images need to be pushed somewhere. You can use legacy docker registry:
+The built images need to be pushed somewhere. You can use a legacy docker
+registry
 
-```
-$ dnf install docker-registry
-$ systemctl enable docker-registry
-$ systemctl start docker-registry
+```shell
+dnf install docker-registry
+systemctl enable docker-registry
+systemctl start docker-registry
 ```
 
-Or you can use current v2 docker registry:
+Or you can use a current v2 docker registry
 
+```shell
+dnf install docker-distribution
+systemctl enable docker-distribution
+systemctl start docker-distribution
 ```
-$ dnf install docker-distribution
-$ systemctl enable docker-distribution
-$ systemctl start docker-distribution
-```
+
+[docker]: https://www.docker.com
+[OpenShift 3]: https://www.openshift.org
+[atomic-reactor]: https://github.com/containerbuildsystem/atomic-reactor
+[ansible playbook]: https://github.com/projectatomic/ansible-osbs
+[storage scalability]: http://developerblog.redhat.com/2014/09/30/overview-storage-scalability-docker
+[Openshift documentation]: https://docs.openshift.org/latest/welcome/index.html
+[source]: https://github.com/openshift/origin
+[OpenShift Enterprise documentation]: https://docs.openshift.com/enterprise/latest/welcome/index.html
+[README]: https://github.com/openshift/origin/blob/master/examples/sample-app/README.md
+[namespaces]: https://docs.openshift.org/latest/architecture/core_concepts/projects_and_users.html#namespaces
+[projects]: https://docs.openshift.org/latest/architecture/core_concepts/projects_and_users.html#projects
+[authentication]: https://docs.openshift.org/latest/install_config/configuring_authentication.html
+[authorization policy]: https://docs.openshift.org/latest/admin_guide/manage_authorization_policy.html
+[HTPasswdPasswordIdentityProvider]: https://docs.openshift.org/latest/admin_guide/configuring_authentication.html#HTPasswdPasswordIdentityProvider
+[configuration guide]: https://docs.openshift.org/latest/admin_guide/configuring_authentication.html
+[RequestHeaderIdentityProvider]:http://docs.openshift.org/latest/admin_guide/configuring_authentication.html#RequestHeaderIdentityProvider
+[ansible role]: https://github.com/projectatomic/ansible-role-atomic-reactor
+[docker registry]: https://docs.openshift.org/latest/install_config/install/docker_registry.html
+[koji]:https://github.com/containerbuildsystem/atomic-reactor/blob/master/atomic_reactor/plugins/pre_koji.py
