@@ -10,6 +10,7 @@ from __future__ import absolute_import
 
 from flexmock import flexmock
 from osbs.utils.yaml import read_yaml, read_yaml_from_file_path
+from osbs.exceptions import OsbsValidationException
 
 import json
 import os
@@ -84,3 +85,26 @@ def test_read_yaml_file_bad_decode(tmpdir, caplog):
     with pytest.raises(ValueError):
         read_yaml_from_file_path(config_path, 'schemas/container.json')
     assert "unable to decode JSON schema, cannot validate" in caplog.text
+
+
+@pytest.mark.parametrize(('config', 'expected'), [
+    ("""\
+        operator_manifests:
+            enable_digest_pinning: true
+            repo_replacements: [] """,
+     ("at top level: validating 'anyOf' has failed "
+      "(%r is a required property)") % u'manifests_dir'),
+    ("""\
+        compose:
+            packages: []
+            pulp_repos: true
+        mage_build_method: "imagebuilder" """,
+     ("at top level: validating 'anyOf' has failed "
+      "(Additional properties are not allowed ('mage_build_method' was unexpected))")),
+])
+def test_read_yaml_validation_error(config, expected, caplog):
+    with pytest.raises(OsbsValidationException) as exc_info:
+        read_yaml(config, 'schemas/container.json')
+
+    assert "schema validation error" in caplog.text
+    assert expected == str(exc_info.value)
