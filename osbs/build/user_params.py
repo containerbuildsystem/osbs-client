@@ -347,6 +347,7 @@ class BuildUserParams(BuildCommon):
         self.platforms = BuildParam('platforms', allow_none=True)
         self.release = BuildParam('release', allow_none=True)
         self.remote_source_build_args = BuildParam('remote_source_build_args', allow_none=True)
+        self.remote_source_configs = BuildParam('remote_source_configs', allow_none=True)
         self.remote_source_url = BuildParam('remote_source_url', allow_none=True)
         self.skip_build = BuildParam('skip_build', allow_none=True)
         self.tags_from_yaml = BuildParam('tags_from_yaml', allow_none=True)
@@ -399,8 +400,9 @@ class BuildUserParams(BuildCommon):
                    platform=None,
                    platforms=None,
                    release=None,
-                   remote_source_url=None,
                    remote_source_build_args=None,
+                   remote_source_configs=None,
+                   remote_source_url=None,
                    repo_info=None,
                    skip_build=None,
                    tags_from_yaml=None,
@@ -489,8 +491,9 @@ class BuildUserParams(BuildCommon):
         self.git_ref.value = git_ref
         self.git_uri.value = git_uri
 
-        self.remote_source_url.value = remote_source_url
         self.remote_source_build_args.value = remote_source_build_args
+        self.remote_source_configs.value = remote_source_configs
+        self.remote_source_url.value = remote_source_url
         self.release.value = release
         self.build_type.value = build_type
 
