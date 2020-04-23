@@ -29,9 +29,6 @@ This document mentions several components that communicate with each other:
    1. The `BuildConfig`'s source git ref names the git branch the build is from
       ― The `bump_release` configuration names the branch's commit the initial
       build is from
-   1. The `stop_autorebuild_if_disabled` configuration names the config file
-      where autorebuilds are enabled/disabled, see [OSBS Repo Configuration
-      File][]
 1. osbs-client starts the Openshift build from `BuildConfig` for *IM*
 1. Openshift spawns a new build container that contains atomic-reactor inside
 1. atomic-reactor's `CheckAndSetRebuildPlugin` is run. This determines whether

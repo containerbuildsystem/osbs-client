@@ -488,20 +488,12 @@ class TestArrangementV6(ArrangementBase):
         assert get_plugin(plugins, 'prebuild_plugins', 'reactor_config')
         assert get_plugin(plugins, 'prebuild_plugins', PLUGIN_RESOLVE_COMPOSES_KEY)
 
-    @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
-    def test_import_image_renders(self, osbs, scratch):
+    def test_import_image_renders(self, osbs):
         additional_params = {
             'base_image': 'fedora:latest',
         }
-        if scratch:
-            additional_params['scratch'] = True
         _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
-
-        if scratch:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, "exit_plugins", "import_image")
-            return
 
         args = plugin_value_get(plugins, 'exit_plugins', 'import_image', 'args')
 
@@ -536,24 +528,17 @@ class TestArrangementV6(ArrangementBase):
         args = plugin_value_get(plugins, 'postbuild_plugins', 'export_operator_manifests', 'args')
         assert match_args == args
 
-    @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
     @pytest.mark.parametrize('base_image', ['koji/image-build', 'foo'])
-    def test_koji_parent_in_orchestrator(self, osbs, base_image, scratch):
+    def test_koji_parent_in_orchestrator(self, osbs, base_image):
         additional_params = {
             'base_image': base_image,
         }
-        if scratch:
-            additional_params['scratch'] = True
         _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
 
-        if scratch:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, 'prebuild_plugins', PLUGIN_KOJI_PARENT_KEY)
-        else:
-            get_plugin(plugins, 'prebuild_plugins', PLUGIN_KOJI_PARENT_KEY)
-            with pytest.raises(KeyError):
-                plugin_value_get(plugins, 'prebuild_plugins', PLUGIN_KOJI_PARENT_KEY, 'args')
+        get_plugin(plugins, 'prebuild_plugins', PLUGIN_KOJI_PARENT_KEY)
+        with pytest.raises(KeyError):
+            plugin_value_get(plugins, 'prebuild_plugins', PLUGIN_KOJI_PARENT_KEY, 'args')
 
     @pytest.mark.parametrize('scratch', [False, True])  # noqa:F811
     def test_koji_upload(self, scratch, osbs):
@@ -605,8 +590,7 @@ class TestArrangementV6(ArrangementBase):
             plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_FETCH_WORKER_METADATA_KEY, 'args')
 
     @pytest.mark.parametrize('triggers', [False, True])  # noqa:F811
-    @pytest.mark.parametrize('scratch', [False, True])
-    def test_check_and_set_rebuild(self, tmpdir, osbs, triggers, scratch):
+    def test_check_and_set_rebuild(self, tmpdir, osbs, triggers):
         imagechange = [
             {
                 "type": "ImageChange",
@@ -643,15 +627,8 @@ class TestArrangementV6(ArrangementBase):
         additional_params = {
             'base_image': 'fedora:latest',
         }
-        if scratch:
-            additional_params['scratch'] = True
         _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
         plugins = get_plugins_from_build_json(build_json)
-
-        if scratch:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, 'prebuild_plugins', 'check_and_set_rebuild')
-            return
 
         args = plugin_value_get(plugins, 'prebuild_plugins', 'check_and_set_rebuild', 'args')
 
@@ -760,26 +737,6 @@ class TestArrangementV6(ArrangementBase):
             plugin_value_get(plugins, 'prebuild_plugins', 'flatpak_create_dockerfile', 'args')
         with pytest.raises(KeyError):
             plugin_value_get(plugins, 'prebuild_plugins', 'add_flatpak_labels', 'args')
-
-    @pytest.mark.parametrize('worker', [True, False])  # noqa:F811
-    def test_not_flatpak(self, osbs, worker):
-        additional_params = {
-            'base_image': 'fedora:latest',
-        }
-        if worker:
-            _, build_json = self.get_worker_build_request(osbs, additional_params)
-        else:
-            _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
-
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "prebuild_plugins", "flatpak_create_dockerfile")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "prebuild_plugins", "flatpak_update_dockerfile")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "prebuild_plugins", "add_flatpak_labels")
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "prepublish_plugins", "flatpak_create_oci")
 
     def test_render_tag_from_container_yaml(self, osbs):  # noqa:F811
         expected_primary = set(['{version}-{release}'])
