@@ -238,13 +238,6 @@ class TestPluginsConfiguration(object):
 
         plugins = get_plugins_from_build_json(build_json)
 
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "prebuild_plugins",
-                       "stop_autorebuild_if_disabled")
-
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, "prebuild_plugins", "koji")
-
         if is_imagestream and build_type == BUILD_TYPE_ORCHESTRATOR:
             assert get_plugin(plugins, "exit_plugins", "import_image")
         else:
@@ -284,10 +277,6 @@ class TestPluginsConfiguration(object):
         ("w", "prepublish_plugins", "flatpak_create_oci"),
     ]
 
-    not_flatpak_plugins = [
-        ("w", "prepublish_plugins", "squash"),
-    ]
-
     def check_plugin_presence(self, build_type, plugins, invited_plugins, uninvited_plugins):
         for _, phase, plugin in uninvited_plugins:
             with pytest.raises(NoSuchPluginException):
@@ -324,9 +313,6 @@ class TestPluginsConfiguration(object):
         build_json = PluginsConfiguration(user_params).render()
 
         plugins = get_plugins_from_build_json(build_json)
-
-        self.check_plugin_presence(build_type, plugins,
-                                   self.flatpak_plugins, self.not_flatpak_plugins)
 
         if build_type == BUILD_TYPE_ORCHESTRATOR:
             plugin = get_plugin(plugins, "prebuild_plugins", "resolve_composes")
@@ -368,30 +354,13 @@ class TestPluginsConfiguration(object):
             with pytest.raises(NoSuchPluginException):
                 plugin = get_plugin(plugins, "prebuild_plugins", "bump_release")
 
-    @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
-    @pytest.mark.parametrize('flatpak_base_image', (TEST_FLATPAK_BASE_IMAGE, None))
-    def test_render_prod_not_flatpak(self, build_type, flatpak_base_image):
-        extra_args = {
-            'flatpak': False,
-            'flatpak_base_image': flatpak_base_image,
-            'build_type': build_type,
-        }
-        user_params = get_sample_user_params(extra_args=extra_args)
-        self.mock_repo_info()
-        build_json = PluginsConfiguration(user_params).render()
-
-        plugins = get_plugins_from_build_json(build_json)
-
-        self.check_plugin_presence(build_type, plugins,
-                                   self.not_flatpak_plugins, self.flatpak_plugins)
-
-    @pytest.mark.parametrize('koji_target,yum_repourls,include_koji_repo,expect_plugin', [
-        ("koji-target", None, False, True),
-        ("koji-target", ["http://example.com/my.repo"], False, False),
-        ("koji-target", ["http://example.com/my.repo"], True, True),
-        (None, None, False, False),
+    @pytest.mark.parametrize('koji_target,yum_repourls,include_koji_repo', [
+        ("koji-target", None, False),
+        ("koji-target", ["http://example.com/my.repo"], False),
+        ("koji-target", ["http://example.com/my.repo"], True),
+        (None, None, False),
     ])
-    def test_render_koji(self, koji_target, yum_repourls, include_koji_repo, expect_plugin):
+    def test_render_koji(self, koji_target, yum_repourls, include_koji_repo):
         extra_args = {
             'include_koji_repo': include_koji_repo,
             'koji_target': koji_target,
@@ -405,22 +374,17 @@ class TestPluginsConfiguration(object):
 
         plugins = get_plugins_from_build_json(build_json)
 
-        if expect_plugin:
-            args = plugin_value_get(plugins, "prebuild_plugins", "koji", "args")
+        args = plugin_value_get(plugins, "prebuild_plugins", "koji", "args")
+        if koji_target:
             assert args == {
                 'target': koji_target
             }
         else:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, "prebuild_plugins", "koji")
+            assert args == {}
 
-    @pytest.mark.parametrize(('disabled', 'release'), (
-        (False, None),
-        (True, '1.2.1'),
-        (False, None),
-    ))
+    @pytest.mark.parametrize('release', (None, '1.2.1'))
     @pytest.mark.parametrize('flatpak', (True, False))
-    def test_render_bump_release(self, disabled, release, flatpak):
+    def test_render_bump_release(self, release, flatpak):
         extra_args = {
             'release': release,
             'flatpak': flatpak,
@@ -437,11 +401,6 @@ class TestPluginsConfiguration(object):
         labels = plugin_value_get(plugins, "prebuild_plugins", "add_labels_in_dockerfile",
                                   "args", "labels")
         assert labels.get('release') == release
-
-        if disabled:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, "prebuild_plugins", "bump_release")
-            return
 
         plugin = get_plugin(plugins, "prebuild_plugins", "bump_release")
         assert plugin
@@ -765,7 +724,6 @@ class TestPluginsConfiguration(object):
         plugins = get_plugins_from_build_json(build_json)
 
         log_messages = [l.getMessage() for l in caplog.records]
-        assert 'no tag suffix placeholder' in log_messages
         assert 'Invalid custom configuration found for disable_plugins' in log_messages
         assert 'Invalid custom configuration found for enable_plugins' in log_messages
         assert plugin_value_get(plugins, 'prebuild_plugins', 'pull_base_image', 'args',
@@ -797,14 +755,10 @@ class TestPluginsConfiguration(object):
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
 
-        if koji_parent_build:
-            assert get_plugin(plugins, plugin_type, plugin_name)
-            assert plugin_value_get(plugins, plugin_type, plugin_name, 'args',
-                                    'koji_parent_build') == koji_parent_build
-        else:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, plugin_type, plugin_name)
-            assert 'no koji parent build in user parameters' in caplog.text
+        assert get_plugin(plugins, plugin_type, plugin_name)
+        parent_value = koji_parent_build if koji_parent_build else {}
+        assert plugin_value_get(plugins, plugin_type, plugin_name, 'args',
+                                'koji_parent_build') == parent_value
 
     def test_render_pin_operator_digest(self):
         plugin_type = "prebuild_plugins"
@@ -867,50 +821,6 @@ class TestPluginsConfiguration(object):
 
         assert get_plugin(plugins, plugin_type, plugin_name)
         assert plugin_value_get(plugins, plugin_type, plugin_name, 'args')
-
-    def test_render_isolated(self):
-        additional_params = {
-            'isolated': True
-        }
-
-        self.mock_repo_info()
-        user_params = get_sample_user_params(extra_args=additional_params)
-        build_json = PluginsConfiguration(user_params).render()
-        plugins = get_plugins_from_build_json(build_json)
-
-        remove_plugins = [
-            ("prebuild_plugins", "check_and_set_rebuild"),
-            ("prebuild_plugins", "stop_autorebuild_if_disabled")
-        ]
-
-        for (plugin_type, plugin) in remove_plugins:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, plugin_type, plugin)
-
-    def test_render_scratch(self):
-        additional_params = {
-            'scratch': True
-        }
-
-        self.mock_repo_info()
-        user_params = get_sample_user_params(extra_args=additional_params)
-        build_json = PluginsConfiguration(user_params).render()
-        plugins = get_plugins_from_build_json(build_json)
-
-        remove_plugins = [
-            ("prebuild_plugins", "koji_parent"),
-            ("postbuild_plugins", "compress"),
-            ("postbuild_plugins", "compare_components"),
-            ("postbuild_plugins", "import_image"),
-            ("exit_plugins", "koji_tag_build"),
-            ("exit_plugins", "import_image"),
-            ("prebuild_plugins", "check_and_set_rebuild"),
-            ("prebuild_plugins", "stop_autorebuild_if_disabled")
-        ]
-
-        for (plugin_type, plugin) in remove_plugins:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, plugin_type, plugin)
 
     @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
     @pytest.mark.parametrize('triggered_task', (None, 12345))
@@ -1029,21 +939,3 @@ class TestSourceContainerPluginsConfiguration(object):
             assert args['koji_build_id'] == expected_build_id
         if signing_intent:
             assert args['signing_intent'] == expected_intent
-
-    def test_source_render_scratch(self):
-        additional_params = {
-            'scratch': True
-        }
-
-        user_params = source_container_user_params(extra_args=additional_params)
-        build_json = SourceContainerPluginsConfiguration(user_params).render()
-        plugins = get_plugins_from_build_json(build_json)
-
-        remove_plugins = [
-            ("postbuild_plugins", "compress"),
-            ("exit_plugins", "koji_tag_build"),
-        ]
-
-        for (plugin_type, plugin) in remove_plugins:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, plugin_type, plugin)

@@ -174,68 +174,6 @@ class PluginsConfigurationBase(object):
         """
         raise NotImplementedError
 
-    def has_tag_suffixes_placeholder(self):
-        phase = 'postbuild_plugins'
-        plugin = 'tag_from_config'
-        if not self.pt.has_plugin_conf(phase, plugin):
-            logger.debug('no tag suffix placeholder')
-            return False
-
-        placeholder = '{{TAG_SUFFIXES}}'
-        plugin_conf = self.pt.get_plugin_conf('postbuild_plugins', 'tag_from_config')
-        return plugin_conf.get('args', {}).get('tag_suffixes') == placeholder
-
-    def adjust_for_scratch(self):
-        """
-        Remove certain plugins in order to handle the "scratch build"
-        scenario. Scratch builds must not affect subsequent builds,
-        and should not be imported into Koji.
-        """
-        if self.user_params.scratch.value:
-            remove_plugins = [
-                ("prebuild_plugins", "koji_parent"),
-                ("postbuild_plugins", "compress"),  # required only to make an archive for Koji
-                ("postbuild_plugins", "compare_components"),
-                ("postbuild_plugins", "import_image"),
-                ("exit_plugins", "koji_tag_build"),
-                ("exit_plugins", "import_image"),
-                ("prebuild_plugins", "check_and_set_rebuild"),
-                ("prebuild_plugins", "stop_autorebuild_if_disabled")
-            ]
-
-            if not self.has_tag_suffixes_placeholder():
-                remove_plugins.append(("postbuild_plugins", "tag_from_config"))
-
-            for when, which in remove_plugins:
-                self.pt.remove_plugin(when, which, 'removed from scratch build request')
-
-    def adjust_for_isolated(self):
-        """
-        Remove certain plugins in order to handle the "isolated build"
-        scenario.
-        """
-        if self.user_params.isolated.value:
-            remove_plugins = [
-                ("prebuild_plugins", "check_and_set_rebuild"),
-                ("prebuild_plugins", "stop_autorebuild_if_disabled")
-            ]
-
-            for when, which in remove_plugins:
-                self.pt.remove_plugin(when, which, 'removed from isolated build request')
-
-    def adjust_for_flatpak(self):
-        """
-        Remove plugins that don't work when building Flatpaks
-        """
-        if self.user_params.flatpak.value:
-            remove_plugins = [
-                # We'll extract the filesystem anyways for a Flatpak instead of exporting
-                # the docker image directly, so squash just slows things down.
-                ("prepublish_plugins", "squash"),
-            ]
-            for when, which in remove_plugins:
-                self.pt.remove_plugin(when, which, 'not needed for flatpak build')
-
     def render_add_filesystem(self):
         phase = 'prebuild_plugins'
         plugin = 'add_filesystem'
@@ -249,15 +187,6 @@ class PluginsConfigurationBase(object):
                                          self.user_params.platform.value)
             self.pt.set_plugin_arg_valid(phase, plugin, 'koji_target',
                                          self.user_params.koji_target.value)
-
-    def render_add_flatpak_labels(self):
-        phase = 'prebuild_plugins'
-        plugin = 'add_flatpak_labels'
-
-        if self.pt.has_plugin_conf(phase, plugin):
-            if not self.user_params.flatpak.value:
-                self.pt.remove_plugin(phase, plugin)
-                return
 
     def render_add_labels_in_dockerfile(self):
         phase = 'prebuild_plugins'
@@ -308,32 +237,11 @@ class PluginsConfigurationBase(object):
             self.pt.set_plugin_arg_valid(phase, plugin, 'flatpak',
                                          self.user_params.flatpak.value)
 
-    def render_flatpak_create_dockerfile(self):
-        phase = 'prebuild_plugins'
-        plugin = 'flatpak_create_dockerfile'
-
-        if self.pt.has_plugin_conf(phase, plugin):
-
-            if not self.user_params.flatpak.value:
-                self.pt.remove_plugin(phase, plugin)
-                return
-
-    def render_flatpak_create_oci(self):
-        phase = 'prepublish_plugins'
-        plugin = 'flatpak_create_oci'
-
-        if not self.user_params.flatpak.value:
-            self.pt.remove_plugin(phase, plugin)
-
     def render_flatpak_update_dockerfile(self):
         phase = 'prebuild_plugins'
         plugin = 'flatpak_update_dockerfile'
 
         if self.pt.has_plugin_conf(phase, plugin):
-
-            if not self.user_params.flatpak.value:
-                self.pt.remove_plugin(phase, plugin)
-                return
 
             self.pt.set_plugin_arg_valid(phase, plugin, 'compose_ids',
                                          self.user_params.compose_ids.value)
@@ -344,14 +252,10 @@ class PluginsConfigurationBase(object):
         """
         phase = 'prebuild_plugins'
         plugin = 'koji'
-        if not self.pt.has_plugin_conf(phase, plugin):
-            return
+        if self.pt.has_plugin_conf(phase, plugin):
 
-        if not self.user_params.include_koji_repo.value and self.user_params.yum_repourls.value:
-            self.pt.remove_plugin(phase, plugin, 'there is a yum repo user parameter')
-        elif not self.pt.set_plugin_arg_valid(phase, plugin, "target",
-                                              self.user_params.koji_target.value):
-            self.pt.remove_plugin(phase, plugin, 'no koji target supplied in user parameters')
+            self.pt.set_plugin_arg_valid(phase, plugin, "target",
+                                         self.user_params.koji_target.value)
 
     def render_bump_release(self):
         """
@@ -360,10 +264,6 @@ class PluginsConfigurationBase(object):
         phase = 'prebuild_plugins'
         plugin = 'bump_release'
         if not self.pt.has_plugin_conf(phase, plugin):
-            return
-
-        if self.user_params.release.value:
-            self.pt.remove_plugin(phase, plugin, 'release value supplied as user parameter')
             return
 
         # For flatpak, we want a name-version-release of
@@ -390,26 +290,17 @@ class PluginsConfigurationBase(object):
         Configure the import_image plugin
         """
         # import_image is a multi-phase plugin
-        if self.user_params.imagestream_name.value is None:
-            self.pt.remove_plugin('exit_plugins', 'import_image',
-                                  'imagestream not in user parameters')
-        elif self.pt.has_plugin_conf('exit_plugins', 'import_image'):
+        if self.pt.has_plugin_conf('exit_plugins', 'import_image'):
+
             self.pt.set_plugin_arg('exit_plugins', 'import_image', 'imagestream',
                                    self.user_params.imagestream_name.value)
 
     def render_inject_parent_image(self):
         phase = 'prebuild_plugins'
         plugin = 'inject_parent_image'
-        if not self.pt.has_plugin_conf(phase, plugin):
-            return
-
-        koji_parent_build = self.user_params.koji_parent_build.value
-
-        if not koji_parent_build:
-            self.pt.remove_plugin(phase, plugin, 'no koji parent build in user parameters')
-            return
-
-        self.pt.set_plugin_arg(phase, plugin, 'koji_parent_build', koji_parent_build)
+        if self.pt.has_plugin_conf(phase, plugin):
+            self.pt.set_plugin_arg_valid(phase, plugin, 'koji_parent_build',
+                                         self.user_params.koji_parent_build.value)
 
     def render_koji_upload(self, use_auth=None):
         phase = 'postbuild_plugins'
@@ -447,14 +338,10 @@ class PluginsConfigurationBase(object):
     def render_koji_tag_build(self):
         phase = 'exit_plugins'
         plugin = 'koji_tag_build'
-        if not self.pt.has_plugin_conf(phase, plugin):
-            return
+        if self.pt.has_plugin_conf(phase, plugin):
 
-        if not self.user_params.koji_target.value:
-            self.pt.remove_plugin(phase, plugin, 'no koji target in user parameters')
-            return
-
-        self.pt.set_plugin_arg(phase, plugin, 'target', self.user_params.koji_target.value)
+            self.pt.set_plugin_arg_valid(phase, plugin, 'target',
+                                         self.user_params.koji_target.value)
 
     def render_orchestrate_build(self):
         phase = 'buildstep_plugins'
@@ -510,7 +397,8 @@ class PluginsConfigurationBase(object):
         """Configure tag_from_config plugin"""
         phase = 'postbuild_plugins'
         plugin = 'tag_from_config'
-        if not self.has_tag_suffixes_placeholder():
+
+        if not self.pt.has_plugin_conf(phase, plugin):
             return
 
         unique_tag = self.user_params.image_tag.value.split(':')[-1]
@@ -626,20 +514,13 @@ class PluginsConfiguration(PluginsConfigurationBase):
         # adjust for custom configuration first
         self.render_customizations()
 
-        self.adjust_for_scratch()
-        self.adjust_for_isolated()
-        self.adjust_for_flatpak()
-
         # Set parameters on each plugin as needed
         self.render_add_filesystem()
-        self.render_add_flatpak_labels()
         self.render_add_labels_in_dockerfile()
         self.render_add_yum_repo_by_url()
         self.render_bump_release()
         self.render_check_and_set_platforms()
         self.render_check_user_settings()
-        self.render_flatpak_create_dockerfile()
-        self.render_flatpak_create_oci()
         self.render_flatpak_update_dockerfile()
         self.render_import_image()
         self.render_inject_parent_image()
@@ -667,27 +548,11 @@ class SourceContainerPluginsConfiguration(PluginsConfigurationBase):
         # orchestrator_sources_inner:<arrangement_version>.json
         return 'orchestrator_sources_inner:{}.json'.format(arrangement_version)
 
-    def adjust_for_scratch(self):
-        """
-        Remove certain plugins in order to handle the "scratch build"
-        scenario. Scratch builds must not affect subsequent builds,
-        and should not be imported into Koji.
-        """
-        if self.user_params.scratch.value:
-            remove_plugins = [
-                ("postbuild_plugins", "compress"),  # required only to make an archive for Koji
-                ("exit_plugins", "koji_tag_build"),
-            ]
-
-            for when, which in remove_plugins:
-                self.pt.remove_plugin(when, which, 'removed from scratch build request')
-
     def render(self):
         self.user_params.validate()
         # adjust for custom configuration first
         self.render_customizations()
 
-        self.adjust_for_scratch()
         # Set parameters on each plugin as needed
         # self.render_bump_release()  # not needed yet
         self.render_fetch_sources()
