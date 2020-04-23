@@ -934,12 +934,15 @@ class TestPluginsConfiguration(object):
                 assert get_plugin(plugins, 'prebuild_plugins', 'koji_delegate')
 
     @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
-    @pytest.mark.parametrize('remote_source_url', (None, 'some_url'))
     @pytest.mark.parametrize('remote_source_build_args', (None, 'some_args'))
+    @pytest.mark.parametrize('remote_source_configs', (None, ['some configs']))
+    @pytest.mark.parametrize('remote_source_url', (None, 'some_url'))
     def test_render_download_remote_sources(self, build_type, remote_source_url,
-                                            remote_source_build_args):
+                                            remote_source_build_args,
+                                            remote_source_configs):
         extra_args = {
             'remote_source_url': remote_source_url,
+            'remote_source_configs': remote_source_configs,
             'remote_source_build_args': remote_source_build_args
         }
         user_params = get_sample_user_params(extra_args=extra_args, build_type=build_type)
@@ -952,6 +955,7 @@ class TestPluginsConfiguration(object):
                                            'download_remote_source', 'args')
 
             assert plugin_args.get('remote_source_url') == remote_source_url
+            assert plugin_args.get('remote_source_configs') == remote_source_configs
             assert plugin_args.get('remote_source_build_args') == remote_source_build_args
 
         else:

@@ -601,6 +601,8 @@ class PluginsConfigurationBase(object):
                                    self.user_params.remote_source_url.value)
             self.pt.set_plugin_arg(phase, plugin, 'remote_source_build_args',
                                    self.user_params.remote_source_build_args.value)
+            self.pt.set_plugin_arg(phase, plugin, 'remote_source_configs',
+                                   self.user_params.remote_source_configs.value)
 
     def render_resolve_remote_source(self):
         phase = 'prebuild_plugins'
