@@ -59,6 +59,19 @@ class TestPodResponse(object):
                  'imageID': 'docker://imageID2',
              },
          ]),
+
+        # New normal case
+        ({'image3': 'imageID3', 'image4': 'imageID4'},
+         [
+             {
+                 'image': 'image3',
+                 'imageID': 'docker-pullable://imageID3',
+             },
+             {
+                 'image': 'image4',
+                 'imageID': 'docker-pullable://imageID4',
+             },
+         ]),
     ])
     def test_container_image_ids(self, expect_image_ids, container_statuses):
         pod_json = deepcopy(self.GENERIC_POD_JSON)

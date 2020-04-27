@@ -41,13 +41,18 @@ class PodResponse(object):
         if statuses is None:
             return {}
 
-        def remove_prefix(image_id, prefix):
-            if image_id.startswith(prefix):
-                return image_id[len(prefix):]
-
+        def remove_prefix(image_id):
+            # Can *currently* be one of None, 'docker://', or
+            #     'docker-pullable://', but is subject to change.
+            try:
+                # Raises 'ValueError' if not found
+                index = image_id.index('://')
+                image_id = image_id[index + 3:]
+            except ValueError:
+                pass
             return image_id
 
-        return {status['image']: remove_prefix(status['imageID'], 'docker://')
+        return {status['image']: remove_prefix(status['imageID'])
                 for status in statuses}
 
     def get_failure_reason(self):
