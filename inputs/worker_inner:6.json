@@ -34,6 +34,9 @@
       "name": "add_help"
     },
     {
+      "name": "add_content_sets"
+    },
+    {
       "name": "add_dockerfile"
     },
     {
