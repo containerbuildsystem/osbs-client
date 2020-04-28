@@ -10,7 +10,6 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import absolute_import, unicode_literals
 
 from pkg_resources import resource_stream
-from osbs.exceptions import OsbsValidationException
 
 import codecs
 import json
@@ -63,34 +62,17 @@ def read_yaml(yaml_data, schema, package=None):
     except jsonschema.SchemaError:
         logger.error('invalid schema, cannot validate')
         raise
-    except jsonschema.ValidationError as exc:
-        logger.debug("schema validation error: %s", exc)
-
-        exc_message = get_error_message(exc)
-
+    except jsonschema.ValidationError:
         for error in validator.iter_errors(data):
-            error_message = get_error_message(error)
+            path = "".join(
+                ('[{}]' if isinstance(element, int) else '.{}').format(element)
+                for element in error.path
+            )
 
-            logger.debug("validation error: %s", error_message)
+            if path.startswith('.'):
+                path = path[1:]
 
-        raise OsbsValidationException(exc_message)
+            logger.error('validation error (%s): %s', path or 'at top level', error.message)
+        raise
 
     return data
-
-
-def get_error_message(error):
-    path = "".join(
-        ('[{}]' if isinstance(element, int) else '.{}').format(element)
-        for element in error.path
-    )
-
-    # get all context messages without duplicates caused by 'anyOf' validator
-    error_contexts = set()
-    for context in error.context:
-        error_contexts.add(context.message)
-
-    error_message = "{}: validating '{}' has failed ({})".format(
-                    path or 'at top level', error.validator,
-                    ", ".join(error_contexts) or error.message)
-
-    return error_message
