@@ -14,9 +14,6 @@
       }
     },
     {
-      "name": "koji_delegate"
-    },
-    {
       "name": "check_and_set_platforms",
       "required": false
     },
@@ -35,6 +32,9 @@
     },
     {
       "name": "koji_parent"
+    },
+    {
+      "name": "koji_delegate"
     },
     {
       "name": "resolve_composes"
