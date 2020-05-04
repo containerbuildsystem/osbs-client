@@ -165,6 +165,10 @@
         "add_timestamp_to_release": {
           "description": "Whether to append timestamp to explicitly specified release for autorebuilds",
           "type": "boolean"
+        },
+        "ignore_isolated_builds": {
+          "description": "Whether to triger autorebuilds for isolated parent build",
+          "type": "boolean"
         }
       },
       "additionalProperties": false
