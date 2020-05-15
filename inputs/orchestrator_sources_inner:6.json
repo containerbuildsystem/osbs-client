@@ -34,7 +34,7 @@
       "required": false
     },
     {
-      "name": "koji_import"
+      "name": "koji_import_source_container"
     },
     {
       "name": "koji_tag_build"

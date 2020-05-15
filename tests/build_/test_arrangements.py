@@ -13,20 +13,25 @@ import json
 from osbs.api import OSBS
 from osbs.constants import (DEFAULT_ARRANGEMENT_VERSION,
                             ORCHESTRATOR_INNER_TEMPLATE,
+                            ORCHESTRATOR_SOURCES_INNER_TEMPLATE,
                             WORKER_INNER_TEMPLATE,
                             ORCHESTRATOR_OUTER_TEMPLATE)
 from osbs import utils
 from osbs.conf import Configuration
+from osbs.constants import USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS
 from osbs.repo_utils import RepoInfo, ModuleSpec
 from osbs.build.build_requestv2 import BuildRequestV2
-from osbs.build.plugins_configuration import PluginsConfiguration
-from osbs.build.user_params import BuildUserParams
+from osbs.build.plugins_configuration import (PluginsConfiguration,
+                                              SourceContainerPluginsConfiguration,)
+from osbs.build.user_params import BuildUserParams, SourceContainerUserParams
 from tests.constants import (TEST_GIT_URI,
                              TEST_GIT_REF,
                              TEST_GIT_BRANCH,
                              TEST_COMPONENT,
                              TEST_VERSION,
-                             INPUTS_PATH)
+                             INPUTS_PATH,
+                             TEST_USER,
+                             TEST_KOJI_BUILD_NVR,)
 from tests.test_api import request_as_response
 from flexmock import flexmock
 import pytest
@@ -41,6 +46,7 @@ import pytest
 # But we need to verify the input json against the actual keys, so keeping this list
 # up to date is the best solution.
 PLUGIN_KOJI_IMPORT_PLUGIN_KEY = 'koji_import'
+PLUGIN_KOJI_IMPORT_SOURCE_CONTAINER_PLUGIN_KEY = 'koji_import_source_container'
 PLUGIN_KOJI_UPLOAD_PLUGIN_KEY = 'koji_upload'
 PLUGIN_KOJI_TAG_BUILD_KEY = 'koji_tag_build'
 PLUGIN_ADD_FILESYSTEM_KEY = 'add_filesystem'
@@ -202,13 +208,17 @@ class ArrangementBase(object):
         self.mock_env(base_image=base_image,
                       additional_tags=additional_params.get('additional_tags'))
         params = self.COMMON_PARAMS.copy()
-        assert build_type in ('orchestrator', 'worker')
+        assert build_type in ('orchestrator', 'worker',
+                              'source_container')
         if build_type == 'orchestrator':
             params.update(self.ORCHESTRATOR_ADD_PARAMS)
             fn = osbs.create_orchestrator_build
         elif build_type == 'worker':
             params.update(self.WORKER_ADD_PARAMS)
             fn = osbs.create_worker_build
+        elif build_type == 'source_container':
+            params.update(self.ORCHESTRATOR_ADD_PARAMS)
+            fn = osbs.create_source_container_build
 
         params.update(additional_params or {})
         params['arrangement_version'] = self.ARRANGEMENT_VERSION
@@ -223,6 +233,10 @@ class ArrangementBase(object):
     def get_worker_build_request(self, osbs,  # noqa:F811
                                  additional_params=None):
         return self.get_build_request('worker', osbs, additional_params)
+
+    def get_source_container_build_request(self, osbs,
+                                           additional_params=None):
+        return self.get_build_request('source_container', osbs, additional_params)
 
     def assert_plugin_not_present(self, build_json, phase, name):
         plugins = get_plugins_from_build_json(build_json)
@@ -779,3 +793,88 @@ class TestArrangementV6(ArrangementBase):
         assert set(tag_suffixes['primary']) == expected_primary
         assert len(tag_suffixes['floating']) == len(expected_floating)
         assert set(tag_suffixes['floating']) == expected_floating
+
+
+class TestArrangementSourceV6(ArrangementBase):
+    """
+    Really, this is a subclass of TestArrangementV6 but for source container
+    builds. Actually *making* this a subclass of TestArrangementV6 seems like a
+    really bad idea, however.
+    """
+
+    ARRANGEMENT_VERSION = 6
+
+    DEFAULT_PLUGINS = {
+        # This looks just like the real source containers JSON. Please add
+        #     useful tests if any come to mind.
+        ORCHESTRATOR_SOURCES_INNER_TEMPLATE: {
+            'prebuild_plugins': [
+                'reactor_config',
+                'fetch_sources',
+                'bump_release',
+            ],
+
+            'buildstep_plugins': [
+                'source_container',
+            ],
+
+            'postbuild_plugins': [
+                'compress',
+                'tag_and_push',
+            ],
+
+            'prepublish_plugins': [
+            ],
+
+            'exit_plugins': [
+                PLUGIN_VERIFY_MEDIA_KEY,
+                PLUGIN_KOJI_IMPORT_SOURCE_CONTAINER_PLUGIN_KEY,
+                'koji_tag_build',
+                'store_metadata_in_osv3',
+            ],
+        }
+    }
+
+    def get_plugins_from_buildrequest(self, build_request, template):
+        conf_args = {
+            "build_from": "image:buildroot:latest",
+            'orchestrator_max_run_hours': 5,
+            'reactor_config_map': 'reactor-config-map-scratch',
+            'scratch': True,
+            'worker_max_run_hours': 3,
+        }
+        param_kwargs = {'build_conf': Configuration(**conf_args)}
+        param_kwargs.update({
+            'user': TEST_USER,
+            'component': TEST_COMPONENT,
+            "koji_target": "tothepoint",
+            "platform": "x86_64",
+            "signing_intent": "test-signing-intent",
+            'sources_for_koji_build_nvr': TEST_KOJI_BUILD_NVR,
+            'kind': USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS,
+        })
+        user_params = SourceContainerUserParams('inputs')
+        user_params.set_params(**param_kwargs)
+        build_request.set_params(user_params)
+        return SourceContainerPluginsConfiguration(build_request.user_params).pt.template
+
+    def test_running_order(self, osbs):
+        """
+        Verify the plugin running order.
+        """
+        orch_inner = self.DEFAULT_PLUGINS[ORCHESTRATOR_SOURCES_INNER_TEMPLATE]
+        build_request = osbs.get_source_container_build_request(
+                            arrangement_version=self.ARRANGEMENT_VERSION
+                        )
+        plugins = self.get_plugins_from_buildrequest(build_request, orch_inner)
+        phases = ('prebuild_plugins',
+                  'buildstep_plugins',
+                  'prepublish_plugins',
+                  'postbuild_plugins',
+                  'exit_plugins')
+        actual = {}
+        for phase in phases:
+            actual[phase] = [plugin['name']
+                             for plugin in plugins.get(phase, {})]
+
+        assert actual == orch_inner
