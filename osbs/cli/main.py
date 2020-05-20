@@ -356,6 +356,9 @@ def cmd_build(args, osbs):
         'skip_build': args.skip_build,
     }
     if args.arrangement_version:
+        if args.arrangement_version < 6:
+            print("Arrangements less than 6 are no longer used.")
+            return -1
         build_kwargs['arrangement_version'] = args.arrangement_version
 
     if args.koji_upload_dir:
@@ -383,6 +386,9 @@ def cmd_build_source_container(args, osbs):
         'component': args.component,
     }
     if args.arrangement_version:
+        if args.arrangement_version < 6:
+            print("Arrangements less than 6 are no longer used.")
+            return -1
         build_kwargs['arrangement_version'] = args.arrangement_version
 
     build = osbs.create_source_container_build(**build_kwargs)
@@ -725,7 +731,9 @@ def cli():
     build_parser.add_argument('--isolated', action='store_true', required=False,
                               help='isolated build')
     build_parser.add_argument('--arrangement-version', action='store', required=False,
-                              help='version of inner template to use')
+                              type=int,
+                              help='version of inner template to use; '
+                              'versions < 6 are unused')
     build_parser.add_argument('--signing-intent', action='store', required=False,
                               help='override signing intent of ODCS composes')
     build_parser.add_argument("--compose-id", action='append', required=False,
@@ -742,7 +750,7 @@ def cli():
     )
     build_source_container_parser.add_argument(
         "--sources-for-koji-build-nvr", action='store',
-        metavar='N-V-R',  help="koji build NVR"
+        metavar='N-V-R', help="koji build NVR"
     )
     build_source_container_parser.add_argument(
         "--sources-for-koji-build-id", action='store',
@@ -787,7 +795,8 @@ def cli():
     )
     build_source_container_parser.add_argument(
         '--arrangement-version', action='store', required=False,
-        help='version of inner template to use'
+        type=int,
+        help='version of inner template to use; versions < 6 are unused'
     )
     build_source_container_parser.add_argument(
         '--signing-intent', action='store', required=False,
