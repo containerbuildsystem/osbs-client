@@ -29,7 +29,7 @@ from osbs.utils import (buildconfig_update,
                         TarWriter, TarReader, make_name_from_git, wrap_name_from_git,
                         get_instance_token_file_name, sanitize_version,
                         has_triggers, strip_registry_and_tag_from_image,
-                        clone_git_repo, get_repo_info)
+                        clone_git_repo, get_repo_info, ImageName)
 from osbs.exceptions import OsbsException, OsbsCommitNotFound
 from tests.constants import (TEST_DOCKERFILE_GIT, TEST_DOCKERFILE_SHA1, TEST_DOCKERFILE_INIT_SHA1,
                              TEST_DOCKERFILE_BRANCH)
@@ -38,6 +38,36 @@ import osbs.kerberos_ccache
 
 BC_NAME_REGEX = r'^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
 BC_LABEL_REGEX = r'^[a-z0-9]([-a-z0-9]*[a-z0-9])?([\/\.]*[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+
+TEST_DATA = {
+    "repository.com/image-name:latest": ImageName(registry="repository.com", repo="image-name"),
+    "repository.com/prefix/image-name:1": ImageName(registry="repository.com",
+                                                    namespace="prefix",
+                                                    repo="image-name", tag="1"),
+    "repository.com/prefix/image-name@sha256:12345": ImageName(registry="repository.com",
+                                                               namespace="prefix",
+                                                               repo="image-name",
+                                                               tag="sha256:12345"),
+    "repository.com/prefix/image-name:latest": ImageName(registry="repository.com",
+                                                         namespace="prefix",
+                                                         repo="image-name"),
+    "image-name:latest": ImageName(repo="image-name"),
+
+    "registry:5000/image-name@sha256:12345": ImageName(registry="registry:5000",
+                                                       repo="image-name", tag="sha256:12345"),
+    "registry:5000/image-name:latest": ImageName(registry="registry:5000", repo="image-name"),
+
+    "fedora:20": ImageName(repo="fedora", tag="20"),
+    "fedora@sha256:12345": ImageName(repo="fedora", tag="sha256:12345"),
+
+    "prefix/image-name:1": ImageName(namespace="prefix", repo="image-name", tag="1"),
+    "prefix/image-name@sha256:12345": ImageName(namespace="prefix", repo="image-name",
+                                                tag="sha256:12345"),
+
+    "library/fedora:20": ImageName(namespace="library", repo="fedora", tag="20"),
+    "library/fedora@sha256:12345": ImageName(namespace="library", repo="fedora",
+                                             tag="sha256:12345"),
+}
 
 
 def has_connection():
@@ -560,3 +590,64 @@ def initialize_git_repo(rpath, files=None):
             first_commit_ref = first_commit_ref.strip()
     subprocess.Popen(['git', 'commit', '--allow-empty', '-m', 'code additions'], cwd=rpath)
     return first_commit_ref
+
+
+def test_image_name_parse():
+    for inp, parsed in TEST_DATA.items():
+        assert ImageName.parse(inp) == parsed
+
+
+def test_image_name_format():
+    for expected, image_name in TEST_DATA.items():
+        assert image_name.to_str() == expected
+
+
+def test_image_name_parse_image_name(caplog):
+    warning = 'Attempting to parse ImageName test:latest as an ImageName'
+    test = ImageName.parse("test")
+    assert warning not in caplog.text
+    image_test = ImageName.parse(test)
+    assert warning in caplog.text
+    assert test is image_test
+
+
+@pytest.mark.parametrize(('repo', 'organization', 'enclosed_repo'), (
+    ('fedora', 'spam', 'spam/fedora'),
+    ('spam/fedora', 'spam', 'spam/fedora'),
+    ('spam/fedora', 'maps', 'maps/spam-fedora'),
+))
+@pytest.mark.parametrize('registry', (
+    'example.registry.com',
+    'example.registry.com:8888',
+    None,
+))
+@pytest.mark.parametrize('tag', ('bacon', None))
+def test_image_name_enclose(repo, organization, enclosed_repo, registry, tag):
+    reference = repo
+    if tag:
+        reference = '{}:{}'.format(repo, tag)
+    if registry:
+        reference = '{}/{}'.format(registry, reference)
+
+    image_name = ImageName.parse(reference)
+    assert image_name.get_repo() == repo
+    assert image_name.registry == registry
+    assert image_name.tag == (tag or 'latest')
+
+    image_name.enclose(organization)
+    assert image_name.get_repo() == enclosed_repo
+    # Verify that registry and tag are unaffected
+    assert image_name.registry == registry
+    assert image_name.tag == (tag or 'latest')
+
+
+def test_image_name_comparison():
+    # make sure that both "==" and "!=" are implemented right on both Python major releases
+    i1 = ImageName(registry='foo.com', namespace='spam', repo='bar', tag='1')
+    i2 = ImageName(registry='foo.com', namespace='spam', repo='bar', tag='1')
+    assert i1 == i2
+    assert not i1 != i2
+
+    i2 = ImageName(registry='foo.com', namespace='spam', repo='bar', tag='2')
+    assert not i1 == i2
+    assert i1 != i2
