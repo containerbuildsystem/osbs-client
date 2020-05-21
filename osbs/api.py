@@ -43,8 +43,7 @@ from osbs.constants import (BUILD_RUNNING_STATES, WORKER_OUTER_TEMPLATE,
                             ORCHESTRATOR_CUSTOMIZE_CONF, BUILD_TYPE_WORKER,
                             BUILD_TYPE_ORCHESTRATOR, BUILD_FINISHED_STATES,
                             DEFAULT_ARRANGEMENT_VERSION, REACTOR_CONFIG_ARRANGEMENT_VERSION,
-                            ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO, FILTER_KEY,
-                            RELEASE_LABEL_FORMAT,
+                            FILTER_KEY, RELEASE_LABEL_FORMAT,
                             ORCHESTRATOR_SOURCES_OUTER_TEMPLATE,
                             USER_PARAMS_KIND_IMAGE_BUILDS,
                             USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS,
@@ -55,8 +54,7 @@ from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsRespons
 from osbs.utils.labels import Labels
 # import utils in this way, so that we can mock standalone functions with flexmock
 from osbs import utils
-from osbs.utils import (retry_on_conflict, graceful_chain_get, RegistryURI,
-                        strip_registry_and_tag_from_image)
+from osbs.utils import (retry_on_conflict, graceful_chain_get, RegistryURI, ImageName)
 
 from six.moves import http_client, input
 
@@ -425,33 +423,70 @@ class OSBS(object):
 
         return BuildResponse(self.os.create_build(build_json).json(), self)
 
+    @retry_on_conflict
+    def _get_or_create_imagestream(self, imagestream_name, build_request):
+        insecure = False
+        source_registry_uri = RegistryURI(build_request.source_registry['url']).docker_uri
+        source_registry_insecure = build_request.source_registry.get('insecure', False)
+
+        docker_image_repo = ImageName.parse(build_request.base_image)
+
+        if not docker_image_repo.registry:
+            docker_image_repo.registry = source_registry_uri
+            insecure = source_registry_insecure
+        else:
+            if docker_image_repo.registry == source_registry_uri:
+                insecure = source_registry_insecure
+
+            else:
+                allowed_registry = False
+
+                if build_request.pull_registries:
+                    for pull_reg in build_request.pull_registries:
+                        if docker_image_repo.registry == RegistryURI(pull_reg['url']).docker_uri:
+                            insecure = pull_reg.get('insecure', False)
+                            allowed_registry = True
+                            break
+
+                if not allowed_registry:
+                    raise RuntimeError('Not allowed explicitly specified registry: {}'.
+                                       format(docker_image_repo.registry))
+
+        # enclose only for source registry
+        if docker_image_repo.registry == source_registry_uri and build_request.organization:
+            docker_image_repo.enclose(build_request.organization)
+
+        try:
+            imagestream = self.get_image_stream(imagestream_name)
+        except OsbsResponseException as x:
+            if x.status_code != 404:
+                raise
+
+            logger.info('Creating ImageStream %s for %s', imagestream_name, docker_image_repo)
+            imagestream = self.create_image_stream(imagestream_name)
+
+        return imagestream, docker_image_repo.to_str(), insecure
+
     def _get_image_stream_info_for_build_request(self, build_request):
         """Return ImageStream, and ImageStreamTag name for base_image of build_request
 
         If build_request is not auto instantiated, objects are not fetched
         and None, None is returned.
         """
-        image_stream = None
+        image_stream_json = None
         image_stream_tag_name = None
+        docker_image_repo = None
+        insecure = None
 
         if build_request.has_ist_trigger():
             image_stream_tag_id = build_request.trigger_imagestreamtag
             image_stream_id, image_stream_tag_name = image_stream_tag_id.split(':')
 
-            try:
-                image_stream = self.get_image_stream(image_stream_id).json()
-            except OsbsResponseException as x:
-                if x.status_code != 404:
-                    raise
+            image_stream, docker_image_repo, insecure =\
+                self._get_or_create_imagestream(image_stream_id, build_request)
+            image_stream_json = image_stream.json()
 
-            if image_stream:
-                try:
-                    self.get_image_stream_tag(image_stream_tag_id).json()
-                except OsbsResponseException as x:
-                    if x.status_code != 404:
-                        raise
-
-        return image_stream, image_stream_tag_name
+        return image_stream_json, image_stream_tag_name, docker_image_repo, insecure
 
     @retry_on_conflict
     def _update_build_config_when_exist(self, build_json):
@@ -502,7 +537,7 @@ class OSBS(object):
         logger.debug('build config to be named "%s"', build_config_name)
         original_bc = self._get_existing_build_config(build_json)
 
-        image_stream, image_stream_tag_name = \
+        image_stream, image_stream_tag_name, docker_image_repo, insecure = \
             self._get_image_stream_info_for_build_request(build_request)
 
         # Remove triggers in BuildConfig to avoid accidental
@@ -522,15 +557,11 @@ class OSBS(object):
 
         tag_id = None
         if image_stream:
-            source_registry = getattr(build_request, 'source_registry', None)
-            organization = getattr(build_request, 'organization', None)
-
             changed_ist = self.ensure_image_stream_tag(image_stream,
                                                        image_stream_tag_name,
+                                                       docker_image_repo,
                                                        scheduled=True,
-                                                       source_registry=source_registry,
-                                                       organization=organization,
-                                                       base_image=build_request.base_image)
+                                                       insecure=insecure)
             logger.debug('Changed parent ImageStreamTag? %s', changed_ist)
 
             tag_id = '{}:{}'.format(image_stream['metadata']['name'], image_stream_tag_name)
@@ -1028,19 +1059,6 @@ class OSBS(object):
         return self.os.set_annotations_on_build(build_id, annotations)
 
     @osbsapi
-    def import_image(self, name, tags=None):
-        """
-        Import image tags from a Docker registry into an ImageStream
-
-        :return: bool, whether tags were imported
-        """
-        stream_import_file = os.path.join(self.os_conf.get_build_json_store(),
-                                          'image_stream_import.json')
-        with open(stream_import_file) as f:
-            stream_import = json.load(f)
-        return self.os.import_image(name, stream_import, tags=tags)
-
-    @osbsapi
     def import_image_tags(self, name, tags, repository, insecure=False):
         """Import image tags from specified container repository.
 
@@ -1131,18 +1149,16 @@ class OSBS(object):
         return self.os.get_image_stream_tag_with_retry(tag_id)
 
     @osbsapi
-    def ensure_image_stream_tag(self, stream, tag_name, scheduled=False,
-                                source_registry=None, organization=None, base_image=None):
+    def ensure_image_stream_tag(self, stream, tag_name, docker_image_repo, scheduled=False,
+                                insecure=False):
         """Ensures the tag is monitored in ImageStream
 
         :param stream: dict, ImageStream object
         :param tag_name: str, name of tag to check, without name of
                               ImageStream as prefix
+        :param docker_image_repo: str full name of repository
         :param scheduled: bool, if True, importPolicy.scheduled will be
                                 set to True in ImageStreamTag
-        :param source_registry: dict, info about source registry
-        :param organization: str, oganization for registry
-        :param base_image: str, base image
         :return: bool, whether or not modifications were performed
         """
         img_stream_tag_file = os.path.join(self.os_conf.get_build_json_store(),
@@ -1150,53 +1166,22 @@ class OSBS(object):
         with open(img_stream_tag_file) as f:
             tag_template = json.load(f)
 
-        repository = None
-        registry = None
-        insecure = False
-
-        if source_registry:
-            registry = RegistryURI(source_registry['url']).docker_uri
-            insecure = source_registry.get('insecure', False)
-
-        if base_image and registry:
-            repository = self._get_enclosed_repo_with_source_registry(base_image,
-                                                                      registry, organization)
-
         return self.os.ensure_image_stream_tag(stream, tag_name, tag_template,
-                                               scheduled, repository=repository,
+                                               docker_image_repo, scheduled,
                                                insecure=insecure)
-
-    def _get_enclosed_repo_with_source_registry(self, repository, registry, organization):
-        repo_without_registry = strip_registry_and_tag_from_image(repository)
-        if not registry.endswith('/'):
-            registry += '/'
-
-        if organization:
-            s = repo_without_registry.split('/', 1)
-
-            if len(s) == 2:
-                repo_without_registry = "{}/{}-{}".format(organization, s[0], s[1])
-            else:
-                repo_without_registry = "{}/{}".format(organization, s[0])
-
-        return registry + repo_without_registry
 
     @osbsapi
     def get_image_stream(self, stream_id):
         return self.os.get_image_stream(stream_id)
 
     @osbsapi
-    def create_image_stream(self, name, docker_image_repository,
-                            insecure_registry=False):
+    def create_image_stream(self, name):
         """
         Create an ImageStream object
 
         Raises exception on error
 
         :param name: str, name of ImageStream
-        :param docker_image_repository: str, pull spec for docker image
-               repository
-        :param insecure_registry: bool, whether plain HTTP should be used
         :return: response
         """
         img_stream_file = os.path.join(self.os_conf.get_build_json_store(), 'image_stream.json')
@@ -1204,9 +1189,6 @@ class OSBS(object):
             stream = json.load(f)
         stream['metadata']['name'] = name
         stream['metadata'].setdefault('annotations', {})
-        stream['metadata']['annotations'][ANNOTATION_SOURCE_REPO] = docker_image_repository
-        if insecure_registry:
-            stream['metadata']['annotations'][ANNOTATION_INSECURE_REPO] = 'true'
 
         return self.os.create_image_stream(json.dumps(stream))
 

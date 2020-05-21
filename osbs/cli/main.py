@@ -29,8 +29,8 @@ from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SE
 from osbs.exceptions import (OsbsNetworkException, OsbsException, OsbsAuthException,
                              OsbsResponseException)
 from osbs.cli.capture import setup_json_capture
-from osbs.utils import (strip_registry_from_image, paused_builds, TarReader,
-                        TarWriter, get_time_from_rfc3339, graceful_chain_get)
+from osbs.utils import (paused_builds, TarReader, TarWriter, get_time_from_rfc3339,
+                        graceful_chain_get, ImageName)
 from six.moves.urllib.parse import urljoin
 
 logger = logging.getLogger('osbs')
@@ -135,7 +135,8 @@ def cmd_list_builds(args, osbs):
                             key=lambda x: x.get_time_created_in_seconds()):
             unique_image = build.get_image_tag()
             try:
-                image = strip_registry_from_image(build.get_repositories()["primary"][0])
+                image = \
+                    ImageName.parse(build.get_repositories()["primary"][0]).to_str(registry=False)
             except (TypeError, KeyError, IndexError):
                 image = ""  # "" or unique_image? failed builds don't have that ^
             if args.FILTER and args.FILTER not in image:
@@ -443,10 +444,6 @@ def cmd_watch_build(args, osbs):
         print_json_nicely(build_response.json)
 
 
-def cmd_import_image(args, osbs):
-    osbs.import_image(args.NAME[0], tags=args.tags)
-
-
 def cmd_get_token(args, osbs):  # pylint: disable=W0613
     token = osbs.get_token()
     if args.oc:
@@ -645,13 +642,6 @@ def cli():
                                                 help='cancel build specified by ID')
     cancel_build_parser.add_argument("BUILD_ID", help="build ID", nargs=1)
     cancel_build_parser.set_defaults(func=cmd_cancel_build)
-
-    import_image_parser = subparsers.add_parser(str_on_2_unicode_on_3('import-image'),
-                                                help='import tags for ImageStream')
-    import_image_parser.add_argument("NAME", help="ImageStream name", nargs=1)
-    import_image_parser.add_argument("--tag", action="append", dest="tags", metavar="TAG",
-                                     help="restrict import to TAG; may be used multiple times")
-    import_image_parser.set_defaults(func=cmd_import_image)
 
     get_token_parser = subparsers.add_parser(str_on_2_unicode_on_3('get-token'),
                                              help='get authentication token')

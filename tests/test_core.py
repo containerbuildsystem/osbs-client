@@ -545,53 +545,23 @@ class TestOpenshift(object):
     @pytest.mark.parametrize('existing_scheduled', (True, False, None))  # noqa
     @pytest.mark.parametrize('existing_insecure', (True, False, None))
     @pytest.mark.parametrize('expected_scheduled', (True, False))
-    @pytest.mark.parametrize('s_annotations', (
-        {ANNOTATION_INSECURE_REPO: 'true'},
-        {ANNOTATION_INSECURE_REPO: 'false'},
-        {ANNOTATION_SOURCE_REPO: 'repo_from_annotations.com/spam'},
-        {ANNOTATION_SOURCE_REPO: 'repo_from_annotations.com/spam'},
-        {ANNOTATION_INSECURE_REPO: 'true',
-         ANNOTATION_SOURCE_REPO: 'repo_from_annotations.com/spam'},
-        {ANNOTATION_INSECURE_REPO: 'false',
-         ANNOTATION_SOURCE_REPO: 'repo_from_annotations.com/spam'},
-        {},
-        None,
-    ))
     @pytest.mark.parametrize('status_code', (200, 404, 500))
-    @pytest.mark.parametrize(('repository', 'insecure'), (
-        (None, None),
-        (None, False),
-        (None, True),
-        ('repo_from_kwargs.com/spam', None),
-        ('repo_from_kwargs.com/spam', True),
-        ('repo_from_kwargs.com/spam', False),
-    ))
+    @pytest.mark.parametrize('insecure', (None, True, False))
     def test_ensure_image_stream_tag(self, existing_scheduled, existing_insecure,
-                                     expected_scheduled, s_annotations, status_code,
-                                     repository, insecure, openshift):
-        stream_name = 'spam'
-        dockerImage_stream_repo = 'repo_from_dockerImageR.com/spam'
-        stream_repo = dockerImage_stream_repo
-        if repository:
-            stream_repo = repository
-        elif s_annotations and ANNOTATION_SOURCE_REPO in s_annotations:
-            stream_repo = s_annotations[ANNOTATION_SOURCE_REPO]
+                                     expected_scheduled, status_code, insecure, openshift):
+
+        tag_name = 'maps_tag'
+        stream_name = 'repo_from_kwargs.com-spam'
+        repository = 'repo_from_kwargs.com/spam:{}'.format(tag_name)
 
         expected_insecure = False
-        if repository:
-            if insecure is not None:
-                expected_insecure = insecure
-        elif s_annotations:
-            expected_insecure = s_annotations.get(ANNOTATION_INSECURE_REPO) == 'true'
+        if insecure is not None:
+            expected_insecure = insecure
 
         stream = {
             'metadata': {'name': stream_name},
-            'spec': {'dockerImageRepository': dockerImage_stream_repo}
         }
-        if s_annotations is not None:
-            stream['metadata']['annotations'] = s_annotations
 
-        tag_name = 'maps'
         tag_id = '{}:{}'.format(stream_name, tag_name)
 
         expected_url = openshift._build_url(
@@ -610,8 +580,7 @@ class TestOpenshift(object):
             if status_code == 404:
                 assert data['metadata']['name'] == tag_id
                 assert data['tag']['name'] == tag_name
-                assert (data['tag']['from']['name'] ==
-                        '{}:{}'.format(stream_repo, tag_name))
+                assert data['tag']['from']['name'] == repository
 
             return make_json_response({})
 
@@ -661,20 +630,20 @@ class TestOpenshift(object):
                 .once())
 
         kwargs = {}
-        if repository:
-            kwargs['repository'] = repository
         if insecure:
             kwargs['insecure'] = insecure
         if expected_error:
             with pytest.raises(OsbsResponseException):
                 openshift.ensure_image_stream_tag(
-                    stream, tag_name, self._make_tag_template(), expected_scheduled, **kwargs)
+                    stream, tag_name, self._make_tag_template(), repository,
+                    expected_scheduled, **kwargs)
 
         else:
             assert (openshift.ensure_image_stream_tag(
                         stream,
                         tag_name,
                         self._make_tag_template(),
+                        repository,
                         expected_scheduled,
                         **kwargs) == expected_change)
 
@@ -715,9 +684,6 @@ class TestOpenshift(object):
                 'metadata': {
                     'name': 'imagestream',
                 },
-                'spec': {
-                    'dockerImageRepository': 'registry.example.com/repo',
-                },
             },
             'tag',
             {
@@ -733,7 +699,8 @@ class TestOpenshift(object):
                     },
                     'importPolicy': {},
                 },
-            })
+            },
+            'registry.example.com/repo')
 
         if should_raise:
             with pytest.raises(OsbsResponseException):
@@ -768,92 +735,21 @@ class TestOpenshift(object):
         ['7.2.username-66'],
         ['7.2.username-66', '7.2.username-67'],
     ))
-    @pytest.mark.parametrize(('imagestream_name', 'expect_update', 'expect_import'), (
-        (TEST_IMAGESTREAM, True, True),
-        (TEST_IMAGESTREAM_NO_TAGS, True, False),
-        (TEST_IMAGESTREAM_WITH_ANNOTATION, False, True),
-    ))
-    def test_import_image(self, openshift, tags, imagestream_name, expect_update, expect_import):
-        """
-        tests that import_image return True
-        regardless if tags were changed
-        """
-        this_file = inspect.getfile(TestCheckResponse)
-        this_dir = os.path.dirname(this_file)
-
-        json_path = os.path.join(this_dir, "mock_jsons", openshift._con.version, 'imagestream.json')
-        with open(json_path) as f:
-            template_resource_json = json.load(f)
-
-        source_repo = None
-        modified_resource_json = deepcopy(template_resource_json)
-        if modified_resource_json['spec'].get('dockerImageRepository'):
-            source_repo = modified_resource_json['spec'].pop('dockerImageRepository')
-            modified_resource_json['metadata']['annotations'][ANNOTATION_SOURCE_REPO] = source_repo
-        else:
-            source_repo = modified_resource_json['status'].get('dockerImageRepository')
-
-        stream_import = {'metadata': {'name': 'FOO'}, 'spec': {'images': []}}
-        stream_import_json = deepcopy(stream_import)
-        stream_import_json['metadata']['name'] = imagestream_name
-        if not expect_import:
-            modified_resource_json['spec']['tags'] = []
-
-        if tags:
-            for tag in modified_resource_json['spec']['tags']:
-                if tag['name'] in tags:
-                    image_import = {
-                        'from': tag['from'],
-                        'to': {'name': tag['name']},
-                        'importPolicy': tag.get('importPolicy'),
-                        'referencePolicy': tag.get('referencePolicy'),
-                    }
-                    stream_import_json['spec']['images'].append(image_import)
-        else:
-            for tag in modified_resource_json['spec']['tags']:
-                image_import = {
-                    'from': tag['from'],
-                    'to': {'name': tag['name']},
-                    'importPolicy': tag.get('importPolicy'),
-                    'referencePolicy': tag.get('referencePolicy'),
-                }
-                stream_import_json['spec']['images'].append(image_import)
-
-        put_url = openshift._build_url(
-            "image.openshift.io/v1",
-            "imagestreams/%s" % imagestream_name
-        )
-        post_url = openshift._build_url(
-            "image.openshift.io/v1",
-            "imagestreamimports/"
-        )
-        (flexmock(openshift)
-            .should_call('_put')
-            .times(1 if expect_update else 0)
-            .with_args(put_url, data=JsonMatcher(modified_resource_json), use_json=True))
-        (flexmock(openshift)
-            .should_call('_post')
-            .times(1 if expect_import else 0)
-            .with_args(post_url, data=JsonMatcher(stream_import_json), use_json=True))
-
-        assert openshift.import_image(imagestream_name, stream_import,
-                                      tags=tags) is expect_import
-
-    @pytest.mark.parametrize('tags', (  # noqa:F811
-        None,
-        [],
-        ['7.2.username-66'],
-        ['7.2.username-66', '7.2.username-67'],
-    ))
     @pytest.mark.parametrize(('imagestream_name', 'expect_update', 'remove_tags'), (
         (TEST_IMAGESTREAM, True, False),
         (TEST_IMAGESTREAM_NO_TAGS, True, True),
         (TEST_IMAGESTREAM_WITH_ANNOTATION, True, False),
         (TEST_IMAGESTREAM_WITHOUT_IMAGEREPOSITORY, False, True),
     ))
+    @pytest.mark.parametrize(('code_status', 'failed_image_status', 'expect_retry'), (
+        (None, None, False),
+        (200, {'status': 'Failure', 'code': 400, 'reason': 'BadRequest'}, False),
+        (200, {'status': 'Failure', 'code': 500, 'reason': 'InternalError'}, True),
+        (504, {'status': 'Failure', 'code': 504, 'reason': 'TimeOut'}, True),
+    ))
     @pytest.mark.parametrize('insecure', (True, False))
     def test_import_image_tags(self, openshift, tags, imagestream_name, expect_update, insecure,
-                               remove_tags):
+                               remove_tags, code_status, failed_image_status, expect_retry):
         """
         tests that import_image return True
         regardless if tags were changed
@@ -869,7 +765,6 @@ class TestOpenshift(object):
         for annotation in ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO:
             modified_resource_json['metadata']['annotations'].pop(annotation, None)
 
-        source_repo = None
         if modified_resource_json['spec'].get('dockerImageRepository'):
             source_repo = modified_resource_json['spec'].pop('dockerImageRepository')
         else:
@@ -902,10 +797,15 @@ class TestOpenshift(object):
             "image.openshift.io/v1",
             "imagestreams/%s" % imagestream_name
         )
-        (flexmock(openshift)
-            .should_call('_put')
-            .times(1 if expect_update else 0)
-            .with_args(put_url, data=JsonMatcher(modified_resource_json), use_json=True))
+        if expect_update:
+            (flexmock(openshift)
+                .should_call('_put')
+                .with_args(put_url, data=JsonMatcher(modified_resource_json), use_json=True))
+        else:
+            (flexmock(openshift)
+                .should_call('_put')
+                .never()
+                .with_args(put_url, data=JsonMatcher(modified_resource_json), use_json=True))
 
         # Load example API response
         this_file = inspect.getfile(TestCheckResponse)
@@ -915,70 +815,47 @@ class TestOpenshift(object):
         with open(json_path) as f:
             content_json = json.load(f)
         good_resp = HttpResponse(200, {}, content=json.dumps(content_json).encode('utf-8'))
-        image_status = {'status': 'Failure', 'code': 504, 'reason': 'TimeOut'}
-        # Create a bad response by marking the first image as failed
-        for key in ('status', 'code', 'reason'):
-            content_json['status']['images'][0]['status'][key] = image_status[key]
-        bad_resp = HttpResponse(504, {}, content=json.dumps(content_json).encode('utf-8'))
+
+        if failed_image_status:
+            for key in ('status', 'code', 'reason'):
+                content_json['status']['images'][0]['status'][key] = failed_image_status[key]
+            bad_resp = HttpResponse(code_status, {},
+                                    content=json.dumps(content_json).encode('utf-8'))
 
         post_url = openshift._build_url("image.openshift.io/v1", "imagestreamimports/")
         if expect_import:
-            (flexmock(openshift)
-                .should_receive('_post')
-                .times(2)
-                .with_args(post_url, data=JsonMatcher(stream_import_json), use_json=True)
-                .and_return(bad_resp)
-                .and_return(good_resp))
+            if not failed_image_status:
+                (flexmock(openshift)
+                    .should_receive('_post')
+                    .once()
+                    .with_args(post_url, data=JsonMatcher(stream_import_json), use_json=True)
+                    .and_return(good_resp))
+            elif expect_retry:
+                (flexmock(openshift)
+                    .should_receive('_post')
+                    .times(2)
+                    .with_args(post_url, data=JsonMatcher(stream_import_json), use_json=True)
+                    .and_return(bad_resp)
+                    .and_return(good_resp))
+            else:
+                (flexmock(openshift)
+                    .should_receive('_post')
+                    .once()
+                    .with_args(post_url, data=JsonMatcher(stream_import_json), use_json=True)
+                    .and_return(bad_resp))
         else:
             (flexmock(openshift)
                 .should_call('_post')
                 .times(0)
                 .with_args(post_url, data=JsonMatcher(stream_import_json), use_json=True))
 
-        assert openshift.import_image_tags(imagestream_name, stream_import,
-                                           tags, source_repo, insecure) is expect_import
-
-    @pytest.mark.parametrize(('image_status', 'expect_retry'), (  # noqa:F811
-        ({'status': 'Failure', 'code': 500, 'reason': 'InternalError'}, True),
-        ({'status': 'Failure', 'code': 400, 'reason': 'BadRequest'}, False),
-    ))
-    def test_import_image_retry(self, openshift, image_status, expect_retry):
-        imagestream_name = TEST_IMAGESTREAM
-
-        # Load example API response
-        this_file = inspect.getfile(TestCheckResponse)
-        this_dir = os.path.dirname(this_file)
-        json_path = os.path.join(this_dir, "mock_jsons", openshift._con.version,
-                                 'imagestreamimport.json')
-        with open(json_path) as f:
-            content_json = json.load(f)
-
-        # Assume mocked data contains a good response
-        good_resp = HttpResponse(200, {}, content=json.dumps(content_json).encode('utf-8'))
-
-        # Create a bad response by marking the first image as failed
-        for key in ('status', 'code', 'reason'):
-            content_json['status']['images'][0]['status'][key] = image_status[key]
-        bad_resp = HttpResponse(200, {}, content=json.dumps(content_json).encode('utf-8'))
-
         # Make time go faster
         flexmock(time).should_receive('sleep')
 
-        stream_import = {'metadata': {'name': 'FOO'}, 'spec': {'images': []}}
-        tags = ['7.2.username-66', '7.2.username-67']
-
-        if expect_retry:
-            (flexmock(openshift)
-                .should_receive('_post')
-                .times(3)
-                .and_return(bad_resp)
-                .and_return(bad_resp)
-                .and_return(good_resp))
-            assert openshift.import_image(imagestream_name, stream_import, tags=tags) is True
-        else:
-            (flexmock(openshift)
-                .should_receive('_post')
-                .once()
-                .and_return(bad_resp))
+        if expect_import and failed_image_status and not expect_retry:
             with pytest.raises(ImportImageFailed):
-                openshift.import_image(imagestream_name, stream_import, tags=tags)
+                openshift.import_image_tags(imagestream_name, stream_import,
+                                            tags, source_repo, insecure)
+        else:
+            assert openshift.import_image_tags(imagestream_name, stream_import,
+                                               tags, source_repo, insecure) is expect_import

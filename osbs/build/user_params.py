@@ -22,10 +22,7 @@ from osbs.constants import (DEFAULT_GIT_REF, REACTOR_CONFIG_ARRANGEMENT_VERSION,
                             USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS,
                             )
 from osbs.exceptions import OsbsValidationException
-from osbs.utils import (
-    get_imagestreamtag_from_image,
-    make_name_from_git,
-    utcnow)
+from osbs.utils import (make_name_from_git, utcnow)
 
 
 logger = logging.getLogger(__name__)
@@ -523,7 +520,7 @@ class BuildUserParams(BuildCommon):
 
         if not name_label:
             raise OsbsValidationException("name_label must be provided")
-        self.imagestream_name.value = name_label.replace('/', '-')
+        self.imagestream_name.value = name_label
 
         if kwargs.get('signing_intent') and compose_ids:
             raise OsbsValidationException(
@@ -550,7 +547,7 @@ class BuildUserParams(BuildCommon):
 
     def set_base_image(self, base_image):
         self.base_image.value = base_image
-        self.trigger_imagestreamtag.value = get_imagestreamtag_from_image(base_image)
+        self.trigger_imagestreamtag.value = base_image
 
 
 @register_user_params

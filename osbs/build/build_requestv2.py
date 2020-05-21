@@ -26,7 +26,8 @@ from osbs.constants import (SECRETS_PATH, DEFAULT_OUTER_TEMPLATE,
                             BUILD_TYPE_WORKER, ISOLATED_RELEASE_FORMAT)
 from osbs.exceptions import OsbsException, OsbsValidationException
 from osbs.utils.labels import Labels
-from osbs.utils import git_repo_humanish_part_from_uri, sanitize_strings_for_openshift
+from osbs.utils import (git_repo_humanish_part_from_uri, sanitize_strings_for_openshift,
+                        RegistryURI, ImageName)
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,7 @@ class BaseBuildRequest(object):
         self.organization = None
         self.osbs_api = osbs_api
         self.source_registry = None
+        self.pull_registries = None
         self.user_params = user_params
         if user_params and user_params.build_json_dir.value:
             self._build_json_store = user_params.build_json_dir.value
@@ -77,12 +79,15 @@ class BaseBuildRequest(object):
         self.render_resource_limits()
         self.adjust_for_scratch()
         self.set_reactor_config()
-        self.render_user_params()
 
         # Set required_secrets based on reactor_config
         # Set worker_token_secrets based on reactor_config, if any
         data = self.get_reactor_config_data()
         self.set_data_from_reactor_config(data)
+
+        # render params has to run after setting data from reactor config,
+        # because that is updating user_params
+        self.render_user_params()
 
         koji_task_id = self.user_params.koji_task_id.value
         if koji_task_id is not None:
@@ -284,6 +289,14 @@ class BaseBuildRequest(object):
         if source_registry_key in reactor_config_data:
             self.source_registry = reactor_config_data[source_registry_key]
 
+    def set_pull_registries(self, reactor_config_data):
+        """
+        Sets pull_registries value
+        """
+        pull_registries_key = 'pull_registries'
+        if pull_registries_key in reactor_config_data:
+            self.pull_registries = reactor_config_data[pull_registries_key]
+
     def set_registry_organization(self, reactor_config_data):
         """
         Sets registry organization
@@ -298,6 +311,7 @@ class BaseBuildRequest(object):
         Sets data from reactor config
         """
         self.set_source_registry(reactor_config_data)
+        self.set_pull_registries(reactor_config_data)
         self.set_registry_organization(reactor_config_data)
         self.set_required_secrets(reactor_config_data)
 
@@ -408,6 +422,37 @@ class BuildRequestV2(BaseBuildRequest):
             required_secrets += token_secrets
         self._set_required_secrets(required_secrets)
 
+    def _update_trigger_imagestreamtag(self, source_registry):
+        """
+        updates trigger_imagestreamtag, as initial value is just
+        base_image from dockerfile, but we need to add also registry and
+        organization which we get from reactor-config-map
+        """
+        image_name = ImageName.parse(self.user_params.base_image.value)
+        # add registry only if there wasn't one specified in dockerfile
+        if not image_name.registry:
+            image_name.registry = source_registry
+        # enclose only for source registry
+        if image_name.registry == source_registry and self.organization:
+            image_name.enclose(self.organization)
+
+        imagestreamtag = image_name.to_str().replace('/', '-')
+        self.user_params.trigger_imagestreamtag.value = imagestreamtag
+
+    def _update_imagestream_name(self, source_registry):
+        """
+        updates imagestream_name, as initial value is just
+        name label from dockerfile, but we need to add also registry and
+        organization which we get from reactor-config-map
+        """
+        image_name = ImageName.parse(self.user_params.imagestream_name.value)
+        image_name.registry = source_registry
+        if self.organization:
+            image_name.enclose(self.organization)
+
+        imagestream = image_name.to_str(tag=False).replace('/', '-')
+        self.user_params.imagestream_name.value = imagestream
+
     def set_data_from_reactor_config(self, reactor_config_data):
         """
         Sets data from reactor config
@@ -418,10 +463,14 @@ class BuildRequestV2(BaseBuildRequest):
             if self.user_params.flatpak.value and not self.user_params.base_image.value:
                 raise OsbsValidationException(
                     "Flatpak base_image must be be set in container.yaml or reactor config")
-            else:
-                return
+        else:
+            self._set_flatpak(reactor_config_data)
 
-        self._set_flatpak(reactor_config_data)
+        if not self.source_registry:
+            raise RuntimeError('mandatory "source_registry" is not defined in reactor_config')
+        source_registry = RegistryURI(self.source_registry['url']).docker_uri
+        self._update_trigger_imagestreamtag(source_registry)
+        self._update_imagestream_name(source_registry)
 
     def render(self, validate=True):
         super(BuildRequestV2, self).render(validate=validate)

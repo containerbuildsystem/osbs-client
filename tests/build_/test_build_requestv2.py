@@ -68,7 +68,7 @@ class MockDFParser(object):
 
 
 def get_sample_user_params(build_json_store=INPUTS_PATH, conf_args=None, git_args=None,
-                           update_args=None, labels=None):
+                           update_args=None, labels=None, no_source=False):
     if not git_args:
         git_args = {}
     git_args.setdefault('git_uri', TEST_GIT_URI)
@@ -98,6 +98,8 @@ def get_sample_user_params(build_json_store=INPUTS_PATH, conf_args=None, git_arg
         'build_type': BUILD_TYPE_WORKER,
         'repo_info': repo_info,
     }
+    if not no_source:
+        kwargs['reactor_config_override'] = {'source_registry': {'url': 'source_registry'}}
     if update_args:
         kwargs.update(update_args)
     user_params.set_params(**kwargs)
@@ -194,8 +196,11 @@ class TestBuildRequestV2(object):
             'triggered_after_koji_task': trigger_after_koji_task,
         }
 
-        user_params = get_sample_user_params(conf_args=conf_args, update_args=extra_kwargs)
-        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
+        user_params = get_sample_user_params(conf_args=conf_args, update_args=extra_kwargs,
+                                             no_source=True)
+        config_map_data = {'source_registry': {'url': 'source_registry'}}
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(config_map_data),
+                                       user_params=user_params)
         build_json = build_request.render()
 
         assert build_request.user_params.triggered_after_koji_task.value == trigger_after_koji_task
@@ -436,7 +441,7 @@ class TestBuildRequestV2(object):
         else:
             assert "triggers" in build_json["spec"]
             from_name = build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"]
-            assert from_name == 'fedora:latest'
+            assert from_name == 'source_registry-fedora:latest'
 
     @pytest.mark.parametrize('koji_parent_build', ('fedora-26-9', None))
     def test_render_custom_base_image_with_trigger(self, tmpdir, koji_parent_build):
@@ -514,7 +519,6 @@ class TestBuildRequestV2(object):
         user_params = get_sample_user_params(build_json_store=str(tmpdir),
                                              git_args=git_args, labels=labels)
         build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
-        base_image = user_params.base_image.value
 
         if isinstance(expected, type):
             with pytest.raises(expected):
@@ -522,6 +526,8 @@ class TestBuildRequestV2(object):
             return
 
         build_json = build_request.render()
+        base_image = '{}-{}'.format(build_request.source_registry['url'],
+                                    user_params.base_image.value)
 
         if expected:
             assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == base_image
@@ -675,9 +681,7 @@ class TestBuildRequestV2(object):
         BUILD_TYPE_ORCHESTRATOR,
     ])
     @pytest.mark.parametrize('reactor_config_override', [
-        None,
-        {},
-        {'version': 1},
+        {'version': 1, 'source_registry': {'url': 'source_registry'}},
     ])
     @pytest.mark.parametrize('reactor_config_map', [
         None,
@@ -734,39 +738,58 @@ class TestBuildRequestV2(object):
     @pytest.mark.parametrize('reactor_config_map', [
         None,
         {},
-        {'required_secrets': ['secret4', 'secret5']},
-        {'required_secrets': ['secret4', 'secret5', 'reactor_secret']},
         {'required_secrets': ['secret4', 'secret5'],
-         'worker_token_secrets': []},
+         'source_registry': {'url': 'source_registry'}},
         {'required_secrets': ['secret4', 'secret5', 'reactor_secret'],
-         'worker_token_secrets': []},
+         'source_registry': {'url': 'source_registry'}},
         {'required_secrets': ['secret4', 'secret5'],
-         'worker_token_secrets': ['secret7', 'secret8']},
-        {'required_secrets': ['secret4', 'secret5'],
-         'worker_token_secrets': ['secret4', 'secret5', 'secret9']},
+         'worker_token_secrets': [],
+         'source_registry': {'url': 'source_registry'}},
         {'required_secrets': ['secret4', 'secret5', 'reactor_secret'],
-         'worker_token_secrets': ['secret7', 'secret8']},
+         'worker_token_secrets': [],
+         'source_registry': {'url': 'source_registry'}},
+        {'required_secrets': ['secret4', 'secret5'],
+         'worker_token_secrets': ['secret7', 'secret8'],
+         'source_registry': {'url': 'source_registry'}},
+        {'required_secrets': ['secret4', 'secret5'],
+         'worker_token_secrets': ['secret4', 'secret5', 'secret9'],
+         'source_registry': {'url': 'source_registry'}},
+        {'required_secrets': ['secret4', 'secret5', 'reactor_secret'],
+         'worker_token_secrets': ['secret7', 'secret8'],
+         'source_registry': {'url': 'source_registry'}},
     ])
     @pytest.mark.parametrize('reactor_config_override', [
         None,
         {},
-        {'required_secrets': ['secret1', 'secret2']},
-        {'required_secrets': ['secret1', 'secret2', 'reactor_secret']},
         {'required_secrets': ['secret1', 'secret2'],
-         'worker_token_secrets': []},
+         'source_registry': {'url': 'source_registry'}},
         {'required_secrets': ['secret1', 'secret2', 'reactor_secret'],
-         'worker_token_secrets': []},
+         'source_registry': {'url': 'source_registry'}},
         {'required_secrets': ['secret1', 'secret2'],
-         'worker_token_secrets': []},
-        {'required_secrets': ['secret1', 'secret2'],
-         'worker_token_secrets': ['secret10', 'secret11']},
-        {'required_secrets': ['secret1', 'secret2'],
-         'worker_token_secrets': ['secret1', 'secret2', 'secret11']},
+         'worker_token_secrets': [],
+         'source_registry': {'url': 'source_registry'}},
         {'required_secrets': ['secret1', 'secret2', 'reactor_secret'],
-         'worker_token_secrets': ['secret10', 'secret11']},
+         'worker_token_secrets': [],
+         'source_registry': {'url': 'source_registry'}},
+        {'required_secrets': ['secret1', 'secret2'],
+         'worker_token_secrets': [],
+         'source_registry': {'url': 'source_registry'}},
+        {'required_secrets': ['secret1', 'secret2'],
+         'worker_token_secrets': ['secret10', 'secret11'],
+         'source_registry': {'url': 'source_registry'}},
+        {'required_secrets': ['secret1', 'secret2'],
+         'worker_token_secrets': ['secret1', 'secret2', 'secret11'],
+         'source_registry': {'url': 'source_registry'}},
+        {'required_secrets': ['secret1', 'secret2', 'reactor_secret'],
+         'worker_token_secrets': ['secret10', 'secret11'],
+         'source_registry': {'url': 'source_registry'}},
     ])
     def test_set_required_secrets(self, build_type, existing, reactor_config_map,
                                   reactor_config_override):
+        # we need source_registry defined in reactor_config_map
+        if not reactor_config_map and not reactor_config_override:
+            return
+
         outer_template = WORKER_OUTER_TEMPLATE
         if build_type == BUILD_TYPE_ORCHESTRATOR:
             outer_template = ORCHESTRATOR_OUTER_TEMPLATE
@@ -786,6 +809,14 @@ class TestBuildRequestV2(object):
 
         build_request = BuildRequestV2(osbs_api=mock_api, user_params=user_params,
                                        outer_template=outer_template)
+
+        if not reactor_config_override and not reactor_config_map:
+            with pytest.raises(RuntimeError) as exc:
+                build_request.render()
+            log_msg = 'mandatory "source_registry" is not defined in reactor_config'
+            assert log_msg in str(exc.value)
+            return
+
         build_json = build_request.render()
 
         expect_secrets = {}
@@ -839,12 +870,18 @@ class TestBuildRequestV2(object):
         {},
         {'registries_organization': 'organization_in_cm',
          'source_registry': {'url': 'registry_in_cm'}},
+        {'registries_organization': 'organization_in_cm',
+         'source_registry': {'url': 'registry_in_cm'},
+         'pull_registries': [{'uri': 'pull_registry'}]},
     ])
     @pytest.mark.parametrize('reactor_config_override', [
         None,
         {},
         {'registries_organization': 'organization_in_override',
          'source_registry': {'url': 'registry_in_override'}},
+        {'registries_organization': 'organization_in_override',
+         'source_registry': {'url': 'registry_in_override'},
+         'pull_registries': [{'uri': 'pull_registry'}]},
     ])
     def test_set_data_from_reactor_config(self, build_type, reactor_config_map,
                                           reactor_config_override):
@@ -854,13 +891,14 @@ class TestBuildRequestV2(object):
 
         conf_args = {
             'build_from': 'image:buildroot:latest',
-            'reactor_config_map': reactor_config_map,
+            'reactor_config_map': 'reactor_config_map',
         }
         update_args = {
             'reactor_config_override': reactor_config_override,
             'build_type': build_type,
         }
-        user_params = get_sample_user_params(conf_args=conf_args, update_args=update_args)
+        user_params = get_sample_user_params(conf_args=conf_args, update_args=update_args,
+                                             no_source=True)
 
         all_secrets = deepcopy(reactor_config_map)
         mock_api = MockOSBSApi(all_secrets)
@@ -868,23 +906,37 @@ class TestBuildRequestV2(object):
         build_request = BuildRequestV2(osbs_api=mock_api, user_params=user_params,
                                        outer_template=outer_template)
 
+        if not reactor_config_override and not reactor_config_map:
+            with pytest.raises(RuntimeError) as exc:
+                build_request.render()
+            log_msg = 'mandatory "source_registry" is not defined in reactor_config'
+            assert log_msg in str(exc.value)
+            return
+
         build_request.render()
 
         expected_registry = None
         expected_organization = None
+        expected_pull_registries = None
         if reactor_config_override:
             if 'source_registry' in reactor_config_override:
                 expected_registry = reactor_config_override['source_registry']
             if 'registries_organization' in reactor_config_override:
                 expected_organization = reactor_config_override['registries_organization']
+            if 'pull_registries' in reactor_config_override:
+                expected_pull_registries = reactor_config_override['pull_registries']
+
         elif reactor_config_map:
             if 'source_registry' in reactor_config_map:
                 expected_registry = reactor_config_map['source_registry']
             if 'registries_organization' in reactor_config_map:
                 expected_organization = reactor_config_map['registries_organization']
+            if 'pull_registries' in reactor_config_map:
+                expected_pull_registries = reactor_config_map['pull_registries']
 
         assert expected_registry == build_request.source_registry
         assert expected_organization == build_request.organization
+        assert expected_pull_registries == build_request.pull_registries
 
     @pytest.mark.parametrize('build_type', [
         BUILD_TYPE_WORKER,
@@ -893,8 +945,6 @@ class TestBuildRequestV2(object):
     @pytest.mark.parametrize('config_as_override', [True, False])
     @pytest.mark.parametrize('config, expected_envs, expected_error', [
         # No conflicts
-        (None, [], None),
-        ({}, [], None),
         ({'build_env_vars': [
             {'name': 'HTTP_PROXY', 'value': 'example.proxy.net'},
             {'name': 'NO_PROXY', 'value': 'example.no-proxy.net'},
@@ -934,13 +984,18 @@ class TestBuildRequestV2(object):
         update_args = {
             'build_type': build_type,
         }
+        config_map = None
         if config_as_override:
-            update_args['reactor_config_override'] = config
+            update_args['reactor_config_override'] = deepcopy(config)
+            update_args['reactor_config_override']['source_registry'] = {'url': 'source_registry'}
         else:
-            conf_args['reactor_config_map'] = config
+            conf_args['reactor_config_map'] = 'reactor-config-map'
+            config_map = deepcopy(config)
+            config_map['source_registry'] = {'url': 'source_registry'}
 
-        user_params = get_sample_user_params(conf_args=conf_args, update_args=update_args)
-        mock_api = MockOSBSApi(None if config_as_override else deepcopy(config))
+        user_params = get_sample_user_params(conf_args=conf_args, update_args=update_args,
+                                             no_source=True)
+        mock_api = MockOSBSApi(config_map)
         build_request = BuildRequestV2(osbs_api=mock_api, user_params=user_params,
                                        outer_template=outer_template)
 
@@ -1004,16 +1059,20 @@ class TestBuildRequestV2(object):
 
         repo_info = RepoInfo(configuration=mock_configuration)
 
+        source_registry_url = 'source_registry'
+
         reactor_config_map = None
         if config_map is not None:
             reactor_config_map = {
-                'flatpak': {'base_image': config_map}
+                'flatpak': {'base_image': config_map},
+                'source_registry': {'url': source_registry_url}
             }
 
         reactor_config_override = None
         if config_override is not None:
             reactor_config_override = {
-                'flatpak': {'base_image': config_override}
+                'flatpak': {'base_image': config_override},
+                'source_registry': {'url': source_registry_url}
             }
 
         conf_args = {
@@ -1027,7 +1086,8 @@ class TestBuildRequestV2(object):
             'flatpak': True,
             'repo_info': repo_info,
         }
-        user_params = get_sample_user_params(conf_args=conf_args, update_args=update_args)
+        user_params = get_sample_user_params(conf_args=conf_args, update_args=update_args,
+                                             no_source=True)
 
         all_secrets = deepcopy(reactor_config_map)
         mock_api = MockOSBSApi(all_secrets)
@@ -1039,15 +1099,19 @@ class TestBuildRequestV2(object):
             with pytest.raises(OsbsValidationException):
                 build_request.render()
             return
-        else:
-            build_request.render()
+        elif config_map is None and config_override is None:
+            with pytest.raises(RuntimeError):
+                build_request.render()
+            return
 
+        build_request.render()
+        imagetstreamtag_name = '{}-{}:{}'.format(source_registry_url, expected, 'latest')
         assert user_params.base_image.value == expected
-        assert user_params.trigger_imagestreamtag.value == expected + ':latest'
+        assert user_params.trigger_imagestreamtag.value == imagetstreamtag_name
 
         if autorebuild:
             trigger = build_request.build_json['spec']['triggers'][0]
-            assert trigger['imageChange']['from']['name'] == expected + ':latest'
+            assert trigger['imageChange']['from']['name'] == imagetstreamtag_name
 
     @pytest.mark.parametrize('cpu', ['None', 100])
     @pytest.mark.parametrize('memory', ['None', 50])
