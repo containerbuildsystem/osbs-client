@@ -437,6 +437,7 @@ class TestArrangementV6(ArrangementBase):
         plugin = 'pull_base_image'
         additional_params = {
             'base_image': base_image,
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}},
         }
         if scratch:
             additional_params['scratch'] = True
@@ -451,6 +452,7 @@ class TestArrangementV6(ArrangementBase):
         additional_params = {
             'base_image': base_image,
             'yum_repourls': ['https://example.com/my.repo'],
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}},
         }
         if scratch:
             additional_params['scratch'] = True
@@ -467,6 +469,7 @@ class TestArrangementV6(ArrangementBase):
         additional_params = {
             'base_image': 'fedora:latest',
             'target': koji_target,
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}},
         }
         _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
 
@@ -476,13 +479,14 @@ class TestArrangementV6(ArrangementBase):
     def test_import_image_renders(self, osbs):
         additional_params = {
             'base_image': 'fedora:latest',
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}},
         }
         _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
 
         args = plugin_value_get(plugins, 'exit_plugins', 'import_image', 'args')
 
         match_args = {
-            "imagestream": "fedora23-something",
+            "imagestream": "source_registry-fedora23-something",
         }
         assert match_args == args
 
@@ -490,6 +494,7 @@ class TestArrangementV6(ArrangementBase):
         additional_params = {
             'platforms': None,
             'base_image': 'fedora:latest',
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}},
         }
         _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
 
@@ -500,7 +505,9 @@ class TestArrangementV6(ArrangementBase):
 
     @pytest.mark.parametrize('extract_platform', ['x86_64', None])  # noqa:F811
     def test_export_operator_manifests(self, osbs, extract_platform):
-        additional_params = {'base_image': 'fedora:latest'}
+        additional_params = {'base_image': 'fedora:latest',
+                             'reactor_config_override':
+                                 {'source_registry': {'url': 'source_registry'}}}
         match_args = {'platform': 'x86_64'}
         if extract_platform:
             additional_params['operator_manifests_extract_platform'] = extract_platform
@@ -514,6 +521,7 @@ class TestArrangementV6(ArrangementBase):
     def test_koji_parent_in_orchestrator(self, osbs, base_image):
         additional_params = {
             'base_image': base_image,
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}},
         }
         _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
 
@@ -526,6 +534,7 @@ class TestArrangementV6(ArrangementBase):
         additional_params = {
             'base_image': 'fedora:latest',
             'koji_upload_dir': 'upload',
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}},
         }
         if scratch:
             additional_params['scratch'] = True
@@ -544,6 +553,7 @@ class TestArrangementV6(ArrangementBase):
         additional_params = {
             'base_image': 'fedora:latest',
             'koji_upload_dir': 'upload',
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}},
         }
         _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
 
@@ -558,6 +568,7 @@ class TestArrangementV6(ArrangementBase):
     def test_fetch_worker_metadata(self, osbs, scratch):
         additional_params = {
             'base_image': 'fedora:latest',
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}},
         }
         if scratch:
             additional_params['scratch'] = True
@@ -604,6 +615,7 @@ class TestArrangementV6(ArrangementBase):
 
         additional_params = {
             'base_image': 'fedora:latest',
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}},
         }
         _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
 
@@ -625,6 +637,7 @@ class TestArrangementV6(ArrangementBase):
     def test_tag_from_config(self, osbs, params, build_type, has_plat_tag, has_primary_tag):
         additional_params = {
             'base_image': 'fedora:latest',
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}},
         }
         additional_params.update(params)
         _, plugins = self.get_build_request(build_type, osbs, additional_params)
@@ -650,6 +663,7 @@ class TestArrangementV6(ArrangementBase):
     def test_group_manifests(self, osbs):  # noqa:F811
         additional_params = {
             'base_image': 'fedora:latest',
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}},
         }
         _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
         with pytest.raises(KeyError):
@@ -660,6 +674,7 @@ class TestArrangementV6(ArrangementBase):
         additional_params = {
             'base_image': 'foo',
             'koji_parent_build': 'fedora-26-9',
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}},
         }
         _, plugins = self.get_build_request(build_type, osbs, additional_params)
 
@@ -674,7 +689,8 @@ class TestArrangementV6(ArrangementBase):
     def test_flatpak(self, osbs, worker, scratch):
         additional_params = {
             'flatpak': True,
-            'reactor_config_override': {'flatpak': {'base_image': 'koji-target'}},
+            'reactor_config_override': {'flatpak': {'base_image': 'koji-target'},
+                                        'source_registry': {'url': 'source_registry'}},
             'target': 'koji-target',
         }
         if scratch:
@@ -719,6 +735,7 @@ class TestArrangementV6(ArrangementBase):
             'platforms': ['x86_64', 'ppc64le'],
             'base_image': 'fedora:latest_is_the_best',
             'additional_tags': tags,
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}},
         }
         _, plugins = self.get_build_request('orchestrator', osbs, additional_params)
 
@@ -737,7 +754,7 @@ class TestArrangementV6(ArrangementBase):
             'platforms': ['x86_64', 'ppc64le'],
             'additional_tags': tags,
             'base_image': 'fedora:latest',
-
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}},
         }
         _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
 

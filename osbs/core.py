@@ -895,19 +895,9 @@ class Openshift(object):
         return response
 
     @retry_on_conflict
-    def ensure_image_stream_tag(self, stream, tag_name, tag_template,
-                                scheduled=False, repository=None, insecure=False):
+    def ensure_image_stream_tag(self, stream, tag_name, tag_template, repository,
+                                scheduled=False, insecure=False):
         stream_id = stream['metadata']['name']
-
-        if not repository:
-            insecure = (stream['metadata'].get('annotations', {})
-                        .get(ANNOTATION_INSECURE_REPO) == 'true')
-
-            repository = stream['metadata'].get('annotations', {}).get(ANNOTATION_SOURCE_REPO)
-            # ImageStream may not have been updated with new annotation, fallback
-            # to fetching repo from dockerImageRepository
-            if not repository:
-                repository = stream['spec']['dockerImageRepository']
 
         tag_id = '{}:{}'.format(stream_id, tag_name)
 
@@ -924,7 +914,7 @@ class Openshift(object):
             tag = tag_template
             tag['metadata']['name'] = tag_id
             tag['tag']['name'] = tag_name
-            tag['tag']['from']['name'] = '{}:{}'.format(repository, tag_name)
+            tag['tag']['from']['name'] = repository
             changed = True
 
         if insecure != tag['tag']['importPolicy'].get('insecure', False):
@@ -938,7 +928,7 @@ class Openshift(object):
             changed = True
 
         if changed:
-            logger.debug('modifying image stream tag: %s', tag_id)
+            logger.debug('modifying image stream tag: %s : %s', tag_id, tag)
             self.put_image_stream_tag(tag_id, tag)
 
         return changed
@@ -971,54 +961,6 @@ class Openshift(object):
                              use_json=True)
         check_response(response)
         return response
-
-    @retry_on_conflict
-    @retry_on_exception(ImportImageFailedServerError)
-    def import_image(self, name, stream_import, tags=None):
-        """
-        Import image tags from a Docker registry into an ImageStream
-
-        :return: bool, whether tags were imported
-        """
-
-        # Get the JSON for the ImageStream
-        imagestream_json = self.get_image_stream(name).json()
-        logger.debug("imagestream: %r", imagestream_json)
-
-        if 'dockerImageRepository' in imagestream_json.get('spec', {}):
-            logger.debug("Removing 'dockerImageRepository' from ImageStream %s", name)
-            source_repo = imagestream_json['spec'].pop('dockerImageRepository')
-            imagestream_json['metadata']['annotations'][ANNOTATION_SOURCE_REPO] = source_repo
-            imagestream_json = self.update_image_stream(name, imagestream_json).json()
-
-        # Note the tags before import
-        oldtags = imagestream_json.get('status', {}).get('tags', [])
-        logger.debug("tags before import: %r", oldtags)
-
-        stream_import['metadata']['name'] = name
-        stream_import['spec']['images'] = []
-        tags_set = set(tags) if tags else set()
-        for tag in imagestream_json.get('spec', {}).get('tags', []):
-            if tags_set and tag['name'] not in tags_set:
-                continue
-
-            image_import = {
-                'from': tag['from'],
-                'to': {'name': tag['name']},
-                'importPolicy': tag.get('importPolicy'),
-                'referencePolicy': tag.get('referencePolicy'),
-            }
-            stream_import['spec']['images'].append(image_import)
-
-        if not stream_import['spec']['images']:
-            logger.debug('No tags to import')
-            return False
-
-        new_tags = self._get_import_image_response_tags(stream_import)
-
-        logger.debug("tags after import: %r", new_tags)
-
-        return True
 
     @retry_on_conflict
     @retry_on_exception(ImportImageFailedServerError)

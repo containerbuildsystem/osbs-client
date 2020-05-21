@@ -23,13 +23,10 @@ from textwrap import dedent
 from osbs.constants import REPO_CONTAINER_CONFIG
 from osbs.repo_utils import RepoInfo
 from osbs.utils import (buildconfig_update,
-                        get_imagestreamtag_from_image,
                         git_repo_humanish_part_from_uri, sanitize_strings_for_openshift,
-                        get_time_from_rfc3339, strip_registry_from_image,
-                        TarWriter, TarReader, make_name_from_git, wrap_name_from_git,
-                        get_instance_token_file_name, sanitize_version,
-                        has_triggers, strip_registry_and_tag_from_image,
-                        clone_git_repo, get_repo_info, ImageName)
+                        get_time_from_rfc3339, TarWriter, TarReader, make_name_from_git,
+                        wrap_name_from_git, get_instance_token_file_name, sanitize_version,
+                        has_triggers, clone_git_repo, get_repo_info, ImageName)
 from osbs.exceptions import OsbsException, OsbsCommitNotFound
 from tests.constants import (TEST_DOCKERFILE_GIT, TEST_DOCKERFILE_SHA1, TEST_DOCKERFILE_INIT_SHA1,
                              TEST_DOCKERFILE_BRANCH)
@@ -163,32 +160,6 @@ def test_trigger_removals(orig_ist, orig_other):
 ])
 def test_git_repo_humanish_part_from_uri(uri, humanish):
     assert git_repo_humanish_part_from_uri(uri) == humanish
-
-
-@pytest.mark.parametrize(('img', 'expected'), [
-    ('fedora23', 'fedora23'),
-    ('fedora23:sometag', 'fedora23:sometag'),
-    ('fedora23/python', 'fedora23/python'),
-    ('fedora23/python:sometag', 'fedora23/python:sometag'),
-    ('docker.io/fedora23', 'fedora23'),
-    ('docker.io/fedora23/python', 'fedora23/python'),
-    ('docker.io/fedora23/python:sometag', 'fedora23/python:sometag'),
-])
-def test_strip_registry_from_image(img, expected):
-    assert strip_registry_from_image(img) == expected
-
-
-@pytest.mark.parametrize(('img', 'expected'), [
-    ('fedora23', 'fedora23:latest'),
-    ('fedora23:sometag', 'fedora23:sometag'),
-    ('fedora23/python', 'fedora23-python:latest'),
-    ('fedora23/python:sometag', 'fedora23-python:sometag'),
-    ('docker.io/fedora23', 'fedora23:latest'),
-    ('docker.io/fedora23/python', 'fedora23-python:latest'),
-    ('docker.io/fedora23/python:sometag', 'fedora23-python:sometag'),
-])
-def test_get_imagestreamtag_from_image(img, expected):
-    assert get_imagestreamtag_from_image(img) == expected
 
 
 @pytest.mark.parametrize('tz', [
@@ -494,19 +465,6 @@ def test_sanitize_version(version, valid):
             pass
         with pytest.raises(ValueError):
             sanitize_version(parse_version(version))
-
-
-@pytest.mark.parametrize(('img', 'expected'), [
-    ('fedora23', 'fedora23'),
-    ('fedora23:sometag', 'fedora23'),
-    ('fedora23/python', 'fedora23/python'),
-    ('fedora23/python:sometag', 'fedora23/python'),
-    ('docker.io/fedora23', 'fedora23'),
-    ('docker.io/fedora23/python', 'fedora23/python'),
-    ('docker.io/fedora23/python:sometag', 'fedora23/python'),
-])
-def test_strip_registry_and_tag_from_image(img, expected):
-    assert strip_registry_and_tag_from_image(img) == expected
 
 
 @pytest.mark.parametrize(('commit', 'branch', 'depth'), [

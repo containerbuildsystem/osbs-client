@@ -376,47 +376,6 @@ def git_repo_humanish_part_from_uri(git_uri):
     return os.path.basename(git_uri)
 
 
-def strip_registry_from_image(image):
-    # this duplicates some logic with atomic_reactor.util.ImageName,
-    # but I don't think it's worth it to depend on AR just for this
-    ret = image
-    parts = image.split('/', 2)
-    if len(parts) == 2:
-        if '.' in parts[0] or ':' in parts[0]:
-            ret = parts[1]
-    elif len(parts) == 3:
-        ret = '%s/%s' % (parts[1], parts[2])
-    return ret
-
-
-def strip_registry_and_tag_from_image(image):
-    image_with_tag = strip_registry_from_image(image)
-    parts = image_with_tag.split(':')
-    return parts[0]
-
-
-def get_imagestreamtag_from_image(image):
-    """
-    return ImageStreamTag, give a FROM value
-
-    :param image: str, the FROM value from the Dockerfile
-    :return: str, ImageStreamTag
-    """
-    ret = image
-
-    # Remove the registry part
-    ret = strip_registry_from_image(image)
-
-    # ImageStream names cannot contain '/'
-    ret = ret.replace('/', '-')
-
-    # If there is no ':' suffix value, add one
-    if ret.find(':') == -1:
-        ret += ":latest"
-
-    return ret
-
-
 def get_time_from_rfc3339(rfc3339):
     """
     return time tuple from an RFC 3339-formatted time string

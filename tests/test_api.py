@@ -45,7 +45,6 @@ from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             ORCHESTRATOR_CUSTOMIZE_CONF,
                             BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR,
                             OS_CONFLICT_MAX_RETRIES,
-                            ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO,
                             REPO_CONTAINER_CONFIG)
 from osbs import utils
 from osbs.repo_utils import RepoInfo, RepoConfiguration, ModuleSpec
@@ -78,6 +77,7 @@ REQUIRED_BUILD_ARGS = {
     'git_branch': TEST_GIT_BRANCH,
     'user': TEST_USER,
     'build_type': BUILD_TYPE_ORCHESTRATOR,
+    'reactor_config_override': {'source_registry': {'url': 'source_registry'}}
 }
 
 REQUIRED_SOURCE_CONTAINER_BUILD_ARGS = {
@@ -243,6 +243,7 @@ class TestOSBS(object):
             'labels': {'Release': 'bacon'},
             'spam': 'maps',
             'build_from': 'image:test',
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}}
         }
 
         response = osbs.create_build(**kwargs)
@@ -425,6 +426,7 @@ class TestOSBS(object):
             'git_ref': TEST_GIT_REF,
             'git_branch': TEST_GIT_BRANCH,
             'user': TEST_USER,
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}}
         }
         if platform is not None:
             kwargs['platform'] = platform
@@ -445,6 +447,7 @@ class TestOSBS(object):
             'outer_template': WORKER_OUTER_TEMPLATE,
             'customize_conf': WORKER_CUSTOMIZE_CONF,
             'arrangement_version': arrangement_version,
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}}
         }
 
         (flexmock(osbs)
@@ -555,13 +558,14 @@ class TestOSBS(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
 
+        kwargs = {'reactor_config_override': {'source_registry': {'url': 'source_registry'}}}
         invalid_version = INVALID_ARRANGEMENT_VERSION
         if INVALID_ARRANGEMENT_VERSION < REACTOR_CONFIG_ARRANGEMENT_VERSION:
             with pytest.raises(OsbsValidationException) as ex:
                 osbs.create_worker_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
                                          git_branch=TEST_GIT_BRANCH, user=TEST_USER,
                                          platform='spam', release='bacon',
-                                         arrangement_version=invalid_version)
+                                         arrangement_version=invalid_version, **kwargs)
 
             assert 'arrangement_version' in ex.value.message
         # REACTOR_CONFIG arrangements can't fail
@@ -570,7 +574,7 @@ class TestOSBS(object):
             response = osbs.create_worker_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
                                                 git_branch=TEST_GIT_BRANCH, user=TEST_USER,
                                                 platform='spam', release='bacon',
-                                                arrangement_version=invalid_version)
+                                                arrangement_version=invalid_version, **kwargs)
             env = response.json['spec']['strategy']['customStrategy']['env']
             user_params = {}
             for entry in env:
@@ -716,13 +720,14 @@ class TestOSBS(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
 
+        kwargs = {'reactor_config_override': {'source_registry': {'url': 'source_registry'}}}
         invalid_version = INVALID_ARRANGEMENT_VERSION
         if invalid_version < REACTOR_CONFIG_ARRANGEMENT_VERSION:
             with pytest.raises(OsbsValidationException) as ex:
                 osbs.create_orchestrator_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
                                                git_branch=TEST_GIT_BRANCH, user=TEST_USER,
                                                platforms=['spam'],
-                                               arrangement_version=invalid_version)
+                                               arrangement_version=invalid_version, **kwargs)
 
             assert 'arrangement_version' in ex.value.message
         # REACTOR_CONFIG arrangements are hard to make fail
@@ -731,7 +736,7 @@ class TestOSBS(object):
             response = osbs.create_orchestrator_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
                                                       git_branch=TEST_GIT_BRANCH, user=TEST_USER,
                                                       platforms=['spam'],
-                                                      arrangement_version=invalid_version)
+                                                      arrangement_version=invalid_version, **kwargs)
             env = response.json['spec']['strategy']['customStrategy']['env']
             user_params = {}
             for entry in env:
@@ -883,6 +888,7 @@ class TestOSBS(object):
             'user': TEST_USER,
             'target': TEST_TARGET,
             'build_type': BUILD_TYPE_ORCHESTRATOR,
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}}
         }
         if should_succeed:
             osbs.create_build(**create_build_args)
@@ -1305,6 +1311,7 @@ class TestOSBS(object):
             'inner_template': WORKER_INNER_TEMPLATE.format(arrangement_version=arrangement),
             'outer_template': WORKER_OUTER_TEMPLATE,
             'customize_conf': WORKER_CUSTOMIZE_CONF,
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}}
         }
 
         (flexmock(utils)
@@ -1645,42 +1652,47 @@ class TestOSBS(object):
     @pytest.mark.parametrize('skip_build', [True, False])
     @pytest.mark.parametrize('triggers_bj', [True, False])
     @pytest.mark.parametrize('existing_bc', [True, False])
-    @pytest.mark.parametrize('existing_is', [True, False])
+    @pytest.mark.parametrize('existing_is', [True, False, None])
     @pytest.mark.parametrize('existing_ist', [True, False, None])
-    @pytest.mark.parametrize('trigger_name',
-                             ['fedora23-python:new_trigger', 'fedora23-python:old_trigger'])
-    @pytest.mark.parametrize(('source_registry', 'organization', 'base_image',
-                              'expected_repo', 'expected_insecure'), [
-        (None, None, None,
-         None, False),
-        ({'url': 'source_registry.com', 'insecure': False}, None, None,
-         None, False),
-        ({'url': 'source_registry.com', 'insecure': True}, None, None,
-         None, True),
-        ({'url': 'source_registry.com', 'insecure': False}, 'my_org', None,
-         None, False),
-        ({'url': 'source_registry.com', 'insecure': True}, 'my_org', None,
-         None, True),
-        ({'url': 'source_registry.com', 'insecure': False}, None,
-         'old_registry.com/fedora23/python',
-         'source_registry.com/fedora23/python', False),
-        ({'url': 'source_registry.com', 'insecure': True}, None,
-         'old_registry.com/fedora23/python',
-         'source_registry.com/fedora23/python', True),
-        ({'url': 'source_registry.com', 'insecure': False}, 'my_org',
-         'old_registry.com/fedora23/python',
-         'source_registry.com/my_org/fedora23-python', False),
-        ({'url': 'source_registry.com', 'insecure': True}, 'my_org',
-         'old_registry.com/fedora23/python',
-         'source_registry.com/my_org/fedora23-python', True),
+    @pytest.mark.parametrize(('source_registry', 'pull_registries'), [
+        ({'url': 'source_registry.com', 'insecure': False}, None),
+        ({'url': 'source_registry.com', 'insecure': True}, []),
+        ({'url': 'source_registry.com', 'insecure': True},
+         [{'url': 'pull_registry.com', 'insecure': True}]),
+        ({'url': 'source_registry.com', 'insecure': True},
+         [{'url': 'pull_registry.com', 'insecure': False}]),
+    ])
+    @pytest.mark.parametrize(('organization', 'base_image', 'expected_repo'), [
+        (None,
+         'source_registry.com/fedora23/python:new_trigger',
+         'source_registry.com/fedora23/python:new_trigger'),
+        (None,
+         'source_registry.com/fedora23/python:old_trigger',
+         'source_registry.com/fedora23/python:old_trigger'),
+        ('my_org',
+         'source_registry.com/fedora23/python:new_trigger',
+         'source_registry.com/my_org/fedora23-python:new_trigger'),
+        ('my_org',
+         'pull_registry.com/fedora23/python:new_trigger',
+         'pull_registry.com/fedora23/python:new_trigger'),
+        ('my_org',
+         'wrong_registry.com/fedora23/python:new_trigger',
+         'wrong_registry.com/fedora23/python:new_trigger'),
     ])
     def test_create_build_config_auto_start(self, caplog, skip_build, triggers_bj, existing_bc,
-                                            existing_is, existing_ist, trigger_name,
-                                            source_registry, organization, base_image,
-                                            expected_repo, expected_insecure):
-        # If ImageStream exists, always expect auto instantiated
-        # build, because this test assumes an auto_instantiated BuildRequest
-        expect_auto = triggers_bj and existing_is
+                                            existing_is, existing_ist, source_registry,
+                                            pull_registries, organization, base_image,
+                                            expected_repo):
+        expected_insecure = False
+        wrong_registry = True
+        if source_registry['url'] in base_image:
+            expected_insecure = source_registry['insecure']
+            wrong_registry = False
+        elif pull_registries and pull_registries[0]['url'] in base_image:
+            expected_insecure = pull_registries[0]['insecure']
+            wrong_registry = False
+
+        expected_is = expected_repo.replace('/', '-').split(':')[0]
         with NamedTemporaryFile(mode='wt') as fp:
             fp.write(dedent("""\
                 [general]
@@ -1691,6 +1703,7 @@ class TestOSBS(object):
 
         osbs_obj = OSBS(config, config)
 
+        trigger_name = expected_repo.replace('/', '-')
         build_json = {
             'apiVersion': 'v1',
             'kind': 'Build',
@@ -1719,25 +1732,27 @@ class TestOSBS(object):
                 },
             },
             'spec': {
-                'triggers': [{'imageChange': {'from': {'name': 'fedora23-python:old_trigger'}}}]
+                'triggers': [
+                    {'imageChange': {'from': {
+                        'name': 'source_registry.com-fedora23-python:old_trigger'}}}]
             },
             'status': {'lastVersion': 'lastVersion'},
         }
 
         image_stream_json = {'apiVersion': 'v',
                              'kind': 'ImageStream',
-                             'metadata': {'name': 'fedora23-python'}}
+                             'metadata': {'name': expected_is}}
         image_stream_tag_json = {'apiVersion': 'v1',
                                  'kind': 'ImageStreamTag',
                                  'image': {'dockerImageReference':
                                                "registry/namespace/repo@sha256:123456"}}
 
-        spec = BuildUserParams()
+        user_params = BuildUserParams()
         # Params needed to avoid exceptions.
-        spec.set_params(
+        user_params.set_params(
             user='user',
             # for build request v1
-            base_image='old_registry.com/fedora23/python',
+            base_image=base_image,
             build_conf=osbs_obj.build_conf,
             name_label='name_label',
             git_uri='https://github.com/user/reponame.git',
@@ -1753,17 +1768,18 @@ class TestOSBS(object):
             organization=organization,
             skip_build=skip_build,
             triggered_after_koji_task='12345',
+            pull_registries=pull_registries,
         )
         # Cannot use spec keyword arg in flexmock constructor
         # because it appears to be used by flexmock itself
-        build_request.spec = spec
+        build_request.user_params = user_params
         if triggers_bj:
             build_request.trigger_imagestreamtag = trigger_name
 
         get_existing_count = 1
-        if existing_bc:
+        if existing_bc and not (triggers_bj is True and (wrong_registry or existing_is is None)):
             get_existing_count += 1
-        if triggers_bj:
+        if triggers_bj and not wrong_registry and existing_is is not None:
             get_existing_count += 1
 
         get_existing = (flexmock(osbs_obj)
@@ -1779,43 +1795,42 @@ class TestOSBS(object):
             get_existing = get_existing.and_return(build_config_json)
 
         def mock_get_image_stream(*args, **kwargs):
-            if not existing_is:
+            if existing_is is False:
                 raise OsbsResponseException('missing ImageStream',
                                             status_code=404)
+            if existing_is is None:
+                raise OsbsResponseException('wrong response',
+                                            status_code=400)
 
             return flexmock(json=lambda: image_stream_json)
         (flexmock(osbs_obj.os)
             .should_receive('get_image_stream')
-            .with_args('fedora23-python')
-            .times(1 if triggers_bj else 0)
+            .with_args(expected_is)
+            .times(1 if triggers_bj and not wrong_registry else 0)
             .replace_with(mock_get_image_stream))
 
-        if existing_is:
-            get_imstream_tag = (flexmock(osbs_obj.os)
-                                .should_receive('get_image_stream_tag')
-                                .times(1 if triggers_bj else 0))
+        (flexmock(osbs_obj.os)
+            .should_receive('create_image_stream')
+            .times(1 if triggers_bj and existing_is is False and not wrong_registry else 0)
+            .and_return(flexmock(json=lambda: image_stream_json)))
+
+        if triggers_bj and not wrong_registry and existing_is is not None:
             get_imstream_tag_retry = (flexmock(osbs_obj.os)
                                       .should_receive('get_image_stream_tag_with_retry')
                                       .times(1 if triggers_bj and skip_build else 0))
 
-            if triggers_bj:
-                if existing_ist:
-                    get_imstream_tag.and_return(flexmock(json=lambda: image_stream_tag_json))
-                    get_imstream_tag_retry.and_return(flexmock(json=lambda: image_stream_tag_json))
-                elif existing_ist is not None:
-                    get_imstream_tag.and_raise(OsbsResponseException('missing ImageStreamTag',
-                                                                     status_code=404))
-                    get_imstream_tag_retry.and_return(flexmock(json=lambda: image_stream_tag_json))
-                else:
-                    get_imstream_tag.and_raise(OsbsResponseException('missing ImageStreamTag',
-                                                                     status_code=404))
-                    get_imstream_tag_retry.and_raise(OsbsResponseException('missing ImageStreamTag',
-                                                                           status_code=404))
+            if existing_ist:
+                get_imstream_tag_retry.and_return(flexmock(json=lambda: image_stream_tag_json))
+            elif existing_ist is not None:
+                get_imstream_tag_retry.and_return(flexmock(json=lambda: image_stream_tag_json))
+            else:
+                get_imstream_tag_retry.and_raise(OsbsResponseException('missing ImageStreamTag',
+                                                                       status_code=404))
             ist_tag = trigger_name.split(':')[1]
             (flexmock(osbs_obj.os)
                 .should_receive('ensure_image_stream_tag')
-                .with_args(image_stream_json, ist_tag, dict, True,
-                           repository=expected_repo, insecure=expected_insecure)
+                .with_args(image_stream_json, ist_tag, dict, expected_repo, True,
+                           insecure=expected_insecure)
                 .times(1 if triggers_bj else 0)
                 .and_return(True))
         else:
@@ -1832,9 +1847,10 @@ class TestOSBS(object):
             (flexmock(osbs_obj.os)
                 .should_receive('list_builds')
                 .with_args(build_config_id='build')
-                .once()
+                .times(0 if triggers_bj is True and (wrong_registry or existing_is is None) else 1)
                 .and_return(flexmock(json=lambda: {'items': []})))
-            update_build_config_times += 1
+            if not (triggers_bj is True and (wrong_registry or existing_is is None)):
+                update_build_config_times += 1
 
         else:
             def mock_create_build_config(encoded_build_json):
@@ -1843,9 +1859,9 @@ class TestOSBS(object):
             (flexmock(osbs_obj.os)
                 .should_receive('create_build_config')
                 .replace_with(mock_create_build_config)
-                .once())
+                .times(0 if (triggers_bj and (wrong_registry or existing_is is None)) else 1))
 
-        if triggers_bj:
+        if triggers_bj and not wrong_registry and existing_is is not None:
             update_build_config_times += 1
 
         (flexmock(osbs_obj.os)
@@ -1853,17 +1869,17 @@ class TestOSBS(object):
             .with_args('build', str)
             .times(update_build_config_times))
 
-        if expect_auto:
+        if triggers_bj:
             (flexmock(osbs_obj.os)
                 .should_receive('wait_for_new_build_config_instance')
                 .with_args('build', 'lastVersion')
-                .times(0 if skip_build else 1)
+                .times(0 if skip_build or wrong_registry or existing_is is None else 1)
                 .and_return('build-id'))
 
             (flexmock(osbs_obj.os)
                 .should_receive('get_build')
                 .with_args('build-id')
-                .times(0 if skip_build else 1)
+                .times(0 if skip_build or wrong_registry or existing_is is None else 1)
                 .and_return(flexmock(json=lambda: {'spam': 'maps'})))
 
         else:
@@ -1873,10 +1889,22 @@ class TestOSBS(object):
                 .times(0 if skip_build else 1)
                 .and_return(flexmock(json=lambda: {'spam': 'maps'})))
 
+        if wrong_registry and triggers_bj:
+            with pytest.raises(RuntimeError) as exc:
+                osbs_obj._create_build_config_and_build(build_request)
+            assert 'Not allowed explicitly specified registry:' in str(exc.value)
+            return
+
+        if triggers_bj and existing_is is None:
+            with pytest.raises(OsbsResponseException) as exc:
+                osbs_obj._create_build_config_and_build(build_request)
+            assert 'wrong response' in str(exc.value)
+            return
+
         build_response = osbs_obj._create_build_config_and_build(build_request)
         if skip_build:
             assert build_response is None
-            if triggers_bj and existing_is and existing_ist is None:
+            if triggers_bj and existing_ist is None:
                 msg = "Imagestream tag doesn't exist yet:"
                 assert msg in caplog.text
         else:
@@ -1900,7 +1928,8 @@ class TestOSBS(object):
             'koji_task_id': None,
             'scratch': False,
             'build_type': 'orchestrator',
-            'reactor_config_override': {'flatpak': {'base_image': 'base_image'}},
+            'reactor_config_override': {'flatpak': {'base_image': 'base_image'},
+                                        'source_registry': {'url': 'source_registry'}},
         }
 
         # Sanity check the user params we create
@@ -2215,34 +2244,13 @@ class TestOSBS(object):
         ref = response.json()['image']['dockerImageReference']
         assert ref == 'spam:maps'
 
-    @pytest.mark.parametrize(('source_registry', 'organization', 'base_image',
-                              'expect_repository', 'expect_insecure'), (
-        (None, None, None, None, False),
-        ({'url': 'source_registry.com'}, None, 'old_registry.com/my_namespace/my_repo:my_tag',
-         'source_registry.com/my_namespace/my_repo', False),
-        ({'url': 'source_registry.com'}, 'my_org', 'old_registry.com/my_namespace/my_repo:my_tag',
-         'source_registry.com/my_org/my_namespace-my_repo', False),
-        ({'url': 'source_registry.com', 'insecure': False}, None,
-         'old_registry.com/my_namespace/my_repo:my_tag',
-         'source_registry.com/my_namespace/my_repo', False),
-        ({'url': 'source_registry.com', 'insecure': True}, None,
-         'old_registry.com/my_namespace/my_repo:my_tag',
-         'source_registry.com/my_namespace/my_repo', True),
-        ({'url': 'source_registry.com', 'insecure': False}, 'my_org',
-         'old_registry.com/my_namespace/my_repo:my_tag',
-         'source_registry.com/my_org/my_namespace-my_repo', False),
-        ({'url': 'source_registry.com', 'insecure': True}, 'my_org',
-         'old_registry.com/my_namespace/my_repo:my_tag',
-         'source_registry.com/my_org/my_namespace-my_repo', True),
-        ({'url': 'source_registry.com', 'insecure': False}, 'my_org',
-         'old_registry.com/my_repo:my_tag',
-         'source_registry.com/my_org/my_repo', False),
-        ({'url': 'source_registry.com', 'insecure': True}, 'my_org',
-         'old_registry.com/my_repo:my_tag',
-         'source_registry.com/my_org/my_repo', True),
+    @pytest.mark.parametrize(('organization', 'repository', 'insecure'), (
+        (None, 'source_registry.com/my_namespace/my_repo', False),
+        (None, 'source_registry.com/my_namespace/my_repo', True),
+        ('my_org', 'source_registry.com/my_org/my_namespace-my_repo', False),
+        ('my_org', 'source_registry.com/my_org/my_namespace-my_repo', True),
     ))
-    def test_ensure_image_stream_tag(self, source_registry, organization, base_image,
-                                     expect_repository, expect_insecure):
+    def test_ensure_image_stream_tag(self, organization, repository, insecure):
         with NamedTemporaryFile(mode='wt') as fp:
             fp.write(dedent("""\
                 [general]
@@ -2257,42 +2265,13 @@ class TestOSBS(object):
         scheduled = False
         (flexmock(osbs_obj.os)
             .should_receive('ensure_image_stream_tag')
-            .with_args(stream, tag_name, dict, scheduled, repository=expect_repository,
-                       insecure=expect_insecure)
+            .with_args(stream, tag_name, dict, repository, scheduled, insecure=insecure)
             .once()
             .and_return('eggs'))
 
-        response = osbs_obj.ensure_image_stream_tag(stream, tag_name, scheduled,
-                                                    source_registry=source_registry,
-                                                    organization=organization,
-                                                    base_image=base_image)
+        response = osbs_obj.ensure_image_stream_tag(stream, tag_name, repository,
+                                                    scheduled, insecure)
         assert response == 'eggs'
-
-    @pytest.mark.parametrize('tags', (
-        None,
-        [],
-        ['tag'],
-        ['tag1', 'tag2'],
-    ))
-    def test_import_image(self, tags):
-        with NamedTemporaryFile(mode='wt') as fp:
-            fp.write(dedent("""\
-                [general]
-                build_json_dir = {build_json_dir}
-                """.format(build_json_dir='inputs')))
-            fp.flush()
-            config = Configuration(fp.name)
-            osbs_obj = OSBS(config, config)
-
-        image_stream_name = 'spam'
-        (flexmock(osbs_obj.os)
-            .should_receive('import_image')
-            .with_args(image_stream_name, dict, tags=tags)
-            .once()
-            .and_return(True))
-
-        response = osbs_obj.import_image(image_stream_name, tags=tags)
-        assert response is True
 
     @pytest.mark.parametrize('tags', (
         None,
@@ -2344,19 +2323,13 @@ class TestOSBS(object):
             osbs_obj = OSBS(config, config)
 
         image_stream_name = 'spam'
-        image_repository = 'registry.example.com/spam'
-
         mocked_result = object()
 
         def mock_create_image_stream(stream_json):
             stream = json.loads(stream_json)
             assert stream['metadata']['name'] == image_stream_name
 
-            assert stream['metadata']['annotations'][ANNOTATION_SOURCE_REPO] == image_repository
-            if insecure:
-                assert stream['metadata']['annotations'][ANNOTATION_INSECURE_REPO] == 'true'
-            else:
-                assert ANNOTATION_INSECURE_REPO not in stream['metadata']['annotations']
+            assert stream['metadata']['annotations'] == {}
             return mocked_result
 
         (flexmock(osbs_obj.os)
@@ -2364,8 +2337,7 @@ class TestOSBS(object):
             .once()
             .replace_with(mock_create_image_stream))
 
-        response = osbs_obj.create_image_stream(image_stream_name, image_repository,
-                                                insecure_registry=insecure)
+        response = osbs_obj.create_image_stream(image_stream_name)
         assert response is mocked_result
 
     def test_reactor_config_secret(self):
@@ -2388,10 +2360,11 @@ class TestOSBS(object):
 
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
 
-        reactor_config_override = {'required_secrets': ['mysecret']}
-        req = osbs_obj.create_build(target=TEST_TARGET,
-                                    reactor_config_override=reactor_config_override,
-                                    **REQUIRED_BUILD_ARGS)
+        required_args = copy.deepcopy(REQUIRED_BUILD_ARGS)
+        reactor_config_override = {'required_secrets': ['mysecret'],
+                                   'source_registry': {'url': 'source_registry'}}
+        required_args['reactor_config_override'] = reactor_config_override
+        req = osbs_obj.create_build(target=TEST_TARGET, **required_args)
         secrets = req.json['spec']['strategy']['customStrategy']['secrets']
         expected_secret = {
             'mountPath': '/var/run/secrets/atomic-reactor/mysecret',
@@ -2646,12 +2619,13 @@ class TestOSBS(object):
         customize_conf = DEFAULT_CUSTOMIZE_CONF
         repo_info = self.mock_repo_info()
 
+        kwargs = {'reactor_config_override': {'source_registry': {'url': 'source_registry'}}}
         user_params = BuildUserParams(build_json_store=osbs.os_conf.get_build_json_store())
         user_params.set_params(base_image='fedora23/python', build_from='image:whatever',
                                build_conf=osbs.build_conf,
                                name_label='whatever', repo_info=repo_info, user=TEST_USER,
                                build_type=BUILD_TYPE_ORCHESTRATOR,
-                               skip_build=skip_build)
+                               skip_build=skip_build, **kwargs)
 
         (flexmock(utils)
             .should_receive('get_repo_info')
@@ -2851,7 +2825,10 @@ class TestOSBS(object):
             has_ist_trigger=lambda: triggers,
             scratch=False,
             skip_build=False,
-            triggered_after_koji_task='12345')
+            triggered_after_koji_task='12345',
+            source_registry={'url': 'source_registry'},
+            base_image='base_image',
+            organization=None)
         # Cannot use spec keyword arg in flexmock constructor
         # because it appears to be used by flexmock itself
         build_request.spec = spec
@@ -2889,6 +2866,11 @@ class TestOSBS(object):
             .with_args('fedora23-python')
             .times(1 if triggers else 0)
             .replace_with(mock_get_image_stream))
+
+        (flexmock(osbs_obj.os)
+            .should_receive('create_image_stream')
+            .times(1 if triggers else 0)
+            .and_return(flexmock(json=lambda: {})))
 
         if existing_bc:
             (flexmock(osbs_obj.os)
@@ -2996,7 +2978,10 @@ class TestOSBS(object):
             has_ist_trigger=lambda: True,
             scratch=False,
             skip_build=False,
-            triggered_after_koji_task='12345')
+            triggered_after_koji_task='12345',
+            source_registry={'url': 'source_registry'},
+            base_image='base_image',
+            organization=None)
         # Cannot use spec keyword arg in flexmock constructor
         # because it appears to be used by flexmock itself
         build_request.spec = spec
@@ -3017,6 +3002,11 @@ class TestOSBS(object):
             .with_args('fedora23-python')
             .once()
             .replace_with(mock_get_image_stream))
+
+        (flexmock(osbs_obj.os)
+            .should_receive('create_image_stream')
+            .once()
+            .and_return(flexmock(json=lambda: {})))
 
         (flexmock(osbs_obj.os)
             .should_receive('list_builds')
@@ -3165,7 +3155,8 @@ class TestOSBS(object):
             assert 'Could not parse Dockerfile in %s' % tmpdir in str(exc.value)
         else:
             kwargs['flatpak'] = True
-            kwargs['reactor_config_override'] = {'flatpak': {'base_image': 'base_image'}}
+            kwargs['reactor_config_override'] = {'flatpak': {'base_image': 'base_image'},
+                                                 'source_registry': {'url': 'source_registry'}}
             response = osbs._do_create_prod_build(**kwargs)
             assert isinstance(response, BuildResponse)
 
@@ -3186,6 +3177,7 @@ class TestOSBS(object):
             'outer_template': DEFAULT_OUTER_TEMPLATE,
             'customize_conf': DEFAULT_CUSTOMIZE_CONF,
             'build_type': 'orchestrator',
+            'reactor_config_override': {'source_registry': {'url': 'source_registry'}}
         }
         osbs._do_create_prod_build(**kwargs)
         with pytest.raises(ValueError):
