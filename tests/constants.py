@@ -80,10 +80,7 @@ TEST_BUILD_JSON = {
                     "name": "buildroot:latest"
                 },
                 "exposeDockerSocket": True,
-                "env": [{
-                    "name": "ATOMIC_REACTOR_PLUGINS",
-                    "value": "TBD"
-                }]
+                "env": []
             }
         },
         "output": {

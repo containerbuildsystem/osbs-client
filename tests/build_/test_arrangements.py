@@ -67,22 +67,9 @@ class NoSuchPluginException(Exception):
     pass
 
 
-def get_plugins_from_build_json(build_json):
-    env_vars = build_json['spec']['strategy']['customStrategy']['env']
-    plugins = None
-
-    for d in env_vars:
-        if d['name'] == 'ATOMIC_REACTOR_PLUGINS':
-            plugins = json.loads(d['value'])
-            break
-
-    assert plugins is not None
-    return plugins
-
-
 def get_plugin(plugins, plugin_type, plugin_name):
-    plugins = plugins[plugin_type]
-    for plugin in plugins:
+    plugins_type = plugins[plugin_type]
+    for plugin in plugins_type:
         if plugin["name"] == plugin_name:
             return plugin
     else:
@@ -237,11 +224,6 @@ class ArrangementBase(object):
     def get_source_container_build_request(self, osbs,
                                            additional_params=None):
         return self.get_build_request('source_container', osbs, additional_params)
-
-    def assert_plugin_not_present(self, build_json, phase, name):
-        plugins = get_plugins_from_build_json(build_json)
-        with pytest.raises(NoSuchPluginException):
-            get_plugin(plugins, phase, name)
 
 
 class TestArrangementV6(ArrangementBase):
@@ -430,18 +412,9 @@ class TestArrangementV6(ArrangementBase):
         else:
             raise KeyError('USER_PARAMS not set in env')
 
-        plugins_json = osbs.render_plugins_configuration(user_params)
-        for entry in env:
-            if entry['name'] == 'ATOMIC_REACTOR_PLUGINS':
-                entry['value'] = plugins_json
-                break
-        else:
-            env.append({
-                'name': 'ATOMIC_REACTOR_PLUGINS',
-                'value': plugins_json
-            })
+        plugins_json = json.loads(osbs.render_plugins_configuration(user_params))
 
-        return params, build_json
+        return params, plugins_json
 
     def test_is_default(self):
         """
@@ -468,8 +441,7 @@ class TestArrangementV6(ArrangementBase):
         if scratch:
             additional_params['scratch'] = True
 
-        _, build_json = self.get_build_request(build_type, osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
+        _, plugins = self.get_build_request(build_type, osbs, additional_params)
 
         assert get_plugin(plugins, phase, plugin)
 
@@ -482,8 +454,7 @@ class TestArrangementV6(ArrangementBase):
         }
         if scratch:
             additional_params['scratch'] = True
-        params, build_json = self.get_worker_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
+        params, plugins = self.get_worker_build_request(osbs, additional_params)
 
         args = plugin_value_get(plugins, 'prebuild_plugins', PLUGIN_ADD_FILESYSTEM_KEY, 'args')
 
@@ -497,8 +468,7 @@ class TestArrangementV6(ArrangementBase):
             'base_image': 'fedora:latest',
             'target': koji_target,
         }
-        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
+        _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
 
         assert get_plugin(plugins, 'prebuild_plugins', 'reactor_config')
         assert get_plugin(plugins, 'prebuild_plugins', PLUGIN_RESOLVE_COMPOSES_KEY)
@@ -507,8 +477,7 @@ class TestArrangementV6(ArrangementBase):
         additional_params = {
             'base_image': 'fedora:latest',
         }
-        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
+        _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
 
         args = plugin_value_get(plugins, 'exit_plugins', 'import_image', 'args')
 
@@ -522,8 +491,7 @@ class TestArrangementV6(ArrangementBase):
             'platforms': None,
             'base_image': 'fedora:latest',
         }
-        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
+        _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
 
         args = plugin_value_get(plugins, 'buildstep_plugins',
                                 PLUGIN_BUILD_ORCHESTRATE_KEY, 'args')
@@ -538,8 +506,7 @@ class TestArrangementV6(ArrangementBase):
             additional_params['operator_manifests_extract_platform'] = extract_platform
             match_args['operator_manifests_extract_platform'] = extract_platform
 
-        _, build_json = self.get_worker_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
+        _, plugins = self.get_worker_build_request(osbs, additional_params)
         args = plugin_value_get(plugins, 'postbuild_plugins', 'export_operator_manifests', 'args')
         assert match_args == args
 
@@ -548,8 +515,7 @@ class TestArrangementV6(ArrangementBase):
         additional_params = {
             'base_image': base_image,
         }
-        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
+        _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
 
         get_plugin(plugins, 'prebuild_plugins', PLUGIN_KOJI_PARENT_KEY)
         with pytest.raises(KeyError):
@@ -563,8 +529,7 @@ class TestArrangementV6(ArrangementBase):
         }
         if scratch:
             additional_params['scratch'] = True
-        _, build_json = self.get_worker_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
+        _, plugins = self.get_worker_build_request(osbs, additional_params)
 
         args = plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_KOJI_UPLOAD_PLUGIN_KEY, 'args')
         expected_args = {
@@ -580,8 +545,7 @@ class TestArrangementV6(ArrangementBase):
             'base_image': 'fedora:latest',
             'koji_upload_dir': 'upload',
         }
-        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
+        _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
 
         with pytest.raises(NoSuchPluginException):
             get_plugin(plugins, 'postbuild_plugins', PLUGIN_KOJI_UPLOAD_PLUGIN_KEY)
@@ -597,8 +561,7 @@ class TestArrangementV6(ArrangementBase):
         }
         if scratch:
             additional_params['scratch'] = True
-        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
+        _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
 
         get_plugin(plugins, 'postbuild_plugins', PLUGIN_FETCH_WORKER_METADATA_KEY)
         with pytest.raises(KeyError):
@@ -642,8 +605,7 @@ class TestArrangementV6(ArrangementBase):
         additional_params = {
             'base_image': 'fedora:latest',
         }
-        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
+        _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
 
         args = plugin_value_get(plugins, 'prebuild_plugins', 'check_and_set_rebuild', 'args')
 
@@ -665,8 +627,7 @@ class TestArrangementV6(ArrangementBase):
             'base_image': 'fedora:latest',
         }
         additional_params.update(params)
-        _, build_json = self.get_build_request(build_type, osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
+        _, plugins = self.get_build_request(build_type, osbs, additional_params)
 
         args = plugin_value_get(plugins, 'postbuild_plugins', 'tag_from_config', 'args')
 
@@ -690,8 +651,7 @@ class TestArrangementV6(ArrangementBase):
         additional_params = {
             'base_image': 'fedora:latest',
         }
-        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
+        _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
         with pytest.raises(KeyError):
             plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_GROUP_MANIFESTS_KEY, 'args')
 
@@ -701,8 +661,7 @@ class TestArrangementV6(ArrangementBase):
             'base_image': 'foo',
             'koji_parent_build': 'fedora-26-9',
         }
-        _, build_json = self.get_build_request(build_type, osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
+        _, plugins = self.get_build_request(build_type, osbs, additional_params)
 
         args = plugin_value_get(plugins, 'prebuild_plugins', 'inject_parent_image', 'args')
         expected_args = {
@@ -722,10 +681,9 @@ class TestArrangementV6(ArrangementBase):
             additional_params['scratch'] = True
         if worker:
             additional_params['compose_ids'] = [42]
-            _, build_json = self.get_worker_build_request(osbs, additional_params)
+            _, plugins = self.get_worker_build_request(osbs, additional_params)
         else:
-            _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
+            _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
 
         if worker:
             plugin = get_plugin(plugins, "prebuild_plugins", "koji")
@@ -762,9 +720,7 @@ class TestArrangementV6(ArrangementBase):
             'base_image': 'fedora:latest_is_the_best',
             'additional_tags': tags,
         }
-
-        _, build_json = self.get_build_request('orchestrator', osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
+        _, plugins = self.get_build_request('orchestrator', osbs, additional_params)
 
         tag_suffixes = plugin_value_get(plugins, 'postbuild_plugins', 'tag_from_config',
                                         'args', 'tag_suffixes')
@@ -783,9 +739,7 @@ class TestArrangementV6(ArrangementBase):
             'base_image': 'fedora:latest',
 
         }
-
-        _, build_json = self.get_orchestrator_build_request(osbs, additional_params)
-        plugins = get_plugins_from_build_json(build_json)
+        _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
 
         tag_suffixes = plugin_value_get(plugins, 'postbuild_plugins', 'tag_from_config',
                                         'args', 'tag_suffixes')
