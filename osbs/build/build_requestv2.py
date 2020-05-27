@@ -60,14 +60,6 @@ class BaseBuildRequest(object):
         if self._build_json_store and not user_params.build_json_dir.value:
             self.user_params.build_json_dir.value = self._build_json_store
 
-    def delete_atomic_reactor_placeholder(self):
-        """Delete the ATOMIC_REACTOR_PLUGINS placeholder"""
-        custom_strategy = self.template['spec']['strategy']['customStrategy']
-        for (index, env) in enumerate(custom_strategy['env']):
-            if env['name'] == 'ATOMIC_REACTOR_PLUGINS':
-                del custom_strategy['env'][index]
-                break
-
     @abc.abstractmethod
     def render(self, validate=True):
         # the api is required for build requests
@@ -86,7 +78,6 @@ class BaseBuildRequest(object):
         self.adjust_for_scratch()
         self.set_reactor_config()
         self.render_user_params()
-        self.delete_atomic_reactor_placeholder()
 
         # Set required_secrets based on reactor_config
         # Set worker_token_secrets based on reactor_config, if any

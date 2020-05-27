@@ -227,7 +227,6 @@ class TestBuildRequestV2(object):
         assert envs['REACTOR_CONFIG'][0]['configMapKeyRef'] == configmapkeyref
 
         assert 'USER_PARAMS' in envs
-        assert 'ATOMIC_REACTOR_PLUGINS' not in envs
 
     @pytest.mark.parametrize(('build_from', 'is_image', 'valid'), (
         (None, False, False),

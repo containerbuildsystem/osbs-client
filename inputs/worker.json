@@ -26,10 +26,7 @@
           "name": "{{BUILD_IMAGE}}"
         },
         "exposeDockerSocket": true,
-        "env": [{
-          "name": "ATOMIC_REACTOR_PLUGINS",
-          "value": "TBD"
-        }],
+        "env": [],
         "secrets": []
       }
     }
