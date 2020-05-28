@@ -71,14 +71,8 @@ function setup_osbs() {
     $RUN mkdir -p /usr/local/lib/python3.6/site-packages/
   fi
 
-  # CentOS needs to have setuptools updates to use wildcards in requirements.txt and to make pytest-cov work
-  if [[ $OS != "fedora" ]]; then
-    $RUN $PIP install -U setuptools
-
-    # Watch out for https://github.com/pypa/setuptools/issues/937
-    $RUN curl -O https://bootstrap.pypa.io/2.6/get-pip.py
-    $RUN $PYTHON get-pip.py
-  fi
+  $RUN $PIP install -U pip
+  $RUN $PIP install -U setuptools
   $RUN $PYTHON setup.py install
 
   # Install packages for tests
