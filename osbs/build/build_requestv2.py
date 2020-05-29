@@ -88,6 +88,11 @@ class BaseBuildRequest(object):
         if koji_task_id is not None:
             self.set_label('koji-task-id', str(koji_task_id))
 
+        # Should run near the end of render() to avoid setting any special
+        # environment variables (such as USER_PARAMS, REACTOR_CONFIG) in case
+        # someone sets them in reactor_config
+        self.set_build_env_vars(data)
+
         return self.template
 
     def render_custom_strategy(self):
@@ -295,6 +300,26 @@ class BaseBuildRequest(object):
         self.set_source_registry(reactor_config_data)
         self.set_registry_organization(reactor_config_data)
         self.set_required_secrets(reactor_config_data)
+
+    def set_build_env_vars(self, reactor_config_data):
+        """
+        Propagates build_env_vars from config map to build environment
+        """
+        env = self.template['spec']['strategy']['customStrategy']['env']
+        existing_vars = set(var['name'] for var in env)
+
+        build_env_vars = reactor_config_data.get('build_env_vars', [])
+        for var in build_env_vars:
+            if var['name'] not in existing_vars:
+                # Could be just `env.append(var)`, but here we are using the reactor config
+                # without validating it (that happens later, in atomic-reactor). Do it this
+                # way to fail early if format does not match schema.
+                env.append({'name': var['name'], 'value': var['value']})
+                existing_vars.add(var['name'])
+                logger.info('Set environment variable from reactor config: %s', var['name'])
+            else:
+                msg = 'Cannot set environment variable from reactor config (already exists): {}'
+                raise OsbsValidationException(msg.format(var['name']))
 
 
 class BuildRequestV2(BaseBuildRequest):
