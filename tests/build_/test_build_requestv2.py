@@ -890,6 +890,78 @@ class TestBuildRequestV2(object):
         BUILD_TYPE_WORKER,
         BUILD_TYPE_ORCHESTRATOR,
     ])
+    @pytest.mark.parametrize('config_as_override', [True, False])
+    @pytest.mark.parametrize('config, expected_envs, expected_error', [
+        # No conflicts
+        (None, [], None),
+        ({}, [], None),
+        ({'build_env_vars': [
+            {'name': 'HTTP_PROXY', 'value': 'example.proxy.net'},
+            {'name': 'NO_PROXY', 'value': 'example.no-proxy.net'},
+         ]},
+         [{'name': 'HTTP_PROXY', 'value': 'example.proxy.net'},
+          {'name': 'NO_PROXY', 'value': 'example.no-proxy.net'}],
+         None),
+        # Conflicts with special environment variables
+        ({'build_env_vars': [
+            {'name': 'USER_PARAMS', 'value': '{"scratch": true}'},
+        ]},
+         [],
+         'Cannot set environment variable from reactor config (already exists): USER_PARAMS'),
+        # Conflicts with special environment variables
+        ({'build_env_vars': [
+            {'name': 'REACTOR_CONFIG', 'value': 'arrangement_version: 5'},
+        ]},
+         [],
+         'Cannot set environment variable from reactor config (already exists): REACTOR_CONFIG'),
+        # Conflicts with itself
+        ({'build_env_vars': [
+            {'name': 'HTTP_PROXY', 'value': 'example.proxy.net'},
+            {'name': 'HTTP_PROXY', 'value': 'example.other-proxy.net'},
+        ]},
+         [],
+         'Cannot set environment variable from reactor config (already exists): HTTP_PROXY'),
+    ])
+    def test_set_build_env_vars(self, build_type, config_as_override, config,
+                                expected_envs, expected_error, caplog):
+        outer_template = WORKER_OUTER_TEMPLATE
+        if build_type == BUILD_TYPE_ORCHESTRATOR:
+            outer_template = ORCHESTRATOR_OUTER_TEMPLATE
+
+        conf_args = {
+            'build_from': 'image:buildroot:latest',
+        }
+        update_args = {
+            'build_type': build_type,
+        }
+        if config_as_override:
+            update_args['reactor_config_override'] = config
+        else:
+            conf_args['reactor_config_map'] = config
+
+        user_params = get_sample_user_params(conf_args=conf_args, update_args=update_args)
+        mock_api = MockOSBSApi(None if config_as_override else deepcopy(config))
+        build_request = BuildRequestV2(osbs_api=mock_api, user_params=user_params,
+                                       outer_template=outer_template)
+
+        if expected_error is None:
+            build_json = build_request.render()
+        else:
+            with pytest.raises(OsbsValidationException) as exc_info:
+                build_request.render()
+            assert str(exc_info.value) == expected_error
+            return
+
+        json_env = build_json['spec']['strategy']['customStrategy']['env']
+        for env in expected_envs:
+            assert env in json_env
+            msg = 'Set environment variable from reactor config: {}'.format(env['name'])
+            assert msg in caplog.text
+
+    @pytest.mark.parametrize('build_type', [
+        BUILD_TYPE_WORKER,
+        BUILD_TYPE_ORCHESTRATOR,
+    ])
     @pytest.mark.parametrize('user_params,config_map,config_override,expected', [
         (None, None, None, None),
         (None, '', None, None),  # config map exists, but doesn't set a value
