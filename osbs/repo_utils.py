@@ -239,6 +239,10 @@ class AdditionalTagsConfig(object):
         self._from_container_yaml = True if tags else False
         self._file_path = os.path.join(dir_path, file_name)
 
+        if os.path.exists(self._file_path):
+            logger.warning('%s file is deprecated and will no longer be '
+                           'supported in a future version. Please consider '
+                           'using tags list in container.yaml instead', file_name)
         self._populate_tags()
 
     def _populate_tags(self):
