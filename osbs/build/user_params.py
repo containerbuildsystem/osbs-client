@@ -7,14 +7,12 @@ of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, absolute_import, unicode_literals
 
-from abc import abstractproperty, ABCMeta
 import logging
 import re
 import random
 import json
 
-import six
-
+from osbs.build.user_params_meta import BuildParam, BuildParamsBase
 from osbs.constants import (DEFAULT_GIT_REF, REACTOR_CONFIG_ARRANGEMENT_VERSION,
                             DEFAULT_CUSTOMIZE_CONF, RAND_DIGITS,
                             WORKER_MAX_RUNTIME, ORCHESTRATOR_MAX_RUNTIME,
@@ -41,61 +39,37 @@ def register_user_params(klass):
     return klass
 
 
-class BuildParam(object):
-    """ One parameter of a spec """
-
-    def __init__(self, name, default=None, allow_none=False):
-        self.name = name
-        self.allow_none = allow_none
-        self._value = default
-
-    @property
-    def value(self):
-        return self._value
-
-    @value.setter
-    def value(self, val):
-        logger.debug("%s = '%s'", self.name, val)
-        self._value = val
-
-    def __repr__(self):
-        return "BuildParam(%s='%s')" % (self.name, self.value)
-
-
 class UserParam(BuildParam):
     """ custom class for "user" parameter with postprocessing """
-    name = "user"
 
-    def __init__(self):
-        super(UserParam, self).__init__(self.name)
+    def __init__(self, **kwargs):
+        super(UserParam, self).__init__("user", **kwargs)
 
 
 class BuildIDParam(BuildParam):
     """ validate build ID """
-    name = "name"
 
-    def __init__(self):
-        super(BuildIDParam, self).__init__(self.name)
+    def __init__(self, **kwargs):
+        super(BuildIDParam, self).__init__("name", **kwargs)
 
-    @BuildParam.value.setter  # pylint: disable=no-member
-    def value(self, val):  # pylint: disable=W0221
+    def __set__(self, obj, value):
         # build ID has to conform to:
         #  * 63 chars at most
         #  * (([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?
 
-        if len(val) > 63:
+        if len(value) > 63:
             # component + timestamp > 63
-            new_name = val[:63]
-            logger.warning("'%s' is too long, changing to '%s'", val, new_name)
-            val = new_name
+            new_name = value[:63]
+            logger.warning("'%s' is too long, changing to '%s'", value, new_name)
+            value = new_name
 
         build_id_re = re.compile(r"^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$")
-        match = build_id_re.match(val)
+        match = build_id_re.match(value)
         if not match:
-            logger.error("'%s' is not valid build ID", val)
+            logger.error("'%s' is not valid build ID", value)
             raise OsbsValidationException("Build ID '%s', doesn't match regex '%s'" %
-                                          (val, build_id_re))
-        BuildParam.value.fset(self, val)  # pylint: disable=no-member
+                                          (value, build_id_re))
+        super(BuildIDParam, self).__set__(obj, value)
 
 
 def load_user_params_from_json(user_params_json):
@@ -113,55 +87,40 @@ def load_user_params_from_json(user_params_json):
     return user_params
 
 
-@six.add_metaclass(ABCMeta)
-class BuildCommon(object):
-    """Abstract class for user parameters"""
+class BuildCommon(BuildParamsBase):
+    """Common user parameters, class should be considered abstract"""
 
-    @abstractproperty
-    def KIND(self):
-        return 'DEFINE_KIND_NAME_IN_SUBCLASS'
+    # Must be defined in subclasses
+    KIND = NotImplemented
 
-    def __init__(self, build_json_store=None):
-        self.arrangement_version = BuildParam(
-            "arrangement_version",
-            allow_none=True,
-            default=REACTOR_CONFIG_ARRANGEMENT_VERSION)
-        # build_from contains the full build_from string, including the source type prefix
-        self.build_from = BuildParam('build_from')
-        # build_image contains the buildroot name, whether the buildroot is a straight image or an
-        # imagestream.  buildroot_is_imagestream indicates what type of buildroot
-        self.build_image = BuildParam('build_image')
-        self.buildroot_is_imagestream = BuildParam('buildroot_is_imagestream', default=False)
-        self.build_json_dir = BuildParam('build_json_dir', default=build_json_store)
-        self.kind = BuildParam(KIND_KEY, default=self.KIND)
-        self.component = BuildParam('component')
-        self.image_tag = BuildParam("image_tag")
-        self.koji_target = BuildParam("koji_target", allow_none=True)
-        self.koji_task_id = BuildParam('koji_task_id', allow_none=True)
-        self.platform = BuildParam("platform", allow_none=True)
-        self.orchestrator_deadline = BuildParam('orchestrator_deadline', allow_none=True)
-        self.reactor_config_map = BuildParam("reactor_config_map", allow_none=True)
-        self.reactor_config_override = BuildParam("reactor_config_override", allow_none=True)
-        self.scratch = BuildParam('scratch', allow_none=True)
-        self.signing_intent = BuildParam('signing_intent', allow_none=True)
-        self.user = UserParam()
-        self.worker_deadline = BuildParam('worker_deadline', allow_none=True)
+    arrangement_version = BuildParam("arrangement_version",
+                                     default=REACTOR_CONFIG_ARRANGEMENT_VERSION)
+    # build_from contains the full build_from string, including the source type prefix
+    build_from = BuildParam("build_from")
+    # build_image contains the buildroot name, whether the buildroot is a straight image or an
+    # imagestream.  buildroot_is_imagestream indicates what type of buildroot
+    build_image = BuildParam("build_image")
+    buildroot_is_imagestream = BuildParam("buildroot_is_imagestream", default=False)
+    build_json_dir = BuildParam("build_json_dir", required=True)
+    component = BuildParam("component")
+    image_tag = BuildParam("image_tag")
+    koji_target = BuildParam("koji_target")
+    koji_task_id = BuildParam("koji_task_id")
+    platform = BuildParam("platform")
+    orchestrator_deadline = BuildParam("orchestrator_deadline")
+    reactor_config_map = BuildParam("reactor_config_map")
+    reactor_config_override = BuildParam("reactor_config_override")
+    scratch = BuildParam("scratch")
+    signing_intent = BuildParam("signing_intent")
+    user = UserParam(required=True)
+    worker_deadline = BuildParam("worker_deadline")
 
-        self.required_params = [
-            self.build_json_dir,
-            self.koji_target,
-            self.user,
-        ]
-        self.convert_dict = {}
+    def __init__(self, build_json_dir=None, **kwargs):
+        super(BuildCommon, self).__init__(build_json_dir=build_json_dir, **kwargs)
 
-    def attrs_finalizer(self):
-        for _, param in self.__dict__.items():
-            if isinstance(param, BuildParam):
-                # check that every parameter has a unique name
-                if param.name in self.convert_dict:
-                    raise OsbsValidationException(
-                        'Two user params with the same name: {}'.format(param.name))
-                self.convert_dict[param.name] = param
+    def __setattr__(self, name, value):
+        super(BuildCommon, self).__setattr__(name, value)
+        logger.debug("%s = %s", name, value)
 
     def set_params(self,
                    build_conf=None,
@@ -206,18 +165,18 @@ class BuildCommon(object):
             raise OsbsValidationException('build_conf must be defined')
 
         build_from = build_from or build_conf.get_build_from()
-        self.scratch.value = build_conf.get_scratch(scratch)
+        self.scratch = build_conf.get_scratch(scratch)
         orchestrator_deadline = build_conf.get_orchestor_deadline()
         worker_deadline = build_conf.get_worker_deadline()
 
-        self.component.value = component
-        self.koji_target.value = koji_target
-        self.koji_task_id.value = koji_task_id
-        self.platform.value = platform
-        self.reactor_config_map.value = build_conf.get_reactor_config_map()
-        self.reactor_config_override.value = reactor_config_override
-        self.signing_intent.value = signing_intent
-        self.user.value = user
+        self.component = component
+        self.koji_target = koji_target
+        self.koji_task_id = koji_task_id
+        self.platform = platform
+        self.reactor_config_map = build_conf.get_reactor_config_map()
+        self.reactor_config_override = reactor_config_override
+        self.signing_intent = signing_intent
+        self.user = user
 
         if not build_from:
             raise OsbsValidationException('build_from must be defined')
@@ -229,18 +188,18 @@ class BuildCommon(object):
             raise OsbsValidationException(
                 'first part in build_from, may be only image or imagestream')
         if source_type == 'imagestream':
-            self.buildroot_is_imagestream.value = True
-        self.build_from.value = build_from
-        self.build_image.value = source_value
+            self.buildroot_is_imagestream = True
+        self.build_from = build_from
+        self.build_image = source_value
 
         try:
-            self.orchestrator_deadline.value = int(orchestrator_deadline)
+            self.orchestrator_deadline = int(orchestrator_deadline)
         except (ValueError, TypeError):
-            self.orchestrator_deadline.value = ORCHESTRATOR_MAX_RUNTIME
+            self.orchestrator_deadline = ORCHESTRATOR_MAX_RUNTIME
         try:
-            self.worker_deadline.value = int(worker_deadline)
+            self.worker_deadline = int(worker_deadline)
         except (ValueError, TypeError):
-            self.worker_deadline.value = WORKER_MAX_RUNTIME
+            self.worker_deadline = WORKER_MAX_RUNTIME
 
         self._populate_image_tag()
 
@@ -253,30 +212,23 @@ class BuildCommon(object):
         random.seed()
 
         tag_segments = [
-            self.koji_target.value or 'none',
+            self.koji_target or 'none',
             str(random.randrange(10**(RAND_DIGITS - 1), 10**RAND_DIGITS)),
             timestamp
         ]
 
-        if self.platform.value and (self.arrangement_version.value or 0) >= 4:
-            tag_segments.append(self.platform.value)
+        if self.platform and (self.arrangement_version or 0) >= 4:
+            tag_segments.append(self.platform)
 
         tag = '-'.join(tag_segments)
-        self.image_tag.value = '{}/{}:{}'.format(self.user.value, self.component.value, tag)
+        self.image_tag = '{}/{}:{}'.format(self.user, self.component, tag)
 
     def validate(self):
         logger.info("Validating params of %s", self.__class__.__name__)
-        for param in self.required_params:
-            if param.value is None:
-                if param.allow_none:
-                    logger.debug("param '%s' is None; None is allowed", param.name)
-                else:
-                    logger.error("param '%s' is None; None is NOT allowed", param.name)
-                    raise OsbsValidationException("param '%s' is not valid: None is not allowed" %
-                                                  param.name)
-
-    def __repr__(self):
-        return "{}({})".format(self.__class__.__name__, self.__dict__)
+        missing = [p for p in self.__class__.required_params if p.__get__(self) is None]
+        if missing:
+            missing_repr = ", ".join(repr(p.name) for p in missing)
+            raise OsbsValidationException("Missing required params: {}".format(missing_repr))
 
     def from_json(self, user_params_json):
         if not user_params_json:
@@ -288,22 +240,21 @@ class BuildCommon(object):
             raise
         for key, value in json_dict.items():
             try:
-                self.convert_dict[key].value = value
-            except KeyError:
+                setattr(self, key, value)
+            except AttributeError:
                 continue
-
-    def set_if_exists(self, json_dict, param):
-        if self.convert_dict[param].value:
-            json_dict[param] = self.convert_dict[param].value
 
     def to_dict(self, keys):
         retdict = {}
         for key in keys:
-            self.set_if_exists(retdict, key)
+            value = getattr(self, key)
+            if value:
+                retdict[key] = value
         return retdict
 
     def to_json(self):
-        json_dict = self.to_dict(list(self.convert_dict))
+        keys = (p.name for p in self.__class__.params if p.include_in_json)
+        json_dict = self.to_dict(keys)
         return json.dumps(json_dict, sort_keys=True)
 
 
@@ -312,60 +263,52 @@ class BuildUserParams(BuildCommon):
 
     KIND = USER_PARAMS_KIND_IMAGE_BUILDS
 
-    def __init__(self, build_json_store=None, customize_conf=None):
-        # defines image_tag, koji_target, filesystem_koji_task_id, platform, arrangement_version
-        super(BuildUserParams, self).__init__(build_json_store=build_json_store)
-        self.additional_tags = BuildParam('additional_tags', allow_none=True)
-        self.base_image = BuildParam('base_image', allow_none=True)
-        self.build_type = BuildParam('build_type')
-        self.compose_ids = BuildParam("compose_ids", allow_none=True)
-        self.customize_conf_path = BuildParam("customize_conf", allow_none=True,
-                                              default=customize_conf or DEFAULT_CUSTOMIZE_CONF)
-        self.dependency_replacements = BuildParam("dependency_replacements")
-        self.filesystem_koji_task_id = BuildParam("filesystem_koji_task_id", allow_none=True)
-        self.flatpak = BuildParam('flatpak', default=False)
-        self.git_branch = BuildParam('git_branch')
-        self.git_commit_depth = BuildParam('git_commit_depth', allow_none=True)
-        self.git_ref = BuildParam('git_ref', default=DEFAULT_GIT_REF)
-        self.git_uri = BuildParam('git_uri')
-        self.imagestream_name = BuildParam('imagestream_name')
-        self.include_koji_repo = BuildParam('include_koji_repo', default=False)
-        self.is_auto = BuildParam('is_auto', allow_none=True)
-        self.isolated = BuildParam('isolated', allow_none=True)
-        self.koji_parent_build = BuildParam('koji_parent_build', allow_none=True)
-        self.koji_upload_dir = BuildParam('koji_upload_dir', allow_none=True)
-        self.name = BuildIDParam()
-        self.operator_bundle_replacement_pullspecs = BuildParam(
-            'operator_bundle_replacement_pullspecs', allow_none=True
-        )
-        self.operator_manifests_extract_platform = BuildParam('operator_manifests_extract_platform',
-                                                              allow_none=True)
-        self.parent_images_digests = BuildParam('parent_images_digests', allow_none=True)
-        self.platforms = BuildParam('platforms', allow_none=True)
-        self.release = BuildParam('release', allow_none=True)
-        self.remote_source_build_args = BuildParam('remote_source_build_args', allow_none=True)
-        self.remote_source_configs = BuildParam('remote_source_configs', allow_none=True)
-        self.remote_source_url = BuildParam('remote_source_url', allow_none=True)
-        self.skip_build = BuildParam('skip_build', allow_none=True)
-        self.tags_from_yaml = BuildParam('tags_from_yaml', allow_none=True)
-        self.trigger_imagestreamtag = BuildParam('trigger_imagestreamtag')
-        self.triggered_after_koji_task = BuildParam('triggered_after_koji_task', allow_none=True)
-        self.yum_repourls = BuildParam("yum_repourls")
+    additional_tags = BuildParam("additional_tags")
+    base_image = BuildParam("base_image")
+    build_type = BuildParam("build_type", required=True)
+    compose_ids = BuildParam("compose_ids")
+    customize_conf = BuildParam("customize_conf", default=DEFAULT_CUSTOMIZE_CONF)
+    dependency_replacements = BuildParam("dependency_replacements")
+    filesystem_koji_task_id = BuildParam("filesystem_koji_task_id")
+    flatpak = BuildParam("flatpak", default=False)
+    git_branch = BuildParam("git_branch")
+    git_commit_depth = BuildParam("git_commit_depth")
+    git_ref = BuildParam("git_ref", default=DEFAULT_GIT_REF, required=True)
+    git_uri = BuildParam("git_uri", required=True)
+    imagestream_name = BuildParam("imagestream_name")
+    include_koji_repo = BuildParam("include_koji_repo", default=False)
+    is_auto = BuildParam("is_auto")
+    isolated = BuildParam("isolated")
+    kind = BuildParam("kind", default=KIND)
+    koji_parent_build = BuildParam("koji_parent_build")
+    koji_upload_dir = BuildParam("koji_upload_dir")
+    name = BuildIDParam()
+    operator_bundle_replacement_pullspecs = BuildParam("operator_bundle_replacement_pullspecs")
+    operator_manifests_extract_platform = BuildParam("operator_manifests_extract_platform")
+    parent_images_digests = BuildParam("parent_images_digests")
+    platforms = BuildParam("platforms")
+    release = BuildParam("release")
+    remote_source_build_args = BuildParam("remote_source_build_args")
+    remote_source_configs = BuildParam("remote_source_configs")
+    remote_source_url = BuildParam("remote_source_url")
+    skip_build = BuildParam("skip_build")
+    tags_from_yaml = BuildParam("tags_from_yaml")
+    trigger_imagestreamtag = BuildParam("trigger_imagestreamtag")
+    triggered_after_koji_task = BuildParam("triggered_after_koji_task")
+    yum_repourls = BuildParam("yum_repourls")
 
-        self.auto_build_node_selector = None
-        self.explicit_build_node_selector = None
-        self.isolated_build_node_selector = None
-        self.platform_node_selector = None
-        self.scratch_build_node_selector = None
+    auto_build_node_selector = BuildParam("auto_build_node_selector",
+                                          include_in_json=False)
+    explicit_build_node_selector = BuildParam("explicit_build_node_selector",
+                                              include_in_json=False)
+    isolated_build_node_selector = BuildParam("isolated_build_node_selector",
+                                              include_in_json=False)
+    platform_node_selector = BuildParam("platform_node_selector",
+                                        include_in_json=False)
+    scratch_build_node_selector = BuildParam("scratch_build_node_selector",
+                                             include_in_json=False)
 
-        self.required_params.extend([
-            self.build_type,
-            self.git_ref,
-            self.git_uri,
-        ])
-        self.repo_info = None
-
-        self.attrs_finalizer()
+    repo_info = BuildParam("repo_info", include_in_json=False)
 
     def set_params(self,
                    additional_tags=None,
@@ -482,34 +425,34 @@ class BuildUserParams(BuildCommon):
         platform_node_selector = build_conf.get_platform_node_selector(platform)
         scratch_build_node_selector = build_conf.get_scratch_build_node_selector()
 
-        self.additional_tags.value = additional_tags or set()
-        self.git_branch.value = git_branch
-        self.git_commit_depth.value = git_commit_depth
-        self.git_ref.value = git_ref
-        self.git_uri.value = git_uri
+        self.additional_tags = additional_tags or set()
+        self.git_branch = git_branch
+        self.git_commit_depth = git_commit_depth
+        self.git_ref = git_ref
+        self.git_uri = git_uri
 
-        self.remote_source_build_args.value = remote_source_build_args
-        self.remote_source_configs.value = remote_source_configs
-        self.remote_source_url.value = remote_source_url
-        self.release.value = release
-        self.build_type.value = build_type
+        self.remote_source_build_args = remote_source_build_args
+        self.remote_source_configs = remote_source_configs
+        self.remote_source_url = remote_source_url
+        self.release = release
+        self.build_type = build_type
 
-        self.name.value = make_name_from_git(self.git_uri.value, self.git_branch.value)
+        self.name = make_name_from_git(self.git_uri, self.git_branch)
 
-        self.filesystem_koji_task_id.value = filesystem_koji_task_id
-        self.is_auto.value = is_auto
-        self.isolated.value = isolated
-        self.flatpak.value = flatpak
-        self.include_koji_repo.value = include_koji_repo
-        self.koji_parent_build.value = koji_parent_build
-        self.koji_upload_dir.value = koji_upload_dir
-        self.parent_images_digests.value = parent_images_digests
-        self.platforms.value = platforms
-        self.operator_manifests_extract_platform.value = operator_manifests_extract_platform
-        self.operator_bundle_replacement_pullspecs.value = operator_bundle_replacement_pullspecs
-        self.skip_build.value = skip_build
-        self.tags_from_yaml.value = tags_from_yaml
-        self.triggered_after_koji_task.value = triggered_after_koji_task
+        self.filesystem_koji_task_id = filesystem_koji_task_id
+        self.is_auto = is_auto
+        self.isolated = isolated
+        self.flatpak = flatpak
+        self.include_koji_repo = include_koji_repo
+        self.koji_parent_build = koji_parent_build
+        self.koji_upload_dir = koji_upload_dir
+        self.parent_images_digests = parent_images_digests
+        self.platforms = platforms
+        self.operator_manifests_extract_platform = operator_manifests_extract_platform
+        self.operator_bundle_replacement_pullspecs = operator_bundle_replacement_pullspecs
+        self.skip_build = skip_build
+        self.tags_from_yaml = tags_from_yaml
+        self.triggered_after_koji_task = triggered_after_koji_task
 
         if not base_image:
             # For flatpaks, we can set this later from the reactor config
@@ -520,7 +463,7 @@ class BuildUserParams(BuildCommon):
 
         if not name_label:
             raise OsbsValidationException("name_label must be provided")
-        self.imagestream_name.value = name_label
+        self.imagestream_name = name_label
 
         if kwargs.get('signing_intent') and compose_ids:
             raise OsbsValidationException(
@@ -531,11 +474,11 @@ class BuildUserParams(BuildCommon):
             raise OsbsValidationException("dependency_replacements must be a list")
         if not (yum_repourls is None or isinstance(yum_repourls, list)):
             raise OsbsValidationException("yum_repourls must be a list")
-        self.compose_ids.value = compose_ids or []
-        self.dependency_replacements.value = dependency_replacements or []
-        self.yum_repourls.value = yum_repourls or []
+        self.compose_ids = compose_ids or []
+        self.dependency_replacements = dependency_replacements or []
+        self.yum_repourls = yum_repourls or []
 
-        if (self.scratch.value, self.is_auto.value, self.isolated.value).count(True) > 1:
+        if (self.scratch, self.is_auto, self.isolated).count(True) > 1:
             raise OsbsValidationException(
                 'Build variations are mutually exclusive. '
                 'Must set either scratch, is_auto, isolated, or none. ')
@@ -546,8 +489,8 @@ class BuildUserParams(BuildCommon):
         self.scratch_build_node_selector = scratch_build_node_selector or {}
 
     def set_base_image(self, base_image):
-        self.base_image.value = base_image
-        self.trigger_imagestreamtag.value = base_image
+        self.base_image = base_image
+        self.trigger_imagestreamtag = base_image
 
 
 @register_user_params
@@ -556,12 +499,9 @@ class SourceContainerUserParams(BuildCommon):
 
     KIND = USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS
 
-    def __init__(self, build_json_store=None):
-        super(SourceContainerUserParams, self).__init__(build_json_store=build_json_store)
-        self.sources_for_koji_build_nvr = BuildParam("sources_for_koji_build_nvr", allow_none=True)
-        self.sources_for_koji_build_id = BuildParam("sources_for_koji_build_id", allow_none=True)
-
-        self.attrs_finalizer()
+    kind = BuildParam("kind", default=KIND)
+    sources_for_koji_build_nvr = BuildParam("sources_for_koji_build_nvr")
+    sources_for_koji_build_id = BuildParam("sources_for_koji_build_id")
 
     def set_params(
         self,
@@ -583,5 +523,5 @@ class SourceContainerUserParams(BuildCommon):
                 "At least one param from 'sources_for_koji_build_id' or "
                 "'sources_for_koji_build_nvr' must be specified"
             )
-        self.sources_for_koji_build_nvr.value = sources_for_koji_build_nvr
-        self.sources_for_koji_build_id.value = sources_for_koji_build_id
+        self.sources_for_koji_build_nvr = sources_for_koji_build_nvr
+        self.sources_for_koji_build_id = sources_for_koji_build_id
