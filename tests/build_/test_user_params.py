@@ -33,16 +33,16 @@ from tests.constants import (TEST_COMPONENT, TEST_FILESYSTEM_KOJI_TASK_ID,
 class TestBuildIDParam(object):
     def test_build_id_param_shorten_id(self):
         p = BuildIDParam()
-        p.value = "x" * 64
 
-        val = p.value
+        obj = flexmock()
+        p.__set__(obj, "x" * 64)
 
-        assert len(val) == 63
+        assert len(p.__get__(obj)) == 63
 
     def test_build_id_param_raise_exc(self):
         p = BuildIDParam()
         with pytest.raises(OsbsValidationException):
-            p.value = r"\\\\@@@@||||"
+            p.__set__(flexmock(), r"\\\\@@@@||||")
 
 
 class TestBuildUserParams(object):
@@ -104,7 +104,7 @@ class TestBuildUserParams(object):
         spec = BuildUserParams()
         spec.set_params(**kwargs)
 
-        assert spec.name.value.startswith('path-master')
+        assert spec.name.startswith('path-master')
 
     @pytest.mark.parametrize('rand,timestr', [
         ('12345', '20170501123456'),
@@ -139,7 +139,7 @@ class TestBuildUserParams(object):
         if platform:
             img_tag += '-{platform}'
         img_tag = img_tag.format(random_number=rand, time_string=timestr, **kwargs)
-        assert spec.image_tag.value == img_tag
+        assert spec.image_tag == img_tag
 
     def test_user_params_bad_json(self):
         required_json = json.dumps({
@@ -221,11 +221,11 @@ class TestBuildUserParams(object):
             spec.set_params(**kwargs)
 
             if yum_repourls:
-                assert spec.yum_repourls.value == yum_repourls
+                assert spec.yum_repourls == yum_repourls
             if signing_intent:
-                assert spec.signing_intent.value == signing_intent
+                assert spec.signing_intent == signing_intent
             if compose_ids:
-                assert spec.compose_ids.value == compose_ids
+                assert spec.compose_ids == compose_ids
 
     def test_v2_all_values_and_json(self):
         repo_conf = RepoConfiguration(git_branch=TEST_GIT_BRANCH, git_ref=TEST_GIT_REF,
