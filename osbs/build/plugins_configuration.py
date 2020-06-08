@@ -146,13 +146,13 @@ class PluginsConfigurationBase(object):
         self.user_params = user_params
 
         customize_conf_path = (
-            self.user_params.customize_conf_path.value
-            if hasattr(self.user_params, 'customize_conf_path')
+            self.user_params.customize_conf
+            if hasattr(self.user_params, 'customize_conf')
             else None
         )
 
         self.pt = PluginsTemplate(
-            self.user_params.build_json_dir.value,
+            self.user_params.build_json_dir,
             self.pt_path,
             customize_conf_path,
         )
@@ -180,26 +180,26 @@ class PluginsConfigurationBase(object):
 
         if self.pt.has_plugin_conf(phase, plugin):
             self.pt.set_plugin_arg_valid(phase, plugin, 'repos',
-                                         self.user_params.yum_repourls.value)
+                                         self.user_params.yum_repourls)
             self.pt.set_plugin_arg_valid(phase, plugin, 'from_task_id',
-                                         self.user_params.filesystem_koji_task_id.value)
+                                         self.user_params.filesystem_koji_task_id)
             self.pt.set_plugin_arg_valid(phase, plugin, 'architecture',
-                                         self.user_params.platform.value)
+                                         self.user_params.platform)
             self.pt.set_plugin_arg_valid(phase, plugin, 'koji_target',
-                                         self.user_params.koji_target.value)
+                                         self.user_params.koji_target)
 
     def render_add_labels_in_dockerfile(self):
         phase = 'prebuild_plugins'
         plugin = 'add_labels_in_dockerfile'
         if self.pt.has_plugin_conf(phase, plugin):
-            if self.user_params.release.value:
-                release_label = {'release': self.user_params.release.value}
+            if self.user_params.release:
+                release_label = {'release': self.user_params.release}
                 self.pt.set_plugin_arg(phase, plugin, 'labels', release_label)
 
     def render_add_yum_repo_by_url(self):
         if self.pt.has_plugin_conf('prebuild_plugins', "add_yum_repo_by_url"):
             self.pt.set_plugin_arg_valid('prebuild_plugins', "add_yum_repo_by_url", "repourls",
-                                         self.user_params.yum_repourls.value)
+                                         self.user_params.yum_repourls)
 
     def render_customizations(self):
         """
@@ -235,7 +235,7 @@ class PluginsConfigurationBase(object):
         plugin = 'check_user_settings'
         if self.pt.has_plugin_conf(phase, plugin):
             self.pt.set_plugin_arg_valid(phase, plugin, 'flatpak',
-                                         self.user_params.flatpak.value)
+                                         self.user_params.flatpak)
 
     def render_flatpak_update_dockerfile(self):
         phase = 'prebuild_plugins'
@@ -244,7 +244,7 @@ class PluginsConfigurationBase(object):
         if self.pt.has_plugin_conf(phase, plugin):
 
             self.pt.set_plugin_arg_valid(phase, plugin, 'compose_ids',
-                                         self.user_params.compose_ids.value)
+                                         self.user_params.compose_ids)
 
     def render_koji(self):
         """
@@ -255,7 +255,7 @@ class PluginsConfigurationBase(object):
         if self.pt.has_plugin_conf(phase, plugin):
 
             self.pt.set_plugin_arg_valid(phase, plugin, "target",
-                                         self.user_params.koji_target.value)
+                                         self.user_params.koji_target)
 
     def render_bump_release(self):
         """
@@ -269,7 +269,7 @@ class PluginsConfigurationBase(object):
         # For flatpak, we want a name-version-release of
         # <name>-<stream>-<module_build_version>.<n>, where the .<n> makes
         # sure that the build is unique in Koji
-        if self.user_params.flatpak.value:
+        if self.user_params.flatpak:
             self.pt.set_plugin_arg(phase, plugin, 'append', True)
 
     def render_check_and_set_platforms(self):
@@ -281,9 +281,9 @@ class PluginsConfigurationBase(object):
         if not self.pt.has_plugin_conf(phase, plugin):
             return
 
-        if self.user_params.koji_target.value:
+        if self.user_params.koji_target:
             self.pt.set_plugin_arg(phase, plugin, "koji_target",
-                                   self.user_params.koji_target.value)
+                                   self.user_params.koji_target)
 
     def render_import_image(self, use_auth=None):
         """
@@ -293,14 +293,14 @@ class PluginsConfigurationBase(object):
         if self.pt.has_plugin_conf('exit_plugins', 'import_image'):
 
             self.pt.set_plugin_arg('exit_plugins', 'import_image', 'imagestream',
-                                   self.user_params.imagestream_name.value)
+                                   self.user_params.imagestream_name)
 
     def render_inject_parent_image(self):
         phase = 'prebuild_plugins'
         plugin = 'inject_parent_image'
         if self.pt.has_plugin_conf(phase, plugin):
             self.pt.set_plugin_arg_valid(phase, plugin, 'koji_parent_build',
-                                         self.user_params.koji_parent_build.value)
+                                         self.user_params.koji_parent_build)
 
     def render_koji_upload(self, use_auth=None):
         phase = 'postbuild_plugins'
@@ -311,15 +311,15 @@ class PluginsConfigurationBase(object):
         def set_arg(arg, value):
             self.pt.set_plugin_arg(phase, name, arg, value)
 
-        set_arg('koji_upload_dir', self.user_params.koji_upload_dir.value)
-        set_arg('platform', self.user_params.platform.value)
+        set_arg('koji_upload_dir', self.user_params.koji_upload_dir)
+        set_arg('platform', self.user_params.platform)
         set_arg('report_multiple_digests', True)
 
     def render_pin_operator_digest(self):
         phase = 'prebuild_plugins'
         name = 'pin_operator_digest'
 
-        replacement_pullspecs = self.user_params.operator_bundle_replacement_pullspecs.value
+        replacement_pullspecs = self.user_params.operator_bundle_replacement_pullspecs
 
         if replacement_pullspecs and self.pt.has_plugin_conf(phase, name):
             self.pt.set_plugin_arg(phase, name, 'replacement_pullspecs', replacement_pullspecs)
@@ -330,10 +330,10 @@ class PluginsConfigurationBase(object):
         if not self.pt.has_plugin_conf(phase, name):
             return
 
-        self.pt.set_plugin_arg(phase, name, 'platform', self.user_params.platform.value)
-        if self.user_params.operator_manifests_extract_platform.value:
+        self.pt.set_plugin_arg(phase, name, 'platform', self.user_params.platform)
+        if self.user_params.operator_manifests_extract_platform:
             self.pt.set_plugin_arg(phase, name, 'operator_manifests_extract_platform',
-                                   self.user_params.operator_manifests_extract_platform.value)
+                                   self.user_params.operator_manifests_extract_platform)
 
     def render_koji_tag_build(self):
         phase = 'exit_plugins'
@@ -341,7 +341,7 @@ class PluginsConfigurationBase(object):
         if self.pt.has_plugin_conf(phase, plugin):
 
             self.pt.set_plugin_arg_valid(phase, plugin, 'target',
-                                         self.user_params.koji_target.value)
+                                         self.user_params.koji_target)
 
     def render_orchestrate_build(self):
         phase = 'buildstep_plugins'
@@ -361,16 +361,16 @@ class PluginsConfigurationBase(object):
         # koji_target is passed as target for some reason
         build_kwargs['target'] = build_kwargs.pop('koji_target', None)
 
-        if self.user_params.flatpak.value:
+        if self.user_params.flatpak:
             build_kwargs['flatpak'] = True
 
-        self.pt.set_plugin_arg_valid(phase, plugin, 'platforms', self.user_params.platforms.value)
+        self.pt.set_plugin_arg_valid(phase, plugin, 'platforms', self.user_params.platforms)
         self.pt.set_plugin_arg(phase, plugin, 'build_kwargs', build_kwargs)
 
         config_kwargs = {}
 
-        if not self.user_params.buildroot_is_imagestream.value:
-            config_kwargs['build_from'] = 'image:' + self.user_params.build_image.value
+        if not self.user_params.buildroot_is_imagestream:
+            config_kwargs['build_from'] = 'image:' + self.user_params.build_image
 
         self.pt.set_plugin_arg(phase, plugin, 'config_kwargs', config_kwargs)
 
@@ -382,16 +382,16 @@ class PluginsConfigurationBase(object):
             return
 
         self.pt.set_plugin_arg_valid(phase, plugin, 'compose_ids',
-                                     self.user_params.compose_ids.value)
+                                     self.user_params.compose_ids)
 
         self.pt.set_plugin_arg_valid(phase, plugin, 'signing_intent',
-                                     self.user_params.signing_intent.value)
+                                     self.user_params.signing_intent)
 
         self.pt.set_plugin_arg_valid(phase, plugin, 'koji_target',
-                                     self.user_params.koji_target.value)
+                                     self.user_params.koji_target)
 
         self.pt.set_plugin_arg_valid(phase, plugin, 'repourls',
-                                     self.user_params.yum_repourls.value)
+                                     self.user_params.yum_repourls)
 
     def render_tag_from_config(self):
         """Configure tag_from_config plugin"""
@@ -401,17 +401,17 @@ class PluginsConfigurationBase(object):
         if not self.pt.has_plugin_conf(phase, plugin):
             return
 
-        unique_tag = self.user_params.image_tag.value.split(':')[-1]
+        unique_tag = self.user_params.image_tag.split(':')[-1]
         tag_suffixes = {'unique': [unique_tag], 'primary': [], 'floating': []}
 
-        if self.user_params.build_type.value == BUILD_TYPE_ORCHESTRATOR:
-            additional_tags = self.user_params.additional_tags.value or set()
+        if self.user_params.build_type == BUILD_TYPE_ORCHESTRATOR:
+            additional_tags = self.user_params.additional_tags or set()
 
-            if self.user_params.scratch.value:
+            if self.user_params.scratch:
                 pass
-            elif self.user_params.isolated.value:
+            elif self.user_params.isolated:
                 tag_suffixes['primary'].extend(['{version}-{release}'])
-            elif self.user_params.tags_from_yaml.value:
+            elif self.user_params.tags_from_yaml:
                 tag_suffixes['primary'].extend(['{version}-{release}'])
                 tag_suffixes['floating'].extend(additional_tags)
             else:
@@ -426,9 +426,9 @@ class PluginsConfigurationBase(object):
         phase = 'prebuild_plugins'
         plugin = 'pull_base_image'
 
-        if self.user_params.parent_images_digests.value:
+        if self.user_params.parent_images_digests:
             self.pt.set_plugin_arg(phase, plugin, 'parent_images_digests',
-                                   self.user_params.parent_images_digests.value)
+                                   self.user_params.parent_images_digests)
 
     def render_koji_delegate(self):
         """Configure koji_delegate"""
@@ -436,9 +436,9 @@ class PluginsConfigurationBase(object):
         plugin = 'koji_delegate'
 
         if self.pt.has_plugin_conf(phase, plugin):
-            if self.user_params.triggered_after_koji_task.value:
+            if self.user_params.triggered_after_koji_task:
                 self.pt.set_plugin_arg(phase, plugin, 'triggered_after_koji_task',
-                                       self.user_params.triggered_after_koji_task.value)
+                                       self.user_params.triggered_after_koji_task)
 
     def render_tag_and_push(self):
         """Configure tag_and_push plugin"""
@@ -446,11 +446,11 @@ class PluginsConfigurationBase(object):
         plugin = 'tag_and_push'
 
         if self.pt.has_plugin_conf(phase, plugin):
-            if self.user_params.koji_target.value:
+            if self.user_params.koji_target:
                 self.pt.set_plugin_arg(
                     phase, plugin,
                     'koji_target',
-                    self.user_params.koji_target.value
+                    self.user_params.koji_target
                 )
 
     def render_fetch_sources(self):
@@ -459,25 +459,25 @@ class PluginsConfigurationBase(object):
         plugin = 'fetch_sources'
 
         if self.pt.has_plugin_conf(phase, plugin):
-            if self.user_params.sources_for_koji_build_nvr.value:
+            if self.user_params.sources_for_koji_build_nvr:
                 self.pt.set_plugin_arg(
                     phase, plugin,
                     'koji_build_nvr',
-                    self.user_params.sources_for_koji_build_nvr.value
+                    self.user_params.sources_for_koji_build_nvr
                 )
 
-            if self.user_params.sources_for_koji_build_id.value:
+            if self.user_params.sources_for_koji_build_id:
                 self.pt.set_plugin_arg(
                     phase, plugin,
                     'koji_build_id',
-                    self.user_params.sources_for_koji_build_id.value
+                    self.user_params.sources_for_koji_build_id
                 )
 
-            if self.user_params.signing_intent.value:
+            if self.user_params.signing_intent:
                 self.pt.set_plugin_arg(
                     phase, plugin,
                     'signing_intent',
-                    self.user_params.signing_intent.value
+                    self.user_params.signing_intent
                 )
 
     def render_download_remote_source(self):
@@ -486,11 +486,11 @@ class PluginsConfigurationBase(object):
 
         if self.pt.has_plugin_conf(phase, plugin):
             self.pt.set_plugin_arg(phase, plugin, 'remote_source_url',
-                                   self.user_params.remote_source_url.value)
+                                   self.user_params.remote_source_url)
             self.pt.set_plugin_arg(phase, plugin, 'remote_source_build_args',
-                                   self.user_params.remote_source_build_args.value)
+                                   self.user_params.remote_source_build_args)
             self.pt.set_plugin_arg(phase, plugin, 'remote_source_configs',
-                                   self.user_params.remote_source_configs.value)
+                                   self.user_params.remote_source_configs)
 
     def render_resolve_remote_source(self):
         phase = 'prebuild_plugins'
@@ -498,7 +498,7 @@ class PluginsConfigurationBase(object):
 
         if self.pt.has_plugin_conf(phase, plugin):
             self.pt.set_plugin_arg_valid(phase, plugin, "dependency_replacements",
-                                         self.user_params.dependency_replacements.value)
+                                         self.user_params.dependency_replacements)
 
 
 class PluginsConfiguration(PluginsConfigurationBase):
@@ -506,8 +506,8 @@ class PluginsConfiguration(PluginsConfigurationBase):
 
     @property
     def pt_path(self):
-        arrangement_version = self.user_params.arrangement_version.value
-        build_type = self.user_params.build_type.value
+        arrangement_version = self.user_params.arrangement_version
+        build_type = self.user_params.build_type
         #    <build_type>_inner:<arrangement_version>.json
         return '{}_inner:{}.json'.format(build_type, arrangement_version)
 
@@ -546,7 +546,7 @@ class SourceContainerPluginsConfiguration(PluginsConfigurationBase):
 
     @property
     def pt_path(self):
-        arrangement_version = self.user_params.arrangement_version.value
+        arrangement_version = self.user_params.arrangement_version
         # orchestrator_sources_inner:<arrangement_version>.json
         return 'orchestrator_sources_inner:{}.json'.format(arrangement_version)
 

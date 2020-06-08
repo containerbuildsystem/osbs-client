@@ -681,7 +681,7 @@ class OSBS(object):
     def get_user_params(self, component=None, req_labels=None, **kwargs):
         req_labels = req_labels or {}
         user_component = component or req_labels[Labels.LABEL_TYPE_COMPONENT]
-        user_params = BuildUserParams(build_json_store=self.os_conf.get_build_json_store())
+        user_params = BuildUserParams(build_json_dir=self.os_conf.get_build_json_store())
         user_params.set_params(build_conf=self.build_conf,
                                component=user_component,
                                name_label=req_labels[Labels.LABEL_TYPE_NAME],
@@ -802,7 +802,7 @@ class OSBS(object):
         :return: instance of BuildRequest
         """
         build_json_store = self.os_conf.get_build_json_store()
-        user_params = SourceContainerUserParams(build_json_store=build_json_store)
+        user_params = SourceContainerUserParams(build_json_dir=build_json_store)
         user_params.set_params(arrangement_version=arrangement_version,
                                build_conf=self.build_conf,
                                component=component,

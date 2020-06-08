@@ -203,9 +203,9 @@ class TestBuildRequestV2(object):
                                        user_params=user_params)
         build_json = build_request.render()
 
-        assert build_request.user_params.triggered_after_koji_task.value == trigger_after_koji_task
+        assert build_request.user_params.triggered_after_koji_task == trigger_after_koji_task
         assert build_request.triggered_after_koji_task == trigger_after_koji_task
-        assert build_request.base_image == user_params.base_image.value
+        assert build_request.base_image == user_params.base_image
 
         assert build_json["metadata"]["name"] is not None
         assert "triggers" not in build_json["spec"]
@@ -527,7 +527,7 @@ class TestBuildRequestV2(object):
 
         build_json = build_request.render()
         base_image = '{}-{}'.format(build_request.source_registry['url'],
-                                    user_params.base_image.value)
+                                    user_params.base_image)
 
         if expected:
             assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == base_image
@@ -1106,8 +1106,8 @@ class TestBuildRequestV2(object):
 
         build_request.render()
         imagetstreamtag_name = '{}-{}:{}'.format(source_registry_url, expected, 'latest')
-        assert user_params.base_image.value == expected
-        assert user_params.trigger_imagestreamtag.value == imagetstreamtag_name
+        assert user_params.base_image == expected
+        assert user_params.trigger_imagestreamtag == imagetstreamtag_name
 
         if autorebuild:
             trigger = build_request.build_json['spec']['triggers'][0]
@@ -1259,7 +1259,7 @@ class TestSourceBuildRequest(object):
 
     def test_render_scratch_source_request(self):
         user_params = get_sample_source_params(update_args={'scratch': True})
-        user_params.image_tag.value = 'test-salt-time'
+        user_params.image_tag = 'test-salt-time'
         build_request = SourceBuildRequest(osbs_api=MockOSBSApi(), user_params=user_params)
         build_request.render()
         assert build_request.template['metadata']['name'] == 'scratch-sources-salt-time'

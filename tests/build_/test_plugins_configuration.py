@@ -539,7 +539,7 @@ class TestPluginsConfiguration(object):
                 assert not worker_config.get_build_from()
 
         if is_flatpak:
-            assert user_params.flatpak.value
+            assert user_params.flatpak
 
     def test_prod_custom_base_image(self, tmpdir):
         kwargs = get_sample_prod_params()
@@ -732,7 +732,7 @@ class TestPluginsConfiguration(object):
     def test_render_no_inject_parent_image(self, caplog):
         self.mock_repo_info()
         user_params = get_sample_user_params()
-        user_params.koji_parent_build.value = None
+        user_params.koji_parent_build = None
         plugins_conf = PluginsConfiguration(user_params)
         plugins_conf.pt.remove_plugin('prebuild_plugins', 'inject_parent_image')
         plugins_conf.render()
