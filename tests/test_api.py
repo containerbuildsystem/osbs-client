@@ -304,7 +304,7 @@ class TestOSBS(object):
                                         outer_template, customize_conf, version):
         repo_info = self.mock_repo_info()
 
-        user_params = BuildUserParams(build_json_store=osbs.os_conf.get_build_json_store())
+        user_params = BuildUserParams(build_json_dir=osbs.os_conf.get_build_json_store())
         user_params.set_params(base_image='fedora23/python', build_from='image:whatever',
                                build_conf=osbs.build_conf,
                                name_label='whatever', repo_info=repo_info, **REQUIRED_BUILD_ARGS)
@@ -926,7 +926,7 @@ class TestOSBS(object):
         flexmock(OSBS, _create_build_config_and_build=request_as_response)
         req = osbs.create_build(target=TEST_TARGET,
                                 **REQUIRED_BUILD_ARGS)
-        assert req.user_params.component.value == component_override
+        assert req.user_params.component == component_override
 
     # osbs is a fixture here
     def test_missing_component_argument_doesnt_break_build(self, osbs):  # noqa
@@ -1937,9 +1937,9 @@ class TestOSBS(object):
 
         def get_user_params(**kwargs):
             user_params = old(**kwargs)
-            assert user_params.base_image.value is None
-            assert user_params.component.value == 'mod_name'
-            assert user_params.imagestream_name.value == 'mod_name'
+            assert user_params.base_image is None
+            assert user_params.component == 'mod_name'
+            assert user_params.imagestream_name == 'mod_name'
             return user_params
         osbs.get_user_params = get_user_params
 
@@ -2620,7 +2620,7 @@ class TestOSBS(object):
         repo_info = self.mock_repo_info()
 
         kwargs = {'reactor_config_override': {'source_registry': {'url': 'source_registry'}}}
-        user_params = BuildUserParams(build_json_store=osbs.os_conf.get_build_json_store())
+        user_params = BuildUserParams(build_json_dir=osbs.os_conf.get_build_json_store())
         user_params.set_params(base_image='fedora23/python', build_from='image:whatever',
                                build_conf=osbs.build_conf,
                                name_label='whatever', repo_info=repo_info, user=TEST_USER,
@@ -3091,7 +3091,7 @@ class TestOSBS(object):
         customize_conf = DEFAULT_CUSTOMIZE_CONF
         repo_info = self.mock_repo_info(mock_df_parser=MockDfParserFromScratch())
 
-        user_params = BuildUserParams(build_json_store=osbs.os_conf.get_build_json_store())
+        user_params = BuildUserParams(build_json_dir=osbs.os_conf.get_build_json_store())
         user_params.set_params(base_image='scratch', build_from='image:python',
                                build_conf=osbs.build_conf,
                                name_label='scratch', repo_info=repo_info, user=TEST_USER,

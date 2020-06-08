@@ -52,15 +52,15 @@ class BaseBuildRequest(object):
         self.source_registry = None
         self.pull_registries = None
         self.user_params = user_params
-        if user_params and user_params.build_json_dir.value:
-            self._build_json_store = user_params.build_json_dir.value
+        if user_params and user_params.build_json_dir:
+            self._build_json_store = user_params.build_json_dir
         else:
             self._build_json_store = build_json_store
 
     def set_params(self, user_params):
         self.user_params = user_params
-        if self._build_json_store and not user_params.build_json_dir.value:
-            self.user_params.build_json_dir.value = self._build_json_store
+        if self._build_json_store and not user_params.build_json_dir:
+            self.user_params.build_json_dir = self._build_json_store
 
     @abc.abstractmethod
     def render(self, validate=True):
@@ -89,7 +89,7 @@ class BaseBuildRequest(object):
         # because that is updating user_params
         self.render_user_params()
 
-        koji_task_id = self.user_params.koji_task_id.value
+        koji_task_id = self.user_params.koji_task_id
         if koji_task_id is not None:
             self.set_label('koji-task-id', str(koji_task_id))
 
@@ -103,17 +103,17 @@ class BaseBuildRequest(object):
     def render_custom_strategy(self):
         """Render data about buildroot used for custom strategy"""
         custom_strategy = self.template['spec']['strategy']['customStrategy']
-        if self.user_params.buildroot_is_imagestream.value:
+        if self.user_params.buildroot_is_imagestream:
             custom_strategy['from']['kind'] = 'ImageStreamTag'
-        custom_strategy['from']['name'] = self.user_params.build_image.value
+        custom_strategy['from']['name'] = self.user_params.build_image
 
     def render_name(self):
         """Sets the Build/BuildConfig object name"""
-        name = self.user_params.name.value
-        platform = self.user_params.platform.value
+        name = self.user_params.name
+        platform = self.user_params.platform
 
-        if self.user_params.scratch.value or self.user_params.isolated.value:
-            name = self.user_params.image_tag.value
+        if self.user_params.scratch or self.user_params.isolated:
+            name = self.user_params.image_tag
             # Platform name may contain characters not allowed by OpenShift.
             if platform:
                 platform_suffix = '-{}'.format(platform)
@@ -122,16 +122,16 @@ class BaseBuildRequest(object):
 
             _, salt, timestamp = name.rsplit('-', 2)
 
-            if self.user_params.scratch.value:
+            if self.user_params.scratch:
                 name = 'scratch-{}-{}'.format(salt, timestamp)
-            elif self.user_params.isolated.value:
+            elif self.user_params.isolated:
                 name = 'isolated-{}-{}'.format(salt, timestamp)
 
         # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
         self.template['metadata']['name'] = name
 
     def render_output_name(self):
-        self.template['spec']['output']['to']['name'] = self.user_params.image_tag.value
+        self.template['spec']['output']['to']['name'] = self.user_params.image_tag
 
     def render_resource_limits(self):
         if self._resource_limits is not None:
@@ -154,7 +154,7 @@ class BaseBuildRequest(object):
         Scratch builds must not affect subsequent builds,
         and should not be imported into Koji.
         """
-        if self.user_params.scratch.value:
+        if self.user_params.scratch:
             self.template['spec'].pop('triggers', None)
             self.set_label('scratch', 'true')
 
@@ -178,8 +178,8 @@ class BaseBuildRequest(object):
             self._openshift_required_version = openshift_required_version
 
     def set_reactor_config(self):
-        reactor_config_override = self.user_params.reactor_config_override.value
-        reactor_config_map = self.user_params.reactor_config_map.value
+        reactor_config_override = self.user_params.reactor_config_override
+        reactor_config_map = self.user_params.reactor_config_map
 
         if not reactor_config_map and not reactor_config_override:
             return
@@ -219,7 +219,7 @@ class BaseBuildRequest(object):
     @property
     def template(self):
         if self._template is None:
-            path = os.path.join(self.user_params.build_json_dir.value, self._outer_template_path)
+            path = os.path.join(self.user_params.build_json_dir, self._outer_template_path)
             logger.debug("loading template from path %s", path)
             try:
                 with open(path, "r") as fp:
@@ -236,8 +236,8 @@ class BaseBuildRequest(object):
         :rval: dict
         :return: atomic-reactor configuration
         """
-        reactor_config_override = self.user_params.reactor_config_override.value
-        reactor_config_map = self.user_params.reactor_config_map.value
+        reactor_config_override = self.user_params.reactor_config_override
+        reactor_config_map = self.user_params.reactor_config_map
         data = {}
 
         if reactor_config_override:
@@ -372,34 +372,34 @@ class BuildRequestV2(BaseBuildRequest):
 
     @property
     def isolated(self):
-        return self.user_params.isolated.value
+        return self.user_params.isolated
 
     @property
     def scratch(self):
-        return self.user_params.scratch.value
+        return self.user_params.scratch
 
     @property
     def skip_build(self):
-        return self.user_params.skip_build.value
+        return self.user_params.skip_build
 
     @property
     def triggered_after_koji_task(self):
-        return self.user_params.triggered_after_koji_task.value
+        return self.user_params.triggered_after_koji_task
 
     @property
     def base_image(self):
-        return self.user_params.base_image.value
+        return self.user_params.base_image
 
     # Override
     @property
     def trigger_imagestreamtag(self):
-        return self.user_params.trigger_imagestreamtag.value
+        return self.user_params.trigger_imagestreamtag
 
     def _set_flatpak(self, reactor_config_data):
         flatpak_key = 'flatpak'
         flatpak_base_image_key = 'base_image'
 
-        if self.user_params.flatpak.value and not self.user_params.base_image.value:
+        if self.user_params.flatpak and not self.user_params.base_image:
             flatpack_base_image = (
                 reactor_config_data.get(flatpak_key, {}).get(flatpak_base_image_key, None)
             )
@@ -418,7 +418,7 @@ class BuildRequestV2(BaseBuildRequest):
         required_secrets = reactor_config_data.get(req_secrets_key, [])
         token_secrets = reactor_config_data.get(token_secrets_key, [])
 
-        if self.user_params.build_type.value == BUILD_TYPE_ORCHESTRATOR:
+        if self.user_params.build_type == BUILD_TYPE_ORCHESTRATOR:
             required_secrets += token_secrets
         self._set_required_secrets(required_secrets)
 
@@ -428,7 +428,7 @@ class BuildRequestV2(BaseBuildRequest):
         base_image from dockerfile, but we need to add also registry and
         organization which we get from reactor-config-map
         """
-        image_name = ImageName.parse(self.user_params.base_image.value)
+        image_name = ImageName.parse(self.user_params.base_image)
         # add registry only if there wasn't one specified in dockerfile
         if not image_name.registry:
             image_name.registry = source_registry
@@ -439,7 +439,7 @@ class BuildRequestV2(BaseBuildRequest):
         # we want to convert it only in registry, as there should be colon before tag
         image_name.registry = image_name.registry.replace(':', '-')
         imagestreamtag = image_name.to_str().replace('/', '-')
-        self.user_params.trigger_imagestreamtag.value = imagestreamtag
+        self.user_params.trigger_imagestreamtag = imagestreamtag
 
     def _update_imagestream_name(self, source_registry):
         """
@@ -447,13 +447,13 @@ class BuildRequestV2(BaseBuildRequest):
         name label from dockerfile, but we need to add also registry and
         organization which we get from reactor-config-map
         """
-        image_name = ImageName.parse(self.user_params.imagestream_name.value)
+        image_name = ImageName.parse(self.user_params.imagestream_name)
         image_name.registry = source_registry
         if self.organization:
             image_name.enclose(self.organization)
 
         imagestream = image_name.to_str(tag=False).replace('/', '-').replace(':', '-')
-        self.user_params.imagestream_name.value = imagestream
+        self.user_params.imagestream_name = imagestream
 
     def set_data_from_reactor_config(self, reactor_config_data):
         """
@@ -462,7 +462,7 @@ class BuildRequestV2(BaseBuildRequest):
         super(BuildRequestV2, self).set_data_from_reactor_config(reactor_config_data)
 
         if not reactor_config_data:
-            if self.user_params.flatpak.value and not self.user_params.base_image.value:
+            if self.user_params.flatpak and not self.user_params.base_image:
                 raise OsbsValidationException(
                     "Flatpak base_image must be be set in container.yaml or reactor config")
         else:
@@ -477,27 +477,27 @@ class BuildRequestV2(BaseBuildRequest):
     def render(self, validate=True):
         super(BuildRequestV2, self).render(validate=validate)
 
-        self.template['spec']['source']['git']['uri'] = self.user_params.git_uri.value
-        self.template['spec']['source']['git']['ref'] = self.user_params.git_ref.value
+        self.template['spec']['source']['git']['uri'] = self.user_params.git_uri
+        self.template['spec']['source']['git']['ref'] = self.user_params.git_ref
 
         if self.has_ist_trigger():
             imagechange = self.template['spec']['triggers'][0]['imageChange']
             imagechange['from']['name'] = self.trigger_imagestreamtag
 
         # Set git-repo-name and git-full-name labels
-        repo_name = git_repo_humanish_part_from_uri(self.user_params.git_uri.value)
+        repo_name = git_repo_humanish_part_from_uri(self.user_params.git_uri)
         # Use the repo name to differentiate different repos, but include the full url as an
         # optional filter.
         self.set_label('git-repo-name', repo_name)
-        self.set_label('git-branch', self.user_params.git_branch.value)
-        self.set_label('git-full-repo', self.user_params.git_uri.value)
+        self.set_label('git-branch', self.user_params.git_branch)
+        self.set_label('git-full-repo', self.user_params.git_uri)
 
-        koji_task_id = self.user_params.koji_task_id.value
+        koji_task_id = self.user_params.koji_task_id
         if koji_task_id is not None:
             # keep also original task for all manual builds with task
             # that way when delegated task for autorebuild will be used
             # we will still keep track of it
-            if self.user_params.triggered_after_koji_task.value is None:
+            if self.user_params.triggered_after_koji_task is None:
                 self.set_label('original-koji-task-id', str(koji_task_id))
 
         # Set template.spec.strategy.customStrategy.env[] USER_PARAMS
@@ -512,7 +512,7 @@ class BuildRequestV2(BaseBuildRequest):
 
         self.adjust_for_repo_info()
         self.adjust_for_isolated(self.user_params.release)
-        self.render_node_selectors(self.user_params.build_type.value)
+        self.render_node_selectors(self.user_params.build_type)
 
         self._set_deadline()
 
@@ -542,13 +542,13 @@ class BuildRequestV2(BaseBuildRequest):
         if build_type == BUILD_TYPE_WORKER:
 
             # auto or explicit build selector
-            if self.user_params.is_auto.value:
+            if self.user_params.is_auto:
                 node_selector = self.user_params.auto_build_node_selector
             # scratch build nodeselector
-            elif self.user_params.scratch.value:
+            elif self.user_params.scratch:
                 node_selector = self.user_params.scratch_build_node_selector
             # isolated build nodeselector
-            elif self.user_params.isolated.value:
+            elif self.user_params.isolated:
                 node_selector = self.user_params.isolated_build_node_selector
             # explicit build nodeselector
             else:
@@ -562,10 +562,10 @@ class BuildRequestV2(BaseBuildRequest):
             self.template['spec']['nodeSelector'] = node_selector
 
     def _set_deadline(self):
-        if self.user_params.build_type.value == BUILD_TYPE_WORKER:
-            deadline_hours = self.user_params.worker_deadline.value
+        if self.user_params.build_type == BUILD_TYPE_WORKER:
+            deadline_hours = self.user_params.worker_deadline
         else:
-            deadline_hours = self.user_params.orchestrator_deadline.value
+            deadline_hours = self.user_params.orchestrator_deadline
 
         self.set_deadline(deadline_hours)
 
@@ -599,34 +599,34 @@ class BuildRequestV2(BaseBuildRequest):
                                    '"release" label must not be set in Dockerfile')
 
     def adjust_for_isolated(self, release):
-        if not self.user_params.isolated.value:
+        if not self.user_params.isolated:
             return
 
         self.template['spec'].pop('triggers', None)
 
-        if not release.value:
+        if not release:
             raise OsbsValidationException('The release parameter is required for isolated builds.')
 
-        if not ISOLATED_RELEASE_FORMAT.match(release.value):
+        if not ISOLATED_RELEASE_FORMAT.match(release):
             raise OsbsValidationException(
                 'For isolated builds, the release value must be in the format: {}'
                 .format(ISOLATED_RELEASE_FORMAT.pattern))
 
         self.set_label('isolated', 'true')
-        self.set_label('isolated-release', release.value)
+        self.set_label('isolated-release', release)
 
     def is_custom_base_image(self):
         """
         Returns whether or not this is a build from a custom base image
         """
         return bool(re.match('^koji/image-build(:.*)?$',
-                             self.user_params.base_image.value or ''))
+                             self.user_params.base_image or ''))
 
     def is_from_scratch_image(self):
         """
         Returns whether or not this is a build `FROM scratch`
         """
-        return self.user_params.base_image.value == 'scratch'
+        return self.user_params.base_image == 'scratch'
 
 
 class SourceBuildRequest(BaseBuildRequest):
@@ -659,12 +659,12 @@ class SourceBuildRequest(BaseBuildRequest):
         Source container builds must have unique names, because we are not
         using buildConfigs just regular builds
         """
-        name = self.user_params.image_tag.value
+        name = self.user_params.image_tag
 
         _, salt, timestamp = name.rsplit('-', 2)
 
         name = 'sources-{}-{}'.format(salt, timestamp)
-        if self.user_params.scratch.value:
+        if self.user_params.scratch:
             name = 'scratch-{}'.format(name)
 
         # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
