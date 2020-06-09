@@ -80,7 +80,7 @@ def load_user_params_from_json(user_params_json):
     :return: initialized object with user params
     """
     json_dict = json.loads(user_params_json)
-    kind = json_dict.get(KIND_KEY, BuildUserParams.KIND)  # BW comp. default to BuildUserParams
+    kind = json_dict.pop(KIND_KEY, BuildUserParams.KIND)  # BW comp. default to BuildUserParams
     user_params_class = user_param_kinds[kind]
     return user_params_class.from_json(user_params_json)
 
@@ -252,6 +252,7 @@ class BuildCommon(BuildParamsBase):
     def to_json(self):
         keys = (p.name for p in self.__class__.params if p.include_in_json)
         json_dict = self.to_dict(keys)
+        json_dict[KIND_KEY] = self.KIND
         return json.dumps(json_dict, sort_keys=True)
 
 
@@ -276,7 +277,6 @@ class BuildUserParams(BuildCommon):
     include_koji_repo = BuildParam("include_koji_repo", default=False)
     is_auto = BuildParam("is_auto")
     isolated = BuildParam("isolated")
-    kind = BuildParam("kind", default=KIND)
     koji_parent_build = BuildParam("koji_parent_build")
     koji_upload_dir = BuildParam("koji_upload_dir")
     name = BuildIDParam()
@@ -496,7 +496,6 @@ class SourceContainerUserParams(BuildCommon):
 
     KIND = USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS
 
-    kind = BuildParam("kind", default=KIND)
     sources_for_koji_build_nvr = BuildParam("sources_for_koji_build_nvr")
     sources_for_koji_build_id = BuildParam("sources_for_koji_build_id")
 
