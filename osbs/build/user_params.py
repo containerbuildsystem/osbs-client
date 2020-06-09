@@ -82,9 +82,7 @@ def load_user_params_from_json(user_params_json):
     json_dict = json.loads(user_params_json)
     kind = json_dict.get(KIND_KEY, BuildUserParams.KIND)  # BW comp. default to BuildUserParams
     user_params_class = user_param_kinds[kind]
-    user_params = user_params_class()
-    user_params.from_json(user_params_json)
-    return user_params
+    return user_params_class.from_json(user_params_json)
 
 
 class BuildCommon(BuildParamsBase):
@@ -230,19 +228,18 @@ class BuildCommon(BuildParamsBase):
             missing_repr = ", ".join(repr(p.name) for p in missing)
             raise OsbsValidationException("Missing required params: {}".format(missing_repr))
 
-    def from_json(self, user_params_json):
+    @classmethod
+    def from_json(cls, user_params_json):
         if not user_params_json:
-            return
+            return cls()
         try:
             json_dict = json.loads(user_params_json)
         except ValueError:
             logger.debug('failed to convert %s', user_params_json)
             raise
-        for key, value in json_dict.items():
-            try:
-                setattr(self, key, value)
-            except AttributeError:
-                continue
+        # Drop invalid keys
+        json_dict = {k: v for k, v in json_dict.items() if cls.get_param(k) is not None}
+        return cls(**json_dict)
 
     def to_dict(self, keys):
         retdict = {}
