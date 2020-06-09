@@ -343,8 +343,7 @@ class TestBuildUserParams(object):
         }
         assert spec.to_json() == json.dumps(expected_json, sort_keys=True)
 
-        spec2 = BuildUserParams()
-        spec2.from_json(spec.to_json())
+        spec2 = BuildUserParams.from_json(spec.to_json())
         assert spec2.to_json() == json.dumps(expected_json, sort_keys=True)
 
     def test_from_json_failure(self, caplog):
@@ -472,8 +471,7 @@ class TestSourceContainerUserParams(object):
             expected_json['sources_for_koji_build_id'] = origin_id
         assert spec.to_json() == json.dumps(expected_json, sort_keys=True)
 
-        spec2 = SourceContainerUserParams()
-        spec2.from_json(spec.to_json())
+        spec2 = SourceContainerUserParams.from_json(spec.to_json())
         assert spec2.to_json() == json.dumps(expected_json, sort_keys=True)
 
 
