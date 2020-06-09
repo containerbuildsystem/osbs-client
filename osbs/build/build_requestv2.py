@@ -436,6 +436,8 @@ class BuildRequestV2(BaseBuildRequest):
         if image_name.registry == source_registry and self.organization:
             image_name.enclose(self.organization)
 
+        # we want to convert it only in registry, as there should be colon before tag
+        image_name.registry = image_name.registry.replace(':', '-')
         imagestreamtag = image_name.to_str().replace('/', '-')
         self.user_params.trigger_imagestreamtag.value = imagestreamtag
 
@@ -450,7 +452,7 @@ class BuildRequestV2(BaseBuildRequest):
         if self.organization:
             image_name.enclose(self.organization)
 
-        imagestream = image_name.to_str(tag=False).replace('/', '-')
+        imagestream = image_name.to_str(tag=False).replace('/', '-').replace(':', '-')
         self.user_params.imagestream_name.value = imagestream
 
     def set_data_from_reactor_config(self, reactor_config_data):
