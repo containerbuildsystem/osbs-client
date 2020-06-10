@@ -39,13 +39,6 @@ def register_user_params(klass):
     return klass
 
 
-class UserParam(BuildParam):
-    """ custom class for "user" parameter with postprocessing """
-
-    def __init__(self, **kwargs):
-        super(UserParam, self).__init__("user", **kwargs)
-
-
 class BuildIDParam(BuildParam):
     """ validate build ID """
 
@@ -110,7 +103,7 @@ class BuildCommon(BuildParamsBase):
     reactor_config_override = BuildParam("reactor_config_override")
     scratch = BuildParam("scratch")
     signing_intent = BuildParam("signing_intent")
-    user = UserParam(required=True)
+    user = BuildParam("user", required=True)
     worker_deadline = BuildParam("worker_deadline")
 
     def __init__(self, build_json_dir=None, **kwargs):
