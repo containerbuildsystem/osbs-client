@@ -24,10 +24,11 @@ from osbs.build.user_params import (
 from osbs.conf import Configuration
 from osbs.repo_utils import RepoInfo, RepoConfiguration
 from osbs.exceptions import OsbsValidationException
-from osbs.constants import BUILD_TYPE_WORKER, REACTOR_CONFIG_ARRANGEMENT_VERSION
+from osbs.constants import (BUILD_TYPE_WORKER, REACTOR_CONFIG_ARRANGEMENT_VERSION,
+                            DEFAULT_CUSTOMIZE_CONF)
 from tests.constants import (TEST_COMPONENT, TEST_FILESYSTEM_KOJI_TASK_ID,
                              TEST_GIT_BRANCH, TEST_GIT_REF, TEST_GIT_URI,
-                             TEST_KOJI_TASK_ID, TEST_USER)
+                             TEST_KOJI_TASK_ID, TEST_USER, INPUTS_PATH)
 
 
 class TestBuildIDParam(object):
@@ -55,6 +56,7 @@ class TestBuildUserParams(object):
         repo_conf = RepoConfiguration(**git_args)
         return {
             # Params needed to avoid exceptions.
+            'build_json_dir': INPUTS_PATH,
             'base_image': 'base_image',
             'build_conf': Configuration(**conf_args),
             'name_label': 'name_label',
@@ -68,11 +70,10 @@ class TestBuildUserParams(object):
         ('repo_info', 'no repo_info passed to BuildUserParams'),
     ])
     def test_incomplete_set_params(self, skip_param, message):
-        spec = BuildUserParams()
         kwargs = self.get_minimal_kwargs()
         kwargs[skip_param] = None
         with pytest.raises(OsbsValidationException) as exc:
-            spec.set_params(**kwargs)
+            BuildUserParams.make_params(**kwargs)
             assert message in exc.message
 
     def test_missing_build_opts(self):
@@ -81,18 +82,15 @@ class TestBuildUserParams(object):
             'build_image': None,
             'build_imagestream': None,
         }
-        spec = BuildUserParams()
         kwargs = self.get_minimal_kwargs(conf_args=conf_args)
 
         with pytest.raises(OsbsValidationException):
-            spec.set_params(**kwargs)
-            spec.validate()
+            BuildUserParams.make_params(**kwargs)
 
     def test_validate_missing_required(self):
-        spec = BuildUserParams()
         kwargs = self.get_minimal_kwargs()
         kwargs['user'] = None
-        spec.set_params(**kwargs)
+        spec = BuildUserParams.make_params(**kwargs)
 
         with pytest.raises(OsbsValidationException):
             spec.validate()
@@ -101,8 +99,7 @@ class TestBuildUserParams(object):
         git_args = {'git_branch': TEST_GIT_BRANCH}
         kwargs = self.get_minimal_kwargs(git_args=git_args)
 
-        spec = BuildUserParams()
-        spec.set_params(**kwargs)
+        spec = BuildUserParams.make_params(**kwargs)
 
         assert spec.name.startswith('path-master')
 
@@ -132,8 +129,7 @@ class TestBuildUserParams(object):
             .with_args(10**(len(rand) - 1), 10**len(rand))
             .and_return(int(rand)))
 
-        spec = BuildUserParams()
-        spec.set_params(**kwargs)
+        spec = BuildUserParams.make_params(**kwargs)
 
         img_tag = '{user}/{component}:{koji_target}-{random_number}-{time_string}'
         if platform:
@@ -164,27 +160,24 @@ class TestBuildUserParams(object):
         kwargs = self.get_minimal_kwargs()
         kwargs['flatpak'] = False
         kwargs.pop(missing_arg)
-        spec = BuildUserParams()
 
         with pytest.raises(OsbsValidationException):
-            spec.set_params(**kwargs)
+            BuildUserParams.make_params(**kwargs)
 
     def test_user_params_bad_compose_ids(self):
         kwargs = self.get_minimal_kwargs()
         kwargs['compose_ids'] = True
-        spec = BuildUserParams()
 
         with pytest.raises(OsbsValidationException):
-            spec.set_params(**kwargs)
+            BuildUserParams.make_params(**kwargs)
 
     def test_user_params_bad_build_from(self):
         # does not have an "image:" prefix:
         conf_args = {'build_from': 'registry.example.com/buildroot'}
         kwargs = self.get_minimal_kwargs(conf_args=conf_args)
-        spec = BuildUserParams()
 
         with pytest.raises(OsbsValidationException) as e:
-            spec.set_params(**kwargs)
+            BuildUserParams.make_params(**kwargs)
         assert 'build_from must be "source_type:source_value"' in str(e.value)
 
     @pytest.mark.parametrize(('signing_intent', 'compose_ids', 'yum_repourls', 'exc'), (
@@ -212,13 +205,11 @@ class TestBuildUserParams(object):
             'git_branch': 'master',
         })
 
-        spec = BuildUserParams()
-
         if exc:
             with pytest.raises(exc):
-                spec.set_params(**kwargs)
+                BuildUserParams.make_params(**kwargs)
         else:
-            spec.set_params(**kwargs)
+            spec = BuildUserParams.make_params(**kwargs)
 
             if yum_repourls:
                 assert spec.yum_repourls == yum_repourls
@@ -239,7 +230,7 @@ class TestBuildUserParams(object):
             # 'arrangement_version': self.arrangement_version,  # calculated value
             'base_image': 'buildroot:old',
             # 'build_from': 'buildroot:old',  # only one of build_*
-            # 'build_json_dir': self.build_json_dir,  # init paramater
+            'build_json_dir': INPUTS_PATH,
             # 'build_image': 'buildroot:latest',
             # 'build_imagestream': 'buildroot:name_label',
             'build_type': BUILD_TYPE_WORKER,
@@ -298,15 +289,13 @@ class TestBuildUserParams(object):
             .with_args(10**(len(rand) - 1), 10**len(rand))
             .and_return(int(rand)))
 
-        build_json_dir = 'inputs'
-        spec = BuildUserParams(build_json_dir)
-        spec.set_params(**param_kwargs)
+        spec = BuildUserParams.make_params(**param_kwargs)
         expected_json = {
             "arrangement_version": REACTOR_CONFIG_ARRANGEMENT_VERSION,
             "base_image": "buildroot:old",
             "build_from": "image:buildroot:latest",
             "build_image": "buildroot:latest",
-            "build_json_dir": build_json_dir,
+            "build_json_dir": INPUTS_PATH,
             "build_type": "worker",
             "component": TEST_COMPONENT,
             "compose_ids": [1, 2],
@@ -386,6 +375,16 @@ class TestBuildUserParams(object):
         }
         spec.from_json(json.dumps(expected_json))
 
+    def test_make_params_keeps_defaults(self):
+        kwargs = self.get_minimal_kwargs()
+        params = BuildUserParams.make_params(**kwargs)
+
+        assert params.arrangement_version == REACTOR_CONFIG_ARRANGEMENT_VERSION
+        assert params.buildroot_is_imagestream is False
+        assert params.customize_conf == DEFAULT_CUSTOMIZE_CONF
+        # assert params.git_ref == 'master'  # set from repo_info
+        assert params.include_koji_repo is False
+
 
 class TestSourceContainerUserParams(object):
     """Tests for source container user params"""
@@ -395,6 +394,7 @@ class TestSourceContainerUserParams(object):
             conf_args = {'build_from': 'image:buildroot:latest'}
         return {
             # Params needed to avoid exceptions.
+            'build_json_dir': INPUTS_PATH,
             'build_conf': Configuration(**conf_args),
             'user': TEST_USER,
             'sources_for_koji_build_nvr': origin_nvr,
@@ -407,9 +407,8 @@ class TestSourceContainerUserParams(object):
             "build_from": "image:buildroot:latest",
             'user': TEST_USER,
         }
-        spec = SourceContainerUserParams()
         with pytest.raises(OsbsValidationException):
-            spec.set_params(**kwargs)
+            SourceContainerUserParams.make_params(**kwargs)
 
     @pytest.mark.parametrize('origin_nvr, origin_id', [
         ('test-1-123', 12345),
@@ -444,15 +443,13 @@ class TestSourceContainerUserParams(object):
             .with_args(10**(len(rand) - 1), 10**len(rand))
             .and_return(int(rand)))
 
-        build_json_dir = 'inputs'
-        spec = SourceContainerUserParams(build_json_dir)
-        spec.set_params(**param_kwargs)
+        spec = SourceContainerUserParams.make_params(**param_kwargs)
 
         expected_json = {
             "arrangement_version": REACTOR_CONFIG_ARRANGEMENT_VERSION,
             "build_from": "image:buildroot:latest",
             "build_image": "buildroot:latest",
-            "build_json_dir": build_json_dir,
+            "build_json_dir": INPUTS_PATH,
             'component': TEST_COMPONENT,
             "image_tag": "{}/{}:tothepoint-{}-{}-x86_64".format(
                 TEST_USER, TEST_COMPONENT, rand, timestr),

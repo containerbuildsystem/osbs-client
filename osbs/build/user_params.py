@@ -106,31 +106,43 @@ class BuildCommon(BuildParamsBase):
     user = BuildParam("user", required=True)
     worker_deadline = BuildParam("worker_deadline")
 
-    def __init__(self, build_json_dir=None, **kwargs):
-        super(BuildCommon, self).__init__(build_json_dir=build_json_dir, **kwargs)
-
     def __setattr__(self, name, value):
         super(BuildCommon, self).__setattr__(name, value)
         logger.debug("%s = %s", name, value)
 
-    def set_params(self,
-                   build_conf=None,
-                   build_from=None,
-                   component=None,
-                   koji_target=None,
-                   koji_task_id=None,
-                   platform=None,
-                   reactor_config_override=None,
-                   scratch=None,
-                   signing_intent=None,
-                   user=None,
-                   **kwargs):
+    @classmethod
+    def make_params(cls,
+                    build_conf=None,
+                    build_from=None,
+                    build_json_dir=None,
+                    component=None,
+                    koji_target=None,
+                    koji_task_id=None,
+                    platform=None,
+                    reactor_config_override=None,
+                    scratch=None,
+                    signing_intent=None,
+                    user=None,
+                    **kwargs):
         """
-        set parameters in the user parameters.
+        Create a user_params instance.
+
+        Most parameters will simply be used as the value of the corresponding BuildParam.
+        The notable exception is `build_conf`, which contains values for other params but
+        is not a BuildParam itself (list of params set from build_conf can be found below).
+
+        Arguments that are None (either passed as None, or None by default) are ignored.
+        This is important to avoid overwriting default values of params. Once the instance
+        is created, however, overwriting defaults by setting None is allowed, e.g.:
+
+        >>> params = BuildCommon.make_params(build_conf=bc)  # does not overwrite defaults
+        >>> params.arrangement_version = None  # does overwrite the default
 
         these parameters are accepted:
         :param base_image: str, name of the parent image
         :param build_conf: BuildConfiguration, the build configuration
+        :param build_from: str, buildroot reference (image or imagestream)
+        :param build_json_dir: str, path to directory with JSON build templates
         :param component: str, name of the component
         :param koji_parent_build: str,
         :param koji_target: str, koji tag with packages used to build the image
@@ -140,59 +152,80 @@ class BuildCommon(BuildParamsBase):
         :param reactor_config_override: dict, data structure for reactor config to be injected as
                                         an environment variable into a worker build;
                                         when used, reactor_config_map is ignored.
-        :param scratch: bool, build as a scratch build
+        :param scratch: bool, build as a scratch build (if not specified in build_conf)
         :param signing_intent: bool, True to sign the resulting image
         :param user: str, name of the user requesting the build
 
         Please keep the paramater list alphabetized for easier tracking of changes
 
         the following parameters are pulled from the BuildConfiguration (ie, build_conf)
-        :param build_from: str,
+        :param build_from: str, buildroot reference (if not specified as argument)
         :param orchestrator_deadline: int, orchestrator deadline in hours
         :param reactor_config_map: str, name of the config map containing the reactor environment
+        :param scratch: bool, build as a scratch build
         :param worker_deadline: int, worker completion deadline in hours
         """
         if not build_conf:
             raise OsbsValidationException('build_conf must be defined')
 
         build_from = build_from or build_conf.get_build_from()
-        self.scratch = build_conf.get_scratch(scratch)
-        orchestrator_deadline = build_conf.get_orchestor_deadline()
-        worker_deadline = build_conf.get_worker_deadline()
-
-        self.component = component
-        self.koji_target = koji_target
-        self.koji_task_id = koji_task_id
-        self.platform = platform
-        self.reactor_config_map = build_conf.get_reactor_config_map()
-        self.reactor_config_override = reactor_config_override
-        self.signing_intent = signing_intent
-        self.user = user
-
         if not build_from:
             raise OsbsValidationException('build_from must be defined')
-
         if ':' not in build_from:
             raise OsbsValidationException('build_from must be "source_type:source_value"')
         source_type, source_value = build_from.split(':', 1)
         if source_type not in ('image', 'imagestream'):
             raise OsbsValidationException(
                 'first part in build_from, may be only image or imagestream')
-        if source_type == 'imagestream':
-            self.buildroot_is_imagestream = True
-        self.build_from = build_from
-        self.build_image = source_value
 
         try:
-            self.orchestrator_deadline = int(orchestrator_deadline)
+            orchestrator_deadline = int(build_conf.get_orchestor_deadline())
         except (ValueError, TypeError):
-            self.orchestrator_deadline = ORCHESTRATOR_MAX_RUNTIME
+            orchestrator_deadline = ORCHESTRATOR_MAX_RUNTIME
         try:
-            self.worker_deadline = int(worker_deadline)
+            worker_deadline = int(build_conf.get_worker_deadline())
         except (ValueError, TypeError):
-            self.worker_deadline = WORKER_MAX_RUNTIME
+            worker_deadline = WORKER_MAX_RUNTIME
 
-        self._populate_image_tag()
+        # Update kwargs with arguments explicitly accepted by this method
+        kwargs.update({
+            "build_json_dir": build_json_dir,
+            "component": component,
+            "koji_target": koji_target,
+            "koji_task_id": koji_task_id,
+            "platform": platform,
+            "reactor_config_override": reactor_config_override,
+            "signing_intent": signing_intent,
+            "user": user,
+            # Potentially pulled from build_conf
+            "build_from": build_from,
+            "build_image": source_value,
+            "buildroot_is_imagestream": (source_type == "imagestream"),
+            "orchestrator_deadline": orchestrator_deadline,
+            "reactor_config_map": build_conf.get_reactor_config_map(),
+            "scratch": build_conf.get_scratch(scratch),
+            "worker_deadline": worker_deadline,
+        })
+
+        # Drop arguments that are:
+        # - unknown; some callers may pass deprecated params
+        # - not set (set to None, either explicitly or implicitly)
+        kwargs = {
+            k: v for k, v in kwargs.items()
+            if v is not None and cls.get_param(k) is not None
+        }
+
+        params = cls(**kwargs)
+        params._populate_image_tag()
+        return params
+
+    @classmethod
+    def _make_params_super(cls, *args, **kwargs):
+        # Pylint cannot properly infer the return type of an overridden classmethod
+        # that returns cls(). This is an ugly workaround that prevents pylint from
+        # inferring any type at all (thus preventing false-positive warnings).
+        # See https://github.com/PyCQA/pylint/issues/981
+        return BuildCommon.make_params.__func__(cls, *args, **kwargs)
 
     def _populate_image_tag(self):
         timestamp = utcnow().strftime('%Y%m%d%H%M%S')
@@ -300,47 +333,48 @@ class BuildUserParams(BuildCommon):
 
     repo_info = BuildParam("repo_info", include_in_json=False)
 
-    def set_params(self,
-                   additional_tags=None,
-                   base_image=None,
-                   build_conf=None,
-                   build_type=None,
-                   compose_ids=None,
-                   dependency_replacements=None,
-                   filesystem_koji_task_id=None,
-                   flatpak=None,
-                   git_branch=None,
-                   git_commit_depth=None,
-                   git_ref=None,
-                   git_uri=None,
-                   include_koji_repo=None,
-                   is_auto=None,
-                   isolated=None,
-                   koji_parent_build=None,
-                   koji_upload_dir=None,
-                   name_label=None,
-                   operator_bundle_replacement_pullspecs=None,
-                   operator_manifests_extract_platform=None,
-                   auto_build_node_selector=None,
-                   explicit_build_node_selector=None,
-                   isolated_build_node_selector=None,
-                   platform_node_selector=None,
-                   scratch_build_node_selector=None,
-                   parent_images_digests=None,
-                   platform=None,
-                   platforms=None,
-                   release=None,
-                   remote_source_build_args=None,
-                   remote_source_configs=None,
-                   remote_source_url=None,
-                   repo_info=None,
-                   skip_build=None,
-                   tags_from_yaml=None,
-                   triggered_after_koji_task=None,
-                   yum_repourls=None,
-                   **kwargs):
+    @classmethod
+    def make_params(cls,
+                    additional_tags=None,
+                    base_image=None,
+                    build_conf=None,
+                    build_type=None,
+                    compose_ids=None,
+                    dependency_replacements=None,
+                    filesystem_koji_task_id=None,
+                    flatpak=None,
+                    git_branch=None,
+                    git_commit_depth=None,
+                    git_ref=None,
+                    git_uri=None,
+                    include_koji_repo=None,
+                    is_auto=None,
+                    isolated=None,
+                    koji_parent_build=None,
+                    koji_upload_dir=None,
+                    name_label=None,
+                    operator_bundle_replacement_pullspecs=None,
+                    operator_manifests_extract_platform=None,
+                    parent_images_digests=None,
+                    platform=None,
+                    platforms=None,
+                    release=None,
+                    remote_source_build_args=None,
+                    remote_source_configs=None,
+                    remote_source_url=None,
+                    repo_info=None,
+                    skip_build=None,
+                    tags_from_yaml=None,
+                    triggered_after_koji_task=None,
+                    yum_repourls=None,
+                    **kwargs):
         """
-        set parameters in the user parameters. Others are set in the super functions
+        Create a BuildUserParams instance.
+
+        Like the parent method, most params are simply used as values for the corresponding
+        BuildParam, this time with two notable exceptions: `build_conf` and `repo_info`.
+        Compared to the parent method, this one pulls even more param values from `build_conf`
+        and may also pull some values from `repo_info` (see below).
 
         these parameters are accepted:
         :param build_conf: BuildConfiguration, optional build configuration
@@ -396,8 +430,6 @@ class BuildUserParams(BuildCommon):
         :param git_ref: str, commit ID of the branch to be pulled
         :param git_uri: str, uri of the git repository for the source
         """
-        super(BuildUserParams, self).set_params(build_conf=build_conf, platform=platform,
-                                                **kwargs)
         if repo_info:
             additional_tags = repo_info.additional_tags.tags
             git_branch = repo_info.git_branch
@@ -405,55 +437,15 @@ class BuildUserParams(BuildCommon):
             git_ref = repo_info.git_ref
             git_uri = repo_info.git_uri
             tags_from_yaml = repo_info.additional_tags.from_container_yaml
-            self.repo_info = repo_info
         elif not git_uri:
             raise OsbsValidationException('no repo_info passed to BuildUserParams')
 
-        auto_build_node_selector = build_conf.get_auto_build_node_selector()
-        explicit_build_node_selector = build_conf.get_explicit_build_node_selector()
-        isolated_build_node_selector = build_conf.get_isolated_build_node_selector()
-        platform_node_selector = build_conf.get_platform_node_selector(platform)
-        scratch_build_node_selector = build_conf.get_scratch_build_node_selector()
-
-        self.additional_tags = additional_tags or set()
-        self.git_branch = git_branch
-        self.git_commit_depth = git_commit_depth
-        self.git_ref = git_ref
-        self.git_uri = git_uri
-
-        self.remote_source_build_args = remote_source_build_args
-        self.remote_source_configs = remote_source_configs
-        self.remote_source_url = remote_source_url
-        self.release = release
-        self.build_type = build_type
-
-        self.name = make_name_from_git(self.git_uri, self.git_branch)
-
-        self.filesystem_koji_task_id = filesystem_koji_task_id
-        self.is_auto = is_auto
-        self.isolated = isolated
-        self.flatpak = flatpak
-        self.include_koji_repo = include_koji_repo
-        self.koji_parent_build = koji_parent_build
-        self.koji_upload_dir = koji_upload_dir
-        self.parent_images_digests = parent_images_digests
-        self.platforms = platforms
-        self.operator_manifests_extract_platform = operator_manifests_extract_platform
-        self.operator_bundle_replacement_pullspecs = operator_bundle_replacement_pullspecs
-        self.skip_build = skip_build
-        self.tags_from_yaml = tags_from_yaml
-        self.triggered_after_koji_task = triggered_after_koji_task
-
-        if not base_image:
-            # For flatpaks, we can set this later from the reactor config
-            if not flatpak:
-                raise OsbsValidationException("base_image must be provided")
-        else:
-            self.set_base_image(base_image)
+        # For flatpaks, we can set this later from the reactor config
+        if not base_image and not flatpak:
+            raise OsbsValidationException("base_image must be provided")
 
         if not name_label:
             raise OsbsValidationException("name_label must be provided")
-        self.imagestream_name = name_label
 
         if kwargs.get('signing_intent') and compose_ids:
             raise OsbsValidationException(
@@ -464,19 +456,59 @@ class BuildUserParams(BuildCommon):
             raise OsbsValidationException("dependency_replacements must be a list")
         if not (yum_repourls is None or isinstance(yum_repourls, list)):
             raise OsbsValidationException("yum_repourls must be a list")
-        self.compose_ids = compose_ids or []
-        self.dependency_replacements = dependency_replacements or []
-        self.yum_repourls = yum_repourls or []
 
-        if (self.scratch, self.is_auto, self.isolated).count(True) > 1:
+        kwargs.update({
+            "base_image": base_image,
+            "build_conf": build_conf,
+            "build_type": build_type,
+            "compose_ids": compose_ids or [],
+            "dependency_replacements": dependency_replacements or [],
+            "filesystem_koji_task_id": filesystem_koji_task_id,
+            "flatpak": flatpak,
+            "imagestream_name": name_label,
+            "include_koji_repo": include_koji_repo,
+            "is_auto": is_auto,
+            "isolated": isolated,
+            "koji_parent_build": koji_parent_build,
+            "koji_upload_dir": koji_upload_dir,
+            "operator_bundle_replacement_pullspecs": operator_bundle_replacement_pullspecs,
+            "operator_manifests_extract_platform": operator_manifests_extract_platform,
+            "parent_images_digests": parent_images_digests,
+            "platform": platform,
+            "platforms": platforms,
+            "release": release,
+            "remote_source_build_args": remote_source_build_args,
+            "remote_source_configs": remote_source_configs,
+            "remote_source_url": remote_source_url,
+            "repo_info": repo_info,
+            "skip_build": skip_build,
+            "trigger_imagestreamtag": base_image,
+            "triggered_after_koji_task": triggered_after_koji_task,
+            "yum_repourls": yum_repourls or [],
+            # Potentially pulled from repo_info
+            "additional_tags": additional_tags or set(),
+            "git_branch": git_branch,
+            "git_commit_depth": git_commit_depth,
+            "git_ref": git_ref,
+            "git_uri": git_uri,
+            "name": make_name_from_git(git_uri, git_branch),
+            "tags_from_yaml": tags_from_yaml,
+            # Pulled from build_conf
+            "auto_build_node_selector": build_conf.get_auto_build_node_selector() or {},
+            "explicit_build_node_selector": build_conf.get_explicit_build_node_selector() or {},
+            "isolated_build_node_selector": build_conf.get_isolated_build_node_selector() or {},
+            "platform_node_selector": build_conf.get_platform_node_selector(platform) or {},
+            "scratch_build_node_selector": build_conf.get_scratch_build_node_selector() or {},
+        })
+
+        params = cls._make_params_super(**kwargs)
+
+        if (params.scratch, params.is_auto, params.isolated).count(True) > 1:
             raise OsbsValidationException(
                 'Build variations are mutually exclusive. '
                 'Must set either scratch, is_auto, isolated, or none. ')
-        self.auto_build_node_selector = auto_build_node_selector or {}
-        self.explicit_build_node_selector = explicit_build_node_selector or {}
-        self.isolated_build_node_selector = isolated_build_node_selector or {}
-        self.platform_node_selector = platform_node_selector or {}
-        self.scratch_build_node_selector = scratch_build_node_selector or {}
+
+        return params
 
     def set_base_image(self, base_image):
         self.base_image = base_image
@@ -492,8 +524,9 @@ class SourceContainerUserParams(BuildCommon):
     sources_for_koji_build_nvr = BuildParam("sources_for_koji_build_nvr")
     sources_for_koji_build_id = BuildParam("sources_for_koji_build_id")
 
-    def set_params(
-        self,
+    @classmethod
+    def make_params(
+        cls,
         sources_for_koji_build_nvr=None,
         sources_for_koji_build_id=None,
         **kwargs
@@ -505,12 +538,13 @@ class SourceContainerUserParams(BuildCommon):
                                               to fetch sources
         :return:
         """
-        super(SourceContainerUserParams, self).set_params(**kwargs)
-
         if sources_for_koji_build_id is None and sources_for_koji_build_nvr is None:
             raise OsbsValidationException(
                 "At least one param from 'sources_for_koji_build_id' or "
                 "'sources_for_koji_build_nvr' must be specified"
             )
-        self.sources_for_koji_build_nvr = sources_for_koji_build_nvr
-        self.sources_for_koji_build_id = sources_for_koji_build_id
+        kwargs.update({
+            "sources_for_koji_build_id": sources_for_koji_build_id,
+            "sources_for_koji_build_nvr": sources_for_koji_build_nvr,
+        })
+        return cls._make_params_super(**kwargs)

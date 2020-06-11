@@ -304,10 +304,15 @@ class TestOSBS(object):
                                         outer_template, customize_conf, version):
         repo_info = self.mock_repo_info()
 
-        user_params = BuildUserParams(build_json_dir=osbs.os_conf.get_build_json_store())
-        user_params.set_params(base_image='fedora23/python', build_from='image:whatever',
-                               build_conf=osbs.build_conf,
-                               name_label='whatever', repo_info=repo_info, **REQUIRED_BUILD_ARGS)
+        user_params = BuildUserParams.make_params(
+            build_json_dir=osbs.os_conf.get_build_json_store(),
+            base_image='fedora23/python',
+            build_from='image:whatever',
+            build_conf=osbs.build_conf,
+            name_label='whatever',
+            repo_info=repo_info,
+            **REQUIRED_BUILD_ARGS
+        )
 
         (flexmock(utils)
             .should_receive('get_repo_info')
@@ -1747,9 +1752,8 @@ class TestOSBS(object):
                                  'image': {'dockerImageReference':
                                                "registry/namespace/repo@sha256:123456"}}
 
-        user_params = BuildUserParams()
         # Params needed to avoid exceptions.
-        user_params.set_params(
+        user_params = BuildUserParams.make_params(
             user='user',
             # for build request v1
             base_image=base_image,
@@ -2620,12 +2624,15 @@ class TestOSBS(object):
         repo_info = self.mock_repo_info()
 
         kwargs = {'reactor_config_override': {'source_registry': {'url': 'source_registry'}}}
-        user_params = BuildUserParams(build_json_dir=osbs.os_conf.get_build_json_store())
-        user_params.set_params(base_image='fedora23/python', build_from='image:whatever',
-                               build_conf=osbs.build_conf,
-                               name_label='whatever', repo_info=repo_info, user=TEST_USER,
-                               build_type=BUILD_TYPE_ORCHESTRATOR,
-                               skip_build=skip_build, **kwargs)
+        user_params = BuildUserParams.make_params(
+            build_json_dir=osbs.os_conf.get_build_json_store(),
+            base_image='fedora23/python',
+            build_from='image:whatever',
+            build_conf=osbs.build_conf,
+            name_label='whatever', repo_info=repo_info, user=TEST_USER,
+            build_type=BUILD_TYPE_ORCHESTRATOR,
+            skip_build=skip_build, **kwargs
+        )
 
         (flexmock(utils)
             .should_receive('get_repo_info')
@@ -2809,9 +2816,8 @@ class TestOSBS(object):
             'status': {'lastVersion': 'lastVersion'},
         }
 
-        spec = BuildUserParams()
         # Params needed to avoid exceptions.
-        spec.set_params(
+        spec = BuildUserParams.make_params(
             user='user',
             base_image='fedora23/python',
             build_conf=osbs_obj.build_conf,
@@ -2962,9 +2968,8 @@ class TestOSBS(object):
             'status': {'lastVersion': 'lastVersion'},
         }
 
-        spec = BuildUserParams()
         # Params needed to avoid exceptions.
-        spec.set_params(
+        spec = BuildUserParams.make_params(
             user='user',
             base_image='fedora23/python',
             name_label='name_label',
@@ -3091,11 +3096,18 @@ class TestOSBS(object):
         customize_conf = DEFAULT_CUSTOMIZE_CONF
         repo_info = self.mock_repo_info(mock_df_parser=MockDfParserFromScratch())
 
-        user_params = BuildUserParams(build_json_dir=osbs.os_conf.get_build_json_store())
-        user_params.set_params(base_image='scratch', build_from='image:python',
-                               build_conf=osbs.build_conf,
-                               name_label='scratch', repo_info=repo_info, user=TEST_USER,
-                               isolated=True, build_type=BUILD_TYPE_ORCHESTRATOR, release='0.1')
+        user_params = BuildUserParams.make_params(
+            build_json_dir=osbs.os_conf.get_build_json_store(),
+            base_image='scratch',
+            build_from='image:python',
+            build_conf=osbs.build_conf,
+            name_label='scratch',
+            repo_info=repo_info,
+            user=TEST_USER,
+            isolated=True,
+            build_type=BUILD_TYPE_ORCHESTRATOR,
+            release='0.1'
+        )
 
         (flexmock(utils)
             .should_receive('get_repo_info')

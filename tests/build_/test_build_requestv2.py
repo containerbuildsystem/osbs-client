@@ -81,12 +81,12 @@ def get_sample_user_params(build_json_store=INPUTS_PATH, conf_args=None, git_arg
     if update_args:
         conf_args.setdefault('scratch', update_args.get('scratch'))
 
-    user_params = BuildUserParams(build_json_store)
     repo_conf = RepoConfiguration(**git_args)
     repo_info = RepoInfo(dockerfile_parser=MockDFParser(labels), configuration=repo_conf)
 
     build_conf = Configuration(conf_file=None, **conf_args)
     kwargs = {
+        'build_json_dir': build_json_store,
         'user': 'john-foo',
         'component': TEST_COMPONENT,
         'base_image': 'fedora:latest',
@@ -102,7 +102,7 @@ def get_sample_user_params(build_json_store=INPUTS_PATH, conf_args=None, git_arg
         kwargs['reactor_config_override'] = {'source_registry': {'url': 'source_registry'}}
     if update_args:
         kwargs.update(update_args)
-    user_params.set_params(**kwargs)
+    user_params = BuildUserParams.make_params(**kwargs)
     return user_params
 
 
@@ -1203,10 +1203,9 @@ def get_sample_source_params(build_json_store=INPUTS_PATH, conf_args=None,
         conf_args.setdefault('scratch', update_args.get('scratch'))
     conf_args.setdefault('reactor_config_map', 'reactor-config-map')
 
-    user_params = SourceContainerUserParams(build_json_store)
-
     build_conf = Configuration(conf_file=None, **conf_args)
     kwargs = {
+        'build_json_dir': build_json_store,
         'user': 'john-foo',
         'component': TEST_COMPONENT,
         'base_image': 'fedora:latest',
@@ -1220,7 +1219,7 @@ def get_sample_source_params(build_json_store=INPUTS_PATH, conf_args=None,
     }
     if update_args:
         kwargs.update(update_args)
-    user_params.set_params(**kwargs)
+    user_params = SourceContainerUserParams.make_params(**kwargs)
     return user_params
 
 
