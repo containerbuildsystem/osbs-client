@@ -380,6 +380,7 @@ class TestArrangementV6(ArrangementBase):
            'reactor_config_map': 'reactor-config-map',
         }
         kwargs = {
+            'build_json_dir': INPUTS_PATH,
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
             'git_branch': TEST_GIT_BRANCH,
@@ -389,8 +390,7 @@ class TestArrangementV6(ArrangementBase):
             'base_image': 'test',
             'name_label': 'test',
         }
-        user_params = BuildUserParams()
-        user_params.set_params(**kwargs)
+        user_params = BuildUserParams.make_params(**kwargs)
         build_request.set_params(user_params)
         return PluginsConfiguration(build_request.user_params).pt.template
 
@@ -814,8 +814,9 @@ class TestArrangementSourceV6(ArrangementBase):
             'scratch': True,
             'worker_max_run_hours': 3,
         }
-        param_kwargs = {'build_conf': Configuration(**conf_args)}
-        param_kwargs.update({
+        param_kwargs = {
+            'build_json_dir': INPUTS_PATH,
+            'build_conf': Configuration(**conf_args),
             'user': TEST_USER,
             'component': TEST_COMPONENT,
             "koji_target": "tothepoint",
@@ -823,9 +824,8 @@ class TestArrangementSourceV6(ArrangementBase):
             "signing_intent": "test-signing-intent",
             'sources_for_koji_build_nvr': TEST_KOJI_BUILD_NVR,
             'kind': USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS,
-        })
-        user_params = SourceContainerUserParams('inputs')
-        user_params.set_params(**param_kwargs)
+        }
+        user_params = SourceContainerUserParams.make_params(**param_kwargs)
         build_request.set_params(user_params)
         return SourceContainerPluginsConfiguration(build_request.user_params).pt.template
 

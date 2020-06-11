@@ -681,12 +681,11 @@ class OSBS(object):
     def get_user_params(self, component=None, req_labels=None, **kwargs):
         req_labels = req_labels or {}
         user_component = component or req_labels[Labels.LABEL_TYPE_COMPONENT]
-        user_params = BuildUserParams(build_json_dir=self.os_conf.get_build_json_store())
-        user_params.set_params(build_conf=self.build_conf,
-                               component=user_component,
-                               name_label=req_labels[Labels.LABEL_TYPE_NAME],
-                               **kwargs)
-        return user_params
+        return BuildUserParams.make_params(build_json_dir=self.os_conf.get_build_json_store(),
+                                           build_conf=self.build_conf,
+                                           component=user_component,
+                                           name_label=req_labels[Labels.LABEL_TYPE_NAME],
+                                           **kwargs)
 
     def _do_create_prod_build(self,
                               git_uri=_REQUIRED_PARAM, git_ref=_REQUIRED_PARAM,
@@ -802,13 +801,15 @@ class OSBS(object):
         :return: instance of BuildRequest
         """
         build_json_store = self.os_conf.get_build_json_store()
-        user_params = SourceContainerUserParams(build_json_dir=build_json_store)
-        user_params.set_params(arrangement_version=arrangement_version,
-                               build_conf=self.build_conf,
-                               component=component,
-                               koji_target=target,
-                               koji_task_id=koji_task_id,
-                               **kwargs)
+        user_params = SourceContainerUserParams.make_params(
+            build_json_dir=build_json_store,
+            arrangement_version=arrangement_version,
+            build_conf=self.build_conf,
+            component=component,
+            koji_target=target,
+            koji_task_id=koji_task_id,
+            **kwargs
+        )
         build_request = self.get_source_container_build_request(
             outer_template=outer_template or ORCHESTRATOR_SOURCES_OUTER_TEMPLATE,
             user_params=user_params

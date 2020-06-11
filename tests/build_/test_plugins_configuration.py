@@ -52,6 +52,7 @@ def get_sample_build_conf(conf_args=None):
 
 def get_sample_prod_params(build_type=BUILD_TYPE_ORCHESTRATOR, conf_args=None, extra_args=None):
     sample_params = {
+        'build_json_dir': INPUTS_PATH,
         'git_uri': TEST_GIT_URI,
         'git_ref': TEST_GIT_REF,
         'git_branch': TEST_GIT_BRANCH,
@@ -72,13 +73,13 @@ def get_sample_prod_params(build_type=BUILD_TYPE_ORCHESTRATOR, conf_args=None, e
 
 def get_sample_user_params(build_type=BUILD_TYPE_ORCHESTRATOR, conf_args=None, extra_args=None):
     sample_params = get_sample_prod_params(build_type, conf_args, extra_args)
-    user_params = BuildUserParams(INPUTS_PATH)
-    user_params.set_params(**sample_params)
+    user_params = BuildUserParams.make_params(**sample_params)
     return user_params
 
 
 def get_sample_source_container_params(conf_args=None, extra_args=None):
     sample_params = {
+        'build_json_dir': INPUTS_PATH,
         'build_conf': get_sample_build_conf(conf_args),
         'component': TEST_COMPONENT,
         'koji_target': 'tothepoint',
@@ -95,8 +96,7 @@ def get_sample_source_container_params(conf_args=None, extra_args=None):
 
 def source_container_user_params(build_args=None, extra_args=None):
     sample_params = get_sample_source_container_params(build_args, extra_args)
-    user_params = SourceContainerUserParams(INPUTS_PATH)
-    user_params.set_params(**sample_params)
+    user_params = SourceContainerUserParams.make_params(**sample_params)
     return user_params
 
 
@@ -145,7 +145,7 @@ class TestPluginsConfiguration(object):
         assert plugin_args['imagestream'] == name_label.replace('/', '-')
 
     def test_bad_customize_conf(self):
-        user_params = BuildUserParams(INPUTS_PATH, customize_conf='invalid_dir')
+        user_params = BuildUserParams(build_json_dir=INPUTS_PATH, customize_conf='invalid_dir')
         build_json = PluginsConfiguration(user_params)
         assert build_json.pt.customize_conf == {}
 
@@ -450,8 +450,7 @@ class TestPluginsConfiguration(object):
         extra_args['additional_tags'] = extra_tags
         kwargs.update(extra_args)
 
-        user_params = BuildUserParams(INPUTS_PATH)
-        user_params.set_params(**kwargs)
+        user_params = BuildUserParams.make_params(**kwargs)
         build_json = PluginsConfiguration(user_params).render()
 
         plugins = get_plugins_from_build_json(build_json)
@@ -547,8 +546,7 @@ class TestPluginsConfiguration(object):
         kwargs['yum_repourls'] = ["http://example.com/my.repo"]
 
         self.mock_repo_info()
-        user_params = BuildUserParams(INPUTS_PATH)
-        user_params.set_params(**kwargs)
+        user_params = BuildUserParams.make_params(**kwargs)
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
 
@@ -568,8 +566,7 @@ class TestPluginsConfiguration(object):
         kwargs.pop('platforms', None)
         kwargs['platform'] = 'ppc64le'
 
-        user_params = BuildUserParams(INPUTS_PATH)
-        user_params.set_params(**kwargs)
+        user_params = BuildUserParams.make_params(**kwargs)
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
 
@@ -599,8 +596,7 @@ class TestPluginsConfiguration(object):
         # build_request.render()
         self.mock_repo_info()
         sample_params = get_sample_prod_params()
-        user_params = BuildUserParams(INPUTS_PATH)
-        user_params.set_params(**sample_params)
+        user_params = BuildUserParams.make_params(**sample_params)
         plugins_conf = PluginsConfiguration(user_params)
 
         plugin_type = "exit_plugins"
@@ -625,8 +621,7 @@ class TestPluginsConfiguration(object):
         # actually disabled in the JSON for the build_request after running
         # build_request.render()
         sample_params = get_sample_prod_params()
-        user_params = BuildUserParams(INPUTS_PATH)
-        user_params.set_params(**sample_params)
+        user_params = BuildUserParams.make_params(**sample_params)
         plugins_conf = PluginsConfiguration(user_params)
 
         plugin_type = "postbuild_plugins"
@@ -651,8 +646,7 @@ class TestPluginsConfiguration(object):
         # after running build_request.render()
         self.mock_repo_info()
         sample_params = get_sample_prod_params()
-        base_user_params = BuildUserParams(INPUTS_PATH)
-        base_user_params.set_params(**sample_params)
+        base_user_params = BuildUserParams.make_params(**sample_params)
         base_plugins_conf = PluginsConfiguration(base_user_params)
         base_build_json = base_plugins_conf.render()
         base_plugins = get_plugins_from_build_json(base_build_json)
@@ -665,8 +659,7 @@ class TestPluginsConfiguration(object):
             if plugin_dict['name'] == plugin_name:
                 plugin_index = base_plugins[plugin_type].index(plugin_dict)
 
-        user_params = BuildUserParams(INPUTS_PATH)
-        user_params.set_params(**sample_params)
+        user_params = BuildUserParams.make_params(**sample_params)
         plugins_conf = PluginsConfiguration(user_params)
         plugins_conf.pt.customize_conf['enable_plugins'].append(
             {
@@ -692,8 +685,7 @@ class TestPluginsConfiguration(object):
         sample_params = get_sample_prod_params()
         sample_params['scratch'] = True
         sample_params['parent_images_digests'] = True
-        user_params = BuildUserParams(INPUTS_PATH)
-        user_params.set_params(**sample_params)
+        user_params = BuildUserParams.make_params(**sample_params)
         plugins_conf = PluginsConfiguration(user_params)
 
         plugins_conf.pt.customize_conf['disable_plugins'].append(
