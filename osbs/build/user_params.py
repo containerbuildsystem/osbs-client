@@ -331,8 +331,6 @@ class BuildUserParams(BuildCommon):
     scratch_build_node_selector = BuildParam("scratch_build_node_selector",
                                              include_in_json=False)
 
-    repo_info = BuildParam("repo_info", include_in_json=False)
-
     @classmethod
     def make_params(cls,
                     additional_tags=None,
@@ -480,7 +478,6 @@ class BuildUserParams(BuildCommon):
             "remote_source_build_args": remote_source_build_args,
             "remote_source_configs": remote_source_configs,
             "remote_source_url": remote_source_url,
-            "repo_info": repo_info,
             "skip_build": skip_build,
             "trigger_imagestreamtag": base_image,
             "triggered_after_koji_task": triggered_after_koji_task,

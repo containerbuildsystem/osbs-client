@@ -67,22 +67,26 @@ class MockDFParser(object):
         self.baseimage = 'fedora:latest'
 
 
-def get_sample_user_params(build_json_store=INPUTS_PATH, conf_args=None, git_args=None,
-                           update_args=None, labels=None, no_source=False):
+def mock_repo_info(git_args=None, labels=None):
     if not git_args:
         git_args = {}
     git_args.setdefault('git_uri', TEST_GIT_URI)
     git_args.setdefault('git_branch', TEST_GIT_BRANCH)
     git_args.setdefault('git_ref', TEST_GIT_REF)
 
+    repo_conf = RepoConfiguration(**git_args)
+    return RepoInfo(dockerfile_parser=MockDFParser(labels), configuration=repo_conf)
+
+
+def get_sample_user_params(build_json_store=INPUTS_PATH, conf_args=None, git_args=None,
+                           update_args=None, labels=None, no_source=False):
     if not conf_args:
         conf_args = {'build_from': 'image:buildroot:latest'}
     # scratch handling is tricky
     if update_args:
         conf_args.setdefault('scratch', update_args.get('scratch'))
 
-    repo_conf = RepoConfiguration(**git_args)
-    repo_info = RepoInfo(dockerfile_parser=MockDFParser(labels), configuration=repo_conf)
+    repo_info = mock_repo_info(git_args=git_args, labels=labels)
 
     build_conf = Configuration(conf_file=None, **conf_args)
     kwargs = {
@@ -278,7 +282,6 @@ class TestBuildRequestV2(object):
 
     def test_render_prod_request_without_repo(self, caplog):
         user_params = get_sample_user_params()
-        user_params.repo_info = None
         build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
         build_request.render()
         assert 'repo info not set' in caplog.text
@@ -518,7 +521,8 @@ class TestBuildRequestV2(object):
         git_args = get_autorebuild_git_args(tmpdir, add_timestamp) if autorebuild_enabled else None
         user_params = get_sample_user_params(build_json_store=str(tmpdir),
                                              git_args=git_args, labels=labels)
-        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
+        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params,
+                                       repo_info=mock_repo_info(git_args, labels))
 
         if isinstance(expected, type):
             with pytest.raises(expected):
@@ -1093,7 +1097,7 @@ class TestBuildRequestV2(object):
         mock_api = MockOSBSApi(all_secrets)
 
         build_request = BuildRequestV2(osbs_api=mock_api, user_params=user_params,
-                                       outer_template=outer_template)
+                                       outer_template=outer_template, repo_info=repo_info)
 
         if expected is None:
             with pytest.raises(OsbsValidationException):

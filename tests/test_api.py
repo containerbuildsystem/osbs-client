@@ -328,7 +328,8 @@ class TestOSBS(object):
             .with_args(inner_template=inner_template,
                        outer_template=outer_template,
                        customize_conf=customize_conf,
-                       user_params=user_params)
+                       user_params=user_params,
+                       repo_info=repo_info)
             .once())
 
         response = osbs.create_build(inner_template=inner_template,
@@ -2648,7 +2649,8 @@ class TestOSBS(object):
             .with_args(inner_template=inner_template,
                        outer_template=outer_template,
                        customize_conf=customize_conf,
-                       user_params=user_params))
+                       user_params=user_params,
+                       repo_info=repo_info))
 
         if branch_name:
             response = osbs._do_create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
@@ -3123,7 +3125,8 @@ class TestOSBS(object):
             .with_args(inner_template=inner_template,
                        outer_template=outer_template,
                        customize_conf=customize_conf,
-                       user_params=user_params)
+                       user_params=user_params,
+                       repo_info=repo_info)
             .once())
 
         with pytest.raises(ValueError) as exc:

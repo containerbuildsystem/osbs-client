@@ -222,7 +222,7 @@ class OSBS(object):
     def get_build_request(self, inner_template=None,
                           outer_template=None, customize_conf=None,
                           arrangement_version=DEFAULT_ARRANGEMENT_VERSION,
-                          user_params=None, **kwargs
+                          user_params=None, repo_info=None, **kwargs
                           ):
         """
         return instance of BuildRequestV2
@@ -232,6 +232,7 @@ class OSBS(object):
         :param outer_template: str, name of outer template for BuildRequest
         :param customize_conf: str, name of customization config for BuildRequest
         :param arrangement_version: int, value of the arrangement version
+        :param repo_info: RepoInfo, git repo data for the build
 
         :return: instance of BuildRequestV2
         """
@@ -243,6 +244,7 @@ class OSBS(object):
                 outer_template=outer_template,
                 customize_conf=customize_conf,
                 user_params=user_params,
+                repo_info=repo_info,
         )
 
         self._set_build_request_resource_limits(build_request)
@@ -739,7 +741,8 @@ class OSBS(object):
         build_request = self.get_build_request(inner_template=inner_template,
                                                outer_template=outer_template,
                                                customize_conf=customize_conf,
-                                               user_params=user_params)
+                                               user_params=user_params,
+                                               repo_info=repo_info)
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
 
         if isolated:
