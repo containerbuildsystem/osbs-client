@@ -341,11 +341,12 @@ class BuildRequestV2(BaseBuildRequest):
     Wraps logic for creating build inputs
     """
     def __init__(self, osbs_api, outer_template=None, customize_conf=None, user_params=None,
-                 build_json_store=None):
+                 build_json_store=None, repo_info=None):
         """
         :param build_json_store: str, path to directory with JSON build files
         :param outer_template: str, path to outer template JSON
         :param customize_conf: str, path to customize configuration JSON
+        :param repo_info: RepoInfo, git repo data for the build
         """
         if user_params:
             assert isinstance(user_params, BuildUserParams)
@@ -360,6 +361,7 @@ class BuildRequestV2(BaseBuildRequest):
 
         self._customize_conf_path = customize_conf or DEFAULT_CUSTOMIZE_CONF
         self.build_json = None       # rendered template
+        self.repo_info = repo_info
 
     # Override
     @property
@@ -570,18 +572,18 @@ class BuildRequestV2(BaseBuildRequest):
         self.set_deadline(deadline_hours)
 
     def adjust_for_repo_info(self):
-        if not self.user_params.repo_info:
+        if not self.repo_info:
             logger.warning('repo info not set')
             return
 
-        if not self.user_params.repo_info.configuration.is_autorebuild_enabled():
+        if not self.repo_info.configuration.is_autorebuild_enabled():
             logger.info('autorebuild is disabled in repo configuration, removing triggers')
             self.template['spec'].pop('triggers', None)
 
         else:
-            labels = self.user_params.repo_info.labels
+            labels = self.repo_info.labels
 
-            add_timestamp = self.user_params.repo_info.configuration.autorebuild.\
+            add_timestamp = self.repo_info.configuration.autorebuild.\
                 get('add_timestamp_to_release', False)
 
             if add_timestamp:
