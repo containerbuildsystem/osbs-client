@@ -241,8 +241,8 @@
           }
         },
         "modular_koji_tags": {
-          "description": "tags of modular Koji content to include in the build",
-          "type": ["array", "null"],
+          "description": "tags of modular Koji content to include in the build, if True is used, tag from koji target will be used",
+          "type": ["array", "null", "boolean"],
           "items": {
               "type": "string",
               "examples": [
