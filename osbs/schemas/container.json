@@ -106,6 +106,24 @@
                         "enable-party-popper"
                       ]
                   }
+                },
+                "packages": {
+                  "description": "the packages object to pass to the Cachito request",
+                  "type": ["object", "null"],
+                  "examples": [
+                    {"npm": [{"path": "client"}, {"path": "proxy"}]}
+                  ],
+                  "additionalProperties" : {
+                    "type" : "array",
+                    "items": {
+                      "type": "object",
+                      "examples": [
+                        {"path": "client"},
+                        {"path": "proxy"}
+                      ],
+                      "minProperties": 1
+                    }
+                  }
                 }
               },
               "additionalProperties": false,
