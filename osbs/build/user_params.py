@@ -313,6 +313,7 @@ class BuildUserParams(BuildCommon):
     release = BuildParam("release")
     remote_source_build_args = BuildParam("remote_source_build_args")
     remote_source_configs = BuildParam("remote_source_configs")
+    remote_source_icm_url = BuildParam("remote_source_icm_url")
     remote_source_url = BuildParam("remote_source_url")
     skip_build = BuildParam("skip_build")
     tags_from_yaml = BuildParam("tags_from_yaml")
@@ -359,6 +360,7 @@ class BuildUserParams(BuildCommon):
                     release=None,
                     remote_source_build_args=None,
                     remote_source_configs=None,
+                    remote_source_icm_url=None,
                     remote_source_url=None,
                     repo_info=None,
                     skip_build=None,
@@ -406,7 +408,12 @@ class BuildUserParams(BuildCommon):
         an environment variable into a worker build;
         when used, reactor_config_map is ignored.
         :param release: str,
-
+        :param remote_source_build_args: dict, extra args for `builder.build_args`, if any
+        :param remote_source_configs: list of str, configuration files to be injected into
+        the exploded remote sources dir
+        :param remote_source_icm_url: int, the Cachito ICM URL; used to request the
+        Image Content Manifest
+        :param remote_source_url: str, URL from which to download a source archive
         :param repo_info: RepoInfo, git repo data for the build
         :param scratch: bool, build as a scratch build
         :param signing_intent: bool, True to sign the resulting image
@@ -477,6 +484,7 @@ class BuildUserParams(BuildCommon):
             "release": release,
             "remote_source_build_args": remote_source_build_args,
             "remote_source_configs": remote_source_configs,
+            "remote_source_icm_url": remote_source_icm_url,
             "remote_source_url": remote_source_url,
             "skip_build": skip_build,
             "trigger_imagestreamtag": base_image,

@@ -31,7 +31,9 @@ from tests.constants import (INPUTS_PATH, TEST_BUILD_CONFIG,
                              TEST_COMPONENT, TEST_FLATPAK_BASE_IMAGE,
                              TEST_GIT_BRANCH, TEST_GIT_REF, TEST_GIT_URI,
                              TEST_FILESYSTEM_KOJI_TASK_ID, TEST_SCRATCH_BUILD_NAME,
-                             TEST_ISOLATED_BUILD_NAME, TEST_USER)
+                             TEST_ISOLATED_BUILD_NAME, TEST_USER,
+                             TEST_REMOTE_SOURCE_ICM_URL,
+                             )
 
 
 USE_DEFAULT_TRIGGERS = object()
@@ -886,6 +888,23 @@ class TestPluginsConfiguration(object):
         else:
             with pytest.raises(NoSuchPluginException):
                 assert get_plugin(plugins, 'prebuild_plugins', 'resolve_remote_source')
+
+    @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
+    @pytest.mark.parametrize('remote_source_icm_url', (None, TEST_REMOTE_SOURCE_ICM_URL))
+    def test_render_add_image_content_manifest(self, build_type, remote_source_icm_url):
+        phase = 'prebuild_plugins'
+        plugin = 'add_image_content_manifest'
+        extra_args = {'remote_source_icm_url': remote_source_icm_url}
+        user_params = get_sample_user_params(build_type=build_type, extra_args=extra_args)
+        build_json = PluginsConfiguration(user_params).render()
+        plugins = get_plugins_from_build_json(build_json)
+        if build_type == BUILD_TYPE_ORCHESTRATOR:
+            with pytest.raises(NoSuchPluginException):
+                assert get_plugin(plugins, phase, plugin)
+        else:
+            assert get_plugin(plugins, phase, plugin)
+            plugin_args = plugin_value_get(plugins, phase, plugin, 'args')
+            assert plugin_args.get('remote_source_icm_url') == remote_source_icm_url
 
 
 class TestSourceContainerPluginsConfiguration(object):

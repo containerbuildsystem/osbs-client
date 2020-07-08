@@ -335,7 +335,7 @@ class TestArrangementV6(ArrangementBase):
                 'add_labels_in_dockerfile',
                 'change_from_in_dockerfile',
                 'add_help',
-                'add_content_sets',
+                'add_image_content_manifest',
                 'add_dockerfile',
                 'distgit_fetch_artefacts',
                 'fetch_maven_artifacts',
