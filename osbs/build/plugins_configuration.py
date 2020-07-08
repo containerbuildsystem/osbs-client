@@ -188,6 +188,13 @@ class PluginsConfigurationBase(object):
             self.pt.set_plugin_arg_valid(phase, plugin, 'koji_target',
                                          self.user_params.koji_target)
 
+    def render_add_image_content_manifest(self):
+        phase = 'prebuild_plugins'
+        plugin = 'add_image_content_manifest'
+        if self.pt.has_plugin_conf(phase, plugin):
+            self.pt.set_plugin_arg_valid(phase, plugin, 'remote_source_icm_url',
+                                         self.user_params.remote_source_icm_url)
+
     def render_add_labels_in_dockerfile(self):
         phase = 'prebuild_plugins'
         plugin = 'add_labels_in_dockerfile'
@@ -538,6 +545,7 @@ class PluginsConfiguration(PluginsConfigurationBase):
         self.render_koji_delegate()
         self.render_download_remote_source()
         self.render_resolve_remote_source()
+        self.render_add_image_content_manifest()
         return self.pt.to_json()
 
 

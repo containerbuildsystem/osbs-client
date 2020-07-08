@@ -34,7 +34,7 @@
       "name": "add_help"
     },
     {
-      "name": "add_content_sets"
+      "name": "add_image_content_manifest"
     },
     {
       "name": "add_dockerfile"

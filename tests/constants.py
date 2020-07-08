@@ -45,7 +45,9 @@ TEST_DOCKERFILE_GIT = "https://github.com/TomasTomecek/docker-hello-world.git"
 TEST_DOCKERFILE_SHA1 = "6e592f1420efcd331cd28b360a7e02f669caf540"
 TEST_DOCKERFILE_INIT_SHA1 = "04523782eeb1e6c960b12f2f6fc887aa7cf76290"
 TEST_DOCKERFILE_BRANCH = "error-build"
-
+TEST_REMOTE_SOURCE_REQUEST_ID = 12345
+TEST_REMOTE_SOURCE_ICM_URL = ('http://cachito.example.com/api/v1/requests/{}/content-manifest'
+                              .format(TEST_REMOTE_SOURCE_REQUEST_ID))
 TEST_FLATPAK_BASE_IMAGE = 'registry.fedoraproject.org/fedora:latest'
 
 TEST_BUILD_JSON = {
