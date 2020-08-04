@@ -110,6 +110,13 @@ token = <enter-the-token-here>
 
 Copy the content and place it in a file named 'osbs.conf'.
 
+You have to ensure all the required json files exist in the directory configured
+for `build_json_dir`:
+
+```shell
+cp inputs/*.json $build_json_dir
+```
+
 You must fill in the `token` value
 
 - OpenShift uses Oauth tokens for authentication, You can easily get a token of
