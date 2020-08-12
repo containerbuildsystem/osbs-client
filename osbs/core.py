@@ -973,7 +973,6 @@ class Openshift(object):
 
         # Get the JSON for the ImageStream
         imagestream_json = self.get_image_stream(name).json()
-        logger.debug("imagestream: %r", imagestream_json)
         changed = False
 
         # existence of dockerImageRepository is limiting how many tags are updated
@@ -989,11 +988,7 @@ class Openshift(object):
                 changed = True
 
         if changed:
-            imagestream_json = self.update_image_stream(name, imagestream_json).json()
-
-        # Note the tags before import
-        oldtags = imagestream_json.get('status', {}).get('tags', [])
-        logger.debug("tags before import: %r", oldtags)
+            self.update_image_stream(name, imagestream_json)
 
         stream_import['metadata']['name'] = name
         stream_import['spec']['images'] = []
