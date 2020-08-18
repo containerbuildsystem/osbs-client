@@ -689,7 +689,10 @@ class ImageName(object):
         return self.to_str(registry=True, tag=True)
 
     def __repr__(self):
-        return "ImageName(image=%r)" % self.to_str()
+        return (
+            "ImageName(registry={s.registry!r}, namespace={s.namespace!r},"
+            " repo={s.repo!r}, tag={s.tag!r})"
+        ).format(s=self)
 
     def __eq__(self, other):
         return (type(self) == type(other) and    # pylint: disable=unidiomatic-typecheck
