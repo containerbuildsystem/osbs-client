@@ -99,7 +99,7 @@ case ${ACTION} in
   TEST_CMD="bandit-baseline -r osbs -ll -ii"
   ;;
 "markdownlint")
-  $RUN gem install mdl
+  $RUN gem install "mdl:0.9"
   TEST_CMD="mdl -g ."
   ;;
 *)
