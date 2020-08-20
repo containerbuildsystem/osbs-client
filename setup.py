@@ -26,9 +26,10 @@ def _get_requirements(path):
     return [p.strip() for p in packages if not re.match(r"^\s*#", p)]
 
 def _install_requirements():
-    requirements = _get_requirements('requirements.txt')
     if sys.version_info[0] >= 3:
-        requirements += _get_requirements('requirements-py3.txt')
+        requirements = _get_requirements('requirements.txt')
+    else:
+        requirements = _get_requirements('requirements-py2.txt')
     return requirements
 
 setup(

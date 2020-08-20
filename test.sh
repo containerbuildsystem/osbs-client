@@ -77,7 +77,6 @@ function setup_osbs() {
 
   # Install packages for tests
   $RUN $PIP install -r tests/requirements.txt
-  if [[ $PYTHON_VERSION -gt 2 ]]; then $RUN $PIP install -r requirements-py3.txt; fi
 }
 
 case ${ACTION} in
