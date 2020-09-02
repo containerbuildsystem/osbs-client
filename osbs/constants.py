@@ -115,6 +115,7 @@ RELEASE_LABEL_FORMAT = re.compile(r"""^\d+             # First character must be
                                       ([._]?           # allow separators between groups
                                       [a-zA-Z0-9]+)*$  # last characters must be alphanumeric
                                    """, re.X)
+VERSION_LABEL_FORBIDDEN_CHARS = ['-']
 
 ANNOTATION_SOURCE_REPO = 'osbs/source_repo'
 ANNOTATION_INSECURE_REPO = 'openshift.io/image.insecureRepository'
