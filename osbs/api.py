@@ -43,7 +43,7 @@ from osbs.constants import (BUILD_RUNNING_STATES, WORKER_OUTER_TEMPLATE,
                             ORCHESTRATOR_CUSTOMIZE_CONF, BUILD_TYPE_WORKER,
                             BUILD_TYPE_ORCHESTRATOR, BUILD_FINISHED_STATES,
                             DEFAULT_ARRANGEMENT_VERSION, REACTOR_CONFIG_ARRANGEMENT_VERSION,
-                            FILTER_KEY, RELEASE_LABEL_FORMAT,
+                            FILTER_KEY, RELEASE_LABEL_FORMAT, VERSION_LABEL_FORBIDDEN_CHARS,
                             ORCHESTRATOR_SOURCES_OUTER_TEMPLATE,
                             USER_PARAMS_KIND_IMAGE_BUILDS,
                             USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS,
@@ -652,6 +652,22 @@ class OSBS(object):
                 raise OsbsValidationException("release label doesn't have proper format")
         except KeyError:
             pass
+
+        try:
+            _, version_value = labels.get_name_and_value(Labels.LABEL_TYPE_VERSION)
+        # version doesn't exist
+        except KeyError:
+            pass
+        else:
+            if version_value:
+                wrong_chars = \
+                    [denied for denied in VERSION_LABEL_FORBIDDEN_CHARS if denied in version_value]
+
+                if wrong_chars:
+                    msg = "version label '{}' contains not allowed chars : '{}'".\
+                        format(version_value, wrong_chars)
+                    logger.error(msg)
+                    raise OsbsValidationException(msg)
 
         if required_missing:
             raise OsbsValidationException("required label missing from Dockerfile")

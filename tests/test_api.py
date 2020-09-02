@@ -47,6 +47,7 @@ from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             OS_CONFLICT_MAX_RETRIES,
                             REPO_CONTAINER_CONFIG)
 from osbs import utils
+from osbs.utils.labels import Labels
 from osbs.repo_utils import RepoInfo, RepoConfiguration, ModuleSpec
 
 from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
@@ -3046,51 +3047,53 @@ class TestOSBS(object):
         build_response = osbs_obj._create_build_config_and_build(build_request)
         assert build_response.json == {'spam': 'maps'}
 
-    @pytest.mark.parametrize(('release_value', 'exc'), [
-        ('1release with space', OsbsValidationException),
-        ('1release_with/slash', OsbsValidationException),
-        ('1release_with-dash', OsbsValidationException),
-        ('release.1', OsbsValidationException),
-        ('1release.1.', OsbsValidationException),
-        ('1release.1_', OsbsValidationException),
-        ('1release..1', OsbsValidationException),
-        ('1release__1', OsbsValidationException),
-        ('1.release_with5', None),
-        ('1_release_with5', None),
-        ('123.54.release_with5', None),
-        ('123.54.release_withalpha', None),
-        ('', None),
+    @pytest.mark.parametrize(('label_type', 'label_value', 'raise_exception'), [
+        (Labels.LABEL_TYPE_RELEASE, '1release with space', OsbsValidationException),
+        (Labels.LABEL_TYPE_RELEASE, '1release_with/slash', OsbsValidationException),
+        (Labels.LABEL_TYPE_RELEASE, '1release_with-dash', OsbsValidationException),
+        (Labels.LABEL_TYPE_RELEASE, 'release.1', OsbsValidationException),
+        (Labels.LABEL_TYPE_RELEASE, '1release.1.', OsbsValidationException),
+        (Labels.LABEL_TYPE_RELEASE, '1release.1_', OsbsValidationException),
+        (Labels.LABEL_TYPE_RELEASE, '1release..1', OsbsValidationException),
+        (Labels.LABEL_TYPE_RELEASE, '1release__1', OsbsValidationException),
+        (Labels.LABEL_TYPE_RELEASE, '1.release_with5', None),
+        (Labels.LABEL_TYPE_RELEASE, '1_release_with5', None),
+        (Labels.LABEL_TYPE_RELEASE, '123.54.release_with5', None),
+        (Labels.LABEL_TYPE_RELEASE, '123.54.release_withalpha', None),
+        (Labels.LABEL_TYPE_RELEASE, '', None),
+        (Labels.LABEL_TYPE_VERSION, '1versionwith space', None),
+        (Labels.LABEL_TYPE_VERSION, '1version_with/slash', None),
+        (Labels.LABEL_TYPE_VERSION, '1version_with-dash', OsbsValidationException),
+        (Labels.LABEL_TYPE_VERSION, 'version.1', None),
+        (Labels.LABEL_TYPE_VERSION, '1version.1.', None),
+        (Labels.LABEL_TYPE_VERSION, '', None),
     ])
-    def test_release_label_validation(self, release_value, exc):
-        with NamedTemporaryFile(mode='wt') as fp:
-            fp.write(dedent("""\
-                [general]
-                build_json_dir = inputs
-                [default]
-                build_from = image:buildroot:latest
-                openshift_url = /
-                """))
-            fp.flush()
-            config = Configuration(fp.name)
-            osbs_obj = OSBS(config, config)
+    def test_raise_error_if_release_or_version_label_is_invalid(self, osbs, label_type,
+                                                                label_value, raise_exception):
+        required_args = copy.deepcopy(REQUIRED_BUILD_ARGS)
+        # just so we stop right after checking labels when error_msgs are empty
+        required_args['signing_intent'] = 'release'
+        required_args['compose_ids'] = [1, 2, 3, 4]
+
+        if raise_exception:
+            if label_type == Labels.LABEL_TYPE_RELEASE:
+                exc_msg = "release label doesn't have proper format"
+            elif label_type == Labels.LABEL_TYPE_VERSION:
+                exc_msg = "version label '{}' contains not allowed chars".format(label_value)
+        else:
+            exc_msg = "Please only define signing_intent -OR- compose_ids, not both"
 
         mocked_df_parser = MockDfParser()
-        mocked_df_parser.labels['release'] = release_value
+        mocked_df_parser.labels[Labels.LABEL_NAMES[label_type][0]] = label_value
 
         (flexmock(utils)
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info(mock_df_parser=mocked_df_parser)))
 
-        flexmock(OSBS, _create_build_config_and_build=request_as_response)
-
-        if exc:
-            with pytest.raises(exc):
-                osbs_obj.create_build(target=TEST_TARGET,
-                                      **REQUIRED_BUILD_ARGS)
-        else:
-            osbs_obj.create_build(target=TEST_TARGET,
-                                  **REQUIRED_BUILD_ARGS)
+        with pytest.raises(OsbsValidationException) as exc:
+            osbs.create_build(target=TEST_TARGET, **required_args)
+        assert exc_msg in str(exc.value)
 
     def test_do_create_prod_build_isolated_from_scratch(self, osbs):  # noqa
         inner_template = DEFAULT_INNER_TEMPLATE
