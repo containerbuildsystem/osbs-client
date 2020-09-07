@@ -319,6 +319,29 @@ class TestRepoConfiguration(object):
         else:
             assert config.flatpak_name is None
 
+    @pytest.mark.parametrize('tag, should_fail', (
+        ('latest', False),
+        ('"latest"', False),
+        ('"1.14"', False),
+        ('1.14', True),
+    ))
+    def test_tags_type_validation(self, tmpdir, tag, should_fail):
+        with open(os.path.join(str(tmpdir), REPO_CONTAINER_CONFIG), 'w') as f:
+            f.write(dedent("""\
+                tags:
+                - {}
+                """.format(tag)))
+
+        if should_fail:
+            match_msg = r"{} is not of type u?'string'".format(tag)
+            with pytest.raises(OsbsException, match=match_msg):
+                RepoConfiguration(dir_path=str(tmpdir))
+        else:
+            config = RepoConfiguration(dir_path=str(tmpdir))
+            # "1.14" is the format written in yaml to represent a string. In
+            # parsed result, it will be 1.14 without the double-quotes.
+            assert [tag.replace('"', '')] == config.container['tags']
+
 
 class TestModuleSpec(object):
     @pytest.mark.parametrize(('as_str', 'as_str_no_profile'), [

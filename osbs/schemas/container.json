@@ -350,6 +350,9 @@
     },
     "tags": {
       "type": "array",
+      "items": {
+        "type": "string"
+      },
       "description": "Tags to apply to the built image",
       "examples": [
         "latest",
