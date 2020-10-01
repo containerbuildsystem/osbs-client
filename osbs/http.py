@@ -188,11 +188,12 @@ class HttpStream(object):
             return
 
     def close(self):
-        if not self.closed:
+        # using getattr and hasattr because this may be called from __del__
+        if not getattr(self, 'closed', True):
             logger.debug("cleaning up")
             if hasattr(self, 'req'):
                 del self.req
-        self.closed = True
+            self.closed = True
 
     def __del__(self):
         self.close()
