@@ -16,7 +16,7 @@ import datetime
 import re
 import sys
 import requests
-from time import tzset
+from time import tzset, sleep
 from pkg_resources import parse_version
 from textwrap import dedent
 
@@ -544,6 +544,7 @@ def initialize_git_repo(rpath, files=None):
         subprocess.Popen(['git', 'add', f], cwd=rpath)
         subprocess.Popen(['git', 'commit', '-m', 'new file {0}'.format(f)], cwd=rpath)
         if not first_commit_ref:
+            sleep(2)  # when rev-parse is called too early after first commit, it fails
             first_commit_ref = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=rpath)
             first_commit_ref = first_commit_ref.strip()
     subprocess.Popen(['git', 'commit', '--allow-empty', '-m', 'code additions'], cwd=rpath)
