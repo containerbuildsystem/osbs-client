@@ -1823,7 +1823,7 @@ class TestOSBS(object):
         if triggers_bj and not wrong_registry and existing_is is not None:
             get_imstream_tag_retry = (flexmock(osbs_obj.os)
                                       .should_receive('get_image_stream_tag_with_retry')
-                                      .times(1 if triggers_bj and skip_build else 0))
+                                      .once())
 
             if existing_ist:
                 get_imstream_tag_retry.and_return(flexmock(json=lambda: image_stream_tag_json))
@@ -1879,13 +1879,15 @@ class TestOSBS(object):
             (flexmock(osbs_obj.os)
                 .should_receive('wait_for_new_build_config_instance')
                 .with_args('build', 'lastVersion')
-                .times(0 if skip_build or wrong_registry or existing_is is None else 1)
+                .times(0 if skip_build or wrong_registry or existing_is is None or
+                       existing_ist is None else 1)
                 .and_return('build-id'))
 
             (flexmock(osbs_obj.os)
                 .should_receive('get_build')
                 .with_args('build-id')
-                .times(0 if skip_build or wrong_registry or existing_is is None else 1)
+                .times(0 if skip_build or wrong_registry or existing_is is None or
+                       existing_ist is None else 1)
                 .and_return(flexmock(json=lambda: {'spam': 'maps'})))
 
         else:
@@ -1905,6 +1907,12 @@ class TestOSBS(object):
             with pytest.raises(OsbsResponseException) as exc:
                 osbs_obj._create_build_config_and_build(build_request)
             assert 'wrong response' in str(exc.value)
+            return
+
+        if triggers_bj and existing_ist is None and not skip_build:
+            with pytest.raises(OsbsException) as exc:
+                osbs_obj._create_build_config_and_build(build_request)
+            assert 'Provided base image does not exist' in str(exc.value)
             return
 
         build_response = osbs_obj._create_build_config_and_build(build_request)
