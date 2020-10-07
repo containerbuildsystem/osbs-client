@@ -608,6 +608,21 @@ class OSBS(object):
             return
 
         if image_stream and triggers:
+            # verify that imagestreamtag exists (if it doesn't non-existent image was provided)
+            # because setting up autorebuilds with non-existent image is allowed, so users
+            # may prepare their images for next build which will trigger autorebuilds
+            # but they run build manually it will be waiting for new BC instance which
+            # won't ever appear, because imagestreamtag doesn't exist yet
+            try:
+                self.get_image_stream_tag_with_retry(tag_id).json()
+            except OsbsResponseException as exc:
+                if exc.status_code == http_client.NOT_FOUND:
+                    logger.info("Imagestream tag doesn't exist yet: %s", tag_id)
+                    raise OsbsException('Provided base image does not exist: '
+                                        '{}'.format(docker_image_repo))
+                else:
+                    raise
+
             prev_version = existing_bc['status']['lastVersion']
             build_id = self.os.wait_for_new_build_config_instance(
                 build_config_name, prev_version)
