@@ -335,6 +335,11 @@
             "required": ["registry", "package_mappings"],
             "additionalProperties": false
           }
+        },
+        "skip_all": {
+          "description": "Skips all modifications of CSV operator file, allowed only for defined koji packages in reactor config map in operator manifests in skip_all_allow_list",
+          "type": "boolean",
+          "default": false
         }
       },
       "required": ["manifests_dir"],
