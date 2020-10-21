@@ -1960,6 +1960,36 @@ class TestOSBS(object):
         response = osbs.create_build(**kwargs)
         assert isinstance(response, BuildResponse)
 
+    # osbs is a fixture here
+    @pytest.mark.parametrize(('build_flatpak', 'repo_flatpak', 'match_exception'), [
+        (True, False, "repository doesn't have a container.yaml with a flatpak: section"),
+        (False, True, "repository has a container.yaml with a flatpak: section"),
+    ])
+    def test_create_build_flatpak_mismatch(self, osbs,
+                                           build_flatpak, repo_flatpak, match_exception):  # noqa
+        mock_config = MockConfiguration(is_flatpak=repo_flatpak, modules=TEST_MODULES)
+        (flexmock(utils)
+            .should_receive('get_repo_info')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
+            .and_return(self.mock_repo_info(mock_config=mock_config)))
+
+        kwargs = {
+            'git_uri': TEST_GIT_URI,
+            'git_ref': TEST_GIT_REF,
+            'git_branch': TEST_GIT_BRANCH,
+            'flatpak': build_flatpak,
+            'user': TEST_USER,
+            'yum_repourls': None,
+            'koji_task_id': None,
+            'scratch': False,
+            'build_type': 'orchestrator',
+            'reactor_config_override': {'flatpak': {'base_image': 'base_image'},
+                                        'source_registry': {'url': 'source_registry'}},
+        }
+
+        with pytest.raises(OsbsException, match=match_exception):
+            osbs.create_build(**kwargs)
+
     @pytest.mark.parametrize(('kind', 'expect_name'), [
         ('ImageStreamTag', 'registry:5000/buildroot:latest'),
         ('DockerImage', 'buildroot:latest'),

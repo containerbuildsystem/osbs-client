@@ -756,6 +756,17 @@ class OSBS(object):
 
         repo_info = utils.get_repo_info(git_uri, git_ref, git_branch=git_branch,
                                         depth=git_commit_depth)
+
+        if flatpak and not repo_info.configuration.is_flatpak:
+            raise OsbsException(
+                "Flatpak build, "
+                "but repository doesn't have a container.yaml with a flatpak: section")
+
+        if not flatpak and repo_info.configuration.is_flatpak:
+            raise OsbsException(
+                "Not a flatpak build, "
+                "but repository has a container.yaml with a flatpak: section")
+
         req_labels = self._check_labels(repo_info)
 
         user_params = self.get_user_params(base_image=repo_info.base_image,
