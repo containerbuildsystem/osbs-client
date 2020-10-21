@@ -114,7 +114,8 @@ class ArrangementBase(object):
     ORCHESTRATOR_ADD_PARAMS = {}
     WORKER_ADD_PARAMS = {}
 
-    def mock_env(self, base_image='fedora23/python', additional_tags=None):
+    def mock_env(self, base_image='fedora23/python', additional_tags=None,
+                 flatpak=False):
         class MockParser(object):
             labels = {
                 'name': 'fedora23/something',
@@ -135,7 +136,7 @@ class ArrangementBase(object):
                 self.module = self.container['compose']['modules'][0]
                 self.container_module_specs = [ModuleSpec.from_str(self.module)]
                 self.depth = int(depth) if depth else 0
-                self.is_flatpak = False
+                self.is_flatpak = flatpak
                 self.flatpak_base_image = None
                 self.flatpak_component = None
                 self.flatpak_name = None
@@ -193,7 +194,8 @@ class ArrangementBase(object):
                           additional_params=None):
         base_image = additional_params.pop('base_image', None)
         self.mock_env(base_image=base_image,
-                      additional_tags=additional_params.get('additional_tags'))
+                      additional_tags=additional_params.get('additional_tags'),
+                      flatpak=additional_params.get('flatpak'))
         params = self.COMMON_PARAMS.copy()
         assert build_type in ('orchestrator', 'worker',
                               'source_container')
