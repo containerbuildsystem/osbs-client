@@ -1,8 +1,10 @@
 # OSBS
 
-[![code health]][code health link]
-[![build status]][build status link]
-[![coverage status]][coverage status link]
+[![unittests status badge]][unittests status link]
+[![coveralls status badge]][coveralls status link]
+[![lgtm python badge]][lgtm python link]
+[![lgtm alerts badge]][lgtm alerts link]
+[![linters status badge]][linters status link]
 
 Python module and command line client for OpenShift Build Service.
 
@@ -27,12 +29,16 @@ instance.
 If you would like to help out, that's great! Please read the [contributing
 guide][] .
 
-[code health]: https://landscape.io/github/containerbuildsystem/osbs-client/master/landscape.svg?style=flat
-[code health link]: https://landscape.io/github/containerbuildsystem/osbs-client/master
-[build status]: https://travis-ci.org/containerbuildsystem/osbs-client.svg?branch=master
-[build status link]: https://travis-ci.org/containerbuildsystem/osbs-client
-[coverage status]: https://coveralls.io/repos/containerbuildsystem/osbs-client/badge.svg?branch=master&service=github
-[coverage status link]: https://coveralls.io/github/containerbuildsystem/osbs-client?branch=master
+[coveralls status badge]: https://coveralls.io/repos/containerbuildsystem/osbs-client/badge.svg?branch=master
+[coveralls status link]: https://coveralls.io/r/containerbuildsystem/osbs-client?branch=master
+[lgtm python badge]: https://img.shields.io/lgtm/grade/python/g/containerbuildsystem/osbs-client.svg?logo=lgtm&logoWidth=18
+[lgtm python link]: https://lgtm.com/projects/g/containerbuildsystem/osbs-client/context:python
+[lgtm alerts badge]: https://img.shields.io/lgtm/alerts/g/containerbuildsystem/osbs-client.svg?logo=lgtm&logoWidth=18
+[lgtm alerts link]: https://lgtm.com/projects/g/containerbuildsystem/osbs-client/alerts
+[linters status badge]: https://github.com/containerbuildsystem/osbs-client/workflows/Linters/badge.svg?branch=master&event=push
+[linters status link]: https://github.com/containerbuildsystem/osbs-client/actions?query=event%3Apush+branch%3Amaster+workflow%3A%22Linters%22
+[unittests status badge]: https://github.com/containerbuildsystem/osbs-client/workflows/Unittests/badge.svg?branch=master&event=push
+[unittests status link]: https://github.com/containerbuildsystem/osbs-client/actions?query=event%3Apush+branch%3Amaster+workflow%3A%22Unittests%22
 [development setup guide]: ./docs/development-setup.md
 [osbs instance setup guide]: ./docs/osbs_instance_setup.md
 [contributing guide]: ./CONTRIBUTING.md
