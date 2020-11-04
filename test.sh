@@ -10,13 +10,6 @@ ACTION=${ACTION:="test"}
 IMAGE="$OS:$OS_VERSION"
 CONTAINER_NAME="osbs-client-$OS-$OS_VERSION-py$PYTHON_VERSION"
 
-if [[ $ACTION == "markdownlint" ]]; then
-  IMAGE="ruby"
-  CONTAINER_NAME="osbs-client-$ACTION-$IMAGE"
-fi
-
-RUN="$ENGINE exec -ti $CONTAINER_NAME"
-
 # Use arrays to prevent globbing and word splitting
 engine_mounts=(-v "$PWD":"$PWD":z)
 for dir in ${EXTRA_MOUNT:-}; do
@@ -32,63 +25,65 @@ elif [[ $($ENGINE ps -q -f name="$CONTAINER_NAME" | wc -l) -eq 0 ]]; then
 fi
 
 function setup_osbs() {
-  # Pull fedora images from registry.fedoraproject.org
-  if [[ $OS == "fedora" ]]; then
-    IMAGE="registry.fedoraproject.org/$IMAGE"
-  fi
-
-  if [[ $OS == "fedora" ]]; then
-    PIP_PKG="python$PYTHON_VERSION-pip"
-    PIP="pip$PYTHON_VERSION"
-    PKG="dnf"
-    PKG_EXTRA="dnf-plugins-core"
-    BUILDDEP="dnf builddep"
-    PYTHON="python$PYTHON_VERSION"
-  else
+  RUN="$ENGINE exec -i $CONTAINER_NAME"
+  if [[ $OS == "centos" ]]; then
+    PYTHON="python"
     PIP_PKG="python-pip"
     PIP="pip"
     PKG="yum"
-    PKG_EXTRA="yum-utils epel-release"
+    PKG_EXTRA=(yum-utils epel-release)
     BUILDDEP="yum-builddep"
-    PYTHON="python"
+  else
+    PYTHON="python$PYTHON_VERSION"
+    PIP_PKG="$PYTHON-pip"
+    PIP="pip$PYTHON_VERSION"
+    PKG="dnf"
+    PKG_EXTRA=(dnf-plugins-core "$PYTHON"-pylint)
+    BUILDDEP=(dnf builddep)
   fi
 
-
+  PIP_INST=("$PIP" install --index-url "${PYPI_INDEX:-https://pypi.org/simple}")
 
   # Install dependencies
-  $RUN $PKG install -y $PKG_EXTRA
+  $RUN $PKG install -y "${PKG_EXTRA[@]}"
   [[ ${PYTHON_VERSION} == '3' ]] && WITH_PY3=1 || WITH_PY3=0
-  $RUN $BUILDDEP --define "with_python3 ${WITH_PY3}" -y osbs-client.spec
-  if [[ $OS != "fedora" ]]; then
+  $RUN "${BUILDDEP[@]}" --define "with_python3 ${WITH_PY3}" -y osbs-client.spec
+  if [[ $OS = centos ]]; then
     # Install dependecies for test, as check is disabled for rhel
-    $RUN yum install -y python-flexmock python-six python-dockerfile-parse python-requests python-requests-kerberos
+    $RUN yum install -y python-flexmock \
+                        python-six \
+                        python-dockerfile-parse \
+                        python-requests \
+                        python-requests-kerberos
   fi
 
-  # Install package
+  # Install pip package
   $RUN $PKG install -y $PIP_PKG
   if [[ $PYTHON_VERSION == 3 ]]; then
     # https://fedoraproject.org/wiki/Changes/Making_sudo_pip_safe
     $RUN mkdir -p /usr/local/lib/python3.6/site-packages/
   fi
 
-  $RUN $PIP install -U pip
-  $RUN $PIP install -U setuptools
+  # pip update pip/setuptools for Cent
+  if [[ $OS == centos && $OS_VERSION == 7 ]]; then
+    $RUN "${PIP_INST[@]}" -U pip
+    $RUN "${PIP_INST[@]}" -U setuptools
+  fi
+
+  # Setuptools install osbs-client from source
   $RUN $PYTHON setup.py install
 
-  # Install packages for tests
-  $RUN $PIP install -r tests/requirements.txt
+  # Pip install packages for unit tests
+  $RUN "${PIP_INST[@]}" -r tests/requirements.txt
 }
 
 case ${ACTION} in
 "test")
   setup_osbs
-  TEST_CMD="py.test --cov osbs --cov-report html tests"
+  TEST_CMD="coverage run --source=osbs -m pytest tests"
   ;;
 "pylint")
   setup_osbs
-  # This can run only at fedora because pylint is not packaged in centos
-  # use distro pylint to not get too new pylint version
-  $RUN $PKG install -y "${PYTHON}-pylint"
   PACKAGES='osbs tests'
   TEST_CMD="${PYTHON} -m pylint ${PACKAGES}"
   ;;
@@ -97,10 +92,6 @@ case ${ACTION} in
   $RUN $PIP install bandit
   TEST_CMD="bandit-baseline -r osbs -ll -ii"
   ;;
-"markdownlint")
-  $RUN gem install "mdl:0.9"
-  TEST_CMD="mdl -g ."
-  ;;
 *)
   echo "Unknown action: ${ACTION}"
   exit 2
@@ -108,6 +99,7 @@ case ${ACTION} in
 esac
 
 # Run tests
+# shellcheck disable=SC2086
 $RUN  ${TEST_CMD} "$@"
 
 echo "To run tests again:"
