@@ -963,7 +963,7 @@ def main():
     return_value = -1
     try:
         return_value = args.func(args, osbs)
-    except AttributeError as ex:
+    except AttributeError:
         if hasattr(args, 'func'):
             raise
         else:

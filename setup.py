@@ -17,6 +17,7 @@ data_files = {
     "share/osbs": [f for f in glob.glob("inputs/*.json") if 'customize' not in f],
 }
 
+
 def _get_requirements(path):
     try:
         with open(path) as f:
@@ -25,12 +26,14 @@ def _get_requirements(path):
         raise RuntimeError("Can't open file with requirements: %s", repr(ex))
     return [p.strip() for p in packages if not re.match(r"^\s*#", p)]
 
+
 def _install_requirements():
     if sys.version_info[0] >= 3:
         requirements = _get_requirements('requirements.txt')
     else:
         requirements = _get_requirements('requirements-py2.txt')
     return requirements
+
 
 setup(
     name="osbs-client",

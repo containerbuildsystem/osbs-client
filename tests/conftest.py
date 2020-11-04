@@ -105,9 +105,9 @@ class Connection(object):
             },
 
             (API_BUILD_V1 + "namespaces/default/builds?fieldSelector=status%21%3DFailed%2C"
-                           "status%21%3DComplete%2Cstatus%21%3DError%2Cstatus%21%3DCancelled",
+                "status%21%3DComplete%2Cstatus%21%3DError%2Cstatus%21%3DCancelled",
              API_BUILD_V1 + "namespaces/default/builds/?fieldSelector=status%21%3DFailed%2C"
-                           "status%21%3DComplete%2Cstatus%21%3DError%2Cstatus%21%3DCancelled"): {
+                "status%21%3DComplete%2Cstatus%21%3DError%2Cstatus%21%3DCancelled"): {
                 "get": {
                     # Contains a list of builds
                     "file": "builds_list.json",
@@ -115,11 +115,11 @@ class Connection(object):
             },
 
             (API_BUILD_V1 + "namespaces/default/builds?fieldSelector=foo%3Doof%2C"
-                           "status%21%3DFailed%2Cstatus%21%3DComplete%2Cstatus%21%3DError%2C"
-                           "status%21%3DCancelled",
+                "status%21%3DFailed%2Cstatus%21%3DComplete%2Cstatus%21%3DError%2C"
+                "status%21%3DCancelled",
              API_BUILD_V1 + "namespaces/default/builds/?fieldSelector=foo%3Doof%2C"
-                           "status%21%3DFailed%2Cstatus%21%3DComplete%2Cstatus%21%3DError%2C"
-                           "status%21%3DCancelled"): {
+                "status%21%3DFailed%2Cstatus%21%3DComplete%2Cstatus%21%3DError%2C"
+                "status%21%3DCancelled"): {
                 "get": {
                     # Contains a list of builds
                     "file": "builds_list.json",
@@ -134,8 +134,8 @@ class Connection(object):
                 }
             },
 
-            API_BUILD_V1 + "namespaces/default/builds/"
-                          "?labelSelector=koji-task-id%3D{task}".format(task=TEST_KOJI_TASK_ID): {
+            API_BUILD_V1 + "namespaces/default/builds/?labelSelector=koji-task-id%3D{task}"
+            .format(task=TEST_KOJI_TASK_ID): {
                 "get": {
                     # Contains a list of builds
                     "file": "builds_list.json",
