@@ -98,6 +98,9 @@ class BaseBuildRequest(object):
         # someone sets them in reactor_config
         self.set_build_env_vars(data)
 
+        # make sure that there is always deadline set (even if this may be changed in subclass)
+        self.set_deadline()
+
         return self.template
 
     def render_custom_strategy(self):
@@ -158,13 +161,27 @@ class BaseBuildRequest(object):
             self.template['spec'].pop('triggers', None)
             self.set_label('scratch', 'true')
 
-    def set_deadline(self, deadline_hours):
+    def set_deadline(self):
+        """Set completion deadline"""
+        deadline_hours = self.deadline_hours
 
         if deadline_hours > 0:
             deadline_seconds = deadline_hours * 3600
             self.template['spec']['completionDeadlineSeconds'] = deadline_seconds
             logger.info("setting completion_deadline to %s hours (%s seconds)", deadline_hours,
                         deadline_seconds)
+
+    @property
+    def deadline_hours(self):
+        """Return value in hours for completion deadline.
+
+        By default always provide a deadline value and let subclass to explicitly
+        override it if there is no deadline.
+
+        :rval: integer
+        :return: completion deadline
+        """
+        return self.user_params.worker_deadline
 
     def set_label(self, name, value):
         if not value:
@@ -516,8 +533,6 @@ class BuildRequestV2(BaseBuildRequest):
         self.adjust_for_isolated(self.user_params.release)
         self.render_node_selectors(self.user_params.build_type)
 
-        self._set_deadline()
-
         # Log build json
         # Return build json
         self.build_json = self.template
@@ -563,13 +578,14 @@ class BuildRequestV2(BaseBuildRequest):
                 node_selector.update(platform_ns)
             self.template['spec']['nodeSelector'] = node_selector
 
-    def _set_deadline(self):
+    @property
+    def deadline_hours(self):
         if self.user_params.build_type == BUILD_TYPE_WORKER:
             deadline_hours = self.user_params.worker_deadline
         else:
             deadline_hours = self.user_params.orchestrator_deadline
 
-        self.set_deadline(deadline_hours)
+        return deadline_hours
 
     def adjust_for_repo_info(self):
         if not self.repo_info:

@@ -1266,3 +1266,31 @@ class TestSourceBuildRequest(object):
         build_request = SourceBuildRequest(osbs_api=MockOSBSApi(), user_params=user_params)
         build_request.render()
         assert build_request.template['metadata']['name'] == 'scratch-sources-salt-time'
+
+    @pytest.mark.parametrize(('worker_max', 'orchestrator_max', 'expected'), [
+        (None, None, 3),
+        (6, 7, 6),
+        ("6", "invalid string", 6),
+        ("invalid string", "7", 3),
+        ({"6": "hours"}, {"7": "hours"}, 3),
+        ("6", "7", 6),
+        ("-1", "2", None),
+        ("0", "7", None),
+    ])
+    def test_set_deadlines(self, worker_max, orchestrator_max, expected):
+        """Source containers builds uses worker limits"""
+        conf_args = {
+           'worker_max_run_hours': worker_max,
+           'orchestrator_max_run_hours': orchestrator_max,
+           'build_from': 'image:fedora:latest',
+        }
+        user_params = get_sample_source_params(conf_args=conf_args)
+        build_request = SourceBuildRequest(osbs_api=MockOSBSApi(), user_params=user_params)
+
+        build_json = build_request.render()
+        if expected:
+            expected_hours = expected * 3600
+            assert build_json['spec']['completionDeadlineSeconds'] == expected_hours
+        else:
+            with pytest.raises(KeyError):
+                assert build_json['spec']['completionDeadlineSeconds']
