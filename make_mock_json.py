@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# flake8: noqa: E501
 """
 Copyright (c) 2019 Red Hat, Inc
 All rights reserved.

@@ -89,6 +89,7 @@ def make_retry(**kwargs):
 
     return Retry(**kwargs)
 
+
 class HttpStream(object):
     """
     Handle on HTTP response that is mostly useful for reading the server response incrementally when
