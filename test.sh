@@ -80,7 +80,7 @@ function setup_osbs() {
 case ${ACTION} in
 "test")
   setup_osbs
-  TEST_CMD="coverage run --source=osbs -m pytest tests"
+  TEST_CMD="coverage run --source=osbs -m pytest tests -ra --color=auto --html=__pytest_reports/osbs-unit-tests.html --self-contained-html"
   ;;
 "pylint")
   setup_osbs
