@@ -89,7 +89,11 @@ case ${ACTION} in
   ;;
 "bandit")
   setup_osbs
-  $RUN $PIP install bandit
+  if [[ $PYTHON_VERSION == 2 ]]; then
+    $RUN $PIP install 'bandit==1.6.*'
+  else
+    $RUN $PIP install bandit
+  fi
   TEST_CMD="bandit-baseline -r osbs -ll -ii"
   ;;
 *)
