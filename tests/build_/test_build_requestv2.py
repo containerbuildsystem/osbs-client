@@ -1191,8 +1191,8 @@ class TestBuildRequestV2(object):
 
         build_json = build_request.render()
         if expected:
-            expected_hours = expected * 3600
-            assert build_json['spec']['completionDeadlineSeconds'] == expected_hours
+            expected_seconds = expected * 3600
+            assert build_json['spec']['completionDeadlineSeconds'] == expected_seconds
         else:
             with pytest.raises(KeyError):
                 assert build_json['spec']['completionDeadlineSeconds']
@@ -1289,8 +1289,8 @@ class TestSourceBuildRequest(object):
 
         build_json = build_request.render()
         if expected:
-            expected_hours = expected * 3600
-            assert build_json['spec']['completionDeadlineSeconds'] == expected_hours
+            expected_seconds = expected * 3600
+            assert build_json['spec']['completionDeadlineSeconds'] == expected_seconds
         else:
             with pytest.raises(KeyError):
                 assert build_json['spec']['completionDeadlineSeconds']
