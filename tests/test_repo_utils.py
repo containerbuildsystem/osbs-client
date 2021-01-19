@@ -10,7 +10,9 @@ from __future__ import absolute_import
 
 from flexmock import flexmock
 from osbs.exceptions import OsbsException, OsbsValidationException
-from osbs.constants import REPO_CONFIG_FILE, ADDITIONAL_TAGS_FILE, REPO_CONTAINER_CONFIG
+from osbs.constants import (REPO_CONFIG_FILE,
+                            ADDITIONAL_TAGS_FILE,
+                            REPO_CONTAINER_CONFIG,)
 from osbs.utils.labels import Labels
 from osbs.repo_utils import RepoInfo, RepoConfiguration, AdditionalTagsConfig, ModuleSpec
 from textwrap import dedent
@@ -341,6 +343,57 @@ class TestRepoConfiguration(object):
             # "1.14" is the format written in yaml to represent a string. In
             # parsed result, it will be 1.14 without the double-quotes.
             assert [tag.replace('"', '')] == config.container['tags']
+
+    @pytest.mark.parametrize(
+        'files, error_msg',
+        (
+                (
+                        ['container.yml'],
+                        'Repo contains wrong filename: {wrong_filename}, expected: '
+                        '{expected_filename}'.format(expected_filename='container.yaml',
+                                                     wrong_filename='container.yml'),
+                ),
+                (
+                        ['container.yaml', 'container.yml'],
+                        'This repo contains both {expected_filename} and {wrong_filename} '
+                        'Please remove {wrong_filename}'.format(
+                            expected_filename='container.yaml',
+                            wrong_filename='container.yml',
+                        ),
+                ),
+                (
+                        ['content_sets.yaml'],
+                        'Repo contains wrong filename: {wrong_filename}, expected: '
+                        '{expected_filename}'.format(expected_filename='content_sets.yml',
+                                                     wrong_filename='content_sets.yaml'),
+                ),
+                (
+                        ['content-sets.yaml'],
+                        'Repo contains wrong filename: {wrong_filename}, expected: '
+                        '{expected_filename}'.format(expected_filename='content_sets.yml',
+                                                     wrong_filename='content-sets.yaml'),
+                ),
+                (
+                        ['content_sets.yml', 'content-sets.yml'],
+                        'This repo contains both {expected_filename} and {wrong_filename} '
+                        'Please remove {wrong_filename}'.format(
+                            expected_filename='content_sets.yml',
+                            wrong_filename='content-sets.yml',
+                        ),
+                ),
+                (['container.yaml'], ''),
+                (['content_sets.yml'], ''),
+        ),
+    )
+    def test_repo_files_extensions(self, tmpdir, files, error_msg):
+        for repo_file in files:
+            path = os.path.join(str(tmpdir), repo_file)
+            os.mknod(path)
+        if error_msg:
+            with pytest.raises(OsbsException, match=error_msg):
+                RepoConfiguration(dir_path=str(tmpdir))
+        else:
+            RepoConfiguration(dir_path=str(tmpdir))
 
 
 class TestModuleSpec(object):

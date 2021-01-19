@@ -10,7 +10,12 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import print_function, absolute_import, unicode_literals
 
 from osbs.exceptions import OsbsException, OsbsValidationException
-from osbs.constants import REPO_CONFIG_FILE, ADDITIONAL_TAGS_FILE, REPO_CONTAINER_CONFIG
+from osbs.constants import (REPO_CONFIG_FILE,
+                            ADDITIONAL_TAGS_FILE,
+                            REPO_CONTAINER_CONFIG,
+                            REPO_CONTAINER_CONFIG_POSSIBLE_TYPOS,
+                            REPO_CONTENT_SETS_FILE,
+                            REPO_CONTENT_SETS_FILE_POSSIBLE_TYPOS)
 from osbs.utils.labels import Labels
 from osbs.utils.yaml import read_yaml_from_file_path
 from six import StringIO
@@ -129,6 +134,7 @@ class RepoConfiguration(object):
         self.git_uri = git_uri
         self.git_branch = git_branch
         self.git_ref = git_ref
+        self.dir_path = dir_path
 
         # Set default options
         self._config_parser.readfp(StringIO(self.DEFAULT_CONFIG))   # pylint: disable=W1505; py2
@@ -137,14 +143,15 @@ class RepoConfiguration(object):
         if os.path.exists(config_path):
             self._config_parser.read(config_path)
 
-        file_path = os.path.join(dir_path, REPO_CONTAINER_CONFIG)
-        if os.path.exists(file_path):
-            try:
-                self.container = read_yaml_from_file_path(file_path, 'schemas/container.json') or {}
-            except Exception as e:
-                msg = ('Failed to load or validate container file "{file}": {reason}'
-                       .format(file=file_path, reason=e))
-                raise OsbsException(msg)
+        if self._check_repo_file_exists_with_expected_filename(
+                expected_filename=REPO_CONTAINER_CONFIG,
+                possible_filename_typos=REPO_CONTAINER_CONFIG_POSSIBLE_TYPOS
+        ):
+            self._validate_container_config_file()
+        self._check_repo_file_exists_with_expected_filename(
+            expected_filename=REPO_CONTENT_SETS_FILE,
+            possible_filename_typos=REPO_CONTENT_SETS_FILE_POSSIBLE_TYPOS
+        )
 
         # container values may be set to None
         container_compose = self.container.get('compose') or {}
@@ -170,6 +177,51 @@ class RepoConfiguration(object):
 
     def is_autorebuild_enabled(self):
         return self._config_parser.getboolean('autorebuild', 'enabled')
+
+    def _check_repo_file_exists_with_expected_filename(self, expected_filename,
+                                                       possible_filename_typos):
+        """
+        Checks if a file with given filename exists in repo
+
+        :param str expected_filename: Expected filename to lookup in the repo
+        :param set possible_filename_typos: Set of possible typos for expected_filename
+        :return: boolean stating wheter expected_filename exists in repo
+        :rtype bool
+        :raises OsbsException: if any filename from possible_filename_typos exists in repo
+        """
+        expected_file_path = os.path.join(self.dir_path, expected_filename)
+
+        wrong_filename = ''
+        for possible_filename_typo in possible_filename_typos:
+            path = os.path.join(self.dir_path, possible_filename_typo)
+            if os.path.exists(path):
+                wrong_filename = possible_filename_typo
+                break
+
+        if os.path.exists(expected_file_path) and wrong_filename:
+            msg = ('This repo contains both {expected_filename} and {wrong_filename} '
+                   'Please remove {wrong_filename}'
+                   .format(expected_filename=expected_filename,
+                           wrong_filename=wrong_filename))
+            raise OsbsException(msg)
+        elif wrong_filename:
+            msg = ('Repo contains wrong filename: {wrong_filename}, expected: {expected_filename}'
+                   .format(expected_filename=expected_filename, wrong_filename=wrong_filename))
+            raise OsbsException(msg)
+        elif os.path.exists(expected_file_path):
+            return True
+
+        return False
+
+    def _validate_container_config_file(self):
+        try:
+            container_config_path = os.path.join(self.dir_path, REPO_CONTAINER_CONFIG)
+            self.container = read_yaml_from_file_path(container_config_path,
+                                                      'schemas/container.json') or {}
+        except Exception as e:
+            msg = ('Failed to load or validate container file "{file}": {reason}'
+                   .format(file=container_config_path, reason=e))
+            raise OsbsException(msg)
 
 
 class ModuleSpec(object):
