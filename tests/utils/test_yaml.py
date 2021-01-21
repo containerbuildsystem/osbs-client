@@ -9,10 +9,16 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import absolute_import
 
 from flexmock import flexmock
-from osbs.utils.yaml import read_yaml, read_yaml_from_file_path
+from osbs.utils.yaml import (read_yaml,
+                             read_yaml_from_file_path,
+                             load_schema,
+                             validate_with_schema)
+
+
 from osbs.exceptions import OsbsValidationException
 
 import json
+import jsonschema
 import os
 import pkg_resources
 import pytest
@@ -108,3 +114,90 @@ def test_read_yaml_validation_error(config, expected, caplog):
 
     assert "schema validation error" in caplog.text
     assert expected == str(exc_info.value)
+
+
+@pytest.mark.parametrize(('package', 'package_pass'), [
+    ('osbs', True),
+    ('FOO', False)
+])
+def test_load_schema_package(package, package_pass, caplog):
+    schema = 'schemas/container.json'
+    if not package_pass:
+        with pytest.raises(ImportError):
+            load_schema(package, schema)
+        assert "Unable to find package FOO" in caplog.text
+    else:
+        assert isinstance(load_schema(package, schema), dict)
+
+
+@pytest.mark.parametrize(('schema', 'schema_pass'), [
+    ('schemas/container.json', True),
+    ('schemas/container.json', False)
+])
+def test_load_schema_schema(schema, schema_pass, caplog):
+    package = 'osbs'
+    if not schema_pass:
+        (flexmock(json)
+            .should_receive('load')
+            .and_raise(ValueError))
+        with pytest.raises(ValueError):
+            load_schema(package, schema)
+        assert "unable to decode JSON schema, cannot validate" in caplog.text
+    else:
+        assert isinstance(load_schema(package, schema), dict)
+
+
+@pytest.mark.parametrize(('config', 'validation_pass', 'expected'), [
+    ({
+        'name': 1
+    }, False,
+     ".name: validating 'type' has failed (1 is not of type 'string')"
+     ),
+    (
+        {
+            'name': 'foo',
+            'module': 'bar'
+        },
+        False,
+        ("at top level: validating 'additionalProperties' has failed "
+         "(Additional properties are not allowed ('module' was unexpected))"),
+    ), ({
+        'name': 'foo'
+    }, True, '')
+])
+def test_validate_with_schema_validation(config, validation_pass, expected, caplog):
+    schema = {
+        'type': 'object',
+        'required': ['name'],
+        'properties': {
+            'name': {
+                'type': 'string'
+            }
+        },
+        'additionalProperties': False
+    }
+    if not validation_pass:
+        with pytest.raises(OsbsValidationException) as exc_info:
+            validate_with_schema(config, schema)
+        assert 'schema validation error' in caplog.text
+        assert expected == str(exc_info.value)
+    else:
+        validate_with_schema(config, schema)
+        assert expected == ''
+
+
+def test_validate_with_schema_bad_schema(caplog):
+    config = {
+        'name': 'foo'
+    }
+    schema = {
+        'type': 'bakagaki',  # Nonexistent type
+        'properties': {
+            'name': {
+                'type': 'string'
+            }
+        }
+    }
+    with pytest.raises(jsonschema.SchemaError):
+        validate_with_schema(config, schema)
+    assert 'invalid schema, cannot validate' in caplog.text

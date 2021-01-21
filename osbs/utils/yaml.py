@@ -39,23 +39,43 @@ def read_yaml(yaml_data, schema, package=None):
     :param schema: string, file path to the JSON schema
     :package: string, package name containing the schema
     """
+    data = yaml.safe_load(yaml_data)
     package = package or 'osbs'
+    schema = load_schema(package, schema)
+    validate_with_schema(data, schema)
+    return data
+
+
+def load_schema(package, schema):
+    """
+    :package: string, package name containing the schema
+    :param schema: string, file path to the JSON schema
+    """
+    # Read schema from file
     try:
         resource = resource_stream(package, schema)
         schema = codecs.getreader('utf-8')(resource)
-    except (ImportError):
+    except ImportError:
         logger.error('Unable to find package %s', package)
         raise
     except (IOError, TypeError):
         logger.error('unable to extract JSON schema, cannot validate')
         raise
 
+    # Load schema into Dict
     try:
         schema = json.load(schema)
     except ValueError:
         logger.error('unable to decode JSON schema, cannot validate')
         raise
-    data = yaml.safe_load(yaml_data)
+    return schema
+
+
+def validate_with_schema(data, schema):
+    """
+    :param data: dict, data to be validated
+    :param schema: dict, schema to validate with
+    """
     validator = jsonschema.Draft4Validator(schema=schema)
     try:
         jsonschema.Draft4Validator.check_schema(schema)
@@ -65,17 +85,11 @@ def read_yaml(yaml_data, schema, package=None):
         raise
     except jsonschema.ValidationError as exc:
         logger.debug("schema validation error: %s", exc)
-
         exc_message = get_error_message(exc)
-
         for error in validator.iter_errors(data):
             error_message = get_error_message(error)
-
             logger.debug("validation error: %s", error_message)
-
         raise OsbsValidationException(exc_message)
-
-    return data
 
 
 def get_error_message(error):
