@@ -66,7 +66,7 @@ function setup_osbs() {
 
   # pip update pip/setuptools for Cent
   if [[ $OS == centos && $OS_VERSION == 7 ]]; then
-    $RUN "${PIP_INST[@]}" -U pip
+    $RUN "${PIP_INST[@]}" -U pip==20.3.4
     $RUN "${PIP_INST[@]}" -U setuptools
   fi
 
