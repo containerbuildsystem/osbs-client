@@ -249,6 +249,7 @@ class BuildCommon(BuildParamsBase):
 
     def validate(self):
         logger.info("Validating params of %s", self.__class__.__name__)
+        # pylint: disable=not-an-iterable; pylint does not understand metaclass properties
         missing = [p for p in self.__class__.required_params if p.__get__(self) is None]
         if missing:
             missing_repr = ", ".join(repr(p.name) for p in missing)
@@ -276,6 +277,7 @@ class BuildCommon(BuildParamsBase):
         return retdict
 
     def to_json(self):
+        # pylint: disable=not-an-iterable; pylint does not understand metaclass properties
         keys = (p.name for p in self.__class__.params if p.include_in_json)
         json_dict = self.to_dict(keys)
         json_dict[KIND_KEY] = self.KIND
