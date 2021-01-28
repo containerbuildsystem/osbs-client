@@ -733,6 +733,7 @@ class OSBS(object):
                               isolated=None,
                               koji_task_id=None,
                               target=None,
+                              operator_csv_modifications_url=None,
                               **kwargs):
 
         required_params = {"git_uri": git_uri, "git_ref": git_ref, "git_branch": git_branch}
@@ -766,6 +767,9 @@ class OSBS(object):
             raise OsbsException(
                 "Not a flatpak build, "
                 "but repository has a container.yaml with a flatpak: section")
+
+        if operator_csv_modifications_url and not isolated:
+            raise OsbsException('Only isolated build can update operator CSV metadata')
 
         req_labels = self._check_labels(repo_info)
 

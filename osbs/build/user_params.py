@@ -309,6 +309,7 @@ class BuildUserParams(BuildCommon):
     koji_upload_dir = BuildParam("koji_upload_dir")
     name = BuildIDParam()
     operator_bundle_replacement_pullspecs = BuildParam("operator_bundle_replacement_pullspecs")
+    operator_csv_modifications_url = BuildParam("operator_csv_modifications_url")
     operator_manifests_extract_platform = BuildParam("operator_manifests_extract_platform")
     parent_images_digests = BuildParam("parent_images_digests")
     platforms = BuildParam("platforms")
@@ -355,6 +356,7 @@ class BuildUserParams(BuildCommon):
                     koji_upload_dir=None,
                     name_label=None,
                     operator_bundle_replacement_pullspecs=None,
+                    operator_csv_modifications_url=None,
                     operator_manifests_extract_platform=None,
                     parent_images_digests=None,
                     platform=None,
@@ -400,6 +402,7 @@ class BuildUserParams(BuildCommon):
         :param operator_bundle_replacement_pullspecs: dict, mapping of original pullspecs to
                                                       replacement pullspecs for operator manifest
                                                       bundle builds
+        :param operator_csv_modifications_url: str, URL to JSON file describing operator CSV changes
         :param operator_manifests_extract_platform: str, indicates which platform should upload
                                                     operator manifests to koji
         :param parent_images_digests: dict, mapping image digests to names and platforms
@@ -479,6 +482,7 @@ class BuildUserParams(BuildCommon):
             "koji_parent_build": koji_parent_build,
             "koji_upload_dir": koji_upload_dir,
             "operator_bundle_replacement_pullspecs": operator_bundle_replacement_pullspecs,
+            "operator_csv_modifications_url": operator_csv_modifications_url,
             "operator_manifests_extract_platform": operator_manifests_extract_platform,
             "parent_images_digests": parent_images_digests,
             "platform": platform,

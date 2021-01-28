@@ -2448,6 +2448,7 @@ class TestOSBS(object):
                 self.signing_intent = 'release'
                 self.compose_ids = [1, 2]
                 self.skip_build = False
+                self.operator_csv_modifications_url = None
 
         expected_kwargs = {
             'platform': platform,
@@ -2467,6 +2468,7 @@ class TestOSBS(object):
             'signing_intent': 'release',
             'compose_ids': [1, 2],
             'skip_build': False,
+            'operator_csv_modifications_url': None,
         }
         if arrangement_version:
             expected_kwargs.update({
@@ -2532,6 +2534,7 @@ class TestOSBS(object):
                 self.signing_intent = None
                 self.compose_ids = None
                 self.skip_build = skip_build
+                self.operator_csv_modifications_url = None
 
         expected_kwargs = {
             'platform': None,
@@ -2557,6 +2560,7 @@ class TestOSBS(object):
                 arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
             'outer_template': ORCHESTRATOR_OUTER_TEMPLATE,
             'customize_conf': ORCHESTRATOR_CUSTOMIZE_CONF,
+            'operator_csv_modifications_url': None,
         }
 
         flexmock(osbs.build_conf, get_git_branch=lambda: TEST_GIT_BRANCH)
@@ -2600,6 +2604,7 @@ class TestOSBS(object):
                 self.signing_intent = 'release'
                 self.compose_ids = [1, 2]
                 self.skip_build = False
+                self.operator_csv_modifications_url = None
 
         expected_kwargs = {
             'platform': None,
@@ -2621,6 +2626,7 @@ class TestOSBS(object):
             'signing_intent': 'release',
             'compose_ids': [1, 2],
             'skip_build': False,
+            'operator_csv_modifications_url': None,
         }
 
         (flexmock(utils)
@@ -2649,6 +2655,80 @@ class TestOSBS(object):
                 cmd_build(args, osbs)
             assert isinstance(exc_info.value.cause, ValueError)
             assert "Flatpak build cannot be isolated" in exc_info.value.message
+
+    @pytest.mark.parametrize('isolated', [True, False])
+    def test_operator_csv_modifications_url_cli(self, osbs, isolated):
+        """Test if operator_csv_modifications_url option without isolated
+        option raises proper exception"""
+        class MockArgs(object):
+            def __init__(self, isolated):
+                self.platform = None
+                self.release = None
+                self.platforms = 'platforms'
+                self.arrangement_version = 6
+                self.worker = False
+                self.orchestrator = True
+                self.scratch = None
+                self.isolated = isolated
+                self.koji_upload_dir = None
+                self.git_uri = None
+                self.git_ref = None
+                self.git_branch = TEST_GIT_BRANCH
+                self.koji_parent_build = None
+                self.signing_intent = 'release'
+                self.compose_ids = None
+                self.skip_build = False
+                self.operator_csv_modifications_url = "https://example.com/updates.json"
+
+        expected_kwargs = {
+            'platform': None,
+            'scratch': None,
+            'isolated': True,
+            'platforms': 'platforms',
+            'release': None,
+            'git_uri': None,
+            'git_ref': None,
+            'git_branch': TEST_GIT_BRANCH,
+            'arrangement_version': 6,
+            'user': None,
+            'tag': None,
+            'target': None,
+            'yum_repourls': None,
+            'dependency_replacements': None,
+            'koji_parent_build': None,
+            'signing_intent': 'release',
+            'compose_ids': None,
+            'skip_build': False,
+            'operator_csv_modifications_url': "https://example.com/updates.json",
+        }
+
+        (flexmock(utils)
+            .should_receive('get_repo_info')
+            .with_args(None, None, git_branch=TEST_GIT_BRANCH, depth=None)
+            .and_return(self.mock_repo_info(mock_config=MockConfiguration(modules=TEST_MODULES))))
+
+        args = MockArgs(isolated)
+        # Some of the command line arguments are pulled through the config
+        # object, so add them there as well.
+        osbs.build_conf.args = args
+        flexmock(osbs.build_conf, get_git_branch=lambda: TEST_GIT_BRANCH)
+
+        if isolated:
+            # and_raise is called to prevent cmd_build to continue
+            # as we only want to check if arguments are correct
+            (flexmock(osbs)
+                .should_receive("create_orchestrator_build")
+                .once()
+                .with_args(**expected_kwargs)
+                .and_raise(CustomTestException))
+            with pytest.raises(CustomTestException):
+                cmd_build(args, osbs)
+        else:
+            with pytest.raises(OsbsException) as exc_info:
+                cmd_build(args, osbs)
+            assert (
+                "Only isolated build can update operator CSV metadata" in str(exc_info.value)
+            )
 
     # osbs is a fixture here
     @pytest.mark.parametrize('branch_name', [  # noqa
