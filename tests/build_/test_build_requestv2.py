@@ -1294,3 +1294,28 @@ class TestSourceBuildRequest(object):
         else:
             with pytest.raises(KeyError):
                 assert build_json['spec']['completionDeadlineSeconds']
+
+    @pytest.mark.parametrize(('reactor_config_map', 'expect_cpu_limit', 'expect_memory_limit'), [
+        (None, None, None),
+        ({}, None, None),
+        ({'source_container': {}}, None, None),
+        ({'no_source_container': {}}, None, None),
+        ({'source_container': {'cpu_request': '1001m'}}, '1001m', None),
+        ({'source_container': {'memory_request': '3Gi'}}, None, '3Gi'),
+        ({'source_container': {'cpu_request': '1001m', 'memory_request': '3Gi'}}, '1001m', '3Gi'),
+    ])
+    def test_openshift_requests(self, reactor_config_map, expect_cpu_limit, expect_memory_limit):
+        """Source containers builds sets openshift limits"""
+        all_limits = deepcopy(reactor_config_map)
+        user_params = get_sample_source_params()
+        build_request = SourceBuildRequest(osbs_api=MockOSBSApi(all_limits))
+        build_request.set_params(user_params=user_params)
+        build_json = build_request.render()
+
+        if not (expect_cpu_limit or expect_memory_limit):
+            assert 'resources' not in build_json['spec']
+        else:
+            if expect_cpu_limit:
+                assert expect_cpu_limit == build_json['spec']['resources']['requests']['cpu']
+            if expect_memory_limit:
+                assert expect_memory_limit == build_json['spec']['resources']['requests']['memory']
