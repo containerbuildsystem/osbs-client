@@ -355,6 +355,7 @@ def cmd_build(args, osbs):
         'signing_intent': args.signing_intent,
         'compose_ids': args.compose_ids,
         'skip_build': args.skip_build,
+        'operator_csv_modifications_url': args.operator_csv_modifications_url,
     }
     if args.arrangement_version:
         if args.arrangement_version < 6:
@@ -733,6 +734,9 @@ def cli():
                               metavar="pkg_manager:name:version[:new_name]",
                               dest="dependency_replacements",
                               help="Cachito dependency replacement")
+    build_parser.add_argument("--operator-csv-modifications-url", action='store', required=False,
+                              dest='operator_csv_modifications_url', metavar='URL',
+                              help="URL to JSON file with operator CSV modification")
 
     build_source_container_parser = subparsers.add_parser(
         str_on_2_unicode_on_3('build-source-container'),
@@ -928,6 +932,10 @@ def cli():
                 "at least one of --sources-for-koji-build-id and "
                 "--sources-for-koji-build-nvr has to be specified"
             )
+
+    if getattr(args, 'func', None) is cmd_build:
+        if args.operator_csv_modifications_url and not args.isolated:
+            parser.error("Only --isolated builds support option --operator-csv-modifications-url")
 
     return parser, args
 
