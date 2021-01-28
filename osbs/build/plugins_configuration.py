@@ -327,9 +327,16 @@ class PluginsConfigurationBase(object):
         name = 'pin_operator_digest'
 
         replacement_pullspecs = self.user_params.operator_bundle_replacement_pullspecs
+        modifications_url = self.user_params.operator_csv_modifications_url
 
-        if replacement_pullspecs and self.pt.has_plugin_conf(phase, name):
-            self.pt.set_plugin_arg(phase, name, 'replacement_pullspecs', replacement_pullspecs)
+        if self.pt.has_plugin_conf(phase, name):
+            if replacement_pullspecs:
+                self.pt.set_plugin_arg(phase, name, 'replacement_pullspecs', replacement_pullspecs)
+
+            if modifications_url:
+                self.pt.set_plugin_arg(
+                    phase, name, 'operator_csv_modifications_url', modifications_url
+                )
 
     def render_export_operator_manifests(self):
         phase = 'postbuild_plugins'

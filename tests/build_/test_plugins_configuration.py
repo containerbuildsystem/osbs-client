@@ -754,25 +754,34 @@ class TestPluginsConfiguration(object):
         assert plugin_value_get(plugins, plugin_type, plugin_name, 'args',
                                 'koji_parent_build') == parent_value
 
-    def test_render_pin_operator_digest(self):
+    @pytest.mark.parametrize('param,param_render,value', [
+        (
+            'operator_bundle_replacement_pullspecs',
+            'replacement_pullspecs',
+            {'foo/fedora:30': 'bar/fedora@sha256:deadbeef'},
+        ),
+        (
+            'operator_csv_modifications_url',
+            'operator_csv_modifications_url',
+            'https://example.com/test.json',
+        ),
+    ])
+    def test_render_pin_operator_digest(self, param, param_render, value):
         plugin_type = "prebuild_plugins"
         plugin_name = "pin_operator_digest"
 
-        replacement_pullspecs = {
-            'foo/fedora:30': 'bar/fedora@sha256:deadbeef'
-        }
-        extra_args = {
-            'operator_bundle_replacement_pullspecs': replacement_pullspecs
-        }
+        extra_args = {param: value}
 
         self.mock_repo_info()
         user_params = get_sample_user_params(extra_args=extra_args)
         build_json = PluginsConfiguration(user_params).render()
         plugins = get_plugins_from_build_json(build_json)
 
-        plugin_value = plugin_value_get(plugins, plugin_type, plugin_name,
-                                        'args', 'replacement_pullspecs')
-        assert plugin_value == replacement_pullspecs
+        plugin_value = plugin_value_get(
+            plugins, plugin_type, plugin_name,
+            'args', param_render
+        )
+        assert plugin_value == value
 
     @pytest.mark.parametrize('extract_platform', ('x86_64', 'aarch64'))
     @pytest.mark.parametrize('build_type', (BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR))
