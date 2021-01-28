@@ -45,6 +45,7 @@ class BaseBuildRequest(object):
         self._openshift_required_version = parse_version('3.6.0')
         self._outer_template_path = outer_template
         self._resource_limits = None
+        self._resource_requests = None
         self._template = None
 
         self.organization = None
@@ -85,6 +86,7 @@ class BaseBuildRequest(object):
         data = self.get_reactor_config_data()
         self.set_data_from_reactor_config(data)
 
+        self.render_resource_requests()
         # render params has to run after setting data from reactor config,
         # because that is updating user_params
         self.render_user_params()
@@ -143,6 +145,13 @@ class BaseBuildRequest(object):
             limits.update(self._resource_limits)
             resources['limits'] = limits
             self.template['spec']['resources'] = resources
+
+    def render_resource_requests(self):
+        """Render resource requests"""
+        if self._resource_requests is not None:
+            resources = self.template['spec'].setdefault('resources', {})
+            requests = resources.setdefault('requests', {})
+            requests.update(self._resource_requests)
 
     def render_user_params(self):
         custom_strategy = self.template['spec']['strategy']['customStrategy']
@@ -232,6 +241,9 @@ class BaseBuildRequest(object):
 
         if storage is not None:
             self._resource_limits['storage'] = storage
+
+    def set_resource_requests(self, reactor_config_data):
+        """Sets resource requests"""
 
     @property
     def template(self):
@@ -331,6 +343,7 @@ class BaseBuildRequest(object):
         self.set_pull_registries(reactor_config_data)
         self.set_registry_organization(reactor_config_data)
         self.set_required_secrets(reactor_config_data)
+        self.set_resource_requests(reactor_config_data)
 
     def set_build_env_vars(self, reactor_config_data):
         """
@@ -687,3 +700,27 @@ class SourceBuildRequest(BaseBuildRequest):
 
         # !IMPORTANT! can't be too long: https://github.com/openshift/origin/issues/733
         self.template['metadata']['name'] = name
+
+    def set_resource_requests(self, reactor_config_data):
+        """Sets resource requests"""
+        source_container_key = 'source_container'
+        memory_request_key = 'memory_request'
+        cpu_request_key = 'cpu_request'
+
+        if source_container_key not in reactor_config_data:
+            return
+
+        cpu_request = reactor_config_data[source_container_key].get(cpu_request_key)
+        memory_request = reactor_config_data[source_container_key].get(memory_request_key)
+
+        if not (cpu_request or memory_request):
+            return
+
+        if self._resource_requests is None:
+            self._resource_requests = {}
+
+        if cpu_request:
+            self._resource_requests['cpu'] = cpu_request
+
+        if memory_request:
+            self._resource_requests['memory'] = memory_request
