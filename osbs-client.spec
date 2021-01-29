@@ -18,7 +18,7 @@
 %global osbs_obsolete_vr 0.14-2
 
 Name:           osbs-client
-Version:        1.5.0
+Version:        1.6.0
 Release:        1%{?dist}
 
 Summary:        Python command line client for OpenShift Build Service
@@ -195,6 +195,9 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %endif # with_python3
 
 %changelog
+* Fri Jan 29 2021 Chenxiong Qi <qcxhome@gmail.com> 1.6.0-1
+- new upstream release: 1.6.0
+
 * Mon Jan 18 2021 Martin Bašti <mbasti@redhat.com> 1.5.0-1
 - new upstream release: 1.5.0
 
