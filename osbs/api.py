@@ -791,10 +791,6 @@ class OSBS(object):
                                                repo_info=repo_info)
         build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
 
-        if isolated:
-            if build_request.is_from_scratch_image():
-                raise ValueError('"FROM scratch" image build cannot be isolated')
-
         builds_for_koji_task = []
         if koji_task_id and build_type == BUILD_TYPE_ORCHESTRATOR:
             # try to find build for koji_task which isn't canceled and use that one
