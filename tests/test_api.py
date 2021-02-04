@@ -3213,52 +3213,6 @@ class TestOSBS(object):
             osbs.create_build(target=TEST_TARGET, **required_args)
         assert exc_msg in str(exc.value)
 
-    def test_do_create_prod_build_isolated_from_scratch(self, osbs):  # noqa
-        inner_template = DEFAULT_INNER_TEMPLATE
-        outer_template = DEFAULT_OUTER_TEMPLATE
-        customize_conf = DEFAULT_CUSTOMIZE_CONF
-        repo_info = self.mock_repo_info(mock_df_parser=MockDfParserFromScratch())
-
-        user_params = BuildUserParams.make_params(
-            build_json_dir=osbs.os_conf.get_build_json_store(),
-            base_image='scratch',
-            build_from='image:python',
-            build_conf=osbs.build_conf,
-            name_label='scratch',
-            repo_info=repo_info,
-            user=TEST_USER,
-            isolated=True,
-            build_type=BUILD_TYPE_ORCHESTRATOR,
-            release='0.1'
-        )
-
-        (flexmock(utils)
-            .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
-            .and_return(repo_info))
-
-        (flexmock(osbs)
-            .should_receive('get_user_params')
-            .and_return(user_params))
-
-        (flexmock(osbs)
-            .should_call('get_build_request')
-            .with_args(inner_template=inner_template,
-                       outer_template=outer_template,
-                       customize_conf=customize_conf,
-                       user_params=user_params,
-                       repo_info=repo_info)
-            .once())
-
-        with pytest.raises(ValueError) as exc:
-            osbs._do_create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
-                                       TEST_GIT_BRANCH, user=TEST_USER,
-                                       inner_template=inner_template,
-                                       outer_template=outer_template,
-                                       customize_conf=customize_conf,
-                                       isolated=True)
-        assert '"FROM scratch" image build cannot be isolated' in str(exc.value)
-
     @pytest.mark.parametrize(('flatpak'), (True, False))  # noqa
     def test_do_create_prod_build_no_dockerfile(self, osbs, flatpak, tmpdir):
         class MockDfParserNoDf(object):
