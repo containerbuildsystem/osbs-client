@@ -220,6 +220,15 @@
               ]
           }
         },
+        "base_module": {
+          "type": "string",
+          "description": "name and stream of a base module",
+          "examples": [
+            "base_module_name1:stream1",
+            "base_module_name2:",
+            ":stream2"
+          ]
+        },
         "signing_intent": {
           "type": "string",
           "description": "Name of ODCS signing intent used to verify package signatures",
