@@ -773,16 +773,18 @@ class OSBS(object):
 
         req_labels = self._check_labels(repo_info)
 
-        user_params = self.get_user_params(base_image=repo_info.base_image,
-                                           build_type=build_type,
-                                           component=component,
-                                           flatpak=flatpak,
-                                           isolated=isolated,
-                                           koji_target=target,
-                                           koji_task_id=koji_task_id,
-                                           req_labels=req_labels,
-                                           repo_info=repo_info,
-                                           **kwargs)
+        user_params = self.get_user_params(
+            base_image=repo_info.base_image,
+            build_type=build_type,
+            component=component,
+            flatpak=flatpak,
+            isolated=isolated,
+            koji_target=target,
+            koji_task_id=koji_task_id,
+            req_labels=req_labels,
+            repo_info=repo_info,
+            operator_csv_modifications_url=operator_csv_modifications_url,
+            **kwargs)
 
         build_request = self.get_build_request(inner_template=inner_template,
                                                outer_template=outer_template,
