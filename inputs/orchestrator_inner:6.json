@@ -84,6 +84,9 @@
     },
     {
       "name": "push_operator_manifests"
+    },
+    {
+      "name": "generate_maven_metadata"
     }
   ],
   "prepublish_plugins": [],
