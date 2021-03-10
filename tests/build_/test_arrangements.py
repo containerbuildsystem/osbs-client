@@ -61,6 +61,7 @@ PLUGIN_RESOLVE_COMPOSES_KEY = 'resolve_composes'
 PLUGIN_VERIFY_MEDIA_KEY = 'verify_media'
 PLUGIN_EXPORT_OPERATOR_MANIFESTS_KEY = 'export_operator_manifests'
 PLUGIN_PUSH_OPERATOR_MANIFESTS_KEY = 'push_operator_manifests'
+PLUGIN_GENERATE_MAVEN_METADATA_KEY = 'generate_maven_metadata'
 
 
 class NoSuchPluginException(Exception):
@@ -309,6 +310,7 @@ class TestArrangementV6(ArrangementBase):
                 'tag_from_config',
                 PLUGIN_GROUP_MANIFESTS_KEY,
                 PLUGIN_PUSH_OPERATOR_MANIFESTS_KEY,
+                PLUGIN_GENERATE_MAVEN_METADATA_KEY,
             ],
 
             'exit_plugins': [
