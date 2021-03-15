@@ -76,6 +76,10 @@ RAND_DIGITS = 5
 ATOMIC_REACTOR_LOGGING_FMT = \
     '%(asctime)s platform:%(arch)s - %(name)s - %(levelname)s - %(message)s'
 
+# Numeric representation of user warnings loggers' level
+# User warning level is logically between INFO (20) and WARNING (30) levels
+USER_WARNING_LEVEL = 25
+
 REPO_CONFIG_FILE = '.osbs-repo-config'
 ADDITIONAL_TAGS_FILE = 'additional-tags'
 REPO_CONTAINER_CONFIG = 'container.yaml'

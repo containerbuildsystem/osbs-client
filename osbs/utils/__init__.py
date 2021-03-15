@@ -9,6 +9,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 from functools import wraps
 import contextlib
 import copy
+import json
 import logging
 import os
 import os.path
@@ -28,7 +29,8 @@ from hashlib import sha256
 from osbs.repo_utils import RepoConfiguration, RepoInfo, AdditionalTagsConfig
 from osbs.constants import (OS_CONFLICT_MAX_RETRIES, OS_CONFLICT_WAIT,
                             GIT_MAX_RETRIES, GIT_BACKOFF_FACTOR, GIT_FETCH_RETRY,
-                            OS_NOT_FOUND_MAX_RETRIES, OS_NOT_FOUND_MAX_WAIT)
+                            OS_NOT_FOUND_MAX_RETRIES, OS_NOT_FOUND_MAX_WAIT,
+                            USER_WARNING_LEVEL)
 
 # This was moved to a separate file - import here for external API compatibility
 from osbs.utils.labels import Labels  # noqa: F401
@@ -586,6 +588,20 @@ def retry_on_exception(exception_type):
         return retry
 
     return do_retry_on_exception
+
+
+def user_warning_log_handler(self, message):
+    """
+    Take arguments to transform them into JSON data
+    and send them into the logger with USER_WARNING level
+    """
+    assert isinstance(message, str)
+
+    content = {
+        'message': message,
+    }
+    msg = json.dumps(content)
+    self._log(USER_WARNING_LEVEL, msg)
 
 
 class RetryFunc(object):
