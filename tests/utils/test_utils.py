@@ -20,13 +20,14 @@ from time import tzset, sleep
 from pkg_resources import parse_version
 from textwrap import dedent
 
-from osbs.constants import REPO_CONTAINER_CONFIG
+from osbs.constants import REPO_CONTAINER_CONFIG, USER_WARNING_LEVEL
 from osbs.repo_utils import RepoInfo
 from osbs.utils import (buildconfig_update,
                         git_repo_humanish_part_from_uri, sanitize_strings_for_openshift,
                         get_time_from_rfc3339, TarWriter, TarReader, make_name_from_git,
                         wrap_name_from_git, get_instance_token_file_name, sanitize_version,
-                        has_triggers, clone_git_repo, get_repo_info, ImageName)
+                        has_triggers, clone_git_repo, get_repo_info, ImageName,
+                        user_warning_log_handler)
 from osbs.exceptions import OsbsException, OsbsCommitNotFound
 from tests.constants import (TEST_DOCKERFILE_GIT, TEST_DOCKERFILE_SHA1, TEST_DOCKERFILE_INIT_SHA1,
                              TEST_DOCKERFILE_BRANCH)
@@ -610,3 +611,21 @@ def test_image_name_comparison():
     i2 = ImageName(registry='foo.com', namespace='spam', repo='bar', tag='2')
     assert not i1 == i2
     assert i1 != i2
+
+
+@pytest.mark.parametrize(('message, expected'), (
+    ('foo-bar', '{"message": "foo-bar"}'),
+    (11, None)
+))
+def test_user_warnings_handler(message, expected):
+    def mocked_log(level, message):
+        assert level == USER_WARNING_LEVEL
+        assert message == expected
+
+    logger = flexmock(_log=mocked_log)
+
+    if expected:
+        user_warning_log_handler(logger, message=message)
+    else:
+        with pytest.raises(AssertionError):
+            user_warning_log_handler(logger, message=message)
