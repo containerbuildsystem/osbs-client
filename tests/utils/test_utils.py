@@ -27,7 +27,7 @@ from osbs.utils import (buildconfig_update,
                         git_repo_humanish_part_from_uri, sanitize_strings_for_openshift,
                         get_time_from_rfc3339, TarWriter, TarReader, make_name_from_git,
                         wrap_name_from_git, get_instance_token_file_name, sanitize_version,
-                        has_triggers, clone_git_repo, get_repo_info, ImageName)
+                        has_triggers, clone_git_repo, get_repo_info, UserWarningsStore, ImageName)
 from osbs.exceptions import OsbsException, OsbsCommitNotFound
 from tests.constants import (TEST_DOCKERFILE_GIT, TEST_DOCKERFILE_SHA1, TEST_DOCKERFILE_INIT_SHA1,
                              TEST_DOCKERFILE_BRANCH)
@@ -629,3 +629,37 @@ def test_user_warnings_handler(message, expected, caplog):
     else:
         with pytest.raises(AssertionError):
             logging.getLogger().user_warning(message=message)
+
+
+@pytest.mark.parametrize(('logs, expected, wrong_input'), (
+    ((
+        '2021-03-18 23:35:42,573 - osbs.http - USER_WARNING - load info',
+        '2021-03-18 23:35:42,573 - osbs.http - USER_WARNING - {"asd112}',
+        '2021-03-18 23:35:42,573 - osbs.http - DEBUG - {"message": "foo-bar"}',
+     ), [""], ['{"asd112}']),
+    ((
+        '2021-03-22 23:35:44,573 platform:x86_64 - atomic_reactor.inner - '
+        'USER_WARNING - {"message": "foo-bar"}',
+        '2021-03-18 23:35:42,573 - atomic_reactor.plugin - USER_WARNING - {"message": "foo-bar"}',
+     ), ['foo-bar'], None),
+    ((
+        '2021-03-22 23:35:44,573 platform:x86_64 - atomic_reactor.inner - '
+        'USER_WARNING - {"message": "foo-bar"}',
+        '2021-03-18 23:35:42,573 - atomic_reactor.plugin - '
+        'USER_WARNING - {"message": "baz-bar"}'
+     ), ['foo-bar', 'baz-bar'], None),
+))
+def test_store_user_warnings(logs, expected, wrong_input, caplog):
+    user_warnings = UserWarningsStore()
+
+    for line in logs:
+        if user_warnings.is_user_warning(line):
+            user_warnings.store(line)
+
+    if wrong_input:
+        for input_ in wrong_input:
+            message = 'Incorrect JSON data input for a user warning: {}'
+            assert message.format(input_) in caplog.text
+
+    user_warnings = str(user_warnings).split('\n')
+    assert sorted(user_warnings) == sorted(expected)
