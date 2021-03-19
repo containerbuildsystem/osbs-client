@@ -30,7 +30,7 @@ from osbs.repo_utils import RepoConfiguration, RepoInfo, AdditionalTagsConfig
 from osbs.constants import (OS_CONFLICT_MAX_RETRIES, OS_CONFLICT_WAIT,
                             GIT_MAX_RETRIES, GIT_BACKOFF_FACTOR, GIT_FETCH_RETRY,
                             OS_NOT_FOUND_MAX_RETRIES, OS_NOT_FOUND_MAX_WAIT,
-                            USER_WARNING_LEVEL)
+                            USER_WARNING_LEVEL, USER_WARNING_LEVEL_NAME)
 
 # This was moved to a separate file - import here for external API compatibility
 from osbs.utils.labels import Labels  # noqa: F401
@@ -726,3 +726,41 @@ class ImageName(object):
             namespace=self.namespace,
             repo=self.repo,
             tag=self.tag)
+
+
+class UserWarningsStore(object):
+    def __init__(self):
+        # (asctime (platform:arch)? - name) - levelname - message
+        self.regex = r' - '.join((r'^.+', USER_WARNING_LEVEL_NAME, r'(\{.*\})$'))
+        self._user_warnings = set()
+
+    def is_user_warning(self, line):
+        return re.match(self.regex, line)
+
+    def store(self, line):
+        """
+        Extract data from given log record with USER_WARNING level
+        and store an understandable message in set
+        """
+        data_search = re.search(self.regex, line)
+        if not data_search:
+            message = 'Incorrect given logline for storing user warnings: %s'
+            logger.error(message, line)
+            return
+
+        try:
+            data = json.loads(data_search.group(1))
+        except ValueError:
+            message = 'Incorrect JSON data input for a user warning: %s'
+            logger.error(message, data_search.group(1))
+            return
+
+        message = data['message']
+
+        self._user_warnings.add(message)
+
+    def __str__(self):
+        return '\n'.join(self._user_warnings)
+
+    def __bool__(self):
+        return bool(self._user_warnings)
