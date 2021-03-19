@@ -79,6 +79,7 @@ ATOMIC_REACTOR_LOGGING_FMT = \
 # Numeric representation of user warnings loggers' level
 # User warning level is logically between INFO (20) and WARNING (30) levels
 USER_WARNING_LEVEL = 25
+USER_WARNING_LEVEL_NAME = 'USER_WARNING'
 
 REPO_CONFIG_FILE = '.osbs-repo-config'
 ADDITIONAL_TAGS_FILE = 'additional-tags'

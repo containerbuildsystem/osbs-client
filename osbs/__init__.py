@@ -9,14 +9,14 @@ from __future__ import print_function, absolute_import, unicode_literals
 
 import logging
 
-from osbs.constants import USER_WARNING_LEVEL
+from osbs.constants import USER_WARNING_LEVEL, USER_WARNING_LEVEL_NAME
 from osbs.utils import user_warning_log_handler
 from osbs.version import __version__  # noqa
 
 
 def set_logging(name="osbs", level=logging.DEBUG):
     # add new level to loggers
-    logging.addLevelName(USER_WARNING_LEVEL, "USER_WARNING")
+    logging.addLevelName(USER_WARNING_LEVEL, USER_WARNING_LEVEL_NAME)
     logging.Logger.user_warning = user_warning_log_handler
 
     # create logger

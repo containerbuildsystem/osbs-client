@@ -30,7 +30,7 @@ from osbs.exceptions import (OsbsNetworkException, OsbsException, OsbsAuthExcept
                              OsbsResponseException)
 from osbs.cli.capture import setup_json_capture
 from osbs.utils import (paused_builds, TarReader, TarWriter, get_time_from_rfc3339,
-                        graceful_chain_get, ImageName)
+                        graceful_chain_get, UserWarningsStore, ImageName)
 from six.moves.urllib.parse import urljoin
 
 logger = logging.getLogger('osbs')
@@ -302,7 +302,9 @@ def cmd_cancel_build(args, osbs):
 
 
 def _print_build_logs(args, osbs, build):
+    user_warnings = UserWarningsStore()
     build_id = build.get_build_name()
+
     # we need to wait for kubelet to schedule the build, otherwise it's 500
     build = osbs.wait_for_build_to_get_scheduled(build_id)
     if not args.no_logs:
@@ -313,11 +315,20 @@ def _print_build_logs(args, osbs, build):
         print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
         try:
             for line in build_logs:
+                if user_warnings.is_user_warning(line):
+                    user_warnings.store(line)
+                    continue
+
                 print('{!r}'.format(line))
         except Exception as ex:
             logger.error("Error during fetching logs for build %s: %s", build_id, repr(ex))
 
         osbs.wait_for_build_to_finish(build_id)
+
+        if user_warnings:
+            print("USER WARNINGS")
+            print(user_warnings)
+
         return _display_build_summary(osbs.get_build(build_id))
     else:
         if args.output == 'json':
@@ -426,15 +437,24 @@ def cmd_build_logs(args, osbs):
     build_id = args.BUILD_ID[0]
     follow = args.follow
 
+    user_warnings = UserWarningsStore()
     logs = osbs.get_build_logs(build_id, follow=follow,
                                wait_if_missing=args.wait_if_missing,
                                decode=True)
 
-    if follow:
-        for line in logs:
+    for line in logs:
+        if user_warnings.is_user_warning(line):
+            user_warnings.store(line)
+
+        if follow:
             print(line)
-        return
-    print(logs, end="")
+
+    if not follow:
+        print(logs, end="\n")
+
+    if user_warnings:
+        print("USER WARNINGS")
+        print(user_warnings)
 
 
 def cmd_watch_build(args, osbs):
