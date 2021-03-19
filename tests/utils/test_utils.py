@@ -618,11 +618,15 @@ def test_image_name_comparison():
     (11, None)
 ))
 def test_user_warnings_handler(message, expected):
-    def mocked_log(level, message):
-        assert level == USER_WARNING_LEVEL
-        assert message == expected
+    def mocked_warning(entry):
+        assert entry == message
 
-    logger = flexmock(_log=mocked_log)
+    def mocked_user_warning(level, entry):
+        assert level == USER_WARNING_LEVEL
+        assert entry == expected
+
+    logger = flexmock(_log=mocked_user_warning,
+                      warning=mocked_warning)
 
     if expected:
         user_warning_log_handler(logger, message=message)

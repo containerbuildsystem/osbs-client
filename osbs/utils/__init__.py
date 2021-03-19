@@ -593,9 +593,12 @@ def retry_on_exception(exception_type):
 def user_warning_log_handler(self, message):
     """
     Take arguments to transform them into JSON data
-    and send them into the logger with USER_WARNING level
+    and send them into the logger with USER_WARNING level.
+
+    Together with that the original message will be logged as an usual warning.
     """
     assert isinstance(message, str)
+    self.warning(message)
 
     content = {
         'message': message,
