@@ -601,7 +601,7 @@ def user_warning_log_handler(self, message):
         'message': message,
     }
     msg = json.dumps(content)
-    self._log(USER_WARNING_LEVEL, msg)
+    self._log(USER_WARNING_LEVEL, msg, None)
 
 
 class RetryFunc(object):

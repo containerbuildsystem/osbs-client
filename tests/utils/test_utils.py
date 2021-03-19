@@ -618,7 +618,7 @@ def test_image_name_comparison():
     (11, None)
 ))
 def test_user_warnings_handler(message, expected):
-    def mocked_log(level, message):
+    def mocked_log(level, message, args):
         assert level == USER_WARNING_LEVEL
         assert message == expected
 
