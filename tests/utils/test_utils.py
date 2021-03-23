@@ -16,6 +16,7 @@ import datetime
 import re
 import sys
 import requests
+import logging
 from time import tzset, sleep
 from pkg_resources import parse_version
 from textwrap import dedent
@@ -26,8 +27,7 @@ from osbs.utils import (buildconfig_update,
                         git_repo_humanish_part_from_uri, sanitize_strings_for_openshift,
                         get_time_from_rfc3339, TarWriter, TarReader, make_name_from_git,
                         wrap_name_from_git, get_instance_token_file_name, sanitize_version,
-                        has_triggers, clone_git_repo, get_repo_info, ImageName,
-                        user_warning_log_handler)
+                        has_triggers, clone_git_repo, get_repo_info, ImageName)
 from osbs.exceptions import OsbsException, OsbsCommitNotFound
 from tests.constants import (TEST_DOCKERFILE_GIT, TEST_DOCKERFILE_SHA1, TEST_DOCKERFILE_INIT_SHA1,
                              TEST_DOCKERFILE_BRANCH)
@@ -617,15 +617,15 @@ def test_image_name_comparison():
     ('foo-bar', '{"message": "foo-bar"}'),
     (11, None)
 ))
-def test_user_warnings_handler(message, expected):
-    def mocked_log(level, message, args):
-        assert level == USER_WARNING_LEVEL
-        assert message == expected
-
-    logger = flexmock(_log=mocked_log)
-
+def test_user_warnings_handler(message, expected, caplog):
     if expected:
-        user_warning_log_handler(logger, message=message)
+        with caplog.at_level(USER_WARNING_LEVEL):
+            logging.getLogger().user_warning(message)
+
+            logged = [(l.getMessage(), l.levelno) for l in caplog.records]
+            assert len(logged) == 1
+            assert expected in logged[0][0]
+            assert logged[0][1] == USER_WARNING_LEVEL
     else:
         with pytest.raises(AssertionError):
-            user_warning_log_handler(logger, message=message)
+            logging.getLogger().user_warning(message=message)
