@@ -5,138 +5,52 @@
 
   "type": ["object", "null"],
   "anyOf": [
-      {
-         "properties": {
-            "go": {
-              "type": "object",
-              "properties": {
-                "modules": {
-                  "type": ["array", "null"],
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "module": {
-                        "type": "string",
-                        "description": "Top-level Go module (package) name which will be built",
-                        "examples": [
-                          "example.com/go/packagename",
-                          "example.com/go/anotherpackage"
-                        ]
-                      },
-                      "archive": {
-                        "type": "string",
-                        "description": "Possibly-compressed archive containing full source code including dependencies",
-                        "examples": [
-                          "anotherpackage.tar.gz"
-                        ]
-                      },
-                      "path": {
-                        "type": "string",
-                        "description": "Path to directory containing source code (or its parent), possibly within archive",
-                        "examples": [
-                          "anotherpackage-v0.54.1"
-                        ]
-                      }
-                    },
-                    "additionalProperties": false,
-                    "required": ["module"]
-                  }
-                }
-              },
-              "additionalProperties": false
-            },
-            "platforms": {"$ref": "#/definitions/all_platforms"},
-            "autorebuild": {"$ref": "#/definitions/autorebuild"},
-            "compose": {"$ref": "#/definitions/compose"},
-            "flatpak": {"$ref": "#/definitions/flatpak"},
-            "operator_manifests": {"$ref": "#/definitions/operator_manifests"},
-            "image_build_method": {"$ref": "#/definitions/image_build_method"},
-            "tags": {"$ref": "#/definitions/tags"},
-            "set_release_env": {"$ref": "#/definitions/set_release_env"},
-            "version": {"$ref": "#/definitions/version"}
-         },
-         "additionalProperties": false
+    {
+      "properties": {
+        "platforms": {"$ref": "#/definitions/all_platforms"},
+        "autorebuild": {"$ref": "#/definitions/autorebuild"},
+        "compose": {"$ref": "#/definitions/compose"},
+        "flatpak": {"$ref": "#/definitions/flatpak"},
+        "operator_manifests": {"$ref": "#/definitions/operator_manifests"},
+        "image_build_method": {"$ref": "#/definitions/image_build_method"},
+        "tags": {"$ref": "#/definitions/tags"},
+        "set_release_env": {"$ref": "#/definitions/set_release_env"},
+        "version": {"$ref": "#/definitions/version"},
+        "go": {"$ref": "#/definitions/go"}
       },
-
-      {
-         "properties": {
-            "platforms": {"$ref": "#/definitions/all_platforms"},
-            "autorebuild": {"$ref": "#/definitions/autorebuild"},
-            "compose": {"$ref": "#/definitions/compose"},
-            "flatpak": {"$ref": "#/definitions/flatpak"},
-            "operator_manifests": {"$ref": "#/definitions/operator_manifests"},
-            "image_build_method": {"$ref": "#/definitions/image_build_method"},
-            "remote_source": {
-              "type": ["object", "null"],
-              "properties": {
-                "repo": {
-                  "type": "string",
-                  "description": "URL to the SCM repository",
-                  "examples": [
-                    "https://git.example.com/team/repo.git",
-                    "https://git.example.com/another-repo.git"
-                  ]
-                },
-                "ref": {
-                  "type": "string",
-                  "pattern": "^[0-9a-z]{40}$",
-                  "description": "SCM reference to fetch from repository",
-                  "examples": [
-                    "b55c00f45ec3dfee0c766cea3d395d6e21cc2e5a",
-                    "651abc41170e52866148cc0c99c3671a2ace7002"
-                  ]
-                },
-                "pkg_managers": {
-                  "description": "list of package managers to be used for resolving dependencies",
-                  "type": ["array", "null"],
-                  "items": {
-                      "type": "string",
-                      "examples": [
-                        "gomod"
-                      ]
-                  }
-                },
-                "flags": {
-                  "description": "list of flags to pass to the Cachito request",
-                  "type": ["array", "null"],
-                  "items": {
-                      "type": "string",
-                      "examples": [
-                        "enable-confeti",
-                        "enable-party-popper"
-                      ]
-                  }
-                },
-                "packages": {
-                  "description": "the packages object to pass to the Cachito request",
-                  "type": ["object", "null"],
-                  "examples": [
-                    {"npm": [{"path": "client"}, {"path": "proxy"}]}
-                  ],
-                  "additionalProperties" : {
-                    "type" : "array",
-                    "items": {
-                      "type": "object",
-                      "examples": [
-                        {"path": "client"},
-                        {"path": "proxy"}
-                      ],
-                      "minProperties": 1
-                    }
-                  }
-                }
-              },
-              "additionalProperties": false,
-              "required": ["repo", "ref"]
-            },
-            "tags": {"$ref": "#/definitions/tags"},
-            "set_release_env": {"$ref": "#/definitions/set_release_env"},
-            "version": {"$ref": "#/definitions/version"}
-         },
-         "additionalProperties": false
-      }
+      "additionalProperties": false
+    },
+    {
+      "properties": {
+        "platforms": {"$ref": "#/definitions/all_platforms"},
+        "autorebuild": {"$ref": "#/definitions/autorebuild"},
+        "compose": {"$ref": "#/definitions/compose"},
+        "flatpak": {"$ref": "#/definitions/flatpak"},
+        "operator_manifests": {"$ref": "#/definitions/operator_manifests"},
+        "image_build_method": {"$ref": "#/definitions/image_build_method"},
+        "tags": {"$ref": "#/definitions/tags"},
+        "set_release_env": {"$ref": "#/definitions/set_release_env"},
+        "version": {"$ref": "#/definitions/version"},
+        "remote_source": {"$ref": "#/definitions/remote_source"}
+      },
+      "additionalProperties": false
+    },
+    {
+      "properties": {
+        "platforms": {"$ref": "#/definitions/all_platforms"},
+        "autorebuild": {"$ref": "#/definitions/autorebuild"},
+        "compose": {"$ref": "#/definitions/compose"},
+        "flatpak": {"$ref": "#/definitions/flatpak"},
+        "operator_manifests": {"$ref": "#/definitions/operator_manifests"},
+        "image_build_method": {"$ref": "#/definitions/image_build_method"},
+        "tags": {"$ref": "#/definitions/tags"},
+        "set_release_env": {"$ref": "#/definitions/set_release_env"},
+        "version": {"$ref": "#/definitions/version"},
+        "remote_sources": {"$ref": "#/definitions/remote_sources"}
+      },
+      "additionalProperties": false
+    }
   ],
-
   "definitions": {
     "platform": {
       "type": "string",
@@ -379,6 +293,120 @@
       "description": "Deprecated option kept for backwards compatibility. Should not be used",
       "minimum": 1,
       "default": 1
+    },
+    "remote_source": {
+      "type": ["object", "null"],
+      "properties": {
+        "repo": {
+          "type": "string",
+          "description": "URL to the SCM repository",
+          "examples": [
+            "https://git.example.com/team/repo.git",
+            "https://git.example.com/another-repo.git"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "pattern": "^[0-9a-z]{40}$",
+          "description": "SCM reference to fetch from repository",
+          "examples": [
+            "b55c00f45ec3dfee0c766cea3d395d6e21cc2e5a",
+            "651abc41170e52866148cc0c99c3671a2ace7002"
+          ]
+        },
+        "pkg_managers": {
+          "description": "list of package managers to be used for resolving dependencies",
+          "type": ["array", "null"],
+          "items": {
+              "type": "string",
+              "examples": [
+                "gomod"
+              ]
+          }
+        },
+        "flags": {
+          "description": "list of flags to pass to the Cachito request",
+          "type": ["array", "null"],
+          "items": {
+              "type": "string",
+              "examples": [
+                "enable-confeti",
+                "enable-party-popper"
+              ]
+          }
+        },
+        "packages": {
+          "description": "the packages object to pass to the Cachito request",
+          "type": ["object", "null"],
+          "examples": [
+            {"npm": [{"path": "client"}, {"path": "proxy"}]}
+          ],
+          "additionalProperties" : {
+            "type" : "array",
+            "items": {
+              "type": "object",
+              "examples": [
+                {"path": "client"},
+                {"path": "proxy"}
+              ],
+              "minProperties": 1
+            }
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": ["repo", "ref"]
+    },
+    "remote_sources": {
+      "type": ["array", "null"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]*$",
+          "description": "Name of remote source"
+        },
+        "remote_source": {"$ref": "#/definitions/remote_source"}
+      },
+      "additionalProperties": false,
+      "required": ["name", "remote_source"]
+    },
+    "go": {
+      "type": "object",
+      "properties": {
+        "modules": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "object",
+            "properties": {
+              "module": {
+                "type": "string",
+                "description": "Top-level Go module (package) name which will be built",
+                "examples": [
+                  "example.com/go/packagename",
+                  "example.com/go/anotherpackage"
+                ]
+              },
+              "archive": {
+                "type": "string",
+                "description": "Possibly-compressed archive containing full source code including dependencies",
+                "examples": [
+                  "anotherpackage.tar.gz"
+                ]
+              },
+              "path": {
+                "type": "string",
+                "description": "Path to directory containing source code (or its parent), possibly within archive",
+                "examples": [
+                  "anotherpackage-v0.54.1"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": ["module"]
+          }
+        }
+      },
+      "additionalProperties": false
     }
   }
 }
