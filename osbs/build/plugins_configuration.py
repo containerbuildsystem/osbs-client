@@ -192,8 +192,8 @@ class PluginsConfigurationBase(object):
         phase = 'prebuild_plugins'
         plugin = 'add_image_content_manifest'
         if self.pt.has_plugin_conf(phase, plugin):
-            self.pt.set_plugin_arg_valid(phase, plugin, 'remote_source_icm_url',
-                                         self.user_params.remote_source_icm_url)
+            self.pt.set_plugin_arg_valid(phase, plugin, 'remote_sources',
+                                         self.user_params.remote_sources)
 
     def render_add_labels_in_dockerfile(self):
         phase = 'prebuild_plugins'
@@ -499,12 +499,8 @@ class PluginsConfigurationBase(object):
         plugin = 'download_remote_source'
 
         if self.pt.has_plugin_conf(phase, plugin):
-            self.pt.set_plugin_arg(phase, plugin, 'remote_source_url',
-                                   self.user_params.remote_source_url)
-            self.pt.set_plugin_arg(phase, plugin, 'remote_source_build_args',
-                                   self.user_params.remote_source_build_args)
-            self.pt.set_plugin_arg(phase, plugin, 'remote_source_configs',
-                                   self.user_params.remote_source_configs)
+            self.pt.set_plugin_arg(phase, plugin, 'remote_sources',
+                                   self.user_params.remote_sources)
 
     def render_resolve_remote_source(self):
         phase = 'prebuild_plugins'
