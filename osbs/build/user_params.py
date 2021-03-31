@@ -314,10 +314,7 @@ class BuildUserParams(BuildCommon):
     parent_images_digests = BuildParam("parent_images_digests")
     platforms = BuildParam("platforms")
     release = BuildParam("release")
-    remote_source_build_args = BuildParam("remote_source_build_args")
-    remote_source_configs = BuildParam("remote_source_configs")
-    remote_source_icm_url = BuildParam("remote_source_icm_url")
-    remote_source_url = BuildParam("remote_source_url")
+    remote_sources = BuildParam("remote_sources")
     skip_build = BuildParam("skip_build")
     tags_from_yaml = BuildParam("tags_from_yaml")
     trigger_imagestreamtag = BuildParam("trigger_imagestreamtag")
@@ -362,10 +359,7 @@ class BuildUserParams(BuildCommon):
                     platform=None,
                     platforms=None,
                     release=None,
-                    remote_source_build_args=None,
-                    remote_source_configs=None,
-                    remote_source_icm_url=None,
-                    remote_source_url=None,
+                    remote_sources=None,
                     repo_info=None,
                     skip_build=None,
                     tags_from_yaml=None,
@@ -413,12 +407,15 @@ class BuildUserParams(BuildCommon):
         an environment variable into a worker build;
         when used, reactor_config_map is ignored.
         :param release: str,
-        :param remote_source_build_args: dict, extra args for `builder.build_args`, if any
-        :param remote_source_configs: list of str, configuration files to be injected into
-        the exploded remote sources dir
-        :param remote_source_icm_url: int, the Cachito ICM URL; used to request the
-        Image Content Manifest
-        :param remote_source_url: str, URL from which to download a source archive
+        :param remote_sources: list of dicts, each dict contains info about particular
+        remote source with the following keys:
+            build_args: dict, extra args for `builder.build_args`, if any
+            configs: list of str, configuration files to be injected into
+            the exploded remote sources dir
+            request_id: int, cachito request id; used to request the
+            Image Content Manifest
+            url: str, URL from which to download a source archive
+            name: str, name of remote source
         :param repo_info: RepoInfo, git repo data for the build
         :param scratch: bool, build as a scratch build
         :param signing_intent: bool, True to sign the resulting image
@@ -488,10 +485,7 @@ class BuildUserParams(BuildCommon):
             "platform": platform,
             "platforms": platforms,
             "release": release,
-            "remote_source_build_args": remote_source_build_args,
-            "remote_source_configs": remote_source_configs,
-            "remote_source_icm_url": remote_source_icm_url,
-            "remote_source_url": remote_source_url,
+            "remote_sources": remote_sources,
             "skip_build": skip_build,
             "trigger_imagestreamtag": base_image,
             "triggered_after_koji_task": triggered_after_koji_task,
