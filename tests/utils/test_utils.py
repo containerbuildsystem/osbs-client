@@ -636,7 +636,7 @@ def test_user_warnings_handler(message, expected, caplog):
         '2021-03-18 23:35:42,573 - osbs.http - USER_WARNING - load info',
         '2021-03-18 23:35:42,573 - osbs.http - USER_WARNING - {"asd112}',
         '2021-03-18 23:35:42,573 - osbs.http - DEBUG - {"message": "foo-bar"}',
-     ), [""], ['{"asd112}']),
+     ), [], ['{"asd112}']),
     ((
         '2021-03-22 23:35:44,573 platform:x86_64 - atomic_reactor.inner - '
         'USER_WARNING - {"message": "foo-bar"}',
@@ -661,5 +661,7 @@ def test_store_user_warnings(logs, expected, wrong_input, caplog):
             message = 'Incorrect JSON data input for a user warning: {}'
             assert message.format(input_) in caplog.text
 
-    user_warnings = str(user_warnings).split('\n')
+    assert sorted(user_warnings) == sorted(expected)
+
+    user_warnings = str(user_warnings).splitlines()
     assert sorted(user_warnings) == sorted(expected)

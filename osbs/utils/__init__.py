@@ -759,6 +759,10 @@ class UserWarningsStore(object):
 
         self._user_warnings.add(message)
 
+    def __iter__(self):
+        for user_warning in self._user_warnings:
+            yield user_warning
+
     def __str__(self):
         return '\n'.join(self._user_warnings)
 
