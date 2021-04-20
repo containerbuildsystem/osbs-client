@@ -523,7 +523,6 @@ class TestOpenshift(object):
         openshift.put_image_stream_tag(tag_id, mock_data)
 
     def _make_tag_template(self):
-        # TODO: Just read from inputs folder
         return json.loads(dedent('''\
             {
               "kind": "ImageStreamTag",

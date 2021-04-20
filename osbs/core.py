@@ -68,7 +68,6 @@ def check_response(response, log_level=logging.ERROR):
         raise OsbsResponseException(message=content, status_code=response.status_code)
 
 
-# TODO: error handling: create function which handles errors in response object
 class Openshift(object):
     def __init__(self, openshift_api_url, openshift_oauth_url,
                  k8s_api_url=None,

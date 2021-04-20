@@ -62,7 +62,6 @@ class Configuration(object):
 
     def _get_value(self, args_key, conf_section, conf_key, default=None, is_bool_val=False,
                    deprecated=False):
-        # FIXME: this is too bloated: split it into separate classes
         # and implement it as mixins
         def get_value_from_kwargs():
             return self.kwargs.get(args_key)

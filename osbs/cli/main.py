@@ -616,8 +616,6 @@ def cli():
         description="OpenShift Build Service client"
     )
     exclusive_group = parser.add_mutually_exclusive_group()
-    # FIXME: default=None is needed to indicate for osbs.conf.Configuration
-    # that the option was not specified
     exclusive_group.add_argument("--verbose", action="store_true", default=None)
     exclusive_group.add_argument("-q", "--quiet", action="store_true")
     exclusive_group.add_argument("-V", "--version", action="version", version=version)
