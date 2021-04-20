@@ -278,7 +278,7 @@ class TestOSBS(object):
     # osbs is a fixture here
     @pytest.mark.parametrize('name_label_name', ['Name', 'name'])  # noqa
     def test_create_build(self, osbs, name_label_name):
-        # TODO: test situation when a buildconfig already exists
+
         class MockParser(object):
             labels = {
                 name_label_name: 'fedora23/something',
