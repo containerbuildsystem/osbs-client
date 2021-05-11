@@ -661,6 +661,8 @@ def test_store_user_warnings(logs, expected, wrong_input, caplog):
             message = 'Incorrect JSON data input for a user warning: {}'
             assert message.format(input_) in caplog.text
 
+    assert bool(user_warnings) == bool(expected)
+    assert len(user_warnings) == len(expected)
     assert sorted(user_warnings) == sorted(expected)
 
     user_warnings = str(user_warnings).splitlines()
