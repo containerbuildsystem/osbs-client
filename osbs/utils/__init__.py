@@ -766,5 +766,8 @@ class UserWarningsStore(object):
     def __str__(self):
         return '\n'.join(self._user_warnings)
 
+    def __len__(self):
+        return len(self._user_warnings)
+
     def __bool__(self):
         return bool(self._user_warnings)
