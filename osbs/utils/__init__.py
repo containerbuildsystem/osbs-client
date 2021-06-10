@@ -771,3 +771,19 @@ class UserWarningsStore(object):
 
     def __bool__(self):
         return bool(self._user_warnings)
+
+
+def stringify_values(d):
+    """All non-string values in dictionary will be json serialized.
+
+    Example of usage is for openshift annotations which must be strings only.
+
+    :param dict d: dict with values of various types
+    :return: new dict with values converted to string
+    """
+    assert isinstance(d, dict)
+
+    return {
+        k: val if isinstance(val, str) else json.dumps(val)
+        for k, val in d.items()
+    }

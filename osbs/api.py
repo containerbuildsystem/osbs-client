@@ -54,7 +54,8 @@ from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsRespons
 from osbs.utils.labels import Labels
 # import utils in this way, so that we can mock standalone functions with flexmock
 from osbs import utils
-from osbs.utils import (retry_on_conflict, graceful_chain_get, RegistryURI, ImageName)
+from osbs.utils import (retry_on_conflict, graceful_chain_get, RegistryURI, ImageName,
+                        stringify_values)
 
 from six.moves import http_client, input
 
@@ -1099,10 +1100,16 @@ class OSBS(object):
 
     @osbsapi
     def update_annotations_on_build(self, build_id, annotations):
+        # annotations support only string, make sure it's string
+        # or json serializable object
+        annotations = stringify_values(annotations)
         return self.os.update_annotations_on_build(build_id, annotations)
 
     @osbsapi
     def set_annotations_on_build(self, build_id, annotations):
+        # annotations support only string, make sure it's string
+        # or json serializable object
+        annotations = stringify_values(annotations)
         return self.os.set_annotations_on_build(build_id, annotations)
 
     @osbsapi
