@@ -27,7 +27,8 @@ from osbs.utils import (buildconfig_update,
                         git_repo_humanish_part_from_uri, sanitize_strings_for_openshift,
                         get_time_from_rfc3339, TarWriter, TarReader, make_name_from_git,
                         wrap_name_from_git, get_instance_token_file_name, sanitize_version,
-                        has_triggers, clone_git_repo, get_repo_info, UserWarningsStore, ImageName)
+                        has_triggers, clone_git_repo, get_repo_info, UserWarningsStore, ImageName,
+                        stringify_values)
 from osbs.exceptions import OsbsException, OsbsCommitNotFound
 from tests.constants import (TEST_DOCKERFILE_GIT, TEST_DOCKERFILE_SHA1, TEST_DOCKERFILE_INIT_SHA1,
                              TEST_DOCKERFILE_BRANCH)
@@ -667,3 +668,13 @@ def test_store_user_warnings(logs, expected, wrong_input, caplog):
 
     user_warnings = str(user_warnings).splitlines()
     assert sorted(user_warnings) == sorted(expected)
+
+
+@pytest.mark.parametrize('d,expected', (
+    [{}, {}],
+    [{'a': [{}]}, {"a": '[{}]'}],
+    [{'b': 'test'}, {'b': 'test'}],
+    [{'a': 'test', 'b': {'c': 5}}, {'a': 'test', 'b': '{"c": 5}'}],
+))
+def test_stringify_values(d, expected):
+    assert stringify_values(d) == expected
