@@ -358,17 +358,22 @@
       "required": ["repo", "ref"]
     },
     "remote_sources": {
-      "type": ["array", "null"],
-      "properties": {
-        "name": {
-          "type": "string",
-          "pattern": "^[a-zA-Z0-9_-]*$",
-          "description": "Name of remote source"
+      "type": ["array"],
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9_-]*$",
+            "description": "Name of remote source"
+         },
+          "remote_source": {"$ref": "#/definitions/remote_source"}
         },
-        "remote_source": {"$ref": "#/definitions/remote_source"}
+        "additionalProperties": false,
+        "required": ["name", "remote_source"]
       },
-      "additionalProperties": false,
-      "required": ["name", "remote_source"]
+      "minItems": 1
     },
     "go": {
       "type": "object",
