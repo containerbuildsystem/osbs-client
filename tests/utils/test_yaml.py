@@ -9,6 +9,7 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import absolute_import
 
 from flexmock import flexmock
+from textwrap import dedent
 from osbs.utils.yaml import (read_yaml,
                              read_yaml_from_file_path,
                              load_schema,
@@ -23,6 +24,7 @@ import os
 import pkg_resources
 import pytest
 import yaml
+import re
 
 
 def test_read_yaml_file_ioerrors(tmpdir):
@@ -201,3 +203,152 @@ def test_validate_with_schema_bad_schema(caplog):
     with pytest.raises(jsonschema.SchemaError):
         validate_with_schema(config, schema)
     assert 'invalid schema, cannot validate' in caplog.text
+
+
+@pytest.mark.parametrize(
+    "config, err_message",
+    [
+        (
+            (
+             """
+             remote_sources:
+              - name: invalid/name
+                remote_source:
+                  repo: https://git.example.com/team/repo.git
+                  ref: b55c00f45ec3dfee0c766cea3d395d6e21cc2e5a
+             """
+            ),
+            r"'invalid/name' does not match u?'\^\[a-zA-Z0-9_-\]\*\$'",
+        ),
+        (
+            ("""
+            remote_sources:
+              - name: valid
+                remote_source:
+                  repo: https://git.example.com/team/repo.git
+                  ref: b55c00f45ec3dfee0c766cea3d395d6e21cc2e5a
+              - name: invalid/name
+                remote_source:
+                  repo: https://git.example.com/team/repo.git
+                  ref: b55c00f45ec3dfee0c766cea3d395d6e21cc2e5a
+             """),
+            r"'invalid/name' does not match u?'\^\[a-zA-Z0-9_-\]\*\$'",
+        ),
+        (
+            ("""
+            remote_sources:
+              - name: ""
+                remote_source:
+                  repo: https://git.example.com/team/repo.git
+                  ref: b55c00f45ec3dfee0c766cea3d395d6e21cc2e5a
+            """),
+            r"'' is too short",
+        ),
+        (
+            ("""
+            remote_sources:
+              - name: valid
+                remote_source:
+                  repo: https://git.example.com/team/repo.git
+                  ref: bad
+             """),
+            r"'bad' does not match u?'\^\[0-9a-z]\{40}\$",
+        ),
+        (
+            ("""
+            remote_sources:
+              - "not an object"
+            """),
+            r"'not an object' is not of type u?'object'",
+        ),
+        (
+            (
+             """
+             remote_sources: "not an array"
+             """
+            ),
+            r"'not an array' is not of type u?'array'",
+        ),
+        (
+            (
+             """
+             remote_sources: []
+             """
+            ),
+            r"\[\] is too short",
+        ),
+        (
+            (
+             """
+             remote_sources:
+              - name: valid
+                remote_source:
+                  repo: https://git.example.com/team/repo.git
+                  ref: b55c00f45ec3dfee0c766cea3d395d6e21cc2e5a
+                  additional_property: this_should_fail
+             """
+            ),
+            r"Additional properties are not allowed \('additional_property' was unexpected\)",
+        ),
+        (
+            (
+             """
+             remote_sources:
+              - name: valid
+                additional_property: this_should_fail
+                remote_source:
+                  repo: https://git.example.com/team/repo.git
+                  ref: b55c00f45ec3dfee0c766cea3d395d6e21cc2e5a
+             """
+            ),
+            r"Additional properties are not allowed \('additional_property' was unexpected\)",
+        ),
+    ],
+)
+def test_invalid_remote_sources_schema(config, err_message, caplog):
+    with pytest.raises(OsbsValidationException) as exc_info:
+        read_yaml(dedent(config), "schemas/container.json")
+
+    assert "schema validation error" in caplog.text
+    assert re.search(err_message, str(exc_info.value))
+
+
+@pytest.mark.parametrize(
+    "config, expected_data",
+    [
+        (
+         """
+          remote_sources:
+            - name: valid-name
+              remote_source:
+                repo: https://git.example.com/team/repo.git
+                ref: b55c00f45ec3dfee0c766cea3d395d6e21cc2e5a
+            - name: also_valid
+              remote_source:
+                repo: https://git.example.com/team/repo.git
+                ref: b55c00f45ec3dfee0c766cea3d395d6e21cc2e5a
+         """,
+         {
+             "remote_sources": [
+                 {
+                     "name": "valid-name",
+                     "remote_source": {
+                         "repo": "https://git.example.com/team/repo.git",
+                         "ref": "b55c00f45ec3dfee0c766cea3d395d6e21cc2e5a",
+                     },
+                 },
+                 {
+                     "name": "also_valid",
+                     "remote_source": {
+                         "repo": "https://git.example.com/team/repo.git",
+                         "ref": "b55c00f45ec3dfee0c766cea3d395d6e21cc2e5a",
+                     },
+                 },
+             ]
+         }
+        )
+    ],
+)
+def test_valid_remote_sources_schema(config, expected_data):
+    data = read_yaml(dedent(config), "schemas/container.json")
+    assert expected_data == data
