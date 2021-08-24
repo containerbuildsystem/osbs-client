@@ -537,19 +537,19 @@ def test_get_repo_info(tmpdir):
 
 
 def initialize_git_repo(rpath, files=None):
-    subprocess.Popen(['git', 'init', rpath])
-    subprocess.Popen(['git', 'config', 'user.name', '"Gerald Host"'], cwd=rpath)
-    subprocess.Popen(['git', 'config', 'user.email', '"ghost@example.com"'], cwd=rpath)
+    subprocess.Popen(['git', 'init', rpath]).wait()
+    subprocess.Popen(['git', 'config', 'user.name', '"Gerald Host"'], cwd=rpath).wait()
+    subprocess.Popen(['git', 'config', 'user.email', '"ghost@example.com"'], cwd=rpath).wait()
     first_commit_ref = None
     for f in files or []:
-        subprocess.Popen(['touch', f], cwd=rpath)
-        subprocess.Popen(['git', 'add', f], cwd=rpath)
-        subprocess.Popen(['git', 'commit', '-m', 'new file {0}'.format(f)], cwd=rpath)
+        subprocess.Popen(['touch', f], cwd=rpath).wait()
+        subprocess.Popen(['git', 'add', f], cwd=rpath).wait()
+        subprocess.Popen(['git', 'commit', '-m', 'new file {0}'.format(f)], cwd=rpath).wait()
         if not first_commit_ref:
             sleep(2)  # when rev-parse is called too early after first commit, it fails
             first_commit_ref = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=rpath)
             first_commit_ref = first_commit_ref.strip()
-    subprocess.Popen(['git', 'commit', '--allow-empty', '-m', 'code additions'], cwd=rpath)
+    subprocess.Popen(['git', 'commit', '--allow-empty', '-m', 'code additions'], cwd=rpath).wait()
     return first_commit_ref
 
 
