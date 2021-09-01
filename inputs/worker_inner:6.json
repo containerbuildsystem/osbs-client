@@ -34,6 +34,9 @@
       "name": "add_help"
     },
     {
+      "name": "fetch_maven_artifacts"
+    },
+    {
       "name": "add_image_content_manifest"
     },
     {
@@ -41,9 +44,6 @@
     },
     {
       "name": "distgit_fetch_artefacts"
-    },
-    {
-      "name": "fetch_maven_artifacts"
     },
     {
       "name": "koji"
