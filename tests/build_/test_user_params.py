@@ -243,7 +243,6 @@ class TestBuildUserParams(object):
             # 'git_ref': TEST_GIT_REF,
             # 'git_uri': TEST_GIT_URI,
             'image_tag': 'user/None:none-0-0',
-            # 'imagestream_name': TEST_IMAGESTREAM,
             'include_koji_repo': True,
             'isolated': False,
             'koji_parent_build': 'fedora-26-9',

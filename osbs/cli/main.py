@@ -13,9 +13,7 @@ import logging
 import pkg_resources
 
 from textwrap import dedent
-import codecs
 import time
-import os.path
 import sys
 import argparse
 from osbs import set_logging
@@ -24,13 +22,12 @@ from osbs.build.build_response import BuildResponse
 from osbs.cli.render import TablePrinter
 from osbs.conf import Configuration
 from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
-                            CLI_LIST_BUILDS_DEFAULT_COLS, PY3, BACKUP_RESOURCES,
+                            CLI_LIST_BUILDS_DEFAULT_COLS, PY3,
                             BUILD_FINISHED_STATES, CLI_WATCH_BUILDS_DEFAULT_COLS)
 from osbs.exceptions import (OsbsNetworkException, OsbsException, OsbsAuthException,
                              OsbsResponseException)
 from osbs.cli.capture import setup_json_capture
-from osbs.utils import (paused_builds, TarReader, TarWriter, get_time_from_rfc3339,
-                        graceful_chain_get, UserWarningsStore, ImageName)
+from osbs.utils import (get_time_from_rfc3339, graceful_chain_get, UserWarningsStore, ImageName)
 from six.moves.urllib.parse import urljoin
 
 logger = logging.getLogger('osbs')
@@ -365,7 +362,6 @@ def cmd_build(args, osbs):
         'isolated': args.isolated,
         'signing_intent': args.signing_intent,
         'compose_ids': args.compose_ids,
-        'skip_build': args.skip_build,
         'operator_csv_modifications_url': args.operator_csv_modifications_url,
     }
     if args.arrangement_version:
@@ -381,9 +377,6 @@ def cmd_build(args, osbs):
         build_kwargs['flatpak'] = True
 
     build = create_func(**build_kwargs)
-    if build is None:
-        print("Build skipped")
-        return
 
     return _print_build_logs(args, osbs, build)
 
@@ -515,59 +508,6 @@ def cmd_get_build_image_id(args, osbs):
         image_ids = pod.get_container_image_ids()
         for name, image_id in image_ids.items():
             print(format_str.format(tag=name, image=image_id))
-
-
-def cmd_backup(args, osbs):
-    dirname = time.strftime("osbs-backup-{}-%Y-%m-%d-%H%M%S"
-                            .format(args.instance))
-    if args.filename == '-':
-        outfile = sys.stdout.buffer if PY3 else sys.stdout  # pylint: disable=no-member
-    elif args.filename:
-        outfile = args.filename
-    else:
-        outfile = dirname + ".tar.bz2"
-
-    with paused_builds(osbs, quota_name='pause-backup',
-                       ignore_quota_errors=args.ignore_quota_errors):
-        with TarWriter(outfile, dirname) as t:
-            for resource_type in BACKUP_RESOURCES:
-                try:
-                    logger.info("dumping %s", resource_type)
-                    resources = osbs.dump_resource(resource_type)
-                    t.write_file(resource_type + ".json", json.dumps(resources).encode('ascii'))
-                except Exception as e:
-                    if args.continue_on_error:
-                        logger.warning(
-                            "Error during %s backup", resource_type, exc_info=True
-                        )
-                    else:
-                        raise e
-
-    if not hasattr(outfile, "write"):
-        logger.info("backup archive created: %s", outfile)
-
-
-def cmd_restore(args, osbs):
-    if args.BACKUP_ARCHIVE == '-':
-        infile = sys.stdin.buffer if PY3 else sys.stdin  # pylint: disable=no-member
-    else:
-        infile = args.BACKUP_ARCHIVE
-    asciireader = codecs.getreader('ascii')
-
-    with paused_builds(osbs, quota_name='pause-backup',
-                       ignore_quota_errors=args.ignore_quota_errors):
-        for f in TarReader(infile):
-            resource_type = os.path.basename(f.filename).split('.')[0]
-            if resource_type not in BACKUP_RESOURCES:
-                logger.warning("Unknown resource type for %s, skipping", f.filename)
-                continue
-
-            logger.info("restoring %s", resource_type)
-            osbs.restore_resource(resource_type, json.load(asciireader(f.fileobj)),
-                                  continue_on_error=args.continue_on_error)
-            f.fileobj.close()
-
-    logger.info("backup recovery complete!")
 
 
 def cmd_print_token_url(args, osbs):
@@ -829,9 +769,6 @@ def cli():
     orchestrator_group.add_argument('--platforms', action='append', metavar='PLATFORM',
                                     help='name of each platform to use (only required for '
                                     'arrangement 5 or earlier; deprecated in arrangement 6+')
-    orchestrator_group.add_argument('--skip-build', action='store_true', required=False,
-                                    help="don't create build, but just modify settings"
-                                         " for autorebuilds")
 
     build_parser.add_argument('--source-registry-uri', action='store', required=False,
                               help="set source registry for pulling parent image")
@@ -859,28 +796,6 @@ def cli():
                                                'build in a namespace')
     get_build_image_id.add_argument("BUILD_ID", help="build ID", nargs=1)
     get_build_image_id.set_defaults(func=cmd_get_build_image_id)
-
-    backup_builder = subparsers.add_parser(str_on_2_unicode_on_3('backup-builder'),
-                                           help='dump builder data (admin)',
-                                           description='create backup of all OSBS data')
-    backup_builder.add_argument("-f", "--filename",
-                                help="name of the resulting tar.bz2 file (use - for stdout)")
-    backup_builder.add_argument("--ignore-quota-errors", action='store_true',
-                                help="ignore resourcequota errors")
-    backup_builder.add_argument("--continue-on-error", action='store_true',
-                                help="don't stop when backing up a resource fails")
-    backup_builder.set_defaults(func=cmd_backup)
-
-    restore_builder = subparsers.add_parser(str_on_2_unicode_on_3('restore-builder'),
-                                            help='restore builder data (admin)',
-                                            description='restore OSBS data from backup')
-    restore_builder.add_argument("BACKUP_ARCHIVE",
-                                 help="name of the tar.bz2 archive to restore (use - for stdin)")
-    restore_builder.add_argument("--continue-on-error", action='store_true',
-                                 help="don't stop when restoring a resource fails")
-    restore_builder.add_argument("--ignore-quota-errors", action='store_true',
-                                 help="ignore resourcequota errors")
-    restore_builder.set_defaults(func=cmd_restore)
 
     token_url_builder = subparsers.add_parser(str_on_2_unicode_on_3('print-token-url'),
                                               description='print a url to oauth authentication '

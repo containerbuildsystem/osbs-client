@@ -303,7 +303,6 @@ class BuildUserParams(BuildCommon):
     git_uri = BuildParam("git_uri", required=True)
     imagestream_name = BuildParam("imagestream_name")
     include_koji_repo = BuildParam("include_koji_repo", default=False)
-    is_auto = BuildParam("is_auto")
     isolated = BuildParam("isolated")
     koji_parent_build = BuildParam("koji_parent_build")
     koji_upload_dir = BuildParam("koji_upload_dir")
@@ -315,10 +314,8 @@ class BuildUserParams(BuildCommon):
     platforms = BuildParam("platforms")
     release = BuildParam("release")
     remote_sources = BuildParam("remote_sources")
-    skip_build = BuildParam("skip_build")
     tags_from_yaml = BuildParam("tags_from_yaml")
     trigger_imagestreamtag = BuildParam("trigger_imagestreamtag")
-    triggered_after_koji_task = BuildParam("triggered_after_koji_task")
     yum_repourls = BuildParam("yum_repourls")
 
     auto_build_node_selector = BuildParam("auto_build_node_selector",
@@ -347,7 +344,6 @@ class BuildUserParams(BuildCommon):
                     git_ref=None,
                     git_uri=None,
                     include_koji_repo=None,
-                    is_auto=None,
                     isolated=None,
                     koji_parent_build=None,
                     koji_upload_dir=None,
@@ -361,9 +357,7 @@ class BuildUserParams(BuildCommon):
                     release=None,
                     remote_sources=None,
                     repo_info=None,
-                    skip_build=None,
                     tags_from_yaml=None,
-                    triggered_after_koji_task=None,
                     yum_repourls=None,
                     **kwargs):
         """
@@ -387,7 +381,6 @@ class BuildUserParams(BuildCommon):
         :param git_uri: str, uri of the git repository for the source
         :param include_koji_repo: include the repo from the target build tag, even if other
                                                    repourls are provided.
-        :param is_auto: bool, build as a automatic build
         :param isolated: bool, build as an isolated build
         :param koji_parent_build: str,
         :param koji_upload_dir: str, koji directory where the completed image will be uploaded
@@ -419,8 +412,6 @@ class BuildUserParams(BuildCommon):
         :param repo_info: RepoInfo, git repo data for the build
         :param scratch: bool, build as a scratch build
         :param signing_intent: bool, True to sign the resulting image
-        :param skip_build: bool, if we should skip build and just set buildconfig for autorebuilds
-        :param triggered_after_koji_task: int, koji task ID from which was autorebuild triggered
         :param yum_repourls: list of str, uris of the yum repos to pull from
 
         Please keep the paramater list alphabetized for easier tracking of changes
@@ -474,7 +465,6 @@ class BuildUserParams(BuildCommon):
             "flatpak": flatpak,
             "imagestream_name": name_label,
             "include_koji_repo": include_koji_repo,
-            "is_auto": is_auto,
             "isolated": isolated,
             "koji_parent_build": koji_parent_build,
             "koji_upload_dir": koji_upload_dir,
@@ -486,9 +476,7 @@ class BuildUserParams(BuildCommon):
             "platforms": platforms,
             "release": release,
             "remote_sources": remote_sources,
-            "skip_build": skip_build,
             "trigger_imagestreamtag": base_image,
-            "triggered_after_koji_task": triggered_after_koji_task,
             "yum_repourls": yum_repourls or [],
             # Potentially pulled from repo_info
             "additional_tags": additional_tags or set(),
@@ -508,10 +496,10 @@ class BuildUserParams(BuildCommon):
 
         params = cls._make_params_super(**kwargs)
 
-        if (params.scratch, params.is_auto, params.isolated).count(True) > 1:
+        if (params.scratch, params.isolated).count(True) > 1:
             raise OsbsValidationException(
                 'Build variations are mutually exclusive. '
-                'Must set either scratch, is_auto, isolated, or none. ')
+                'Must set either scratch, isolated, or none. ')
 
         return params
 

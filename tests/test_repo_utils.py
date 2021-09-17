@@ -10,8 +10,7 @@ from __future__ import absolute_import
 
 from flexmock import flexmock
 from osbs.exceptions import OsbsException, OsbsValidationException
-from osbs.constants import (REPO_CONFIG_FILE,
-                            ADDITIONAL_TAGS_FILE,
+from osbs.constants import (ADDITIONAL_TAGS_FILE,
                             REPO_CONTAINER_CONFIG,)
 from osbs.utils.labels import Labels
 from osbs.repo_utils import RepoInfo, RepoConfiguration, AdditionalTagsConfig, ModuleSpec
@@ -142,10 +141,6 @@ class TestRepoInfo(object):
 
 class TestRepoConfiguration(object):
 
-    def test_default_values(self):
-        conf = RepoConfiguration()
-        assert conf.is_autorebuild_enabled() is False
-
     def test_invalid_yaml(self, tmpdir):
         yaml_file = tmpdir.join(REPO_CONTAINER_CONFIG)
         yaml_file.write('\n'.join(['hallo: 1', 'bye']))
@@ -157,39 +152,6 @@ class TestRepoConfiguration(object):
         assert 'Failed to load or validate container file "{}"'.format(yaml_file) in err_msg
         assert "could not find expected ':'" in err_msg
         assert 'line 2, column 4:' in err_msg
-
-    @pytest.mark.parametrize(('config_value', 'expected_value'), (
-        (None, False),
-        ('false', False),
-        ('true', True),
-    ))
-    def test_is_autorebuild_enabled(self, tmpdir, config_value, expected_value):
-
-        with open(os.path.join(str(tmpdir), REPO_CONFIG_FILE), 'w') as f:
-            if config_value is not None:
-                f.write(dedent("""\
-                    [autorebuild]
-                    enabled={}
-                    """.format(config_value)))
-
-        add_timestamp = ''
-        if expected_value:
-            add_timestamp = 'add_timestamp_to_release: true'
-        with open(os.path.join(str(tmpdir), REPO_CONTAINER_CONFIG), 'w') as f:
-            f.write(dedent("""\
-                compose:
-                    modules:
-                    - mod_name:mod_stream:mod_version
-                autorebuild:
-                    {}
-                """.format(add_timestamp)))
-
-        conf = RepoConfiguration(dir_path=str(tmpdir))
-        assert conf.is_autorebuild_enabled() is expected_value
-        if add_timestamp:
-            assert conf.autorebuild == {'add_timestamp_to_release': True}
-        else:
-            assert conf.autorebuild == {}
 
     @pytest.mark.parametrize('module_a_nsv, module_b_nsv, should_raise', [
         ('name:stream', 'name', True),

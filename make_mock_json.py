@@ -23,9 +23,8 @@ from osbs import set_logging
 from osbs.api import OSBS
 from osbs.conf import Configuration
 from osbs.constants import DEFAULT_CONFIGURATION_FILE, DEFAULT_ARRANGEMENT_VERSION
-from tests.constants import (TEST_BUILD, TEST_IMAGESTREAM, TEST_ORCHESTRATOR_BUILD,
-                             TEST_CANCELLED_BUILD)
-from osbs.exceptions import OsbsException, OsbsResponseException
+from tests.constants import (TEST_BUILD, TEST_ORCHESTRATOR_BUILD, TEST_CANCELLED_BUILD)
+from osbs.exceptions import OsbsException
 from osbs.cli.capture import setup_json_capture
 
 
@@ -287,53 +286,6 @@ class MockCreator(object):
         self.create_a_mock_build(self.osbs.create_orchestrator_build, TEST_ORCHESTRATOR_BUILD,
                                  "orchestrator-", build_kwargs)
 
-    def create_mock_imagestream(self):
-        imagestream_repo = "/".join([self.imagestream_server, self.imagestream_file])
-        try:
-            imagestream = self.osbs.create_image_stream(TEST_IMAGESTREAM, imagestream_repo)
-        except OsbsResponseException:
-            print("imagestream {} already exists.".format(TEST_IMAGESTREAM))
-            print("run `oc delete imagestream {}` and try again".format(TEST_IMAGESTREAM))
-            exit(0)
-        self.osbs.import_image_tags(TEST_IMAGESTREAM, self.imagestream_tags, imagestream_repo)
-        for tag in self.imagestream_tags:
-            self.osbs.ensure_image_stream_tag(imagestream.json(), tag)
-
-        imagestreamimport_fname = "post-namespaces_osbs-stage_imagestreamimports_-000.json"
-        imagestreamimport_path = "/".join([self.capture_dir, imagestreamimport_fname])
-        imagestreamimport_data = []
-        imagestream_data = []
-        with open(imagestreamimport_path, "r") as infile:
-            imagestreamimport_data = json.load(infile)
-
-        self.osbs.get_image_stream(TEST_IMAGESTREAM)
-        imagestream_fname = "get-namespaces_osbs-stage_imagestreams_test_imagestream-001.json"
-        imagestream_path = "/".join([self.capture_dir, imagestream_fname])
-        with open(imagestream_path, "r") as infile:
-            imagestream_data = json.load(infile)
-
-        # I'm not really happy with setting this value, but the imagestream tests in test_conf.py
-        # fail without it
-        imagestream_data["spec"].setdefault("dockerImageRepository",
-                                            imagestream_data["status"].get("dockerImageRepository"))
-
-        # override the tags to the values expected by the tasks
-        for i in range(0, 3):
-            tag_line = "7.2.username-{}".format(66 + i)
-            tag_name = "example.com:8888/username/rhel7:" + tag_line
-            spec_tag = imagestream_data["spec"]["tags"][i]
-            spec_tag["from"]["name"] = tag_name
-            spec_tag["name"] = tag_line
-            status_tag = imagestream_data["status"]["tags"][i]
-            status_tag["tag"] = tag_line
-            import_status = imagestreamimport_data["status"]
-            import_status["images"][i]["tag"] = tag_line
-            import_status["import"]["spec"]["tags"][i]["name"] = tag_line
-            import_status["import"]["status"]["tags"][i]["tag"] = tag_line
-
-        self.comp_write("imagestreamimport.json", imagestreamimport_data)
-        self.comp_write("imagestream.json", imagestream_data)
-
     def create_mock_build_other(self):
         build_kwargs = {
             'git_uri': self.osbs.build_conf.get_git_uri(),
@@ -398,7 +350,6 @@ def main():
     mock_builder.create_mock_get_user()
     mock_builder.create_mock_build_other()
     mock_builder.create_mock_build()
-    mock_builder.create_mock_imagestream()
     mock_builder.create_mock_static_files()
     return 0
 

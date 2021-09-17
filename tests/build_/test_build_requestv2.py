@@ -8,11 +8,8 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import absolute_import
 
 import copy
-import glob
-import json
 import os
 import fnmatch
-import shutil
 from textwrap import dedent
 import yaml
 from copy import deepcopy
@@ -23,12 +20,9 @@ from osbs.build.build_requestv2 import (
 )
 from osbs.build.user_params import BuildUserParams, SourceContainerUserParams
 from osbs.conf import Configuration
-from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
-                            ORCHESTRATOR_OUTER_TEMPLATE, BUILD_TYPE_WORKER,
-                            BUILD_TYPE_ORCHESTRATOR, SECRETS_PATH,
-                            REPO_CONFIG_FILE, REPO_CONTAINER_CONFIG)
+from osbs.constants import (WORKER_OUTER_TEMPLATE, ORCHESTRATOR_OUTER_TEMPLATE, BUILD_TYPE_WORKER,
+                            BUILD_TYPE_ORCHESTRATOR, SECRETS_PATH, REPO_CONTAINER_CONFIG)
 from osbs.exceptions import OsbsValidationException, OsbsException
-from osbs.utils.labels import Labels
 from osbs.repo_utils import ModuleSpec, RepoInfo, RepoConfiguration
 from osbs.api import OSBS
 
@@ -111,10 +105,6 @@ def get_sample_user_params(build_json_store=INPUTS_PATH, conf_args=None, git_arg
 
 
 def get_autorebuild_git_args(tmpdir, add_timestamp=None):
-    with open(os.path.join(str(tmpdir), REPO_CONFIG_FILE), 'w') as f:
-        f.write(dedent("""\
-            [autorebuild]
-            enabled=true"""))
     if add_timestamp:
         with open(os.path.join(str(tmpdir), REPO_CONTAINER_CONFIG), 'w') as f:
             f.write(dedent("""\
@@ -133,22 +123,6 @@ class TestBuildRequestV2(object):
         br = BuildRequestV2('something')
         with pytest.raises(RuntimeError):
             br.customize_conf   # pylint: disable=pointless-statement; is a property
-
-    def test_build_request_has_ist_trigger(self):
-        build_json = copy.deepcopy(TEST_BUILD_JSON)
-        user_params = get_sample_user_params()
-        br = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
-        flexmock(br).should_receive('template').and_return(build_json)
-        assert br.has_ist_trigger() is True
-        assert br.trigger_imagestreamtag == 'fedora:latest'
-
-    def test_build_request_isnt_auto_instantiated(self):
-        build_json = copy.deepcopy(TEST_BUILD_JSON)
-        build_json['spec']['triggers'] = []
-        user_params = get_sample_user_params()
-        br = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
-        flexmock(br).should_receive('template').and_return(build_json)
-        assert br.has_ist_trigger() is False
 
     def test_set_label(self):
         build_json = copy.deepcopy(TEST_BUILD_JSON)
@@ -174,11 +148,10 @@ class TestBuildRequestV2(object):
 
     @pytest.mark.parametrize(('extra_kwargs', 'valid'), (  # noqa:F811
         ({'scratch': True}, True),
-        ({'is_auto': True, 'scratch': False}, True),
+        ({'scratch': False}, True),
         ({'isolated': True, 'release': '1.0', 'scratch': False}, True),
         ({'scratch': True, 'isolated': True, 'release': '1.0'}, False),
-        ({'scratch': True, 'is_auto': True}, False),
-        ({'is_auto': True, 'isolated': True, 'release': '1.0'}, False),
+        ({'isolated': True, 'release': '1.0'}, True),
     ))
     def test_mutually_exclusive_build_variation(self, extra_kwargs, valid):  # noqa:F811
         if valid:
@@ -191,14 +164,11 @@ class TestBuildRequestV2(object):
             assert 'mutually exclusive' in str(exc_info.value)
 
     def test_render_simple_request(self):
-        trigger_after_koji_task = '12345'
         conf_args = {
             'build_from': 'image:buildroot:latest',
             'reactor_config_map': 'reactor-config-map',
         }
-        extra_kwargs = {
-            'triggered_after_koji_task': trigger_after_koji_task,
-        }
+        extra_kwargs = {}
 
         user_params = get_sample_user_params(conf_args=conf_args, update_args=extra_kwargs,
                                              no_source=True)
@@ -207,8 +177,6 @@ class TestBuildRequestV2(object):
                                        user_params=user_params)
         build_json = build_request.render()
 
-        assert build_request.user_params.triggered_after_koji_task == trigger_after_koji_task
-        assert build_request.triggered_after_koji_task == trigger_after_koji_task
         assert build_request.base_image == user_params.base_image
 
         assert build_json["metadata"]["name"] is not None
@@ -279,12 +247,6 @@ class TestBuildRequestV2(object):
         if not is_image:
             assert build_json["spec"]["strategy"]["customStrategy"]["from"]["kind"] == \
                 "ImageStreamTag"
-
-    def test_render_prod_request_without_repo(self, caplog):
-        user_params = get_sample_user_params()
-        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
-        build_request.render()
-        assert 'repo info not set' in caplog.text
 
     def test_render_prod_request(self):
         user_params = get_sample_user_params()
@@ -364,90 +326,8 @@ class TestBuildRequestV2(object):
         with pytest.raises(OsbsValidationException):
             get_sample_user_params(update_args=extra_kwargs)
 
-    @staticmethod
-    def create_image_change_trigger_json(outdir, custom_triggers=USE_DEFAULT_TRIGGERS):
-        """
-        Create JSON templates with an image change trigger added.
-
-        :param outdir: str, path to store modified templates
-        """
-
-        triggers = custom_triggers if custom_triggers is not USE_DEFAULT_TRIGGERS else [
-            {
-                "type": "ImageChange",
-                "imageChange": {
-                    "from": {
-                        "kind": "ImageStreamTag",
-                        "name": "{{BASE_IMAGE_STREAM}}"
-                    }
-                }
-            }
-        ]
-
-        # Make temporary copies of all the JSON files
-        for json_file_path in glob.glob(os.path.join(INPUTS_PATH, '*.json')):
-            basename = os.path.basename(json_file_path)
-            shutil.copy(json_file_path,
-                        os.path.join(outdir, basename))
-
-        # Create a build JSON description with an image change trigger
-        with open(os.path.join(outdir, DEFAULT_OUTER_TEMPLATE), 'r+') as prod_json:
-            build_json = json.load(prod_json)
-
-            # Add the image change trigger
-            build_json['spec']['triggers'] = triggers
-
-            prod_json.seek(0)
-            json.dump(build_json, prod_json)
-            prod_json.truncate()
-
-    @pytest.mark.parametrize('triggers', [  # noqa:F811
-        None,
-        [],
-        [{
-            "type": "Generic",
-            "generic": {
-                "secret": "secret101",
-                "allowEnv": True
-            }
-        }]
-    ])
-    def test_render_prod_with_falsey_triggers(self, tmpdir, triggers):
-        self.create_image_change_trigger_json(str(tmpdir), custom_triggers=triggers)
-        user_params = get_sample_user_params(build_json_store=str(tmpdir))
-        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
-        build_request.render()
-
-    @pytest.mark.parametrize(('scratch', 'isolated'), (
-        (True, False),
-        (False, True),
-        (False, False),
-    ))
-    def test_render_prod_request_with_trigger(self, tmpdir, scratch, isolated):
-        self.create_image_change_trigger_json(str(tmpdir))
-        kwargs = {'is_autorebuild': True}
-        if scratch:
-            kwargs['scratch'] = scratch
-        if isolated:
-            kwargs['isolated'] = isolated
-            kwargs['release'] = '1.1'
-
-        git_args = get_autorebuild_git_args(tmpdir)
-        user_params = get_sample_user_params(build_json_store=str(tmpdir), update_args=kwargs,
-                                             git_args=git_args)
-        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
-        assert isinstance(build_request, BuildRequestV2)
-        build_json = build_request.render()
-
-        if scratch or isolated:
-            assert "triggers" not in build_json["spec"]
-        else:
-            assert "triggers" in build_json["spec"]
-            from_name = build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"]
-            assert from_name == 'source_registry-fedora:latest'
-
     @pytest.mark.parametrize('koji_parent_build', ('fedora-26-9', None))
-    def test_render_custom_base_image_with_trigger(self, tmpdir, koji_parent_build):
+    def test_render_custom_base_image_with_trigger(self, koji_parent_build):
         kwargs = {'base_image': 'koji/image-build'}
         if koji_parent_build:
             kwargs['koji_parent_build'] = koji_parent_build
@@ -461,11 +341,10 @@ class TestBuildRequestV2(object):
         # Verify the triggers are now disabled
         assert "triggers" not in build_json["spec"]
 
-    def test_render_from_scratch_image_with_trigger(self, tmpdir):
-        self.create_image_change_trigger_json(str(tmpdir))
+    def test_render_from_scratch_image_with_trigger(self):
         kwargs = {'base_image': 'scratch'}
 
-        user_params = get_sample_user_params(update_args=kwargs, build_json_store=str(tmpdir))
+        user_params = get_sample_user_params(update_args=kwargs)
         build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
         assert isinstance(build_request, BuildRequestV2)
         build_json = build_request.render()
@@ -481,9 +360,7 @@ class TestBuildRequestV2(object):
         ({'isolated': True, 'release': '1.1'}, None),
     ))
     def test_adjust_for_isolated(self, tmpdir, extra_kwargs, expected_error):
-        self.create_image_change_trigger_json(str(tmpdir))
-
-        user_params = get_sample_user_params(update_args=extra_kwargs, build_json_store=str(tmpdir))
+        user_params = get_sample_user_params(update_args=extra_kwargs)
         build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
         assert isinstance(build_request, BuildRequestV2)
 
@@ -497,47 +374,6 @@ class TestBuildRequestV2(object):
             assert 'triggers' not in build_json['spec']
             assert build_json['metadata']['labels']['isolated'] == 'true'
             assert build_json['metadata']['labels']['isolated-release'] == extra_kwargs['release']
-
-    @pytest.mark.parametrize(('autorebuild_enabled', 'release_label', 'add_timestamp',
-                              'expected'), (
-        (True, None, True, True),
-        (True, None, False, True),
-        (True, 'release', True, True),
-        (True, 'release', False, RuntimeError),
-        (True, 'Release', True, True),
-        (True, 'Release', False, RuntimeError),
-        (False, 'release', True, False),
-        (False, 'release', False, False),
-        (False, 'Release', True, False),
-        (False, 'Release', False, False),
-    ))
-    def test_render_prod_request_with_repo_info(self, tmpdir,
-                                                autorebuild_enabled, release_label,
-                                                add_timestamp, expected):
-        labels = None
-        if release_label:
-            labels = {Labels.LABEL_TYPE_RELEASE: release_label}
-        self.create_image_change_trigger_json(str(tmpdir))
-        git_args = get_autorebuild_git_args(tmpdir, add_timestamp) if autorebuild_enabled else None
-        user_params = get_sample_user_params(build_json_store=str(tmpdir),
-                                             git_args=git_args, labels=labels)
-        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params,
-                                       repo_info=mock_repo_info(git_args, labels))
-
-        if isinstance(expected, type):
-            with pytest.raises(expected):
-                build_json = build_request.render()
-            return
-
-        build_json = build_request.render()
-        base_image = '{}-{}'.format(build_request.source_registry['url'],
-                                    user_params.base_image)
-
-        if expected:
-            assert build_json["spec"]["triggers"][0]["imageChange"]["from"]["name"] == base_image
-
-        else:
-            assert 'triggers' not in build_json['spec']
 
     @pytest.mark.parametrize(('base_image', 'is_custom'), [
         ('fedora', False),
@@ -568,76 +404,44 @@ class TestBuildRequestV2(object):
 
         assert build_request.is_from_scratch_image() == is_from_scratch
 
-    @pytest.mark.parametrize('base_image, msg, keep_triggers', (
-        ('fedora', None, True),
-        ('scratch', 'from request because FROM scratch image', False),
-        ('koji/image-build', 'from request because custom base image', False),
-    ))
-    def test_adjust_for_triggers_base_builds(self, tmpdir, caplog, base_image, msg, keep_triggers):
-        """Test if triggers are properly adjusted for base and FROM scratch builds"""
-        self.create_image_change_trigger_json(str(tmpdir))
-        git_args = get_autorebuild_git_args(tmpdir)
-
-        update_args = {'base_image': base_image}
-        user_params = get_sample_user_params(build_json_store=str(tmpdir), update_args=update_args,
-                                             git_args=git_args)
-        build_request = BuildRequestV2(osbs_api=MockOSBSApi(), user_params=user_params)
-        build_request.render()
-
-        assert bool(build_request.template['spec'].get('triggers', [])) == keep_triggers
-
-        if msg is not None:
-            assert msg in caplog.text
-
-    @pytest.mark.parametrize(('platform', 'platforms', 'is_auto', 'scratch',
+    @pytest.mark.parametrize(('platform', 'platforms', 'scratch',
                               'isolated', 'expected'), [
-        (None, None, False, False, False, {'explicit1': 'yes',
-                                           'explicit2': 'yes'}),
-        (None, None, False, True, False, {'scratch1': 'yes',
-                                          'scratch2': 'yes'}),
-        (None, None, True, False, False, {'auto1': 'yes',
-                                          'auto2': 'yes'}),
-        (None, None, False, False, True, {'isolated1': 'yes',
-                                          'isolated2': 'yes'}),
-        (None, ["x86"], False, False, False, {}),
-        (None, ["ppc"], False, False, False, {}),
-        (None, ["x86"], True, False, False, {}),
-        (None, ["ppc"], False, True, False, {}),
-        (None, ["ppc"], False, False, True, {}),
-        ("x86", None, False, False, False, {'explicit1': 'yes',
-                                            'explicit2': 'yes',
-                                            'plx86a': 'yes',
-                                            'plx86b': 'yes'}),
-        ("x86", None, False, True, False, {'scratch1': 'yes',
-                                           'scratch2': 'yes',
-                                           'plx86a': 'yes',
-                                           'plx86b': 'yes'}),
-        ("x86", None, True, False, False, {'auto1': 'yes',
-                                           'auto2': 'yes',
-                                           'plx86a': 'yes',
-                                           'plx86b': 'yes'}),
-        ("x86", None, False, False, True, {'isolated1': 'yes',
-                                           'isolated2': 'yes',
-                                           'plx86a': 'yes',
-                                           'plx86b': 'yes'}),
-        ("ppc", None, False, False, False, {'explicit1': 'yes',
-                                            'explicit2': 'yes',
-                                            'plppc1': 'yes',
-                                            'plppc2': 'yes'}),
-        ("ppc", None, False, True, False, {'scratch1': 'yes',
-                                           'scratch2': 'yes',
-                                           'plppc1': 'yes',
-                                           'plppc2': 'yes'}),
-        ("ppc", None, True, False, False, {'auto1': 'yes',
-                                           'auto2': 'yes',
-                                           'plppc1': 'yes',
-                                           'plppc2': 'yes'}),
-        ("ppc", None, False, False, True, {'isolated1': 'yes',
-                                           'isolated2': 'yes',
-                                           'plppc1': 'yes',
-                                           'plppc2': 'yes'}),
+        (None, None, False, False, {'explicit1': 'yes',
+                                    'explicit2': 'yes'}),
+        (None, None, True, False, {'scratch1': 'yes',
+                                   'scratch2': 'yes'}),
+        (None, None, False, True, {'isolated1': 'yes',
+                                   'isolated2': 'yes'}),
+        (None, ["x86"], False, False, {}),
+        (None, ["ppc"], False, False, {}),
+        (None, ["ppc"], True, False, {}),
+        (None, ["ppc"], False, True, {}),
+        ("x86", None, False, False, {'explicit1': 'yes',
+                                     'explicit2': 'yes',
+                                     'plx86a': 'yes',
+                                     'plx86b': 'yes'}),
+        ("x86", None, True, False, {'scratch1': 'yes',
+                                    'scratch2': 'yes',
+                                    'plx86a': 'yes',
+                                    'plx86b': 'yes'}),
+        ("x86", None, False, True, {'isolated1': 'yes',
+                                    'isolated2': 'yes',
+                                    'plx86a': 'yes',
+                                    'plx86b': 'yes'}),
+        ("ppc", None, False, False, {'explicit1': 'yes',
+                                     'explicit2': 'yes',
+                                     'plppc1': 'yes',
+                                     'plppc2': 'yes'}),
+        ("ppc", None, True, False, {'scratch1': 'yes',
+                                    'scratch2': 'yes',
+                                    'plppc1': 'yes',
+                                    'plppc2': 'yes'}),
+        ("ppc", None, False, True, {'isolated1': 'yes',
+                                    'isolated2': 'yes',
+                                    'plppc1': 'yes',
+                                    'plppc2': 'yes'}),
     ])
-    def test_check_set_nodeselectors(self, platform, platforms, is_auto, scratch,
+    def test_check_set_nodeselectors(self, platform, platforms, scratch,
                                      isolated, expected):
         platform_nodeselectors = {
             'x86': 'plx86a=yes, plx86b=yes',
@@ -655,7 +459,6 @@ class TestBuildRequestV2(object):
                 'build_type': BUILD_TYPE_WORKER,
             }
 
-        update_args['is_auto'] = is_auto
         update_args['scratch'] = scratch
         update_args['isolated'] = isolated
         if isolated:
@@ -1041,10 +844,6 @@ class TestBuildRequestV2(object):
         if build_type == BUILD_TYPE_ORCHESTRATOR:
             outer_template = ORCHESTRATOR_OUTER_TEMPLATE
 
-        # autorebuild only has an effect on orchestrator builds,
-        # so combine testing both into one branch
-        autorebuild = build_type == BUILD_TYPE_ORCHESTRATOR
-
         mock_configuration = flexmock(
             autorebuild={},
             container={},
@@ -1052,7 +851,6 @@ class TestBuildRequestV2(object):
                 ModuleSpec.from_str('eog:stable')
             ],
             depth=0,
-            is_autorebuild_enabled=lambda: autorebuild,
             is_flatpak=True,
             flatpak_base_image=user_params,
             flatpak_name=None,
@@ -1112,10 +910,6 @@ class TestBuildRequestV2(object):
         imagetstreamtag_name = '{}-{}:{}'.format(source_registry_url, expected, 'latest')
         assert user_params.base_image == expected
         assert user_params.trigger_imagestreamtag == imagetstreamtag_name
-
-        if autorebuild:
-            trigger = build_request.build_json['spec']['triggers'][0]
-            assert trigger['imageChange']['from']['name'] == imagetstreamtag_name
 
     @pytest.mark.parametrize('cpu', ['None', 100])
     @pytest.mark.parametrize('memory', ['None', 50])

@@ -18,16 +18,16 @@ import sys
 import requests
 import logging
 from time import tzset, sleep
+import time
 from pkg_resources import parse_version
 from textwrap import dedent
 
 from osbs.constants import REPO_CONTAINER_CONFIG, USER_WARNING_LEVEL
 from osbs.repo_utils import RepoInfo
-from osbs.utils import (buildconfig_update,
-                        git_repo_humanish_part_from_uri, sanitize_strings_for_openshift,
+from osbs.utils import (git_repo_humanish_part_from_uri, sanitize_strings_for_openshift,
                         get_time_from_rfc3339, TarWriter, TarReader, make_name_from_git,
                         wrap_name_from_git, get_instance_token_file_name, sanitize_version,
-                        has_triggers, clone_git_repo, get_repo_info, UserWarningsStore, ImageName,
+                        clone_git_repo, get_repo_info, UserWarningsStore, ImageName,
                         stringify_values)
 from osbs.exceptions import OsbsException, OsbsCommitNotFound
 from tests.constants import (TEST_DOCKERFILE_GIT, TEST_DOCKERFILE_SHA1, TEST_DOCKERFILE_INIT_SHA1,
@@ -79,79 +79,6 @@ def has_connection():
 
 # In case we run tests in an environment without internet connection.
 requires_internet = pytest.mark.skipif(not has_connection(), reason="requires internet connection")
-
-
-def test_buildconfig_update():
-    x = {'a': 'a', 'strategy': {'b1': 'B1', 'b2': 'B2', 'b11': {'x': 'y'}}, 'd': 'D'}
-    y = {'a': 'A', 'strategy': {'b1': 'newB1', 'b3': 'B3', 'b11': {}}, 'c': 'C'}
-    buildconfig_update(x, y)
-    assert x == {'a': 'A', 'strategy': {'b1': 'newB1', 'b3': 'B3', 'b11': {}}, 'c': 'C', 'd': 'D'}
-
-
-def has_trigger(buildconfig, trigger_type):
-    if not has_triggers(buildconfig):
-        return False
-    triggers = buildconfig['spec']['triggers']
-    if not triggers:
-        return False
-    for t in triggers:
-        if t.get('type') == trigger_type:
-            return True
-
-
-def add_ist(buildconfig):
-    buildconfig['spec'].setdefault('triggers', [])
-    buildconfig['spec']['triggers'].append({
-        "type": "ImageChange",
-        "imageChange": {
-            "from": {
-                "kind": "ImageStreamTag",
-                "name": "foobar",
-            }
-        }
-    })
-
-
-def add_other(buildconfig):
-    buildconfig['spec'].setdefault('triggers', [])
-    buildconfig['spec']['triggers'].append({
-            "type": "Generic",
-            "generic": {
-                "secret": "secret101",
-                "allowEnv": True,
-            }
-        }
-    )
-
-
-@pytest.mark.parametrize(('orig_ist', 'orig_other'), [
-    (True, False),
-    (False, True),
-    (True, True)
-])
-def test_trigger_removals(orig_ist, orig_other):
-    orig = {
-        'spec': {
-            'foo': 'bar',
-            }
-        }
-
-    new = {
-        'spec': {
-            'baz': 'qux',
-        }
-    }
-
-    if orig_ist:
-        add_ist(orig)
-    if orig_other:
-        add_other(orig)
-
-    buildconfig_update(orig, new)
-
-    if orig_other:
-        assert has_trigger(orig, 'Generic')
-    assert not has_trigger(orig, 'ImageChange')
 
 
 @pytest.mark.parametrize(('uri', 'humanish'), [
@@ -479,6 +406,7 @@ def test_sanitize_version(version, valid):
 @requires_internet
 def test_clone_git_repo(tmpdir, commit, branch, depth):
     tmpdir_path = str(tmpdir.realpath())
+    flexmock(time).should_receive('sleep').and_return(None)
     repo_data = clone_git_repo(TEST_DOCKERFILE_GIT, tmpdir_path, commit=commit,
                                branch=branch, depth=depth)
     assert repo_data.commit_id is not None
@@ -492,6 +420,7 @@ def test_clone_git_repo(tmpdir, commit, branch, depth):
 @requires_internet
 def test_calc_depth_git_repo(tmpdir):
     tmpdir_path = str(tmpdir.realpath())
+    flexmock(time).should_receive('sleep').and_return(None)
     repo_data = clone_git_repo(TEST_DOCKERFILE_GIT, tmpdir_path, commit='HEAD',
                                branch='master', depth=None)
     assert repo_data.commit_id is not None
@@ -508,6 +437,7 @@ def test_calc_depth_git_repo(tmpdir):
 @requires_internet
 def test_clone_git_repo_commit_failure(tmpdir, commit, branch, depth):
     tmpdir_path = str(tmpdir.realpath())
+    flexmock(time).should_receive('sleep').and_return(None)
     with pytest.raises(OsbsCommitNotFound) as exc:
         clone_git_repo(TEST_DOCKERFILE_GIT, tmpdir_path, commit=commit, retry_times=1,
                        branch=branch, depth=depth)
@@ -516,6 +446,7 @@ def test_clone_git_repo_commit_failure(tmpdir, commit, branch, depth):
 
 def test_clone_git_repo_total_failure(tmpdir):
     tmpdir_path = str(tmpdir.realpath())
+    flexmock(time).should_receive('sleep').and_return(None)
     with pytest.raises(OsbsException) as exc:
         clone_git_repo(tmpdir_path + 'failure', tmpdir_path, retry_times=1)
     assert 'Unable to clone git repo' in exc.value.message
@@ -530,6 +461,7 @@ def test_get_repo_info(tmpdir):
                 - n:s:v
             """))
 
+    flexmock(time).should_receive('sleep').and_return(None)
     initialize_git_repo(repo_path, files=[REPO_CONTAINER_CONFIG])
     info = get_repo_info(repo_path, 'HEAD')
     assert isinstance(info, RepoInfo)

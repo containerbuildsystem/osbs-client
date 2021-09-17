@@ -21,7 +21,6 @@ import stat
 import copy
 import getpass
 import sys
-import time
 import yaml
 from tempfile import NamedTemporaryFile
 
@@ -44,7 +43,6 @@ from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             REACTOR_CONFIG_ARRANGEMENT_VERSION,
                             ORCHESTRATOR_CUSTOMIZE_CONF,
                             BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR,
-                            OS_CONFLICT_MAX_RETRIES,
                             REPO_CONTAINER_CONFIG)
 from osbs import utils
 from osbs.utils.labels import Labels
@@ -356,19 +354,7 @@ class TestOSBS(object):
         if has_task_id:
             build_config['metadata']['labels']['koji-task-id'] = 123
 
-        def inspect_build_request(name, br):
-            assert 'koji-task-id' not in json.loads(br)['metadata']['labels']
-
-            class Response(object):
-                def __init__(self, br):
-                    self.br = br
-
-                def json(self):
-                    return self.br
-
-            return Response(br)
-
-        def mock_start_build(name):
+        def mock_create_build(request):
 
             class Response(object):
                 def json(self):
@@ -387,24 +373,8 @@ class TestOSBS(object):
             .and_return(self.mock_repo_info()))
 
         (flexmock(osbs_obj.os)
-            .should_receive('get_build_config')
-            .and_return(build_config))
-
-        (flexmock(osbs_obj)
-            .should_receive('_verify_labels_match')
-            .and_return())
-
-        (flexmock(osbs_obj)
-            .should_receive('_verify_running_builds')
-            .and_return())
-
-        (flexmock(osbs_obj.os)
-            .should_receive('update_build_config')
-            .replace_with(inspect_build_request))
-
-        (flexmock(osbs_obj.os)
-            .should_receive('start_build')
-            .replace_with(mock_start_build))
+            .should_receive('create_build')
+            .replace_with(mock_create_build))
 
         osbs_obj.create_build(inner_template=DEFAULT_INNER_TEMPLATE,
                               outer_template=DEFAULT_OUTER_TEMPLATE,
@@ -577,7 +547,7 @@ class TestOSBS(object):
             assert 'arrangement_version' in ex.value.message
         # REACTOR_CONFIG arrangements can't fail
         else:
-            flexmock(OSBS, _create_build_config_and_build=request_as_response)
+            flexmock(OSBS, _create_build_directly=request_as_response)
             response = osbs.create_worker_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
                                                 git_branch=TEST_GIT_BRANCH, user=TEST_USER,
                                                 platform='spam', release='bacon',
@@ -739,7 +709,7 @@ class TestOSBS(object):
             assert 'arrangement_version' in ex.value.message
         # REACTOR_CONFIG arrangements are hard to make fail
         else:
-            flexmock(OSBS, _create_build_config_and_build=request_as_response)
+            flexmock(OSBS, _create_build_directly=request_as_response)
             response = osbs.create_orchestrator_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
                                                       git_branch=TEST_GIT_BRANCH, user=TEST_USER,
                                                       platforms=['spam'],
@@ -930,7 +900,7 @@ class TestOSBS(object):
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info(mock_df_parser=MockParser())))
-        flexmock(OSBS, _create_build_config_and_build=request_as_response)
+        flexmock(OSBS, _create_build_directly=request_as_response)
         req = osbs.create_build(target=TEST_TARGET,
                                 **REQUIRED_BUILD_ARGS)
         assert req.user_params.component == component_override
@@ -1024,20 +994,6 @@ class TestOSBS(object):
             'outer_template': outer_template,
         }
         osbs.get_build_request(**get_build_request_kwargs)
-
-    # osbs is a fixture here
-    def test_create_build_from_buildrequest(self, osbs):  # noqa
-        api_version = "random-api.openshift.io/random-version"
-        build_json = {
-            'apiVersion': api_version,
-        }
-        build_request = flexmock(
-            render=lambda: build_json,
-            set_openshift_required_version=lambda x: api_version,
-            has_ist_trigger=lambda: False,
-            scratch=False)
-        response = osbs.create_build_from_buildrequest(build_request)
-        assert isinstance(response, BuildResponse)
 
     # osbs is a fixture here
     def test_set_labels_on_build_api(self, osbs):  # noqa
@@ -1208,41 +1164,6 @@ class TestOSBS(object):
         assert isinstance(logs, GeneratorType)
         assert list(logs) == []
 
-    # osbs is a fixture here
-    def test_pause_builds(self, osbs):  # noqa
-        osbs.pause_builds()
-
-    # osbs is a fixture here
-    def test_resume_builds(self, osbs):  # noqa
-        osbs.resume_builds()
-
-    # osbs is a fixture here
-    def test_backup(self, osbs):  # noqa
-        osbs.dump_resource("builds")
-
-    # osbs is a fixture here
-    def test_restore(self, osbs):  # noqa
-        build = {
-            "status": {
-                "phase": "Complete",
-                "completionTimestamp": "2015-09-16T19:37:35Z",
-                "startTimestamp": "2015-09-16T19:25:55Z",
-                "duration": 700000000000
-            },
-            "spec": {},
-            "metadata": {
-                "name": "aos-f5-router-docker-20150916-152551",
-                "namespace": "default",
-                "resourceVersion": "141714",
-                "creationTimestamp": "2015-09-16T19:25:52Z",
-                "selfLink":
-                    "/apis/build.openshift.io/v1/namespaces/default/builds/"
-                    "aos-f5-router-docker-20150916-152551",
-                "uid": "be5dbec5-5ca8-11e5-af58-6cae8b5467ca"
-            }
-        }
-        osbs.restore_resource("builds", {"items": [build], "kind": "BuildList", "apiVersion": "v1"})
-
     @pytest.mark.parametrize(('build_from', 'is_image', 'valid'), (
         ('image:registry.example.com/buildroot:2.0', True, 'registry.example.com/buildroot:2.0'),
         ('imagestream:buildroot-stream:v1.0', False, 'buildroot-stream:v1.0'),
@@ -1268,7 +1189,7 @@ class TestOSBS(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
 
-        flexmock(OSBS, _create_build_config_and_build=request_as_response)
+        flexmock(OSBS, _create_build_directly=request_as_response)
 
         if valid:
             req = osbs_obj.create_build(target=TEST_TARGET,
@@ -1326,154 +1247,13 @@ class TestOSBS(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
 
-        flexmock(OSBS, _create_build_config_and_build=request_as_response)
+        flexmock(OSBS, _create_build_directly=request_as_response)
 
         req = osbs_obj.create_worker_build(**kwargs)
         img = req.json['spec']['strategy']['customStrategy']['from']['name']
         assert img == build_image
         node_selector = req.json['spec']['nodeSelector']
         assert node_selector == {'breakfast': 'bacon.com', 'lunch': 'ham.com'}
-
-    def test_get_existing_build_config_by_labels(self):
-        build_config = {
-            'metadata': {
-                'name': 'name',
-                'labels': {
-                    'git-repo-name': 'reponame',
-                    'git-branch': 'branch',
-                    'git-full-repo': 'full-name',
-                }
-            },
-        }
-
-        existing_build_config = copy.deepcopy(build_config)
-        existing_build_config['_from'] = 'from-labels'
-
-        config = Configuration(conf_name=None)
-        osbs_obj = OSBS(config, config)
-
-        (flexmock(osbs_obj.os)
-            .should_receive('get_build_config_by_labels')
-            .with_args([('git-repo-name', 'reponame'), ('git-branch', 'branch'),
-                        ('git-full-repo', 'full-name')])
-            .once()
-            .and_return(existing_build_config))
-        (flexmock(osbs_obj.os)
-            .should_receive('get_build_config')
-            .never())
-
-        actual_build_config = osbs_obj._get_existing_build_config(build_config)
-        assert actual_build_config == existing_build_config
-        assert actual_build_config['_from'] == 'from-labels'
-
-    def test_get_existing_build_config_by_name(self):
-        build_config = {
-            'metadata': {
-                'name': 'name',
-                'labels': {
-                    'git-repo-name': 'reponame',
-                    'git-branch': 'branch',
-                    'git-full-repo': 'full-name',
-                }
-            },
-        }
-
-        existing_build_config = copy.deepcopy(build_config)
-        existing_build_config['_from'] = 'from-name'
-
-        config = Configuration(conf_name=None)
-        osbs_obj = OSBS(config, config)
-
-        (flexmock(osbs_obj.os)
-            .should_receive('get_build_config_by_labels')
-            .with_args([('git-repo-name', 'reponame'), ('git-branch', 'branch'),
-                        ('git-full-repo', 'full-name')])
-            .once()
-            .and_raise(OsbsException))
-        (flexmock(osbs_obj.os)
-            .should_receive('get_build_config')
-            .with_args('name')
-            .once()
-            .and_return(existing_build_config))
-
-        actual_build_config = osbs_obj._get_existing_build_config(build_config)
-        assert actual_build_config == existing_build_config
-        assert actual_build_config['_from'] == 'from-name'
-
-    def test_get_existing_build_config_missing(self):
-        build_config = {
-            'metadata': {
-                'name': 'name',
-                'labels': {
-                    'git-repo-name': 'reponame',
-                    'git-branch': 'branch',
-                    'git-full-repo': 'full-name',
-                }
-            },
-        }
-        config = Configuration(conf_name=None)
-        osbs_obj = OSBS(config, config)
-
-        (flexmock(osbs_obj.os)
-            .should_receive('get_build_config_by_labels')
-            .with_args([('git-repo-name', 'reponame'), ('git-branch', 'branch'),
-                        ('git-full-repo', 'full-name')])
-            .once()
-            .and_raise(OsbsException))
-        (flexmock(osbs_obj.os)
-            .should_receive('get_build_config')
-            .with_args('name')
-            .once()
-            .and_raise(OsbsException))
-
-        assert osbs_obj._get_existing_build_config(build_config) is None
-
-    def test_verify_running_builds_zero(self, caplog):  # noqa:F811
-        config = Configuration(conf_name=None)
-        osbs_obj = OSBS(config, config)
-
-        (flexmock(osbs_obj)
-            .should_receive('_get_running_builds_for_build_config')
-            .with_args('build_config_name')
-            .once()
-            .and_return([]))
-
-        osbs_obj._verify_running_builds('build_config_name')
-        assert 'Multiple builds' not in caplog.text
-
-    def test_verify_running_builds_one(self, caplog):  # noqa:F811
-        config = Configuration(conf_name=None)
-        osbs_obj = OSBS(config, config)
-
-        (flexmock(osbs_obj)
-            .should_receive('_get_running_builds_for_build_config')
-            .with_args('build_config_name')
-            .once()
-            .and_return([
-                flexmock(status='Running', get_build_name=lambda: 'build-1'),
-            ]))
-
-        osbs_obj._verify_running_builds('build_config_name')
-        assert 'Multiple builds for build_config_name' in caplog.text
-        assert 'build-1: Running' in caplog.text
-
-    def test_verify_running_builds_many(self, caplog):  # noqa:F811
-        config = Configuration(conf_name=None)
-        osbs_obj = OSBS(config, config)
-
-        (flexmock(osbs_obj)
-            .should_receive('_get_running_builds_for_build_config')
-            .with_args('build_config_name')
-            .once()
-            .and_return([
-                flexmock(status='Running', get_build_name=lambda: 'build-1'),
-                flexmock(status='Running', get_build_name=lambda: 'build-2'),
-            ]))
-
-        osbs_obj._verify_running_builds('build_config_name')
-        assert 'Multiple builds for build_config_name' in caplog.text
-        assert 'build-1: Running' in caplog.text
-        assert 'build-2: Running' in caplog.text
 
     @pytest.mark.parametrize(('koji_task_id', 'count'), (  # noqa:F811
         (123456789, 2),
@@ -1487,442 +1267,6 @@ class TestOSBS(object):
 
         builds_list = osbs_obj._get_not_cancelled_builds_for_koji_task(koji_task_id)
         assert len(builds_list) == count
-
-    def test_create_build_config_label_mismatch(self):
-        config = Configuration(conf_name=None)
-        osbs_obj = OSBS(config, config)
-
-        build_json = {
-            'apiVersion': 'build.openshift.io/v1',
-            'metadata': {
-                'name': 'build',
-                'labels': {
-                    'git-repo-name': 'reponame',
-                    'git-branch': 'branch',
-                    'git-full-repo': 'full-name',
-                },
-            },
-            'spec': {},
-        }
-
-        existing_build_json = copy.deepcopy(build_json)
-        existing_build_json['metadata']['name'] = 'build'
-        existing_build_json['metadata']['labels']['git-repo-name'] = 'reponame2'
-        existing_build_json['metadata']['labels']['git-branch'] = 'branch2'
-
-        build_request = flexmock(
-            render=lambda: build_json,
-            has_ist_trigger=lambda: False,
-            scratch=False)
-
-        (flexmock(osbs_obj)
-            .should_receive('_get_existing_build_config')
-            .times(2)
-            .and_return(existing_build_json))
-
-        with pytest.raises(OsbsValidationException) as exc:
-            osbs_obj._create_build_config_and_build(build_request)
-
-        assert 'Git labels collide' in str(exc.value)
-
-    def test_create_build_config_already_running(self):
-        config = Configuration(conf_name=None)
-        osbs_obj = OSBS(config, config)
-
-        build_json = {
-            'apiVersion': 'build.openshift.io/v1',
-            'metadata': {
-                'name': 'build',
-                'labels': {
-                    'git-repo-name': 'reponame',
-                    'git-branch': 'branch',
-                },
-            },
-            'spec': {},
-        }
-
-        existing_build_json = copy.deepcopy(build_json)
-        existing_build_json['metadata']['name'] = 'existing-build'
-
-        build_request = flexmock(
-            render=lambda: build_json,
-            has_ist_trigger=lambda: False,
-            scratch=False)
-
-        (flexmock(osbs_obj)
-            .should_receive('_get_existing_build_config')
-            .times(2)
-            .and_return(existing_build_json))
-
-        (flexmock(osbs_obj)
-            .should_receive('_get_running_builds_for_build_config')
-            .once()
-            .and_return([
-                flexmock(status='Running', get_build_name=lambda: 'build-1'),
-            ]))
-
-        with pytest.raises(OsbsException):
-            osbs_obj._create_build_config_and_build(build_request)
-
-    def test_create_build_config_update(self):
-        config = Configuration(conf_name=None)
-        osbs_obj = OSBS(config, config)
-
-        build_json = {
-            'apiVersion': "build.openshift.io/v1",
-            'metadata': {
-                'name': 'build',
-                'labels': {
-                    'git-repo-name': 'reponame',
-                    'git-branch': 'branch',
-                },
-            },
-            'spec': {'triggers': []},
-        }
-
-        existing_build_json = copy.deepcopy(build_json)
-        existing_build_json['metadata']['name'] = 'existing-build'
-        existing_build_json['metadata']['labels']['new-label'] = 'new-value'
-
-        build_request = flexmock(
-            render=lambda: build_json,
-            has_ist_trigger=lambda: False,
-            scratch=False,
-            skip_build=False)
-
-        (flexmock(osbs_obj)
-            .should_receive('_get_existing_build_config')
-            .times(2)
-            .and_return(existing_build_json))
-
-        (flexmock(osbs_obj)
-            .should_receive('_get_running_builds_for_build_config')
-            .once()
-            .and_return([]))
-
-        (flexmock(osbs_obj.os)
-            .should_receive('update_build_config')
-            .with_args('existing-build', json.dumps(existing_build_json))
-            .once())
-
-        (flexmock(osbs_obj.os)
-            .should_receive('start_build')
-            .with_args('existing-build')
-            .once()
-            .and_return(flexmock(json=lambda: {'spam': 'maps'})))
-
-        build_response = osbs_obj._create_build_config_and_build(build_request)
-        assert build_response.json == {'spam': 'maps'}
-
-    def test_create_build_config_create(self):
-        config = Configuration(conf_name=None)
-        osbs_obj = OSBS(config, config)
-
-        build_json = {
-            'apiVersion': "build.openshift.io/v1",
-            'metadata': {
-                'name': 'build',
-                'labels': {
-                    'git-repo-name': 'reponame',
-                    'git-branch': 'branch',
-                },
-            },
-            'spec': {},
-        }
-
-        build_request = flexmock(
-            render=lambda: build_json,
-            has_ist_trigger=lambda: False,
-            scratch=False,
-            skip_build=False)
-
-        (flexmock(osbs_obj)
-            .should_receive('_get_existing_build_config')
-            .once()
-            .and_return(None))
-
-        (flexmock(osbs_obj.os)
-            .should_receive('create_build_config')
-            .with_args(json.dumps(build_json))
-            .once()
-            .and_return(flexmock(json=lambda: {'spam': 'maps'})))
-
-        (flexmock(osbs_obj.os)
-            .should_receive('start_build')
-            .with_args('build')
-            .once()
-            .and_return(flexmock(json=lambda: {'spam': 'maps'})))
-
-        build_response = osbs_obj._create_build_config_and_build(build_request)
-        assert build_response.json == {'spam': 'maps'}
-
-    @pytest.mark.parametrize('skip_build', [True, False])
-    @pytest.mark.parametrize('triggers_bj', [True, False])
-    @pytest.mark.parametrize('existing_bc', [True, False])
-    @pytest.mark.parametrize('existing_is', [True, False, None])
-    @pytest.mark.parametrize('existing_ist', [True, False, None])
-    @pytest.mark.parametrize(('source_registry', 'pull_registries'), [
-        ({'url': 'source_registry.com', 'insecure': False}, None),
-        ({'url': 'source_registry.com', 'insecure': True}, []),
-        ({'url': 'source_registry.com', 'insecure': True},
-         [{'url': 'pull_registry.com', 'insecure': True}]),
-        ({'url': 'source_registry.com', 'insecure': True},
-         [{'url': 'pull_registry.com', 'insecure': False}]),
-    ])
-    @pytest.mark.parametrize(('organization', 'base_image', 'expected_repo'), [
-        (None,
-         'source_registry.com/fedora23/python:new_trigger',
-         'source_registry.com/fedora23/python:new_trigger'),
-        (None,
-         'source_registry.com/fedora23/python:old_trigger',
-         'source_registry.com/fedora23/python:old_trigger'),
-        ('my_org',
-         'source_registry.com/fedora23/python:new_trigger',
-         'source_registry.com/my_org/fedora23-python:new_trigger'),
-        ('my_org',
-         'pull_registry.com/fedora23/python:new_trigger',
-         'pull_registry.com/fedora23/python:new_trigger'),
-        ('my_org',
-         'wrong_registry.com/fedora23/python:new_trigger',
-         'wrong_registry.com/fedora23/python:new_trigger'),
-    ])
-    def test_create_build_config_auto_start(self, caplog, skip_build, triggers_bj, existing_bc,
-                                            existing_is, existing_ist, source_registry,
-                                            pull_registries, organization, base_image,
-                                            expected_repo):
-        expected_insecure = False
-        wrong_registry = True
-        if source_registry['url'] in base_image:
-            expected_insecure = source_registry['insecure']
-            wrong_registry = False
-        elif pull_registries and pull_registries[0]['url'] in base_image:
-            expected_insecure = pull_registries[0]['insecure']
-            wrong_registry = False
-
-        expected_is = expected_repo.replace('/', '-').split(':')[0]
-        with NamedTemporaryFile(mode='wt') as fp:
-            fp.write(dedent("""\
-                [general]
-                build_json_dir = inputs
-                """))
-            fp.flush()
-            config = Configuration(fp.name)
-
-        osbs_obj = OSBS(config, config)
-
-        trigger_name = expected_repo.replace('/', '-')
-        build_json = {
-            'apiVersion': 'v1',
-            'kind': 'Build',
-            'metadata': {
-                'name': 'build',
-                'labels': {
-                    'git-repo-name': 'reponame',
-                    'git-branch': 'branch',
-                },
-            },
-            'spec': {
-                'triggers': [{'imageChange': {'from': {'name': trigger_name}}}]
-            },
-        }
-        if not triggers_bj:
-            build_json['spec'].pop('triggers', None)
-
-        build_config_json = {
-            'apiVersion': 'v1',
-            'kind': 'BuildConfig',
-            'metadata': {
-                'name': 'build',
-                'labels': {
-                    'git-repo-name': 'reponame',
-                    'git-branch': 'branch',
-                },
-            },
-            'spec': {
-                'triggers': [
-                    {'imageChange': {'from': {
-                        'name': 'source_registry.com-fedora23-python:old_trigger'}}}]
-            },
-            'status': {'lastVersion': 'lastVersion'},
-        }
-
-        image_stream_json = {'apiVersion': 'v',
-                             'kind': 'ImageStream',
-                             'metadata': {'name': expected_is}}
-        image_stream_tag_json = {'apiVersion': 'v1',
-                                 'kind': 'ImageStreamTag',
-                                 'image': {'dockerImageReference':
-                                               "registry/namespace/repo@sha256:123456"}}
-
-        # Params needed to avoid exceptions.
-        user_params = BuildUserParams.make_params(
-            user='user',
-            # for build request v1
-            base_image=base_image,
-            build_conf=osbs_obj.build_conf,
-            name_label='name_label',
-            git_uri='https://github.com/user/reponame.git',
-            build_from='image:buildroot:latest',
-        )
-
-        build_request = flexmock(
-            render=lambda: build_json,
-            has_ist_trigger=lambda: triggers_bj, scratch=False,
-            # for build request v2
-            base_image=base_image,
-            source_registry=source_registry,
-            organization=organization,
-            skip_build=skip_build,
-            triggered_after_koji_task='12345',
-            pull_registries=pull_registries,
-        )
-        # Cannot use spec keyword arg in flexmock constructor
-        # because it appears to be used by flexmock itself
-        build_request.user_params = user_params
-        if triggers_bj:
-            build_request.trigger_imagestreamtag = trigger_name
-
-        get_existing_count = 1
-        if existing_bc and not (triggers_bj is True and (wrong_registry or existing_is is None)):
-            get_existing_count += 1
-        if triggers_bj and not wrong_registry and existing_is is not None:
-            get_existing_count += 1
-
-        get_existing = (flexmock(osbs_obj)
-                        .should_receive('_get_existing_build_config')
-                        .times(get_existing_count))
-
-        if existing_bc:
-            get_existing = get_existing.and_return(build_config_json).and_return(build_config_json)
-        else:
-            get_existing = get_existing.and_return(None)
-
-        if triggers_bj:
-            get_existing = get_existing.and_return(build_config_json)
-
-        def mock_get_image_stream(*args, **kwargs):
-            if existing_is is False:
-                raise OsbsResponseException('missing ImageStream',
-                                            status_code=404)
-            if existing_is is None:
-                raise OsbsResponseException('wrong response',
-                                            status_code=400)
-
-            return flexmock(json=lambda: image_stream_json)
-        (flexmock(osbs_obj.os)
-            .should_receive('get_image_stream')
-            .with_args(expected_is)
-            .times(1 if triggers_bj and not wrong_registry else 0)
-            .replace_with(mock_get_image_stream))
-
-        (flexmock(osbs_obj.os)
-            .should_receive('create_image_stream')
-            .times(1 if triggers_bj and existing_is is False and not wrong_registry else 0)
-            .and_return(flexmock(json=lambda: image_stream_json)))
-
-        if triggers_bj and not wrong_registry and existing_is is not None:
-            get_imstream_tag_retry = (flexmock(osbs_obj.os)
-                                      .should_receive('get_image_stream_tag_with_retry')
-                                      .once())
-
-            if existing_ist:
-                get_imstream_tag_retry.and_return(flexmock(json=lambda: image_stream_tag_json))
-            elif existing_ist is not None:
-                get_imstream_tag_retry.and_return(flexmock(json=lambda: image_stream_tag_json))
-            else:
-                get_imstream_tag_retry.and_raise(OsbsResponseException('missing ImageStreamTag',
-                                                                       status_code=404))
-            ist_tag = trigger_name.split(':')[1]
-            (flexmock(osbs_obj.os)
-                .should_receive('ensure_image_stream_tag')
-                .with_args(image_stream_json, ist_tag, dict, expected_repo, True,
-                           insecure=expected_insecure)
-                .times(1 if triggers_bj else 0)
-                .and_return(True))
-        else:
-            (flexmock(osbs_obj.os)
-                .should_receive('get_image_stream_tag')
-                .never())
-            (flexmock(osbs_obj.os)
-                .should_receive('get_image_stream_tag_with_retry')
-                .never())
-
-        update_build_config_times = 0
-
-        if existing_bc:
-            (flexmock(osbs_obj.os)
-                .should_receive('list_builds')
-                .with_args(build_config_id='build')
-                .times(0 if triggers_bj is True and (wrong_registry or existing_is is None) else 1)
-                .and_return(flexmock(json=lambda: {'items': []})))
-            if not (triggers_bj is True and (wrong_registry or existing_is is None)):
-                update_build_config_times += 1
-
-        else:
-            def mock_create_build_config(encoded_build_json):
-                assert json.loads(encoded_build_json) == build_json
-                return flexmock(json=lambda: build_config_json)
-            (flexmock(osbs_obj.os)
-                .should_receive('create_build_config')
-                .replace_with(mock_create_build_config)
-                .times(0 if (triggers_bj and (wrong_registry or existing_is is None)) else 1))
-
-        if triggers_bj and not wrong_registry and existing_is is not None:
-            update_build_config_times += 1
-
-        (flexmock(osbs_obj.os)
-            .should_receive('update_build_config')
-            .with_args('build', str)
-            .times(update_build_config_times))
-
-        if triggers_bj:
-            (flexmock(osbs_obj.os)
-                .should_receive('wait_for_new_build_config_instance')
-                .with_args('build', 'lastVersion')
-                .times(0 if skip_build or wrong_registry or existing_is is None or
-                       existing_ist is None else 1)
-                .and_return('build-id'))
-
-            (flexmock(osbs_obj.os)
-                .should_receive('get_build')
-                .with_args('build-id')
-                .times(0 if skip_build or wrong_registry or existing_is is None or
-                       existing_ist is None else 1)
-                .and_return(flexmock(json=lambda: {'spam': 'maps'})))
-
-        else:
-            (flexmock(osbs_obj.os)
-                .should_receive('start_build')
-                .with_args('build')
-                .times(0 if skip_build else 1)
-                .and_return(flexmock(json=lambda: {'spam': 'maps'})))
-
-        if wrong_registry and triggers_bj:
-            with pytest.raises(RuntimeError) as exc:
-                osbs_obj._create_build_config_and_build(build_request)
-            assert 'Not allowed explicitly specified registry:' in str(exc.value)
-            return
-
-        if triggers_bj and existing_is is None:
-            with pytest.raises(OsbsResponseException) as exc:
-                osbs_obj._create_build_config_and_build(build_request)
-            assert 'wrong response' in str(exc.value)
-            return
-
-        if triggers_bj and existing_ist is None and not skip_build:
-            with pytest.raises(OsbsException) as exc:
-                osbs_obj._create_build_config_and_build(build_request)
-            assert 'Provided base image does not exist' in str(exc.value)
-            return
-
-        build_response = osbs_obj._create_build_config_and_build(build_request)
-        if skip_build:
-            assert build_response is None
-            if triggers_bj and existing_ist is None:
-                msg = "Imagestream tag doesn't exist yet:"
-                assert msg in caplog.text
-        else:
-            assert build_response.json == {'spam': 'maps'}
 
     # osbs is a fixture here
     def test_create_build_flatpak(self, osbs):  # noqa
@@ -2079,14 +1423,6 @@ class TestOSBS(object):
             .replace_with(verify_build_json)
             .times(0 if fail else 1))
 
-        (flexmock(osbs_obj.os)
-            .should_receive('create_build_config')
-            .never())
-
-        (flexmock(osbs_obj.os)
-            .should_receive('update_build_config')
-            .never())
-
         if check_running:
             builds_list = []
             if running_builds:
@@ -2143,21 +1479,13 @@ class TestOSBS(object):
             .once()
             .and_return(flexmock(json=lambda: {'spam': 'maps'})))
 
-        (flexmock(osbs_obj.os)
-            .should_receive('create_build_config')
-            .never())
-
-        (flexmock(osbs_obj.os)
-            .should_receive('update_build_config')
-            .never())
-
         build_response = osbs_obj.create_build(**kwargs)
         assert build_response.json() == {'spam': 'maps'}
 
     @pytest.mark.parametrize(('variation', 'delegate_method'), (  # noqa:F811
         ('isolated', '_create_isolated_build'),
         ('scratch', '_create_scratch_build'),
-        (None, '_create_build_config_and_build'),
+        (None, '_create_build_directly'),
     ))
     @pytest.mark.parametrize(('koji_task_id', 'use_build', 'exc'), (
         (123456789, False, OsbsException),
@@ -2288,102 +1616,6 @@ class TestOSBS(object):
         ref = response.json()['image']['dockerImageReference']
         assert ref == 'spam:maps'
 
-    @pytest.mark.parametrize(('organization', 'repository', 'insecure'), (
-        (None, 'source_registry.com/my_namespace/my_repo', False),
-        (None, 'source_registry.com/my_namespace/my_repo', True),
-        ('my_org', 'source_registry.com/my_org/my_namespace-my_repo', False),
-        ('my_org', 'source_registry.com/my_org/my_namespace-my_repo', True),
-    ))
-    def test_ensure_image_stream_tag(self, organization, repository, insecure):
-        with NamedTemporaryFile(mode='wt') as fp:
-            fp.write(dedent("""\
-                [general]
-                build_json_dir = {build_json_dir}
-                """.format(build_json_dir='inputs')))
-            fp.flush()
-            config = Configuration(fp.name)
-            osbs_obj = OSBS(config, config)
-
-        stream = {'type': 'stream'}
-        tag_name = 'latest'
-        scheduled = False
-        (flexmock(osbs_obj.os)
-            .should_receive('ensure_image_stream_tag')
-            .with_args(stream, tag_name, dict, repository, scheduled, insecure=insecure)
-            .once()
-            .and_return('eggs'))
-
-        response = osbs_obj.ensure_image_stream_tag(stream, tag_name, repository,
-                                                    scheduled, insecure)
-        assert response == 'eggs'
-
-    @pytest.mark.parametrize('tags', (
-        None,
-        [],
-        ['tag'],
-        ['tag1', 'tag2'],
-    ))
-    @pytest.mark.parametrize(('repository', 'insecure'), (
-        (None, None),
-        ('registry/namespace/repo', None),
-        ('registry/namespace/repo', True),
-        ('registry/namespace/repo', False),
-        (None, True),
-        (None, False),
-    ))
-    def test_import_image_tags(self, tags, repository, insecure):
-        with NamedTemporaryFile(mode='wt') as fp:
-            fp.write(dedent("""\
-                [general]
-                build_json_dir = {build_json_dir}
-                """.format(build_json_dir='inputs')))
-            fp.flush()
-            config = Configuration(fp.name)
-            osbs_obj = OSBS(config, config)
-
-        expect_insecure = True if insecure else False
-        image_stream_name = 'spam'
-        (flexmock(osbs_obj.os)
-            .should_receive('import_image_tags')
-            .with_args(image_stream_name, dict, tags, repository, expect_insecure)
-            .once()
-            .and_return(True))
-
-        kwargs = {}
-        if insecure is not None:
-            kwargs['insecure'] = insecure
-        response = osbs_obj.import_image_tags(image_stream_name, tags, repository, **kwargs)
-        assert response is True
-
-    @pytest.mark.parametrize('insecure', (True, False))
-    def test_create_image_stream(self, insecure):
-        with NamedTemporaryFile(mode='wt') as fp:
-            fp.write(dedent("""\
-                [general]
-                build_json_dir = {build_json_dir}
-                """.format(build_json_dir='inputs')))
-            fp.flush()
-            config = Configuration(fp.name)
-            osbs_obj = OSBS(config, config)
-
-        image_stream_name = 'spam'
-        mocked_result = object()
-
-        def mock_create_image_stream(stream_json):
-            stream = json.loads(stream_json)
-            assert stream['metadata']['name'] == image_stream_name
-
-            assert stream['metadata']['annotations'] == {}
-            return mocked_result
-
-        (flexmock(osbs_obj.os)
-            .should_receive('create_image_stream')
-            .once()
-            .replace_with(mock_create_image_stream))
-
-        response = osbs_obj.create_image_stream(image_stream_name)
-        assert response is mocked_result
-
     def test_reactor_config_secret(self):
         with NamedTemporaryFile(mode='wt') as fp:
             fp.write(dedent("""\
@@ -2402,7 +1634,7 @@ class TestOSBS(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info()))
 
-        flexmock(OSBS, _create_build_config_and_build=request_as_response)
+        flexmock(OSBS, _create_build_directly=request_as_response)
 
         required_args = copy.deepcopy(REQUIRED_BUILD_ARGS)
         reactor_config_override = {'required_secrets': ['mysecret'],
@@ -2447,7 +1679,6 @@ class TestOSBS(object):
                 self.flatpak = False
                 self.signing_intent = 'release'
                 self.compose_ids = [1, 2]
-                self.skip_build = False
                 self.operator_csv_modifications_url = None
 
         expected_kwargs = {
@@ -2467,7 +1698,6 @@ class TestOSBS(object):
             'koji_parent_build': None,
             'signing_intent': 'release',
             'compose_ids': [1, 2],
-            'skip_build': False,
             'operator_csv_modifications_url': None,
         }
         if arrangement_version:
@@ -2513,76 +1743,6 @@ class TestOSBS(object):
                 )
 
     # osbs is a fixture here
-    @pytest.mark.parametrize('skip_build', (True, False))  # noqa
-    def test_skip_orchestrator_build(self, osbs, skip_build):
-        class MockArgs(object):
-            def __init__(self, skip_build):
-                self.platform = None
-                self.release = None
-                self.platforms = ['spam', 'bacon']
-                self.arrangement_version = None
-                self.worker = False
-                self.orchestrator = True
-                self.scratch = None
-                self.isolated = None
-                self.koji_upload_dir = None
-                self.git_uri = None
-                self.git_ref = None
-                self.git_branch = TEST_GIT_BRANCH
-                self.koji_parent_build = None
-                self.flatpak = False
-                self.signing_intent = None
-                self.compose_ids = None
-                self.skip_build = skip_build
-                self.operator_csv_modifications_url = None
-
-        expected_kwargs = {
-            'platform': None,
-            'scratch': None,
-            'isolated': None,
-            'platforms': ['spam', 'bacon'],
-            'release': None,
-            'git_uri': None,
-            'git_ref': None,
-            'git_branch': TEST_GIT_BRANCH,
-            'user': None,
-            'tag': None,
-            'target': None,
-            'yum_repourls': None,
-            'dependency_replacements': None,
-            'koji_parent_build': None,
-            'signing_intent': None,
-            'compose_ids': None,
-            'skip_build': skip_build,
-            'arrangement_version': DEFAULT_ARRANGEMENT_VERSION,
-            'build_type': BUILD_TYPE_ORCHESTRATOR,
-            'inner_template': ORCHESTRATOR_INNER_TEMPLATE.format(
-                arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
-            'outer_template': ORCHESTRATOR_OUTER_TEMPLATE,
-            'customize_conf': ORCHESTRATOR_CUSTOMIZE_CONF,
-            'operator_csv_modifications_url': None,
-        }
-
-        flexmock(osbs.build_conf, get_git_branch=lambda: TEST_GIT_BRANCH)
-
-        (flexmock(osbs)
-            .should_receive('_do_create_prod_build')
-            .with_args(**expected_kwargs)
-            .and_return(None if skip_build else BuildResponse({}))
-            .once())
-
-        (flexmock(osbs)
-            .should_receive("wait_for_build_to_get_scheduled")
-            .times(0 if skip_build else 1)
-            .and_raise(CustomTestException))
-
-        if skip_build:
-            cmd_build(MockArgs(skip_build), osbs)
-        else:
-            with pytest.raises(CustomTestException):
-                cmd_build(MockArgs(skip_build), osbs)
-
-    # osbs is a fixture here
     @pytest.mark.parametrize('isolated', [True, False])  # noqa
     def test_flatpak_args_from_cli(self, caplog, osbs, isolated):
         class MockArgs(object):
@@ -2603,7 +1763,6 @@ class TestOSBS(object):
                 self.flatpak = True
                 self.signing_intent = 'release'
                 self.compose_ids = [1, 2]
-                self.skip_build = False
                 self.operator_csv_modifications_url = None
 
         expected_kwargs = {
@@ -2625,7 +1784,6 @@ class TestOSBS(object):
             'koji_parent_build': None,
             'signing_intent': 'release',
             'compose_ids': [1, 2],
-            'skip_build': False,
             'operator_csv_modifications_url': None,
         }
 
@@ -2677,7 +1835,6 @@ class TestOSBS(object):
                 self.koji_parent_build = None
                 self.signing_intent = 'release'
                 self.compose_ids = None
-                self.skip_build = False
                 self.operator_csv_modifications_url = "https://example.com/updates.json"
 
         expected_kwargs = {
@@ -2698,7 +1855,6 @@ class TestOSBS(object):
             'koji_parent_build': None,
             'signing_intent': 'release',
             'compose_ids': None,
-            'skip_build': False,
             'operator_csv_modifications_url': "https://example.com/updates.json",
         }
 
@@ -2736,8 +1892,7 @@ class TestOSBS(object):
         '',
         None
     ])
-    @pytest.mark.parametrize('skip_build', [True, False])
-    def test_do_create_prod_build_branch_required(self, osbs, branch_name, skip_build):
+    def test_do_create_prod_build_branch_required(self, osbs, branch_name):
         inner_template = DEFAULT_INNER_TEMPLATE
         outer_template = DEFAULT_OUTER_TEMPLATE
         customize_conf = DEFAULT_CUSTOMIZE_CONF
@@ -2751,7 +1906,7 @@ class TestOSBS(object):
             build_conf=osbs.build_conf,
             name_label='whatever', repo_info=repo_info, user=TEST_USER,
             build_type=BUILD_TYPE_ORCHESTRATOR,
-            skip_build=skip_build, **kwargs
+            **kwargs
         )
 
         (flexmock(utils)
@@ -2777,12 +1932,8 @@ class TestOSBS(object):
                                                   inner_template=inner_template,
                                                   outer_template=outer_template,
                                                   customize_conf=customize_conf,
-                                                  build_type=BUILD_TYPE_ORCHESTRATOR,
-                                                  skip_build=skip_build)
-            if skip_build:
-                assert response is None
-            else:
-                assert isinstance(response, BuildResponse)
+                                                  build_type=BUILD_TYPE_ORCHESTRATOR)
+            assert isinstance(response, BuildResponse)
         else:
             with pytest.raises(OsbsException):
                 osbs._do_create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
@@ -2790,8 +1941,7 @@ class TestOSBS(object):
                                            inner_template=inner_template,
                                            outer_template=outer_template,
                                            customize_conf=customize_conf,
-                                           build_type=BUILD_TYPE_ORCHESTRATOR,
-                                           skip_build=skip_build)
+                                           build_type=BUILD_TYPE_ORCHESTRATOR)
 
     def test_do_create_prod_build_missing_params(self, osbs, caplog):  # noqa
         with pytest.raises(OsbsException):
@@ -2888,282 +2038,6 @@ class TestOSBS(object):
         # Verify that retries are re-enabled after contextmanager exits
         with pytest.raises(OsbsException):
             osbs.get_config_map('test')
-
-    @pytest.mark.parametrize('existing_bc', [True, False])
-    @pytest.mark.parametrize('triggers', [True, False])
-    def test_update_build_config_retry(self, existing_bc, triggers):
-        with NamedTemporaryFile(mode='wt') as fp:
-            fp.write(dedent("""\
-                [general]
-                build_json_dir = inputs
-                """))
-            fp.flush()
-            config = Configuration(fp.name)
-
-        osbs_obj = OSBS(config, config)
-        new_trigger = 'fedora23-python:new_trigger'
-
-        build_json = {
-            'apiVersion': 'v1',
-            'kind': 'Build',
-            'metadata': {
-                'name': 'build',
-                'labels': {
-                    'git-repo-name': 'reponame',
-                    'git-branch': 'branch',
-                },
-            },
-            'spec': {
-                'triggers': [{'imageChange': {'from': {'name': new_trigger}}}]
-            },
-        }
-
-        if not triggers:
-            build_json['spec'].pop('triggers', None)
-
-        build_config_json = {
-            'apiVersion': 'v1',
-            'kind': 'BuildConfig',
-            'metadata': {
-                'name': 'build',
-                'labels': {
-                    'git-repo-name': 'reponame',
-                    'git-branch': 'branch',
-                },
-            },
-            'spec': {
-                'triggers': [{'imageChange': {'from': {'name': 'fedora23-python:old_trigger'}}}]
-            },
-            'status': {'lastVersion': 'lastVersion'},
-        }
-
-        # Params needed to avoid exceptions.
-        spec = BuildUserParams.make_params(
-            user='user',
-            base_image='fedora23/python',
-            build_conf=osbs_obj.build_conf,
-            name_label='name_label',
-            git_uri='https://github.com/user/reponame.git',
-            build_from='image:buildroot:latest',
-        )
-
-        build_request = flexmock(
-            render=lambda: build_json,
-            has_ist_trigger=lambda: triggers,
-            scratch=False,
-            skip_build=False,
-            triggered_after_koji_task='12345',
-            source_registry={'url': 'source_registry'},
-            base_image='base_image',
-            organization=None)
-        # Cannot use spec keyword arg in flexmock constructor
-        # because it appears to be used by flexmock itself
-        build_request.spec = spec
-        if triggers:
-            build_request.trigger_imagestreamtag = new_trigger
-
-        get_existing_count = 0
-        if existing_bc:
-            get_existing_count += OS_CONFLICT_MAX_RETRIES + 2
-        else:
-            get_existing_count += 1
-            if triggers:
-                get_existing_count += OS_CONFLICT_MAX_RETRIES + 1
-
-        get_existing = (flexmock(osbs_obj)
-                        .should_receive('_get_existing_build_config')
-                        .times(get_existing_count))
-
-        if existing_bc:
-            for _ in range(OS_CONFLICT_MAX_RETRIES + 2):
-                get_existing = get_existing.and_return(build_config_json)
-        else:
-            get_existing = get_existing.and_return(None)
-
-            if triggers:
-                for _ in range(OS_CONFLICT_MAX_RETRIES + 1):
-                    get_existing = get_existing.and_return(build_config_json)
-
-        def mock_get_image_stream(*args, **kwargs):
-            raise OsbsResponseException('missing ImageStream',
-                                        status_code=404)
-
-        (flexmock(osbs_obj.os)
-            .should_receive('get_image_stream')
-            .with_args('fedora23-python')
-            .times(1 if triggers else 0)
-            .replace_with(mock_get_image_stream))
-
-        (flexmock(osbs_obj.os)
-            .should_receive('create_image_stream')
-            .times(1 if triggers else 0)
-            .and_return(flexmock(json=lambda: {})))
-
-        if existing_bc:
-            (flexmock(osbs_obj.os)
-                .should_receive('list_builds')
-                .with_args(build_config_id='build')
-                .and_return(flexmock(json=lambda: {'items': []})))
-        else:
-            def mock_create_build_config(encoded_build_json):
-                assert json.loads(encoded_build_json) == build_json
-                return flexmock(json=lambda: build_config_json)
-            (flexmock(osbs_obj.os)
-                .should_receive('create_build_config')
-                .replace_with(mock_create_build_config)
-                .once())
-
-        (flexmock(time)
-            .should_receive('sleep')
-            .and_return(None))
-
-        def mock_update_build_config(*args, **kwargs):
-            raise OsbsResponseException('BuildConfig update conflict',
-                                        status_code=409)
-
-        if existing_bc or triggers:
-            (flexmock(osbs_obj.os)
-                .should_receive('update_build_config')
-                .with_args('build', str)
-                .replace_with(mock_update_build_config)
-                .times(OS_CONFLICT_MAX_RETRIES + 1))
-        else:
-            (flexmock(osbs_obj.os)
-                .should_receive('start_build')
-                .with_args('build')
-                .once()
-                .and_return(flexmock(json=lambda: {'spam': 'maps'})))
-
-        if existing_bc or triggers:
-            with pytest.raises(OsbsResponseException):
-                osbs_obj._create_build_config_and_build(build_request)
-
-        else:
-            build_response = osbs_obj._create_build_config_and_build(build_request)
-            assert build_response.json == {'spam': 'maps'}
-
-    def test_update_build_config_retry_2(self):
-        with NamedTemporaryFile(mode='wt') as fp:
-            fp.write(dedent("""\
-                [general]
-                build_json_dir = inputs
-                """))
-            fp.flush()
-            config = Configuration(fp.name)
-
-        osbs_obj = OSBS(config, config)
-        update_response = [http_client.CONFLICT,
-                           http_client.CONFLICT,
-                           http_client.CONFLICT,
-                           http_client.OK]
-        new_trigger = 'fedora23-python:new_trigger'
-
-        build_json = {
-            'apiVersion': 'v1',
-            'kind': 'Build',
-            'metadata': {
-                'name': 'build',
-                'labels': {
-                    'git-repo-name': 'reponame',
-                    'git-branch': 'branch',
-                },
-            },
-            'spec': {
-                'triggers': [{'imageChange': {'from': {'name': new_trigger}}}]
-            },
-        }
-
-        build_config_json = {
-            'apiVersion': 'v1',
-            'kind': 'BuildConfig',
-            'metadata': {
-                'name': 'build',
-                'labels': {
-                    'git-repo-name': 'reponame',
-                    'git-branch': 'branch',
-                },
-            },
-            'spec': {
-                'triggers': [{'imageChange': {'from': {'name': 'fedora23-python:old_trigger'}}}]
-            },
-            'status': {'lastVersion': 'lastVersion'},
-        }
-
-        # Params needed to avoid exceptions.
-        spec = BuildUserParams.make_params(
-            user='user',
-            base_image='fedora23/python',
-            name_label='name_label',
-            git_uri='https://github.com/user/reponame.git',
-            build_from='image:buildroot:latest',
-            build_conf=osbs_obj.build_conf,
-        )
-
-        build_request = flexmock(
-            render=lambda: build_json,
-            has_ist_trigger=lambda: True,
-            scratch=False,
-            skip_build=False,
-            triggered_after_koji_task='12345',
-            source_registry={'url': 'source_registry'},
-            base_image='base_image',
-            organization=None)
-        # Cannot use spec keyword arg in flexmock constructor
-        # because it appears to be used by flexmock itself
-        build_request.spec = spec
-        build_request.trigger_imagestreamtag = new_trigger
-        get_existing_count = (len(update_response) * 2) + 1
-
-        (flexmock(osbs_obj)
-            .should_receive('_get_existing_build_config')
-            .times(get_existing_count)
-            .and_return(build_config_json))
-
-        def mock_get_image_stream(*args, **kwargs):
-            raise OsbsResponseException('missing ImageStream',
-                                        status_code=404)
-
-        (flexmock(osbs_obj.os)
-            .should_receive('get_image_stream')
-            .with_args('fedora23-python')
-            .once()
-            .replace_with(mock_get_image_stream))
-
-        (flexmock(osbs_obj.os)
-            .should_receive('create_image_stream')
-            .once()
-            .and_return(flexmock(json=lambda: {})))
-
-        (flexmock(osbs_obj.os)
-            .should_receive('list_builds')
-            .with_args(build_config_id='build')
-            .and_return(flexmock(json=lambda: {'items': []})))
-
-        (flexmock(time)
-            .should_receive('sleep')
-            .and_return(None))
-
-        update_config = (flexmock(osbs_obj.os)
-                         .should_receive('update_build_config')
-                         .with_args('build', str)
-                         .times(len(update_response) * 2))
-
-        for response in (update_response + update_response):
-            if response == http_client.OK:
-                update_config = update_config.and_return(True)
-            else:
-                update_config = \
-                    update_config.and_raise(OsbsResponseException('BuildConfig update conflict',
-                                                                  status_code=response))
-
-        (flexmock(osbs_obj.os)
-            .should_receive('start_build')
-            .with_args('build')
-            .once()
-            .and_return(flexmock(json=lambda: {'spam': 'maps'})))
-
-        build_response = osbs_obj._create_build_config_and_build(build_request)
-        assert build_response.json == {'spam': 'maps'}
 
     @pytest.mark.parametrize(('label_type', 'label_value', 'raise_exception'), [
         (Labels.LABEL_TYPE_RELEASE, '1release with space', OsbsValidationException),

@@ -7,15 +7,12 @@ of the BSD license. See the LICENSE file for details.
 """
 
 from __future__ import unicode_literals, absolute_import
-import shutil
-import os
 import json
 from osbs.api import OSBS
 from osbs.constants import (DEFAULT_ARRANGEMENT_VERSION,
                             ORCHESTRATOR_INNER_TEMPLATE,
                             ORCHESTRATOR_SOURCES_INNER_TEMPLATE,
-                            WORKER_INNER_TEMPLATE,
-                            ORCHESTRATOR_OUTER_TEMPLATE)
+                            WORKER_INNER_TEMPLATE)
 from osbs import utils
 from osbs.conf import Configuration
 from osbs.constants import USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS
@@ -155,7 +152,7 @@ class ArrangementBase(object):
             .and_return(RepoInfo(MockParser(), mock_conf)))
 
         # Trick create_orchestrator_build into return the *request* JSON
-        flexmock(OSBS, _create_build_config_and_build=request_as_response)
+        flexmock(OSBS, _create_build_directly=request_as_response)
         flexmock(OSBS, _create_scratch_build=request_as_response)
 
     def get_plugins_from_buildrequest(self, build_request, template=None):
@@ -278,15 +275,12 @@ class TestArrangementV6(ArrangementBase):
         # Changing this? Add test methods
         ORCHESTRATOR_INNER_TEMPLATE: {
             'prebuild_plugins': [
-                'reactor_config',
                 'check_user_settings',
-                'check_and_set_rebuild',
                 PLUGIN_CHECK_AND_SET_PLATFORMS_KEY,
                 'flatpak_create_dockerfile',
                 'inject_parent_image',
                 'pull_base_image',
                 PLUGIN_KOJI_PARENT_KEY,
-                'koji_delegate',
                 PLUGIN_RESOLVE_COMPOSES_KEY,
                 PLUGIN_ADD_FILESYSTEM_KEY,
                 'flatpak_update_dockerfile',
@@ -309,7 +303,6 @@ class TestArrangementV6(ArrangementBase):
                 PLUGIN_COMPARE_COMPONENTS_KEY,
                 'tag_from_config',
                 PLUGIN_GROUP_MANIFESTS_KEY,
-                PLUGIN_PUSH_OPERATOR_MANIFESTS_KEY,
                 PLUGIN_GENERATE_MAVEN_METADATA_KEY,
             ],
 
@@ -317,7 +310,6 @@ class TestArrangementV6(ArrangementBase):
                 PLUGIN_VERIFY_MEDIA_KEY,
                 PLUGIN_KOJI_IMPORT_PLUGIN_KEY,
                 'push_floating_tags',
-                'import_image',
                 'koji_tag_build',
                 'store_metadata_in_osv3',
                 'sendmail',
@@ -329,7 +321,6 @@ class TestArrangementV6(ArrangementBase):
         # Changing this? Add test methods
         WORKER_INNER_TEMPLATE: {
             'prebuild_plugins': [
-                'reactor_config',
                 'flatpak_create_dockerfile',
                 'flatpak_update_dockerfile',
                 PLUGIN_ADD_FILESYSTEM_KEY,
@@ -477,22 +468,7 @@ class TestArrangementV6(ArrangementBase):
         }
         _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
 
-        assert get_plugin(plugins, 'prebuild_plugins', 'reactor_config')
         assert get_plugin(plugins, 'prebuild_plugins', PLUGIN_RESOLVE_COMPOSES_KEY)
-
-    def test_import_image_renders(self, osbs):
-        additional_params = {
-            'base_image': 'fedora:latest',
-            'reactor_config_override': {'source_registry': {'url': 'source_registry'}},
-        }
-        _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
-
-        args = plugin_value_get(plugins, 'exit_plugins', 'import_image', 'args')
-
-        match_args = {
-            "imagestream": "source_registry-fedora23-something",
-        }
-        assert match_args == args
 
     def test_orchestrate_render_no_platforms(self, osbs):  # noqa:F811
         additional_params = {
@@ -581,55 +557,6 @@ class TestArrangementV6(ArrangementBase):
         get_plugin(plugins, 'postbuild_plugins', PLUGIN_FETCH_WORKER_METADATA_KEY)
         with pytest.raises(KeyError):
             plugin_value_get(plugins, 'postbuild_plugins', PLUGIN_FETCH_WORKER_METADATA_KEY, 'args')
-
-    @pytest.mark.parametrize('triggers', [False, True])  # noqa:F811
-    def test_check_and_set_rebuild(self, tmpdir, osbs, triggers):
-        imagechange = [
-            {
-                "type": "ImageChange",
-                "imageChange": {
-                    "from": {
-                        "kind": "ImageStreamTag",
-                        "name": "{{BASE_IMAGE_STREAM}}",
-                    }
-                }
-            }
-        ]
-
-        if triggers:
-            orch_outer_temp = ORCHESTRATOR_INNER_TEMPLATE.format(
-                arrangement_version=self.ARRANGEMENT_VERSION
-            )
-            for basename in [ORCHESTRATOR_OUTER_TEMPLATE, orch_outer_temp]:
-                shutil.copy(os.path.join(INPUTS_PATH, basename),
-                            os.path.join(str(tmpdir), basename))
-
-            with open(os.path.join(str(tmpdir), ORCHESTRATOR_OUTER_TEMPLATE), 'r+') as orch_json:
-                build_json = json.load(orch_json)
-                build_json['spec']['triggers'] = imagechange
-
-                orch_json.seek(0)
-                json.dump(build_json, orch_json)
-                orch_json.truncate()
-
-            flexmock(osbs.os_conf, get_build_json_store=lambda: str(tmpdir))
-            (flexmock(BuildRequestV2)
-                .should_receive('adjust_for_repo_info')
-                .and_return(True))
-
-        additional_params = {
-            'base_image': 'fedora:latest',
-            'reactor_config_override': {'source_registry': {'url': 'source_registry'}},
-        }
-        _, plugins = self.get_orchestrator_build_request(osbs, additional_params)
-
-        args = plugin_value_get(plugins, 'prebuild_plugins', 'check_and_set_rebuild', 'args')
-
-        match_args = {
-            "label_key": "is_autorebuild",
-            "label_value": "true",
-        }
-        assert match_args == args
 
     @pytest.mark.parametrize(('params', 'build_type', 'has_plat_tag',  # noqa:F811
                               'has_primary_tag'), (

@@ -21,7 +21,6 @@ import sys
 import tempfile
 import tarfile
 import time
-import requests
 from collections import namedtuple
 from datetime import datetime
 from io import BytesIO
@@ -163,42 +162,6 @@ def graceful_chain_del(d, *args):
         pass
 
 
-def has_triggers(build_config):
-    return graceful_chain_get(build_config, 'spec', 'triggers') is not None
-
-
-def clean_triggers(orig, new):
-    if not has_triggers(new) and has_triggers(orig):
-        orig['spec']['triggers'] = [t for t in orig['spec']['triggers']
-                                    if t.get('type', None) != 'ImageChange']
-
-
-def buildconfig_update(orig, new, remove_nonexistent_keys=False):
-    """Performs update of given `orig` BuildConfig with values from `new` BuildConfig.
-    Both BuildConfigs have to be represented as `dict`s.
-
-    This function:
-    - adds all key/value pairs to `orig` from `new` that are missing
-    - replaces values in `orig` for keys that are in both
-    - removes key/value pairs from `orig` for keys that are not in `new`,
-      but only in dicts nested inside `strategy` key
-      (see https://github.com/containerbuildsystem/osbs-client/pull/273#issuecomment-148038314)
-    """
-    if isinstance(orig, dict) and isinstance(new, dict):
-        clean_triggers(orig, new)
-        if remove_nonexistent_keys:
-            missing = set(orig.keys()) - set(new.keys())
-            for k in missing:
-                orig.pop(k)
-        for k, v in new.items():
-            if k == 'strategy':
-                remove_nonexistent_keys = True
-            if isinstance(orig.get(k), dict) and isinstance(v, dict):
-                buildconfig_update(orig[k], v, remove_nonexistent_keys)
-            else:
-                orig[k] = v
-
-
 @contextlib.contextmanager
 def checkout_git_repo(git_url, target_dir=None, commit=None, retry_times=GIT_MAX_RETRIES,
                       branch=None, depth=None):
@@ -325,29 +288,6 @@ def reset_git_repo(target_dir, git_reference, retry_depth=None):
         final_commit_depth = int(subprocess.check_output(cmd, cwd=target_dir)) - base_commit_depth
 
     return commit_id, final_commit_depth
-
-
-@contextlib.contextmanager
-def paused_builds(osbs, quota_name=None, ignore_quota_errors=False):
-    try:
-        logger.info("pausing builds")
-        try:
-            osbs.pause_builds(quota_name=quota_name)
-        except OsbsResponseException as e:
-            if ignore_quota_errors and (e.status_code == requests.codes.FORBIDDEN):
-                logger.warning("Ignoring resourcequota error")
-            else:
-                raise
-        yield osbs
-    finally:
-        logger.info("resuming builds")
-        try:
-            osbs.resume_builds(quota_name=quota_name)
-        except OsbsResponseException as e:
-            if ignore_quota_errors and (e.status_code == requests.codes.FORBIDDEN):
-                logger.warning("Ignoring resourcequota error")
-            else:
-                raise
 
 
 def looks_like_git_hash(git_ref):

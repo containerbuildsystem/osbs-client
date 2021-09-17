@@ -10,17 +10,13 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import print_function, absolute_import, unicode_literals
 
 from osbs.exceptions import OsbsException, OsbsValidationException
-from osbs.constants import (REPO_CONFIG_FILE,
-                            ADDITIONAL_TAGS_FILE,
+from osbs.constants import (ADDITIONAL_TAGS_FILE,
                             REPO_CONTAINER_CONFIG,
                             REPO_CONTAINER_CONFIG_POSSIBLE_TYPOS,
                             REPO_CONTENT_SETS_FILE,
                             REPO_CONTENT_SETS_FILE_POSSIBLE_TYPOS)
 from osbs.utils.labels import Labels
 from osbs.utils.yaml import read_yaml_from_file_path
-from six import StringIO
-from six.moves.configparser import ConfigParser
-from textwrap import dedent
 
 import logging
 import os
@@ -119,29 +115,14 @@ class RepoConfiguration(object):
     Read configuration from repository.
     """
 
-    DEFAULT_CONFIG = dedent("""\
-        [autorebuild]
-        enabled = false
-        """)
-
-    def __init__(self, dir_path='', file_name=REPO_CONFIG_FILE, depth=None,
-                 git_uri=None, git_branch=None, git_ref=None):
-        self._config_parser = ConfigParser()
+    def __init__(self, dir_path='', depth=None, git_uri=None, git_branch=None, git_ref=None):
         self.container = {}
         self.depth = depth or 0
-        self.autorebuild = {}
         # Keep track of the repo metadata in the repo configuration
         self.git_uri = git_uri
         self.git_branch = git_branch
         self.git_ref = git_ref
         self.dir_path = dir_path
-
-        # Set default options
-        self._config_parser.readfp(StringIO(self.DEFAULT_CONFIG))   # pylint: disable=W1505; py2
-
-        config_path = os.path.join(dir_path, file_name)
-        if os.path.exists(config_path):
-            self._config_parser.read(config_path)
 
         if self._check_repo_file_exists_with_expected_filename(
                 expected_filename=REPO_CONTAINER_CONFIG,
@@ -156,8 +137,6 @@ class RepoConfiguration(object):
         # container values may be set to None
         container_compose = self.container.get('compose') or {}
         modules = container_compose.get('modules') or []
-
-        self.autorebuild = self.container.get('autorebuild') or {}
 
         self.container_module_specs = []
         value_errors = []
@@ -174,9 +153,6 @@ class RepoConfiguration(object):
         self.flatpak_base_image = flatpak.get('base_image')
         self.flatpak_component = flatpak.get('component')
         self.flatpak_name = flatpak.get('name')
-
-    def is_autorebuild_enabled(self):
-        return self._config_parser.getboolean('autorebuild', 'enabled')
 
     def _check_repo_file_exists_with_expected_filename(self, expected_filename,
                                                        possible_filename_typos):
