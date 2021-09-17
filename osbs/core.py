@@ -8,7 +8,6 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import print_function, unicode_literals, absolute_import, division
 import json
 import os
-import numbers
 import time
 import base64
 
@@ -16,15 +15,11 @@ import logging
 from osbs.kerberos_ccache import kerberos_ccache_init
 from osbs.build.build_response import BuildResponse
 from osbs.constants import (DEFAULT_NAMESPACE, BUILD_FINISHED_STATES, BUILD_RUNNING_STATES,
-                            WATCH_MODIFIED, WATCH_DELETED,
                             SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
-                            SERVICEACCOUNT_CACRT, ANNOTATION_SOURCE_REPO,
-                            ANNOTATION_INSECURE_REPO)
+                            SERVICEACCOUNT_CACRT)
 from osbs.exceptions import (OsbsResponseException, OsbsException,
-                             OsbsWatchBuildNotFound, OsbsAuthException,
-                             ImportImageFailed, ImportImageFailedServerError)
-from osbs.utils import (graceful_chain_get, retry_on_conflict, retry_on_exception,
-                        retry_on_not_found, retry_on_gateway_timeout)
+                             OsbsWatchBuildNotFound, OsbsAuthException)
+from osbs.utils import retry_on_conflict, retry_on_not_found
 
 import requests
 from requests.utils import guess_json_utf
@@ -52,7 +47,6 @@ OCP_USER_API_V1 = "user.openshift.io/v1"
 
 OCP_RESOURCE_API_VERSION_MAP = {
     'builds': OCP_BUILD_API_V1,
-    'buildconfigs': OCP_BUILD_API_V1,
     'imagestreams': OCP_IMAGE_API_V1,
 }
 
@@ -331,134 +325,6 @@ class Openshift(object):
         url = self._build_k8s_url("pods/", **kwargs)
         return self._get(url)
 
-    def get_build_config(self, build_config_id):
-        url = self._build_url(
-            OCP_BUILD_API_V1,
-            "buildconfigs/%s/" % build_config_id
-        )
-        response = self._get(url)
-        build_config = response.json()
-        return build_config
-
-    def get_all_build_configs_by_labels(self, label_selectors):
-        """
-        Returns all builds matching a given set of label selectors. It is up to the
-        calling function to filter the results.
-        """
-        labels = ['%s=%s' % (field, value) for field, value in label_selectors]
-        labels = ','.join(labels)
-        url = self._build_url(
-            OCP_BUILD_API_V1,
-            "buildconfigs/",
-            labelSelector=labels
-        )
-        return self._get(url).json()['items']
-
-    def get_build_config_by_labels(self, label_selectors):
-        """
-        Returns a build config matching the given label
-        selectors. This method will raise OsbsException
-        if not exactly one build config is found.
-        """
-        items = self.get_all_build_configs_by_labels(label_selectors)
-
-        if not items:
-            raise OsbsException(
-                "Build config not found for labels: %r" %
-                (label_selectors, ))
-        if len(items) > 1:
-            raise OsbsException(
-                "More than one build config found for labels: %r" %
-                (label_selectors, ))
-
-        return items[0]
-
-    def get_build_config_by_labels_filtered(self, label_selectors, filter_key, filter_value):
-        """
-        Returns a build config matching the given label selectors, filtering against
-        another predetermined value. This method will raise OsbsException
-        if not exactly one build config is found after filtering.
-        """
-        items = self.get_all_build_configs_by_labels(label_selectors)
-
-        if filter_value is not None:
-            build_configs = []
-            for build_config in items:
-                match_value = graceful_chain_get(build_config, *filter_key.split('.'))
-                if filter_value == match_value:
-                    build_configs.append(build_config)
-            items = build_configs
-
-        if not items:
-            raise OsbsException(
-                "Build config not found for labels: %r" %
-                (label_selectors, ))
-        if len(items) > 1:
-            raise OsbsException(
-                "More than one build config found for labels: %r" %
-                (label_selectors, ))
-        return items[0]
-
-    def create_build_config(self, build_config_json):
-        """
-        :return:
-        """
-        url = self._build_url(OCP_BUILD_API_V1, "buildconfigs/")
-        return self._post(url, data=build_config_json,
-                          headers={"Content-Type": "application/json"})
-
-    def update_build_config(self, build_config_id, build_config_json):
-        url = self._build_url(
-            OCP_BUILD_API_V1,
-            "buildconfigs/%s" % build_config_id
-        )
-        response = self._put(url, data=build_config_json,
-                             headers={"Content-Type": "application/json"})
-        check_response(response)
-        return response
-
-    def instantiate_build_config(self, build_config_id):
-        api_ver = OCP_BUILD_API_V1
-        url = self._build_url(
-            api_ver,
-            "buildconfigs/%s/instantiate" % build_config_id
-        )
-        data = json.dumps({
-            "kind": "BuildRequest",
-            "apiVersion": api_ver,
-            "metadata": {
-                "name": build_config_id,
-            },
-        })
-        return self._post(url, data=data,
-                          headers={"Content-Type": "application/json"})
-
-    def start_build(self, build_config_id):
-        """
-        :return:
-        """
-        return self.instantiate_build_config(build_config_id)
-
-    def wait_for_new_build_config_instance(self, build_config_id, prev_version):
-        logger.info("waiting for build config %s to get instantiated", build_config_id)
-        for changetype, obj in self.watch_resource("buildconfigs", build_config_id):
-            if changetype in (None, WATCH_MODIFIED):
-                version = graceful_chain_get(obj, 'status', 'lastVersion')
-                if not isinstance(version, numbers.Integral):
-                    logger.error("BuildConfig %s has unexpected lastVersion: %s", build_config_id,
-                                 version)
-                    continue
-
-                if version > prev_version:
-                    return "%s-%s" % (build_config_id, version)
-
-            if changetype == WATCH_DELETED:
-                logger.error("BuildConfig deleted while waiting for new build instance")
-                break
-
-        raise OsbsResponseException("New BuildConfig instance not found",
-                                    http_client.NOT_FOUND)
-
     def stream_logs(self, build_id):
         """
         stream logs from build
@@ -555,12 +421,10 @@ class Openshift(object):
         check_response(response)
         return response.content
 
-    def list_builds(self, build_config_id=None, koji_task_id=None,
-                    field_selector=None, labels=None):
+    def list_builds(self, koji_task_id=None, field_selector=None, labels=None):
         """
         List builds matching criteria
 
-        :param build_config_id: str, only list builds created from BuildConfig
         :param koji_task_id: str, only list builds for Koji Task ID
         :param field_selector: str, field selector for query
         :return: HttpResponse
@@ -571,9 +435,6 @@ class Openshift(object):
         label = {}
         if labels is not None:
             label.update(labels)
-
-        if build_config_id is not None:
-            label['buildconfig'] = build_config_id
 
         if koji_task_id is not None:
             label['koji-task-id'] = str(koji_task_id)
@@ -837,16 +698,6 @@ class Openshift(object):
                                                 'labels', labels,
                                                 self._replace_metadata_things)
 
-    def update_labels_on_build_config(self, build_config_id, labels):
-        return self.adjust_attributes_on_object('buildconfigs', build_config_id,
-                                                'labels', labels,
-                                                self._update_metadata_things)
-
-    def set_labels_on_build_config(self, build_config_id, labels):
-        return self.adjust_attributes_on_object('buildconfigs', build_config_id,
-                                                'labels', labels,
-                                                self._replace_metadata_things)
-
     def update_annotations_on_build(self, build_id, annotations):
         """
         set annotations on build object
@@ -883,55 +734,6 @@ class Openshift(object):
         check_response(response, log_level=logging.DEBUG)
         return response
 
-    def put_image_stream_tag(self, tag_id, tag):
-        url = self._build_url(
-            OCP_IMAGE_API_V1,
-            "imagestreamtags/%s" % tag_id
-        )
-        response = self._put(url, data=json.dumps(tag),
-                             headers={"Content-Type": "application/json"})
-        check_response(response)
-        return response
-
-    @retry_on_conflict
-    def ensure_image_stream_tag(self, stream, tag_name, tag_template, repository,
-                                scheduled=False, insecure=False):
-        stream_id = stream['metadata']['name']
-
-        tag_id = '{}:{}'.format(stream_id, tag_name)
-
-        changed = False
-        try:
-            tag = self.get_image_stream_tag(tag_id).json()
-            logger.debug('image stream tag found: %s', tag_id)
-        except OsbsResponseException as exc:
-            if exc.status_code != 404:
-                raise
-
-            logger.debug('image stream tag NOT found: %s', tag_id)
-
-            tag = tag_template
-            tag['metadata']['name'] = tag_id
-            tag['tag']['name'] = tag_name
-            tag['tag']['from']['name'] = repository
-            changed = True
-
-        if insecure != tag['tag']['importPolicy'].get('insecure', False):
-            tag['tag']['importPolicy']['insecure'] = insecure
-            logger.debug('setting importPolicy.insecure to: %s', insecure)
-            changed = True
-
-        if scheduled != tag['tag']['importPolicy'].get('scheduled', False):
-            tag['tag']['importPolicy']['scheduled'] = scheduled
-            logger.debug('setting importPolicy.scheduled to: %s', scheduled)
-            changed = True
-
-        if changed:
-            logger.debug('modifying image stream tag: %s : %s', tag_id, tag)
-            self.put_image_stream_tag(tag_id, tag)
-
-        return changed
-
     def get_image_stream(self, stream_id):
         url = self._build_url(
             OCP_IMAGE_API_V1,
@@ -939,127 +741,6 @@ class Openshift(object):
         )
         response = self._get(url)
         check_response(response, log_level=logging.DEBUG)
-        return response
-
-    def create_image_stream(self, stream_json):
-        url = self._build_url(
-            OCP_IMAGE_API_V1,
-            "imagestreams/"
-        )
-        response = self._post(url, data=stream_json,
-                              headers={"Content-Type": "application/json"})
-        check_response(response)
-        return response
-
-    def update_image_stream(self, stream_id, stream_json):
-        url = self._build_url(
-            OCP_IMAGE_API_V1,
-            "imagestreams/%s" % stream_id
-        )
-        response = self._put(url, data=json.dumps(stream_json),
-                             use_json=True)
-        check_response(response)
-        return response
-
-    @retry_on_conflict
-    @retry_on_exception(ImportImageFailedServerError)
-    def import_image_tags(self, name, stream_import, tags, repository, insecure):
-        """
-        Import image tags from a Docker registry into an ImageStream
-
-        :return: bool, whether tags were imported
-        """
-
-        # Get the JSON for the ImageStream
-        imagestream_json = self.get_image_stream(name).json()
-        changed = False
-
-        # existence of dockerImageRepository is limiting how many tags are updated
-        if 'dockerImageRepository' in imagestream_json.get('spec', {}):
-            logger.debug("Removing 'dockerImageRepository' from ImageStream %s", name)
-            imagestream_json['spec'].pop('dockerImageRepository')
-            changed = True
-        all_annotations = imagestream_json.get('metadata', {}).get('annotations', {})
-        # remove annotations about registry, since method will get them as arguments
-        for annotation in ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO:
-            if annotation in all_annotations:
-                imagestream_json['metadata']['annotations'].pop(annotation)
-                changed = True
-
-        if changed:
-            self.update_image_stream(name, imagestream_json)
-
-        stream_import['metadata']['name'] = name
-        stream_import['spec']['images'] = []
-        tags_set = set(tags) if tags else set()
-
-        if not tags_set:
-            logger.debug('No tags to import')
-            return False
-
-        for tag in tags_set:
-            image_import = {
-                'from': {"kind": "DockerImage",
-                         "name": '{}:{}'.format(repository, tag)},
-                'to': {'name': tag},
-                'importPolicy': {'insecure': insecure},
-                # referencePolicy will default to "type: source"
-                # so we don't have to explicitly set it
-            }
-            stream_import['spec']['images'].append(image_import)
-
-        new_tags = self._get_import_image_response_tags(stream_import)
-
-        logger.debug("tags after import: %r", new_tags)
-
-        return True
-
-    @retry_on_gateway_timeout
-    def _get_import_image_response_tags(self, stream_import):
-        import_url = self._build_url(
-            OCP_IMAGE_API_V1,
-            "imagestreamimports/"
-        )
-        import_response = self._post(import_url, data=json.dumps(stream_import),
-                                     use_json=True)
-
-        check_response(import_response)
-
-        failed_images = []
-        failed_images_server_error = False
-
-        for image in import_response.json()['status']['images']:
-            if image['status']['status'] == 'Success':
-                continue
-            logger.error('Error importing image %s: %r', image['tag'], image)
-            failed_images.append(image)
-            if image['status']['code'] == requests.codes.server_error:
-                failed_images_server_error = True
-
-        if failed_images:
-            error_msg = 'Failed to import {} image(s)'.format(len(failed_images))
-            logger.error(error_msg)
-            if failed_images_server_error:
-                raise ImportImageFailedServerError(error_msg)
-            else:
-                raise ImportImageFailed(error_msg)
-        return [
-            image['tag']
-            for image in import_response.json().get('status', {}).get('images', [])]
-
-    def dump_resource(self, resource_type):
-        api_ver = OCP_RESOURCE_API_VERSION_MAP[resource_type]
-        url = self._build_url(api_ver, "%s" % resource_type)
-        response = self._get(url)
-        check_response(response)
-        return response
-
-    def restore_resource(self, resource_type, resource):
-        api_ver = OCP_RESOURCE_API_VERSION_MAP[resource_type]
-        url = self._build_url(api_ver, "%s" % resource_type)
-        response = self._post(url, data=json.dumps(resource),
-                              headers={"Content-Type": "application/json"})
-        check_response(response)
         return response
 
     def create_config_map(self, config_data):

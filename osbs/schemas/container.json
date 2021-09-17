@@ -8,7 +8,6 @@
     {
       "properties": {
         "platforms": {"$ref": "#/definitions/all_platforms"},
-        "autorebuild": {"$ref": "#/definitions/autorebuild"},
         "compose": {"$ref": "#/definitions/compose"},
         "flatpak": {"$ref": "#/definitions/flatpak"},
         "operator_manifests": {"$ref": "#/definitions/operator_manifests"},
@@ -23,7 +22,6 @@
     {
       "properties": {
         "platforms": {"$ref": "#/definitions/all_platforms"},
-        "autorebuild": {"$ref": "#/definitions/autorebuild"},
         "compose": {"$ref": "#/definitions/compose"},
         "flatpak": {"$ref": "#/definitions/flatpak"},
         "operator_manifests": {"$ref": "#/definitions/operator_manifests"},
@@ -38,7 +36,6 @@
     {
       "properties": {
         "platforms": {"$ref": "#/definitions/all_platforms"},
-        "autorebuild": {"$ref": "#/definitions/autorebuild"},
         "compose": {"$ref": "#/definitions/compose"},
         "flatpak": {"$ref": "#/definitions/flatpak"},
         "operator_manifests": {"$ref": "#/definitions/operator_manifests"},
@@ -83,24 +80,6 @@
         "not": {
           "$ref": "#/definitions/platforms",
           "description": "Platform(s) not to build image for"
-        }
-      },
-      "additionalProperties": false
-    },
-    "autorebuild": {
-      "type": ["object", "null"],
-      "properties": {
-        "from_latest": {
-          "description": "Whether to rebuild from the latest commit",
-          "type": "boolean"
-        },
-        "add_timestamp_to_release": {
-          "description": "Whether to append timestamp to explicitly specified release for autorebuilds",
-          "type": "boolean"
-        },
-        "ignore_isolated_builds": {
-          "description": "Whether to triger autorebuilds for isolated parent build",
-          "type": "boolean"
         }
       },
       "additionalProperties": false

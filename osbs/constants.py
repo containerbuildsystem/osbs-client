@@ -62,9 +62,6 @@ SERVICEACCOUNT_CACRT = "ca.crt"
 # Where will secrets be mounted?
 SECRETS_PATH = "/var/run/secrets/atomic-reactor"
 
-# Backup/restore
-BACKUP_RESOURCES = ('buildconfigs', 'imagestreams',)
-
 CLI_LIST_BUILDS_DEFAULT_COLS = ["name", "status", "image"]
 CLI_WATCH_BUILDS_DEFAULT_COLS = ["changetype", "status", "created", "name"]
 
@@ -80,7 +77,6 @@ ATOMIC_REACTOR_LOGGING_FMT = \
 USER_WARNING_LEVEL = 25
 USER_WARNING_LEVEL_NAME = 'USER_WARNING'
 
-REPO_CONFIG_FILE = '.osbs-repo-config'
 ADDITIONAL_TAGS_FILE = 'additional-tags'
 REPO_CONTAINER_CONFIG = 'container.yaml'
 REPO_CONTAINER_CONFIG_POSSIBLE_TYPOS = {'container.yml'}

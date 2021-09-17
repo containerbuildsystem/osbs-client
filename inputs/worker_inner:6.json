@@ -1,9 +1,6 @@
 {
   "prebuild_plugins": [
     {
-      "name": "reactor_config"
-    },
-    {
       "name": "flatpak_create_dockerfile"
     },
     {

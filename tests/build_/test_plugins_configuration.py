@@ -136,15 +136,6 @@ class TestPluginsConfiguration(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH)
             .and_return(RepoInfo(additional_tags=additional_tags)))
 
-    def assert_import_image_plugin(self, plugins, name_label):
-        phase = 'postbuild_plugins'
-        plugin = 'import_image'
-
-        assert get_plugin(plugins, phase, plugin)
-        plugin_args = plugin_value_get(plugins, phase, plugin, 'args')
-
-        assert plugin_args['imagestream'] == name_label.replace('/', '-')
-
     def test_bad_customize_conf(self):
         user_params = BuildUserParams(build_json_dir=INPUTS_PATH, customize_conf='invalid_dir')
         build_json = PluginsConfiguration(user_params)
@@ -210,13 +201,13 @@ class TestPluginsConfiguration(object):
                 not pull_base_image['args']['parent_registry'])
 
     @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
-    @pytest.mark.parametrize(('build_from', 'is_imagestream', 'valid'), (
-        (None, False, False),
-        ('image:ultimate-buildroot:v1.0', False, 'ultimate-buildroot:v1.0'),
-        ('imagestream:buildroot-stream:v1.0', True, 'buildroot-stream:v1.0'),
-        ('ultimate-buildroot:v1.0', False, False)
+    @pytest.mark.parametrize(('build_from', 'valid'), (
+        (None, False),
+        ('image:ultimate-buildroot:v1.0', 'ultimate-buildroot:v1.0'),
+        ('imagestream:buildroot-stream:v1.0', 'buildroot-stream:v1.0'),
+        ('ultimate-buildroot:v1.0', False)
     ))
-    def test_render_request_with_yum(self, build_from, is_imagestream, valid, build_type):
+    def test_render_request_with_yum(self, build_from, valid, build_type):
         conf_args = {
             'build_from': build_from,
         }
@@ -238,12 +229,6 @@ class TestPluginsConfiguration(object):
             return
 
         plugins = get_plugins_from_build_json(build_json)
-
-        if is_imagestream and build_type == BUILD_TYPE_ORCHESTRATOR:
-            assert get_plugin(plugins, "exit_plugins", "import_image")
-        else:
-            with pytest.raises(NoSuchPluginException):
-                get_plugin(plugins, "postbuild_plugins", "import_image")
 
         if build_type == BUILD_TYPE_WORKER:
             assert plugin_value_get(plugins, "prebuild_plugins", "add_yum_repo_by_url",
@@ -823,27 +808,6 @@ class TestPluginsConfiguration(object):
 
         assert get_plugin(plugins, plugin_type, plugin_name)
         assert plugin_value_get(plugins, plugin_type, plugin_name, 'args')
-
-    @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
-    @pytest.mark.parametrize('triggered_task', (None, 12345))
-    def test_render_koji_delegate(self, build_type, triggered_task):
-        extra_args = {'triggered_after_koji_task': triggered_task}
-        user_params = get_sample_user_params(extra_args=extra_args, build_type=build_type)
-        self.mock_repo_info()
-        build_json = PluginsConfiguration(user_params).render()
-        plugins = get_plugins_from_build_json(build_json)
-        if build_type == BUILD_TYPE_ORCHESTRATOR:
-            assert get_plugin(plugins, 'prebuild_plugins', 'koji_delegate')
-            plugin_args = plugin_value_get(plugins, 'prebuild_plugins', 'koji_delegate', 'args')
-
-            if triggered_task:
-                assert plugin_args.get('triggered_after_koji_task') == triggered_task
-            else:
-                assert 'triggered_after_koji_task' not in plugin_args
-
-        else:
-            with pytest.raises(NoSuchPluginException):
-                assert get_plugin(plugins, 'prebuild_plugins', 'koji_delegate')
 
     @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
     @pytest.mark.parametrize('remote_sources', (

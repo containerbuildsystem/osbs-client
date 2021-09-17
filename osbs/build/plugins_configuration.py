@@ -292,16 +292,6 @@ class PluginsConfigurationBase(object):
             self.pt.set_plugin_arg(phase, plugin, "koji_target",
                                    self.user_params.koji_target)
 
-    def render_import_image(self, use_auth=None):
-        """
-        Configure the import_image plugin
-        """
-        # import_image is a multi-phase plugin
-        if self.pt.has_plugin_conf('exit_plugins', 'import_image'):
-
-            self.pt.set_plugin_arg('exit_plugins', 'import_image', 'imagestream',
-                                   self.user_params.imagestream_name)
-
     def render_inject_parent_image(self):
         phase = 'prebuild_plugins'
         plugin = 'inject_parent_image'
@@ -444,16 +434,6 @@ class PluginsConfigurationBase(object):
             self.pt.set_plugin_arg(phase, plugin, 'parent_images_digests',
                                    self.user_params.parent_images_digests)
 
-    def render_koji_delegate(self):
-        """Configure koji_delegate"""
-        phase = 'prebuild_plugins'
-        plugin = 'koji_delegate'
-
-        if self.pt.has_plugin_conf(phase, plugin):
-            if self.user_params.triggered_after_koji_task:
-                self.pt.set_plugin_arg(phase, plugin, 'triggered_after_koji_task',
-                                       self.user_params.triggered_after_koji_task)
-
     def render_tag_and_push(self):
         """Configure tag_and_push plugin"""
         phase = 'postbuild_plugins'
@@ -534,7 +514,6 @@ class PluginsConfiguration(PluginsConfigurationBase):
         self.render_check_and_set_platforms()
         self.render_check_user_settings()
         self.render_flatpak_update_dockerfile()
-        self.render_import_image()
         self.render_inject_parent_image()
         self.render_koji()
         self.render_koji_tag_build()
@@ -545,7 +524,6 @@ class PluginsConfiguration(PluginsConfigurationBase):
         self.render_pull_base_image()
         self.render_resolve_composes()
         self.render_tag_from_config()
-        self.render_koji_delegate()
         self.render_download_remote_source()
         self.render_resolve_remote_source()
         self.render_add_image_content_manifest()

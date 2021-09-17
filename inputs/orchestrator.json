@@ -3,22 +3,9 @@
   "kind": "BuildConfig",
   "metadata": {
     "name": "{{NAME}}",
-    "labels": {
-      "is_autorebuild": "false"
-    }
+    "labels": {}
   },
   "spec": {
-    "triggers": [
-      {
-        "type": "ImageChange",
-        "imageChange": {
-          "from": {
-            "kind": "ImageStreamTag",
-            "name": "{{BASE_IMAGE_STREAM}}"
-          }
-        }
-      }
-    ],
     "source": {
       "type": "Git",
       "git": {

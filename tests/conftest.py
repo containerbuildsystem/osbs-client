@@ -20,10 +20,7 @@ from osbs.conf import Configuration
 from osbs.api import OSBS
 from osbs.constants import ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_ORCHESTRATOR_BUILD,
-                             TEST_GIT_BRANCH, TEST_BUILD_CONFIG, TEST_GIT_URI_HUMAN_NAME,
-                             TEST_KOJI_TASK_ID, TEST_IMAGESTREAM, TEST_IMAGESTREAM_NO_TAGS,
-                             TEST_IMAGESTREAM_WITH_ANNOTATION,
-                             TEST_IMAGESTREAM_WITHOUT_IMAGEREPOSITORY, TEST_GIT_URI_SANITIZED)
+                             TEST_KOJI_TASK_ID)
 from tempfile import NamedTemporaryFile
 from textwrap import dedent
 
@@ -229,116 +226,6 @@ class Connection(object):
                     # Single MODIFIED item, with a Build object in
                     # Completed phase named test-build-123
                     "file": "watch_build_test-orchestrator-build-123.json",
-                }
-            },
-
-            API_BUILD_V1 + "namespaces/default/buildconfigs/": {
-                "post": {
-                    # Contains a BuildConfig named test-build-config-123
-                    "file": "created_build_config_test-build-config-123.json",
-                }
-            },
-
-            API_BUILD_V1 + "namespaces/default/buildconfigs/%s/instantiate" % TEST_BUILD_CONFIG: {
-                "post": {
-                    # A Build named test-build-123 instantiated from a
-                    # BuildConfig named test-build-config-123
-                    "file": "instantiated_test-build-config-123.json",
-                }
-            },
-
-            # use both version with ending slash and without it
-            (API_BUILD_V1 + "namespaces/default/buildconfigs/%s" % TEST_BUILD_CONFIG,
-             API_BUILD_V1 + "namespaces/default/buildconfigs/%s/" % TEST_BUILD_CONFIG,
-             ((API_BUILD_V1 + "namespaces/default/buildconfigs/?labelSelector=" +
-               "git-repo-name%%3D%s" "%%2C" "git-branch%%3D%s"
-               ) % (TEST_GIT_URI_HUMAN_NAME, TEST_GIT_BRANCH)),
-             ((API_BUILD_V1 + "namespaces/default/buildconfigs/?labelSelector=" +
-               "git-repo-name%%3D%s" "%%2C" "git-branch%%3D%s" "%%2C" "git-full-repo%%3D%s"
-               ) % (TEST_GIT_URI_HUMAN_NAME, TEST_GIT_BRANCH, TEST_GIT_URI_SANITIZED)),
-             ): {
-                 "get": {
-                     "custom_callback":
-                         self.with_status_code(http_client.NOT_FOUND),
-                     # Empty file (no response content as the status is 404
-                     "file": None,
-                 }
-            },
-
-            API_BUILD_V1 + "namespaces/default/builds/?labelSelector=buildconfig%%3D%s" %
-            TEST_BUILD_CONFIG: {
-                "get": {
-                    # Contains a BuildList with Builds labeled with
-                    # buildconfig=fedora23-something, none of which
-                    # are running
-                    "file": "builds_list.json"
-                }
-            },
-
-            API_IMAGE_V1 + "namespaces/default/imagestreams/%s" %
-            TEST_IMAGESTREAM: {
-                "get": {
-                    # Contains imagestream
-                    # with 3 tags
-                    "file": "imagestream.json"
-                },
-                "put": {
-                    # Contains imagestream
-                    # with 3 tags but with different resourceVersion
-                    "file": "imagestream.json",
-                    "custom_callback": self.increment_resource_version
-                }
-            },
-
-            API_IMAGE_V1 + "namespaces/default/imagestreams/%s" %
-            TEST_IMAGESTREAM_NO_TAGS: {
-                "get": {
-                    # Contains imagestream with no tags
-                    "file": "imagestream.json",
-                    "custom_callback": self.remove_tags
-                },
-                "put": {
-                    # Contains imagestream with no tags
-                    "file": "imagestream.json",
-                    "custom_callback": self.remove_tags
-                }
-            },
-
-            API_IMAGE_V1 + "namespaces/default/imagestreams/%s" %
-            TEST_IMAGESTREAM_WITH_ANNOTATION: {
-                "get": {
-                    # Contains imagestream with 3 tags; source repository
-                    # is listed in annotation instead of spec.
-                    "file": "imagestream.json",
-                    "custom_callback": self.move_repo_to_annotation
-                },
-                "put": {
-                    # Contains imagestream with 3 tags; source repository
-                    # is listed in annotation instead of spec.
-                    "file": "imagestream.json",
-                    "custom_callback": self.move_repo_to_annotation
-                }
-            },
-
-            API_IMAGE_V1 + "namespaces/default/imagestreams/%s" %
-            TEST_IMAGESTREAM_WITHOUT_IMAGEREPOSITORY: {
-                "get": {
-                    # Contains imagestream with 3 tags; source repository
-                    # is listed in annotation instead of spec.
-                    "file": "imagestream.json",
-                    "custom_callback": self.remove_imagerepository
-                },
-                "put": {
-                    # Contains imagestream with 3 tags; source repository
-                    # is listed in annotation instead of spec.
-                    "file": "imagestream.json",
-                    "custom_callback": self.remove_imagerepository
-                }
-            },
-
-            API_IMAGE_V1 + "namespaces/default/imagestreamimports/": {
-                "post": {
-                    "file": "imagestreamimport.json",
                 }
             },
 

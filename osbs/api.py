@@ -37,13 +37,12 @@ from osbs.build.plugins_configuration import (
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
 from osbs.build.config_map_response import ConfigMapResponse
-from osbs.constants import (BUILD_RUNNING_STATES, WORKER_OUTER_TEMPLATE,
-                            WORKER_INNER_TEMPLATE, WORKER_CUSTOMIZE_CONF,
+from osbs.constants import (WORKER_OUTER_TEMPLATE, WORKER_INNER_TEMPLATE, WORKER_CUSTOMIZE_CONF,
                             ORCHESTRATOR_OUTER_TEMPLATE, ORCHESTRATOR_INNER_TEMPLATE,
                             ORCHESTRATOR_CUSTOMIZE_CONF, BUILD_TYPE_WORKER,
                             BUILD_TYPE_ORCHESTRATOR, BUILD_FINISHED_STATES,
                             DEFAULT_ARRANGEMENT_VERSION, REACTOR_CONFIG_ARRANGEMENT_VERSION,
-                            FILTER_KEY, RELEASE_LABEL_FORMAT, VERSION_LABEL_FORBIDDEN_CHARS,
+                            RELEASE_LABEL_FORMAT, VERSION_LABEL_FORBIDDEN_CHARS,
                             ORCHESTRATOR_SOURCES_OUTER_TEMPLATE,
                             USER_PARAMS_KIND_IMAGE_BUILDS,
                             USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS,
@@ -54,8 +53,7 @@ from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsRespons
 from osbs.utils.labels import Labels
 # import utils in this way, so that we can mock standalone functions with flexmock
 from osbs import utils
-from osbs.utils import (retry_on_conflict, graceful_chain_get, RegistryURI, ImageName,
-                        stringify_values)
+from osbs.utils import stringify_values
 
 from six.moves import http_client, input
 
@@ -273,113 +271,16 @@ class OSBS(object):
         self._set_build_request_resource_limits(build_request)
         return build_request
 
-    @osbsapi
-    def create_build_from_buildrequest(self, build_request):
-        """
-        render provided build_request and submit build from it
-
-        :param build_request: instance of build.build_request.BuildRequest
-        :return: instance of build.build_response.BuildResponse
-        """
-        build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
-        build = build_request.render()
-        response = self.os.create_build(json.dumps(build))
-        build_response = BuildResponse(response.json(), self)
-        return build_response
-
-    def _get_running_builds_for_build_config(self, build_config_id):
-        all_builds_for_bc = self.os.list_builds(build_config_id=build_config_id).json()['items']
-        running = []
-        for b in all_builds_for_bc:
-            br = BuildResponse(b, self)
-            if br.is_pending() or br.is_running():
-                running.append(br)
-        return running
-
     def _get_not_cancelled_builds_for_koji_task(self, koji_task_id):
         all_builds_for_task = self.os.list_builds(koji_task_id=koji_task_id).json()['items']
         not_cancelled = []
 
         for b in all_builds_for_task:
             br = BuildResponse(b, self)
-            build_labels = br.get_labels()
-            if not br.is_cancelled() and build_labels['is_autorebuild'] == "false":
+            if not br.is_cancelled():
                 not_cancelled.append(br)
 
         return not_cancelled
-
-    def _verify_labels_match(self, new_build_config, existing_build_config):
-        new_labels = new_build_config['metadata']['labels']
-        existing_labels = existing_build_config['metadata']['labels']
-
-        for key in self._GIT_LABEL_KEYS:
-            new_label_value = new_labels.get(key)
-            existing_label_value = existing_labels.get(key)
-
-            if (existing_label_value and existing_label_value != new_label_value):
-                msg = (
-                    'Git labels collide with existing build config "%s". '
-                    'Existing labels: %r, '
-                    'New labels: %r ') % (
-                       existing_build_config['metadata']['name'],
-                       existing_labels,
-                       new_labels)
-                raise OsbsValidationException(msg)
-
-    def _get_existing_build_config(self, build_config):
-        """
-        Uses the given build config to find an existing matching build config.
-        Build configs are a match if:
-        - metadata.labels.git-repo-name AND metadata.labels.git-branch AND
-          metadata.labels.git-full-repo are equal
-        OR
-        - metadata.labels.git-repo-name AND metadata.labels.git-branch are equal AND
-          metadata.spec.source.git.uri are equal
-        OR
-        - metadata.name are equal
-        """
-
-        bc_labels = build_config['metadata']['labels']
-        git_labels = {
-            "label_selectors": [(key, bc_labels[key]) for key in self._GIT_LABEL_KEYS]
-        }
-        old_labels_kwargs = {
-            "label_selectors": [(key, bc_labels[key]) for key in self._OLD_LABEL_KEYS],
-            "filter_key": FILTER_KEY,
-            "filter_value": graceful_chain_get(build_config, *FILTER_KEY.split('.'))
-        }
-        name = {
-            "build_config_id": build_config['metadata']['name']
-        }
-
-        queries = (
-            (self.os.get_build_config_by_labels, git_labels),
-            (self.os.get_build_config_by_labels_filtered, old_labels_kwargs),
-            (self.os.get_build_config, name),
-        )
-
-        existing_bc = None
-        for func, kwargs in queries:
-            try:
-                existing_bc = func(**kwargs)
-                # build config found
-                break
-            except OsbsException as exc:
-                # doesn't exist
-                logger.info('Build config NOT found via %s: %s',
-                            func.__name__, str(exc))
-                continue
-
-        return existing_bc
-
-    def _verify_running_builds(self, build_config_name):
-        running_builds = self._get_running_builds_for_build_config(build_config_name)
-        rb_len = len(running_builds)
-
-        if rb_len > 0:
-            # report the number of simeltamous builds to detect build spam or runaway processes
-            builds = ', '.join(['%s: %s' % (b.get_build_name(), b.status) for b in running_builds])
-            logger.info("Multiple builds for %s running: %s", build_config_name, builds)
 
     def _create_scratch_build(self, build_request):
         return self._create_build_directly(build_request)
@@ -424,214 +325,6 @@ class OSBS(object):
                                    .format(', '.join(x.get_build_name() for x in running_builds)))
 
         return BuildResponse(self.os.create_build(build_json).json(), self)
-
-    @retry_on_conflict
-    def _get_or_create_imagestream(self, imagestream_name, build_request):
-        insecure = False
-        source_registry_uri = RegistryURI(build_request.source_registry['url']).docker_uri
-        source_registry_insecure = build_request.source_registry.get('insecure', False)
-
-        docker_image_repo = ImageName.parse(build_request.base_image)
-
-        if not docker_image_repo.registry:
-            docker_image_repo.registry = source_registry_uri
-            insecure = source_registry_insecure
-        else:
-            if docker_image_repo.registry == source_registry_uri:
-                insecure = source_registry_insecure
-
-            else:
-                allowed_registry = False
-
-                if build_request.pull_registries:
-                    for pull_reg in build_request.pull_registries:
-                        if docker_image_repo.registry == RegistryURI(pull_reg['url']).docker_uri:
-                            insecure = pull_reg.get('insecure', False)
-                            allowed_registry = True
-                            break
-
-                if not allowed_registry:
-                    raise RuntimeError('Not allowed explicitly specified registry: {}'.
-                                       format(docker_image_repo.registry))
-
-        # enclose only for source registry
-        if docker_image_repo.registry == source_registry_uri and build_request.organization:
-            docker_image_repo.enclose(build_request.organization)
-
-        try:
-            imagestream = self.get_image_stream(imagestream_name)
-        except OsbsResponseException as x:
-            if x.status_code != 404:
-                raise
-
-            logger.info('Creating ImageStream %s for %s', imagestream_name, docker_image_repo)
-            imagestream = self.create_image_stream(imagestream_name)
-
-        return imagestream, docker_image_repo.to_str(), insecure
-
-    def _get_image_stream_info_for_build_request(self, build_request):
-        """Return ImageStream, and ImageStreamTag name for base_image of build_request
-
-        If build_request is not auto instantiated, objects are not fetched
-        and None, None is returned.
-        """
-        image_stream_json = None
-        image_stream_tag_name = None
-        docker_image_repo = None
-        insecure = None
-
-        if build_request.has_ist_trigger():
-            image_stream_tag_id = build_request.trigger_imagestreamtag
-            image_stream_id, image_stream_tag_name = image_stream_tag_id.split(':')
-
-            image_stream, docker_image_repo, insecure =\
-                self._get_or_create_imagestream(image_stream_id, build_request)
-            image_stream_json = image_stream.json()
-
-        return image_stream_json, image_stream_tag_name, docker_image_repo, insecure
-
-    @retry_on_conflict
-    def _update_build_config_when_exist(self, build_json):
-        existing_bc = self._get_existing_build_config(build_json)
-        self._verify_labels_match(build_json, existing_bc)
-        # Existing build config may have a different name if matched by
-        # git-repo-name and git-branch labels. Continue using existing
-        # build config name.
-        build_config_name = existing_bc['metadata']['name']
-        logger.debug('existing build config name to be used "%s"',
-                     build_config_name)
-        self._verify_running_builds(build_config_name)
-
-        # Remove nodeSelector, will be set from build_json for worker build
-        old_nodeselector = existing_bc['spec'].pop('nodeSelector', None)
-        logger.debug("removing build config's nodeSelector %s", old_nodeselector)
-
-        # Remove koji_task_id
-        koji_task_id = utils.graceful_chain_get(existing_bc, 'metadata', 'labels',
-                                                'koji-task-id')
-        if koji_task_id is not None:
-            logger.debug("removing koji-task-id %r", koji_task_id)
-            utils.graceful_chain_del(existing_bc, 'metadata', 'labels', 'koji-task-id')
-
-        utils.buildconfig_update(existing_bc, build_json)
-        # Reset name change that may have occurred during
-        # update above, since renaming is not supported.
-        existing_bc['metadata']['name'] = build_config_name
-        logger.debug('build config for %s already exists, updating...',
-                     build_config_name)
-
-        self.os.update_build_config(build_config_name, json.dumps(existing_bc))
-        return existing_bc
-
-    @retry_on_conflict
-    def _update_build_config_with_triggers(self, build_json, triggers, is_autorebuild=False):
-        existing_bc = self._get_existing_build_config(build_json)
-        existing_bc['spec']['triggers'] = triggers
-        build_config_name = existing_bc['metadata']['name']
-        existing_bc['metadata']['labels']['is_autorebuild'] = "true" if is_autorebuild else "false"
-        self.os.update_build_config(build_config_name, json.dumps(existing_bc))
-        return existing_bc
-
-    def _create_build_config_and_build(self, build_request):
-        build_json = build_request.render()
-
-        build_config_name = build_json['metadata']['name']
-        logger.debug('build config to be named "%s"', build_config_name)
-        original_bc = self._get_existing_build_config(build_json)
-
-        image_stream, image_stream_tag_name, docker_image_repo, insecure = \
-            self._get_image_stream_info_for_build_request(build_request)
-
-        # Remove triggers in BuildConfig to avoid accidental
-        # auto instance of Build. If defined, triggers will
-        # be added to BuildConfig after ImageStreamTag object
-        # is properly configured.
-        triggers = build_json['spec'].pop('triggers', [])
-
-        if original_bc:
-            build_config_name = original_bc['metadata']['name']
-            existing_bc = self._update_build_config_when_exist(build_json)
-
-        else:
-            logger.debug("build config for %s doesn't exist, creating...",
-                         build_config_name)
-            existing_bc = self.os.create_build_config(json.dumps(build_json)).json()
-
-        tag_id = None
-        if image_stream:
-            changed_ist = self.ensure_image_stream_tag(image_stream,
-                                                       image_stream_tag_name,
-                                                       docker_image_repo,
-                                                       scheduled=True,
-                                                       insecure=insecure)
-            logger.debug('Changed parent ImageStreamTag? %s', changed_ist)
-
-            tag_id = '{}:{}'.format(image_stream['metadata']['name'], image_stream_tag_name)
-
-        original_trigger = original_bc['spec']['triggers'] if original_bc else []
-        if original_trigger:
-            original_trigger[0]['imageChange'].pop('lastTriggeredImageID', None)
-
-        if triggers or original_trigger:
-            if triggers == original_trigger:
-                logger.info("Trigger didn't change")
-            else:
-                logger.info("Trigger changed from : %s to %s", original_trigger, triggers)
-
-        if triggers:
-            is_autorebuild = False
-            if build_request.skip_build and tag_id:
-                imstreamtag = None
-                try:
-                    imstreamtag = self.get_image_stream_tag_with_retry(tag_id).json()
-                except OsbsResponseException as exc:
-                    if exc.status_code == http_client.NOT_FOUND:
-                        logger.info("Imagestream tag doesn't exist yet: %s", tag_id)
-                    else:
-                        raise
-
-                # when imagestream tag doesn't exist yet, we will just add the trigger,
-                # without setting lastTriggeredImageID
-                if imstreamtag:
-                    triggers[0]['imageChange']['lastTriggeredImageID'] =\
-                        imstreamtag['image']['dockerImageReference']
-                is_autorebuild = True
-
-            if build_request.triggered_after_koji_task is not None:
-                is_autorebuild = True
-
-            existing_bc = self._update_build_config_with_triggers(build_json, triggers,
-                                                                  is_autorebuild)
-
-        if build_request.skip_build:
-            logger.info('Build skipped')
-            return
-
-        if image_stream and triggers:
-            # verify that imagestreamtag exists (if it doesn't non-existent image was provided)
-            # because setting up autorebuilds with non-existent image is allowed, so users
-            # may prepare their images for next build which will trigger autorebuilds
-            # but they run build manually it will be waiting for new BC instance which
-            # won't ever appear, because imagestreamtag doesn't exist yet
-            try:
-                self.get_image_stream_tag_with_retry(tag_id).json()
-            except OsbsResponseException as exc:
-                if exc.status_code == http_client.NOT_FOUND:
-                    logger.info("Imagestream tag doesn't exist yet: %s", tag_id)
-                    raise OsbsException('Provided base image does not exist: '
-                                        '{}'.format(docker_image_repo))
-                else:
-                    raise
-
-            prev_version = existing_bc['status']['lastVersion']
-            build_id = self.os.wait_for_new_build_config_instance(
-                build_config_name, prev_version)
-            build = BuildResponse(self.os.get_build(build_id).json(), self)
-        else:
-            response = self.os.start_build(build_config_name)
-            build = BuildResponse(response.json(), self)
-
-        return build
 
     def _check_labels(self, repo_info):
         labels = repo_info.labels
@@ -815,11 +508,8 @@ class OSBS(object):
             logger.info("creating isolated build")
             response = self._create_isolated_build(build_request)
         else:
-            logger.info("creating build from build_config")
-            response = self._create_build_config_and_build(build_request)
-        # when build is skipped
-        if response is None:
-            return
+            logger.info("creating normal direct build")
+            response = self._create_build_directly(build_request)
 
         logger.debug(response.json)
         return response
@@ -1089,16 +779,6 @@ class OSBS(object):
         return response
 
     @osbsapi
-    def update_labels_on_build_config(self, build_config_id, labels):
-        response = self.os.update_labels_on_build_config(build_config_id, labels)
-        return response
-
-    @osbsapi
-    def set_labels_on_build_config(self, build_config_id, labels):
-        response = self.os.set_labels_on_build_config(build_config_id, labels)
-        return response
-
-    @osbsapi
     def update_annotations_on_build(self, build_id, annotations):
         # annotations support only string, make sure it's string
         # or json serializable object
@@ -1111,25 +791,6 @@ class OSBS(object):
         # or json serializable object
         annotations = stringify_values(annotations)
         return self.os.set_annotations_on_build(build_id, annotations)
-
-    @osbsapi
-    def import_image_tags(self, name, tags, repository, insecure=False):
-        """Import image tags from specified container repository.
-
-        :param name: str, name of ImageStream object
-        :param tags: iterable, tags to be imported
-        :param repository: str, remote location of container image
-                                in the format <registry>/<repository>
-        :param insecure: bool, indicates whenever registry is secure
-
-        :return: bool, whether tags were imported
-        """
-        stream_import_file = os.path.join(self.os_conf.get_build_json_store(),
-                                          'image_stream_import.json')
-        with open(stream_import_file) as f:
-            stream_import = json.load(f)
-        return self.os.import_image_tags(name, stream_import, tags,
-                                         repository, insecure)
 
     @osbsapi
     def get_token(self):
@@ -1203,115 +864,13 @@ class OSBS(object):
         return self.os.get_image_stream_tag_with_retry(tag_id)
 
     @osbsapi
-    def ensure_image_stream_tag(self, stream, tag_name, docker_image_repo, scheduled=False,
-                                insecure=False):
-        """Ensures the tag is monitored in ImageStream
-
-        :param stream: dict, ImageStream object
-        :param tag_name: str, name of tag to check, without name of
-                              ImageStream as prefix
-        :param docker_image_repo: str full name of repository
-        :param scheduled: bool, if True, importPolicy.scheduled will be
-                                set to True in ImageStreamTag
-        :return: bool, whether or not modifications were performed
-        """
-        img_stream_tag_file = os.path.join(self.os_conf.get_build_json_store(),
-                                           'image_stream_tag.json')
-        with open(img_stream_tag_file) as f:
-            tag_template = json.load(f)
-
-        return self.os.ensure_image_stream_tag(stream, tag_name, tag_template,
-                                               docker_image_repo, scheduled,
-                                               insecure=insecure)
-
-    @osbsapi
     def get_image_stream(self, stream_id):
         return self.os.get_image_stream(stream_id)
-
-    @osbsapi
-    def create_image_stream(self, name):
-        """
-        Create an ImageStream object
-
-        Raises exception on error
-
-        :param name: str, name of ImageStream
-        :return: response
-        """
-        img_stream_file = os.path.join(self.os_conf.get_build_json_store(), 'image_stream.json')
-        with open(img_stream_file) as f:
-            stream = json.load(f)
-        stream['metadata']['name'] = name
-        stream['metadata'].setdefault('annotations', {})
-
-        return self.os.create_image_stream(json.dumps(stream))
-
-    def _load_quota_json(self, quota_name=None):
-        quota_file = os.path.join(self.os_conf.get_build_json_store(),
-                                  'pause_quota.json')
-        with open(quota_file) as fp:
-            quota_json = json.load(fp)
-
-        if quota_name:
-            quota_json['metadata']['name'] = quota_name
-
-        return quota_json['metadata']['name'], quota_json
-
-    @osbsapi
-    def pause_builds(self, quota_name=None):
-        # First, set quota so 0 pods are allowed to be running
-        quota_name, quota_json = self._load_quota_json(quota_name)
-        self.os.create_resource_quota(quota_name, quota_json)
-
-        # Now wait for running builds to finish
-        while True:
-            field_selector = ','.join(['status=%s' % status.capitalize()
-                                       for status in BUILD_RUNNING_STATES])
-            builds = self.list_builds(field_selector)
-
-            # Double check builds are actually in running state.
-            running_builds = [build for build in builds if build.is_running()]
-
-            if not running_builds:
-                break
-
-            name = running_builds[0].get_build_name()
-            logger.info("waiting for build to finish: %s", name)
-            self.wait_for_build_to_finish(name)
-
-    @osbsapi
-    def resume_builds(self, quota_name=None):
-        quota_name, _ = self._load_quota_json(quota_name)
-        self.os.delete_resource_quota(quota_name)
 
     # implements subset of OpenShift's export logic in pkg/cmd/cli/cmd/exporter.go
     @staticmethod
     def _prepare_resource(resource):
         utils.graceful_chain_del(resource, 'metadata', 'resourceVersion')
-
-    @osbsapi
-    def dump_resource(self, resource_type):
-        return self.os.dump_resource(resource_type).json()
-
-    @osbsapi
-    def restore_resource(self, resource_type, resources, continue_on_error=False):
-        nfailed = 0
-        for r in resources["items"]:
-            name = utils.graceful_chain_get(r, 'metadata', 'name') or '(no name)'
-            logger.debug("restoring %s/%s", resource_type, name)
-            try:
-                self._prepare_resource(r)
-                self.os.restore_resource(resource_type, r)
-            except Exception:
-                if continue_on_error:
-                    logger.exception("failed to restore %s/%s", resource_type, name)
-                    nfailed += 1
-                else:
-                    raise
-
-        if continue_on_error:
-            ntotal = len(resources["items"])
-            logger.info("restored %s/%s %s", ntotal - nfailed, ntotal, resource_type)
 
     @osbsapi
     def list_resource_quotas(self):

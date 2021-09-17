@@ -25,7 +25,6 @@ from osbs.constants import (SECRETS_PATH, DEFAULT_OUTER_TEMPLATE,
                             DEFAULT_CUSTOMIZE_CONF, BUILD_TYPE_ORCHESTRATOR,
                             BUILD_TYPE_WORKER, ISOLATED_RELEASE_FORMAT)
 from osbs.exceptions import OsbsException, OsbsValidationException
-from osbs.utils.labels import Labels
 from osbs.utils import (git_repo_humanish_part_from_uri, sanitize_strings_for_openshift,
                         RegistryURI, ImageName)
 
@@ -113,7 +112,7 @@ class BaseBuildRequest(object):
         custom_strategy['from']['name'] = self.user_params.build_image
 
     def render_name(self):
-        """Sets the Build/BuildConfig object name"""
+        """Sets the Build object name"""
         name = self.user_params.name
         platform = self.user_params.platform
 
@@ -167,7 +166,6 @@ class BaseBuildRequest(object):
         and should not be imported into Koji.
         """
         if self.user_params.scratch:
-            self.template['spec'].pop('triggers', None)
             self.set_label('scratch', 'true')
 
     def set_deadline(self):
@@ -411,14 +409,6 @@ class BuildRequestV2(BaseBuildRequest):
         return self.user_params.scratch
 
     @property
-    def skip_build(self):
-        return self.user_params.skip_build
-
-    @property
-    def triggered_after_koji_task(self):
-        return self.user_params.triggered_after_koji_task
-
-    @property
     def base_image(self):
         return self.user_params.base_image
 
@@ -512,10 +502,6 @@ class BuildRequestV2(BaseBuildRequest):
         self.template['spec']['source']['git']['uri'] = self.user_params.git_uri
         self.template['spec']['source']['git']['ref'] = self.user_params.git_ref
 
-        if self.has_ist_trigger():
-            imagechange = self.template['spec']['triggers'][0]['imageChange']
-            imagechange['from']['name'] = self.trigger_imagestreamtag
-
         # Set git-repo-name and git-full-name labels
         repo_name = git_repo_humanish_part_from_uri(self.user_params.git_uri)
         # Use the repo name to differentiate different repos, but include the full url as an
@@ -527,22 +513,13 @@ class BuildRequestV2(BaseBuildRequest):
         koji_task_id = self.user_params.koji_task_id
         if koji_task_id is not None:
             # keep also original task for all manual builds with task
-            # that way when delegated task for autorebuild will be used
-            # we will still keep track of it
-            if self.user_params.triggered_after_koji_task is None:
-                self.set_label('original-koji-task-id', str(koji_task_id))
+            self.set_label('original-koji-task-id', str(koji_task_id))
 
         # Set template.spec.strategy.customStrategy.env[] USER_PARAMS
-        # Adjust triggers for custom base image
-        if (self.template['spec'].get('triggers', []) and
-                (self.is_custom_base_image() or self.is_from_scratch_image())):
-            if self.is_custom_base_image():
-                logger.info("removing triggers from request because custom base image")
-            elif self.is_from_scratch_image():
-                logger.info('removing from request because FROM scratch image')
+        # Remove any triggers
+        if self.template['spec'].get('triggers', None):
             del self.template['spec']['triggers']
 
-        self.adjust_for_repo_info()
         self.adjust_for_isolated(self.user_params.release)
         self.render_node_selectors(self.user_params.build_type)
 
@@ -556,26 +533,12 @@ class BuildRequestV2(BaseBuildRequest):
     def build_id(self):
         return self.build_json['metadata']['name']
 
-    def has_ist_trigger(self):
-        """Return True if this BuildConfig has ImageStreamTag trigger."""
-        triggers = self.template['spec'].get('triggers', [])
-        if not triggers:
-            return False
-        for trigger in triggers:
-            if trigger['type'] == 'ImageChange' and \
-                    trigger['imageChange']['from']['kind'] == 'ImageStreamTag':
-                return True
-        return False
-
     def render_node_selectors(self, build_type):
         # for worker builds set nodeselectors
         if build_type == BUILD_TYPE_WORKER:
 
-            # auto or explicit build selector
-            if self.user_params.is_auto:
-                node_selector = self.user_params.auto_build_node_selector
             # scratch build nodeselector
-            elif self.user_params.scratch:
+            if self.user_params.scratch:
                 node_selector = self.user_params.scratch_build_node_selector
             # isolated build nodeselector
             elif self.user_params.isolated:
@@ -600,40 +563,9 @@ class BuildRequestV2(BaseBuildRequest):
 
         return deadline_hours
 
-    def adjust_for_repo_info(self):
-        if not self.repo_info:
-            logger.warning('repo info not set')
-            return
-
-        if not self.repo_info.configuration.is_autorebuild_enabled():
-            logger.info('autorebuild is disabled in repo configuration, removing triggers')
-            self.template['spec'].pop('triggers', None)
-
-        else:
-            labels = self.repo_info.labels
-
-            add_timestamp = self.repo_info.configuration.autorebuild.\
-                get('add_timestamp_to_release', False)
-
-            if add_timestamp:
-                logger.info('add_timestamp_to_release is enabled for autorebuilds,'
-                            'skipping release check in dockerfile')
-                return
-
-            try:
-                labels.get_name_and_value(Labels.LABEL_TYPE_RELEASE)
-            except KeyError:
-                # As expected, release label not set in Dockerfile
-                pass
-            else:
-                raise RuntimeError('when autorebuild is enabled in repo configuration, '
-                                   '"release" label must not be set in Dockerfile')
-
     def adjust_for_isolated(self, release):
         if not self.user_params.isolated:
             return
-
-        self.template['spec'].pop('triggers', None)
 
         if not release:
             raise OsbsValidationException('The release parameter is required for isolated builds.')
@@ -685,7 +617,7 @@ class SourceBuildRequest(BaseBuildRequest):
         return super(SourceBuildRequest, self).render(validate=validate)
 
     def render_name(self):
-        """Sets the Build/BuildConfig object name
+        """Sets the Build object name
 
         Source container builds must have unique names, because we are not
         using buildConfigs just regular builds

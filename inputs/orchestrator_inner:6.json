@@ -1,17 +1,7 @@
 {
   "prebuild_plugins": [
     {
-      "name": "reactor_config"
-    },
-    {
       "name": "check_user_settings"
-    },
-    {
-      "name": "check_and_set_rebuild",
-      "args": {
-        "label_key": "is_autorebuild",
-        "label_value": "true"
-      }
     },
     {
       "name": "check_and_set_platforms",
@@ -32,9 +22,6 @@
     },
     {
       "name": "koji_parent"
-    },
-    {
-      "name": "koji_delegate"
     },
     {
       "name": "resolve_composes"
@@ -83,9 +70,6 @@
       "name": "group_manifests"
     },
     {
-      "name": "push_operator_manifests"
-    },
-    {
       "name": "generate_maven_metadata"
     }
   ],
@@ -100,10 +84,6 @@
     },
     {
       "name": "push_floating_tags"
-    },
-    {
-      "name": "import_image",
-      "required": false
     },
     {
       "name": "koji_tag_build"
