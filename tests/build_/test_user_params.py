@@ -24,8 +24,7 @@ from osbs.build.user_params import (
 from osbs.conf import Configuration
 from osbs.repo_utils import RepoInfo, RepoConfiguration
 from osbs.exceptions import OsbsValidationException
-from osbs.constants import (BUILD_TYPE_WORKER, REACTOR_CONFIG_ARRANGEMENT_VERSION,
-                            DEFAULT_CUSTOMIZE_CONF)
+from osbs.constants import (BUILD_TYPE_WORKER, DEFAULT_CUSTOMIZE_CONF)
 from tests.constants import (TEST_COMPONENT, TEST_FILESYSTEM_KOJI_TASK_ID,
                              TEST_GIT_BRANCH, TEST_GIT_REF, TEST_GIT_URI,
                              TEST_KOJI_TASK_ID, TEST_USER, INPUTS_PATH)
@@ -139,7 +138,6 @@ class TestBuildUserParams(object):
 
     def test_user_params_bad_json(self):
         required_json = json.dumps({
-            'arrangement_version': 6,
             'customize_conf': 'worker_customize.json',
             'git_ref': 'master',
             'kind': 'build_user_params',
@@ -227,7 +225,6 @@ class TestBuildUserParams(object):
 
         # all values that BuildUserParams stores
         param_kwargs = {
-            # 'arrangement_version': self.arrangement_version,  # calculated value
             'base_image': 'buildroot:old',
             # 'build_from': 'buildroot:old',  # only one of build_*
             'build_json_dir': INPUTS_PATH,
@@ -290,7 +287,6 @@ class TestBuildUserParams(object):
 
         spec = BuildUserParams.make_params(**param_kwargs)
         expected_json = {
-            "arrangement_version": REACTOR_CONFIG_ARRANGEMENT_VERSION,
             "base_image": "buildroot:old",
             "build_from": "image:buildroot:latest",
             "build_image": "buildroot:latest",
@@ -343,7 +339,6 @@ class TestBuildUserParams(object):
     def test_from_json_continue(self):
         spec = BuildUserParams()
         expected_json = {
-            "arrangement_version": REACTOR_CONFIG_ARRANGEMENT_VERSION,
             "base_image": "buildroot:old",
             "build_image": "buildroot:latest",
             "build_json_dir": "build_dir",
@@ -378,7 +373,6 @@ class TestBuildUserParams(object):
         kwargs = self.get_minimal_kwargs()
         params = BuildUserParams.make_params(**kwargs)
 
-        assert params.arrangement_version == REACTOR_CONFIG_ARRANGEMENT_VERSION
         assert params.buildroot_is_imagestream is False
         assert params.customize_conf == DEFAULT_CUSTOMIZE_CONF
         # assert params.git_ref == 'master'  # set from repo_info
@@ -445,7 +439,6 @@ class TestSourceContainerUserParams(object):
         spec = SourceContainerUserParams.make_params(**param_kwargs)
 
         expected_json = {
-            "arrangement_version": REACTOR_CONFIG_ARRANGEMENT_VERSION,
             "build_from": "image:buildroot:latest",
             "build_image": "buildroot:latest",
             "build_json_dir": INPUTS_PATH,

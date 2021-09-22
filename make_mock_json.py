@@ -22,7 +22,7 @@ from textwrap import dedent
 from osbs import set_logging
 from osbs.api import OSBS
 from osbs.conf import Configuration
-from osbs.constants import DEFAULT_CONFIGURATION_FILE, DEFAULT_ARRANGEMENT_VERSION
+from osbs.constants import DEFAULT_CONFIGURATION_FILE
 from tests.constants import (TEST_BUILD, TEST_ORCHESTRATOR_BUILD, TEST_CANCELLED_BUILD)
 from osbs.exceptions import OsbsException
 from osbs.cli.capture import setup_json_capture
@@ -268,7 +268,6 @@ class MockCreator(object):
             'user': self.osbs.build_conf.get_user(),
             'release': TEST_BUILD,
             'platform': "x86_64",
-            'arrangement_version': DEFAULT_ARRANGEMENT_VERSION,
             'scratch': True,
         }
 
@@ -294,7 +293,6 @@ class MockCreator(object):
             'user': self.osbs.build_conf.get_user(),
             'release': TEST_BUILD,
             'platform': "x86_64",
-            'arrangement_version': DEFAULT_ARRANGEMENT_VERSION,
             'scratch': True,
         }
         build_id = ""

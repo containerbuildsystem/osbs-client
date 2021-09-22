@@ -765,12 +765,6 @@ class TestBuildRequestV2(object):
         ]},
          [],
          'Cannot set environment variable from reactor config (already exists): USER_PARAMS'),
-        # Conflicts with special environment variables
-        ({'build_env_vars': [
-            {'name': 'REACTOR_CONFIG', 'value': 'arrangement_version: 5'},
-        ]},
-         [],
-         'Cannot set environment variable from reactor config (already exists): REACTOR_CONFIG'),
         # Conflicts with itself
         ({'build_env_vars': [
             {'name': 'HTTP_PROXY', 'value': 'example.proxy.net'},

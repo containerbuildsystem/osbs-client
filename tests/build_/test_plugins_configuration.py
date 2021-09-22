@@ -18,8 +18,7 @@ from osbs.build.plugins_configuration import (
     PluginsConfiguration,
     SourceContainerPluginsConfiguration,
 )
-from osbs.constants import (BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR,
-                            REACTOR_CONFIG_ARRANGEMENT_VERSION)
+from osbs.constants import (BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR)
 from osbs.exceptions import OsbsValidationException
 from osbs.conf import Configuration
 from osbs import utils
@@ -503,7 +502,6 @@ class TestPluginsConfiguration(object):
             platforms = {}
         assert plugin_value_get(plugins, phase, plugin, 'args', 'platforms') == platforms or {}
         build_kwargs = plugin_value_get(plugins, phase, plugin, 'args', 'build_kwargs')
-        assert build_kwargs['arrangement_version'] == REACTOR_CONFIG_ARRANGEMENT_VERSION
         assert build_kwargs.get('koji_parent_build') == koji_parent_build
         assert build_kwargs.get('reactor_config_map') == 'reactor-config-map'
         assert build_kwargs.get('reactor_config_override') == 'reactor-config-override'

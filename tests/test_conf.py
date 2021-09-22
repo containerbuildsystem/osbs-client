@@ -14,8 +14,6 @@ import argparse
 from copy import deepcopy
 from osbs.conf import Configuration
 from osbs import utils
-from osbs.exceptions import OsbsValidationException
-from osbs.constants import DEFAULT_ARRANGEMENT_VERSION
 import pytest
 from tempfile import NamedTemporaryFile
 import logging
@@ -243,22 +241,6 @@ class TestConfiguration(object):
 
             assert conf.get_builder_build_json_store() == expected
 
-    @pytest.mark.parametrize(('config', 'expected'), [
-        ({'default': {}}, DEFAULT_ARRANGEMENT_VERSION),
-
-        ({'default': {'arrangement_version': 50}}, 50),
-        ({'default': {'arrangement_version': 'one'}}, OsbsValidationException),
-    ])
-    def test_arrangement_version(self, config, expected):
-        with self.config_file(config) as config_file:
-            conf = Configuration(conf_file=config_file)
-
-        if isinstance(expected, type):
-            with pytest.raises(expected):
-                conf.get_arrangement_version()
-        else:
-            assert conf.get_arrangement_version() == expected
-
     @pytest.mark.parametrize(('platform', 'config', 'kwargs', 'expected'), [
         ('',
          {},
@@ -332,8 +314,6 @@ class TestConfiguration(object):
 
     def test_deprecated_warnings(self, caplog):  # noqa:F811
         with caplog.at_level(logging.WARNING):
-            self.test_arrangement_version({'default': {'deprecated_key': 'client_secret'}},
-                                          DEFAULT_ARRANGEMENT_VERSION)
             assert "it has been deprecated" not in caplog.text
             # kwargs don't get warnings
             self.test_param_retrieval(config={'default': {}},

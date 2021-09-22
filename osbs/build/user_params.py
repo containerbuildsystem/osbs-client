@@ -13,8 +13,7 @@ import random
 import json
 
 from osbs.build.user_params_meta import BuildParam, BuildParamsBase
-from osbs.constants import (DEFAULT_GIT_REF, REACTOR_CONFIG_ARRANGEMENT_VERSION,
-                            DEFAULT_CUSTOMIZE_CONF, RAND_DIGITS,
+from osbs.constants import (DEFAULT_GIT_REF, DEFAULT_CUSTOMIZE_CONF, RAND_DIGITS,
                             WORKER_MAX_RUNTIME, ORCHESTRATOR_MAX_RUNTIME,
                             USER_PARAMS_KIND_IMAGE_BUILDS,
                             USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS,
@@ -84,8 +83,6 @@ class BuildCommon(BuildParamsBase):
     # Must be defined in subclasses
     KIND = NotImplemented
 
-    arrangement_version = BuildParam("arrangement_version",
-                                     default=REACTOR_CONFIG_ARRANGEMENT_VERSION)
     # build_from contains the full build_from string, including the source type prefix
     build_from = BuildParam("build_from")
     # build_image contains the buildroot name, whether the buildroot is a straight image or an
@@ -136,7 +133,7 @@ class BuildCommon(BuildParamsBase):
         is created, however, overwriting defaults by setting None is allowed, e.g.:
 
         >>> params = BuildCommon.make_params(build_conf=bc)  # does not overwrite defaults
-        >>> params.arrangement_version = None  # does overwrite the default
+        >>> params.version = None  # does overwrite the default
 
         these parameters are accepted:
         :param base_image: str, name of the parent image
@@ -241,7 +238,7 @@ class BuildCommon(BuildParamsBase):
             timestamp
         ]
 
-        if self.platform and (self.arrangement_version or 0) >= 4:
+        if self.platform:
             tag_segments.append(self.platform)
 
         tag = '-'.join(tag_segments)

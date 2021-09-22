@@ -41,9 +41,8 @@ from osbs.constants import (WORKER_OUTER_TEMPLATE, WORKER_INNER_TEMPLATE, WORKER
                             ORCHESTRATOR_OUTER_TEMPLATE, ORCHESTRATOR_INNER_TEMPLATE,
                             ORCHESTRATOR_CUSTOMIZE_CONF, BUILD_TYPE_WORKER,
                             BUILD_TYPE_ORCHESTRATOR, BUILD_FINISHED_STATES,
-                            DEFAULT_ARRANGEMENT_VERSION, REACTOR_CONFIG_ARRANGEMENT_VERSION,
                             RELEASE_LABEL_FORMAT, VERSION_LABEL_FORBIDDEN_CHARS,
-                            ORCHESTRATOR_SOURCES_OUTER_TEMPLATE,
+                            ORCHESTRATOR_SOURCES_OUTER_TEMPLATE, DEFAULT_ARRANGEMENT_VERSION,
                             USER_PARAMS_KIND_IMAGE_BUILDS,
                             USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS,
                             )
@@ -91,21 +90,6 @@ _REQUIRED_PARAM = object()
 logger = logging.getLogger(__name__)
 
 LogEntry = namedtuple('LogEntry', ['platform', 'line'])
-
-
-def validate_arrangement_version(arrangement_version):
-    """Validate if the arrangement_version is supported
-
-    Shows a warning when version is deprecated
-
-    :param int|None arrangement_version: version to be validated
-    :raises ValueError: when version is not supported
-    """
-    if arrangement_version is None:
-        return
-
-    if arrangement_version <= 5:
-        raise ValueError('arrangement_version <= 5 is no longer supported')
 
 
 class OSBS(object):
@@ -219,7 +203,6 @@ class OSBS(object):
     @osbsapi
     def get_build_request(self, inner_template=None,
                           outer_template=None, customize_conf=None,
-                          arrangement_version=DEFAULT_ARRANGEMENT_VERSION,
                           user_params=None, repo_info=None, **kwargs
                           ):
         """
@@ -229,13 +212,10 @@ class OSBS(object):
         :param inner_template: str, name of inner template for BuildRequest
         :param outer_template: str, name of outer template for BuildRequest
         :param customize_conf: str, name of customization config for BuildRequest
-        :param arrangement_version: int, value of the arrangement version
         :param repo_info: RepoInfo, git repo data for the build
 
         :return: instance of BuildRequestV2
         """
-        validate_arrangement_version(arrangement_version)
-
         build_request = BuildRequestV2(
                 build_json_store=self.os_conf.get_build_json_store(),
                 osbs_api=self,
@@ -249,19 +229,13 @@ class OSBS(object):
         return build_request
 
     @osbsapi
-    def get_source_container_build_request(
-            self, outer_template=None,
-            arrangement_version=DEFAULT_ARRANGEMENT_VERSION,
-            user_params=None,
-    ):
+    def get_source_container_build_request(self, outer_template=None, user_params=None):
         """
         return instance of SourceBuildRequest
 
         :param str outer_template: name of outer template for SourceBuildRequest
         :return: instance of SourceBuildRequest
         """
-        validate_arrangement_version(arrangement_version)
-
         build_request = SourceBuildRequest(
             osbs_api=self,
             outer_template=outer_template,
@@ -527,7 +501,6 @@ class OSBS(object):
     @osbsapi
     def create_source_container_build(self,
                                       outer_template=None,
-                                      arrangement_version=None,
                                       component=None,
                                       koji_task_id=None,
                                       target=None,
@@ -540,7 +513,6 @@ class OSBS(object):
         build_json_store = self.os_conf.get_build_json_store()
         user_params = SourceContainerUserParams.make_params(
             build_json_dir=build_json_store,
-            arrangement_version=arrangement_version,
             build_conf=self.build_conf,
             component=component,
             koji_target=target,
@@ -590,7 +562,6 @@ class OSBS(object):
         modifications:
             - platform param is required
             - release param is required
-            - arrangement_version param is required, which is used to
               select which worker_inner:n.json template to use
             - inner template set to worker_inner:n.json if not set
             - outer template set to worker.json if not set
@@ -599,7 +570,7 @@ class OSBS(object):
         :return: BuildResponse instance
         """
         missing = set()
-        for required in ('platform', 'release', 'arrangement_version'):
+        for required in ('platform', 'release'):
             if not kwargs.get(required):
                 missing.add(required)
 
@@ -610,9 +581,8 @@ class OSBS(object):
         if kwargs.get('platforms'):
             raise ValueError("Worker build called with unwanted platforms param")
 
-        arrangement_version = kwargs['arrangement_version']
         kwargs.setdefault('inner_template', WORKER_INNER_TEMPLATE.format(
-            arrangement_version=arrangement_version))
+            arrangement_version=DEFAULT_ARRANGEMENT_VERSION))
         kwargs.setdefault('outer_template', WORKER_OUTER_TEMPLATE)
         kwargs.setdefault('customize_conf', WORKER_CUSTOMIZE_CONF)
         kwargs['build_type'] = BUILD_TYPE_WORKER
@@ -621,7 +591,7 @@ class OSBS(object):
         except IOError as ex:
             if os.path.basename(ex.filename) == kwargs['inner_template']:
                 raise OsbsValidationException("worker invalid arrangement_version %s" %
-                                              arrangement_version)
+                                              DEFAULT_ARRANGEMENT_VERSION)
 
             raise
 
@@ -633,8 +603,6 @@ class OSBS(object):
         Pass through method to create_prod_build with the following
         modifications:
             - platforms param is required
-            - arrangement_version param may be used to select which
-              orchestrator_inner:n.json template to use
             - inner template set to orchestrator_inner:n.json if not set
             - outer template set to orchestrator.json if not set
             - customize configuration set to orchestrator_customize.json if not set
@@ -649,14 +617,8 @@ class OSBS(object):
             raise ValueError("Orchestrator build called with unwanted parameters: %s" %
                              extra)
 
-        arrangement_version = kwargs.setdefault('arrangement_version',
-                                                self.build_conf.get_arrangement_version())
-
-        if arrangement_version < REACTOR_CONFIG_ARRANGEMENT_VERSION and not kwargs.get('platforms'):
-            raise ValueError('Orchestrator build requires platforms param')
-
         kwargs.setdefault('inner_template', ORCHESTRATOR_INNER_TEMPLATE.format(
-            arrangement_version=arrangement_version))
+            arrangement_version=DEFAULT_ARRANGEMENT_VERSION))
         kwargs.setdefault('outer_template', ORCHESTRATOR_OUTER_TEMPLATE)
         kwargs.setdefault('customize_conf', ORCHESTRATOR_CUSTOMIZE_CONF)
         kwargs['build_type'] = BUILD_TYPE_ORCHESTRATOR
@@ -665,7 +627,7 @@ class OSBS(object):
         except IOError as ex:
             if os.path.basename(ex.filename) == kwargs['inner_template']:
                 raise OsbsValidationException("orchestrator invalid arrangement_version %s" %
-                                              arrangement_version)
+                                              DEFAULT_ARRANGEMENT_VERSION)
 
             raise
 
