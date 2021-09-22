@@ -91,8 +91,6 @@ Some options are also mandatory.
   with optional mount path in the format `secret[:path]`, which can be used to
   hold service account tokens referenced by token_file in the osbs_client_secret
   osbs.conf
-- `arrangement_version` (optional, int): default version of inner template
-  to use when creating orchestrator build
 - `can_orchestrate` (optional, boolean): allows using orchestrator build,
   default is false
 - `scratch_build_node_selector` (optional, str): a node selector to be applied
@@ -140,9 +138,8 @@ or worker builds.
 
 Based on `prod.json` there are `worker.json` and `orchestrator.json`.
 
-Based on `prod_inner.json` there are `orchestrator_inner:1.json` and
-`worker_inner:1.json`, where `1` is `arrangement_version` from configuration
-file, to specify default version.
+Based on `prod_inner.json` there are `orchestrator_inner:6.json` and
+`worker_inner:6.json`.
 
 Based on `prod_customize.json` there are `orchestrator_customize.json` and
 `worker_customize.json`.

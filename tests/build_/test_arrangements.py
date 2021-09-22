@@ -81,30 +81,6 @@ def plugin_value_get(plugins, plugin_type, plugin_name, *args):
     return result
 
 
-def unsupported_arrangement_version(version_test_class):
-    """
-    Mark a test class as unsupported to disable version validation.
-    Does not disable validation for classes that inherit from said class.
-    """
-    from osbs.api import validate_arrangement_version
-
-    def setup_class(cls):
-        import osbs.api
-        osbs.api.validate_arrangement_version = lambda version: None
-
-    def teardown_class(cls):
-        import osbs.api
-        # restore original validation logic
-        osbs.api.validate_arrangement_version = validate_arrangement_version
-        # prevent setup and teardown of child classes
-        del cls.setup_class, cls.teardown_class
-
-    version_test_class.setup_class = classmethod(setup_class)
-    version_test_class.teardown_class = classmethod(teardown_class)
-
-    return version_test_class
-
-
 class ArrangementBase(object):
     ARRANGEMENT_VERSION = None
     COMMON_PARAMS = {}
@@ -208,7 +184,6 @@ class ArrangementBase(object):
             fn = osbs.create_source_container_build
 
         params.update(additional_params or {})
-        params['arrangement_version'] = self.ARRANGEMENT_VERSION
         osbs.build_conf = osbs.build_conf or Configuration(params)
 
         return params, fn(**params).json
@@ -765,9 +740,7 @@ class TestArrangementSourceV6(ArrangementBase):
         Verify the plugin running order.
         """
         orch_inner = self.DEFAULT_PLUGINS[ORCHESTRATOR_SOURCES_INNER_TEMPLATE]
-        build_request = osbs.get_source_container_build_request(
-                            arrangement_version=self.ARRANGEMENT_VERSION
-                        )
+        build_request = osbs.get_source_container_build_request()
         plugins = self.get_plugins_from_buildrequest(build_request, orch_inner)
         phases = ('prebuild_plugins',
                   'buildstep_plugins',

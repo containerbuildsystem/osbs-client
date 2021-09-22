@@ -23,7 +23,6 @@ WORKER_INNER_TEMPLATE = "worker_inner:{arrangement_version}.json"
 ORCHESTRATOR_INNER_TEMPLATE = "orchestrator_inner:{arrangement_version}.json"
 ORCHESTRATOR_SOURCES_INNER_TEMPLATE = "orchestrator_sources_inner:{arrangement_version}.json"
 DEFAULT_ARRANGEMENT_VERSION = 6  # this should be the highest-numbered version
-REACTOR_CONFIG_ARRANGEMENT_VERSION = 6
 WORKER_CUSTOMIZE_CONF = "worker_customize.json"
 ORCHESTRATOR_CUSTOMIZE_CONF = "orchestrator_customize.json"
 DEFAULT_OUTER_TEMPLATE = WORKER_OUTER_TEMPLATE

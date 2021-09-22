@@ -14,7 +14,7 @@ import json
 
 import six
 
-from osbs.constants import BUILD_TYPE_ORCHESTRATOR
+from osbs.constants import BUILD_TYPE_ORCHESTRATOR, DEFAULT_ARRANGEMENT_VERSION
 from osbs.exceptions import OsbsException
 
 logger = logging.getLogger(__name__)
@@ -357,7 +357,7 @@ class PluginsConfigurationBase(object):
         worker_params = [
             'component', 'git_branch', 'git_ref', 'git_uri', 'koji_task_id',
             'filesystem_koji_task_id', 'scratch', 'koji_target', 'user', 'yum_repourls',
-            'arrangement_version', 'koji_parent_build', 'isolated', 'reactor_config_map',
+            'koji_parent_build', 'isolated', 'reactor_config_map',
             'reactor_config_override', 'git_commit_depth',
         ]
 
@@ -496,10 +496,9 @@ class PluginsConfiguration(PluginsConfigurationBase):
 
     @property
     def pt_path(self):
-        arrangement_version = self.user_params.arrangement_version
         build_type = self.user_params.build_type
         #    <build_type>_inner:<arrangement_version>.json
-        return '{}_inner:{}.json'.format(build_type, arrangement_version)
+        return '{}_inner:{}.json'.format(build_type, DEFAULT_ARRANGEMENT_VERSION)
 
     def render(self):
         self.user_params.validate()
@@ -535,9 +534,8 @@ class SourceContainerPluginsConfiguration(PluginsConfigurationBase):
 
     @property
     def pt_path(self):
-        arrangement_version = self.user_params.arrangement_version
         # orchestrator_sources_inner:<arrangement_version>.json
-        return 'orchestrator_sources_inner:{}.json'.format(arrangement_version)
+        return 'orchestrator_sources_inner:{}.json'.format(DEFAULT_ARRANGEMENT_VERSION)
 
     def render(self):
         self.user_params.validate()

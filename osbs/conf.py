@@ -18,9 +18,7 @@ from six.moves.urllib.parse import urljoin
 
 from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
                             GENERAL_CONFIGURATION_SECTION, DEFAULT_NAMESPACE,
-                            DEFAULT_ARRANGEMENT_VERSION, REACTOR_CONFIG_ARRANGEMENT_VERSION,
                             WORKER_MAX_RUNTIME, ORCHESTRATOR_MAX_RUNTIME)
-from osbs.exceptions import OsbsValidationException
 from osbs import utils
 
 
@@ -86,10 +84,9 @@ class Configuration(object):
             if value is not None:
                 # Only print deprecation warnings for cli or file arguments
                 if deprecated and func in (get_value_from_cli_args, get_value_from_conf):
-                    logger.warning("user configuration key '%s' in section '%s' is ignored in "
-                                   "arrangement %s and later. it has been deprecated in "
-                                   "favor of the value in the reactor_config_map",
-                                   args_key, conf_section, REACTOR_CONFIG_ARRANGEMENT_VERSION)
+                    logger.warning("user configuration key '%s' in section '%s' is ignored, "
+                                   "it has been deprecated in favor of the value in the"
+                                   " reactor_config_map", args_key, conf_section)
                 break
         else:  # we didn't break
             return default
@@ -319,15 +316,6 @@ class Configuration(object):
                              token_file, ex)
 
         return value
-
-    def get_arrangement_version(self):
-        value = self._get_value("arrangement_version", self.conf_section,
-                                "arrangement_version",
-                                default=DEFAULT_ARRANGEMENT_VERSION)
-        try:
-            return int(value)
-        except ValueError:
-            raise OsbsValidationException("Invalid arrangement_version: %s" % value)
 
     def get_can_orchestrate(self):
         return self._get_value("can_orchestrate", self.conf_section, "can_orchestrate",

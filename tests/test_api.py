@@ -24,7 +24,7 @@ import sys
 import yaml
 from tempfile import NamedTemporaryFile
 
-from osbs.api import OSBS, osbsapi, validate_arrangement_version
+from osbs.api import OSBS, osbsapi
 from osbs.conf import Configuration
 from osbs.build.user_params import BuildUserParams
 from osbs.build.build_requestv2 import BuildRequestV2
@@ -40,7 +40,6 @@ from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             DEFAULT_CUSTOMIZE_CONF, WORKER_CUSTOMIZE_CONF,
                             ORCHESTRATOR_OUTER_TEMPLATE, ORCHESTRATOR_INNER_TEMPLATE,
                             DEFAULT_ARRANGEMENT_VERSION,
-                            REACTOR_CONFIG_ARRANGEMENT_VERSION,
                             ORCHESTRATOR_CUSTOMIZE_CONF,
                             BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR,
                             REPO_CONTAINER_CONFIG)
@@ -57,8 +56,6 @@ from osbs.core import Openshift
 from osbs import api as _osbs_api
 from six.moves import http_client
 
-
-INVALID_ARRANGEMENT_VERSION = DEFAULT_ARRANGEMENT_VERSION + 1
 
 # Expected log return lines for test_orchestrator_build_logs_api
 ORCHESTRATOR_LOGS = [u'2017-06-23 17:18:41,791 platform:- - '
@@ -148,22 +145,6 @@ class MockConfiguration(object):
 
     def is_autorebuild_enabled(self):
         return False
-
-
-@pytest.mark.parametrize('version,warning,exception', (
-    (5, None, ValueError),
-    (6, None, None),
-))
-def test_validate_arrangement_version(caplog, version, warning, exception):
-    """Test deprecation mechanism of arrangement version"""
-    if exception:
-        with pytest.raises(exception):
-            validate_arrangement_version(version)
-    else:
-        validate_arrangement_version(version)
-
-    if warning:
-        assert warning in caplog.text
 
 
 class TestOSBS(object):
@@ -382,17 +363,14 @@ class TestOSBS(object):
                               **REQUIRED_BUILD_ARGS)
 
     # osbs is a fixture here
-    @pytest.mark.parametrize(('platform', 'release', 'arrangement_version', 'raises_exception'), [  # noqa
-        (None, None, None, True),
-        ('', '', DEFAULT_ARRANGEMENT_VERSION, True),
-        ('spam', None, DEFAULT_ARRANGEMENT_VERSION, True),
-        (None, 'bacon', DEFAULT_ARRANGEMENT_VERSION, True),
-        ('spam', 'bacon', None, True),
-        ('spam', 'bacon', DEFAULT_ARRANGEMENT_VERSION, False),
+    @pytest.mark.parametrize(('platform', 'release', 'raises_exception'), [  # noqa
+        (None, None, True),
+        ('', '', True),
+        ('spam', None, True),
+        (None, 'bacon', True),
+        ('spam', 'bacon', False),
     ])
-    def test_create_worker_build_missing_param(self, osbs, platform, release,
-                                               arrangement_version,
-                                               raises_exception):
+    def test_create_worker_build_missing_param(self, osbs, platform, release, raises_exception):
         (flexmock(utils)
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
@@ -409,8 +387,6 @@ class TestOSBS(object):
             kwargs['platform'] = platform
         if release is not None:
             kwargs['release'] = release
-        if arrangement_version is not None:
-            kwargs['arrangement_version'] = arrangement_version
 
         expected_kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -420,10 +396,10 @@ class TestOSBS(object):
             'platform': platform,
             'build_type': BUILD_TYPE_WORKER,
             'release': release,
-            'inner_template': WORKER_INNER_TEMPLATE.format(arrangement_version=arrangement_version),
+            'inner_template':
+                WORKER_INNER_TEMPLATE.format(arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
             'outer_template': WORKER_OUTER_TEMPLATE,
             'customize_conf': WORKER_CUSTOMIZE_CONF,
-            'arrangement_version': arrangement_version,
             'reactor_config_override': {'source_registry': {'url': 'source_registry'}}
         }
 
@@ -441,35 +417,24 @@ class TestOSBS(object):
 
     # osbs is a fixture here
     @pytest.mark.parametrize(('inner_template', 'outer_template',  # noqa
-                              'customize_conf', 'arrangement_version',
+                              'customize_conf',
                               'exp_inner_template_if_different'), (
         (WORKER_INNER_TEMPLATE.format(
             arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
-         WORKER_OUTER_TEMPLATE, WORKER_CUSTOMIZE_CONF,
-         DEFAULT_ARRANGEMENT_VERSION, None),
+         WORKER_OUTER_TEMPLATE, WORKER_CUSTOMIZE_CONF, None),
 
-        (None, WORKER_OUTER_TEMPLATE, None,
-         DEFAULT_ARRANGEMENT_VERSION, None),
+        (None, WORKER_OUTER_TEMPLATE, None, None),
 
         (WORKER_INNER_TEMPLATE.format(
             arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
-         None, None,
-         DEFAULT_ARRANGEMENT_VERSION, None),
+         None, None, None),
 
-        (None, None, WORKER_CUSTOMIZE_CONF,
-         DEFAULT_ARRANGEMENT_VERSION, None),
+        (None, None, WORKER_CUSTOMIZE_CONF, None),
 
-        (None, None, None,
-         DEFAULT_ARRANGEMENT_VERSION, None),
-
-        (None, None, None, DEFAULT_ARRANGEMENT_VERSION + 1,
-         # Expect specified arrangement_version to be used
-         WORKER_INNER_TEMPLATE.format(
-             arrangement_version=DEFAULT_ARRANGEMENT_VERSION + 1)),
+        (None, None, None, None),
     ))
     def test_create_worker_build(self, osbs, inner_template, outer_template,
-                                 customize_conf, arrangement_version,
-                                 exp_inner_template_if_different):
+                                 customize_conf, exp_inner_template_if_different):
         branch = TEST_GIT_BRANCH
         (flexmock(utils)
             .should_receive('get_repo_info')
@@ -483,7 +448,6 @@ class TestOSBS(object):
             'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID,
             'platform': 'spam',
             'release': 'bacon',
-            'arrangement_version': arrangement_version,
         }
         if branch:
             kwargs['git_branch'] = branch
@@ -501,7 +465,6 @@ class TestOSBS(object):
                 arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
             'outer_template': WORKER_OUTER_TEMPLATE,
             'customize_conf': WORKER_CUSTOMIZE_CONF,
-            'arrangement_version': arrangement_version,
         }
 
         if inner_template is not None:
@@ -523,47 +486,6 @@ class TestOSBS(object):
             .once())
 
         osbs.create_worker_build(**kwargs)
-
-    # osbs is a fixture here
-    def test_create_worker_build_invalid_arrangement_version(self, osbs):  # noqa
-        """
-        Test we get OsbsValidationException for an invalid
-        arrangement_version value
-        """
-        (flexmock(utils)
-            .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
-            .and_return(self.mock_repo_info()))
-
-        kwargs = {'reactor_config_override': {'source_registry': {'url': 'source_registry'}}}
-        invalid_version = INVALID_ARRANGEMENT_VERSION
-        if INVALID_ARRANGEMENT_VERSION < REACTOR_CONFIG_ARRANGEMENT_VERSION:
-            with pytest.raises(OsbsValidationException) as ex:
-                osbs.create_worker_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
-                                         git_branch=TEST_GIT_BRANCH, user=TEST_USER,
-                                         platform='spam', release='bacon',
-                                         arrangement_version=invalid_version, **kwargs)
-
-            assert 'arrangement_version' in ex.value.message
-        # REACTOR_CONFIG arrangements can't fail
-        else:
-            flexmock(OSBS, _create_build_directly=request_as_response)
-            response = osbs.create_worker_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
-                                                git_branch=TEST_GIT_BRANCH, user=TEST_USER,
-                                                platform='spam', release='bacon',
-                                                arrangement_version=invalid_version, **kwargs)
-            env = response.json['spec']['strategy']['customStrategy']['env']
-            user_params = {}
-            for entry in env:
-                if entry['name'] == 'USER_PARAMS':
-                    user_params = json.loads(entry['value'])
-                    break
-
-            user_params['arrangement_version'] = invalid_version
-            with pytest.raises(OsbsException) as ex:
-                osbs.render_plugins_configuration(json.dumps(user_params))
-
-            assert 'inner:{}'.format(invalid_version) in ex.value.message
 
     # osbs is a fixture here
     def test_create_worker_build_ioerror(self, osbs):  # noqa
@@ -646,7 +568,6 @@ class TestOSBS(object):
                 arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
             'outer_template': ORCHESTRATOR_OUTER_TEMPLATE,
             'customize_conf': ORCHESTRATOR_CUSTOMIZE_CONF,
-            'arrangement_version': DEFAULT_ARRANGEMENT_VERSION,
             'release': '1'
         }
         if platforms is not None:
@@ -681,51 +602,9 @@ class TestOSBS(object):
                 git_ref=TEST_GIT_REF,
                 git_branch=TEST_GIT_BRANCH,
                 user=TEST_USER,
-                platforms=['spam'],
-                arrangement_version=DEFAULT_ARRANGEMENT_VERSION)
+                platforms=['spam'])
 
         assert 'can\'t create orchestrate build' in ex.value.message
-
-    # osbs is a fixture here
-    def test_create_orchestrator_build_invalid_arrangement_version(self, osbs):  # noqa
-        """
-        Test we get OsbsValidationException for an invalid
-        arrangement_version value
-        """
-        (flexmock(utils)
-            .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
-            .and_return(self.mock_repo_info()))
-
-        kwargs = {'reactor_config_override': {'source_registry': {'url': 'source_registry'}}}
-        invalid_version = INVALID_ARRANGEMENT_VERSION
-        if invalid_version < REACTOR_CONFIG_ARRANGEMENT_VERSION:
-            with pytest.raises(OsbsValidationException) as ex:
-                osbs.create_orchestrator_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
-                                               git_branch=TEST_GIT_BRANCH, user=TEST_USER,
-                                               platforms=['spam'],
-                                               arrangement_version=invalid_version, **kwargs)
-
-            assert 'arrangement_version' in ex.value.message
-        # REACTOR_CONFIG arrangements are hard to make fail
-        else:
-            flexmock(OSBS, _create_build_directly=request_as_response)
-            response = osbs.create_orchestrator_build(git_uri=TEST_GIT_URI, git_ref=TEST_GIT_REF,
-                                                      git_branch=TEST_GIT_BRANCH, user=TEST_USER,
-                                                      platforms=['spam'],
-                                                      arrangement_version=invalid_version, **kwargs)
-            env = response.json['spec']['strategy']['customStrategy']['env']
-            user_params = {}
-            for entry in env:
-                if entry['name'] == 'USER_PARAMS':
-                    user_params = json.loads(entry['value'])
-                    break
-
-            user_params['arrangement_version'] = invalid_version
-            with pytest.raises(OsbsException) as ex:
-                osbs.render_plugins_configuration(json.dumps(user_params))
-
-            assert 'inner:{}'.format(invalid_version) in ex.value.message
 
     # osbs is a fixture here
     def test_create_build_missing_name_label(self, osbs):  # noqa
@@ -1227,7 +1106,6 @@ class TestOSBS(object):
 
         assert config.get_build_from() == build_from
 
-        arrangement = DEFAULT_ARRANGEMENT_VERSION
         kwargs = {
             'git_uri': TEST_GIT_URI,
             'git_ref': TEST_GIT_REF,
@@ -1235,8 +1113,8 @@ class TestOSBS(object):
             'user': TEST_USER,
             'platform': 'meal',
             'release': 'bacon',
-            'arrangement_version': arrangement,
-            'inner_template': WORKER_INNER_TEMPLATE.format(arrangement_version=arrangement),
+            'inner_template':
+                WORKER_INNER_TEMPLATE.format(arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
             'outer_template': WORKER_OUTER_TEMPLATE,
             'customize_conf': WORKER_CUSTOMIZE_CONF,
             'reactor_config_override': {'source_registry': {'url': 'source_registry'}}
@@ -1650,98 +1528,6 @@ class TestOSBS(object):
         }
         assert expected_secret in secrets
 
-    @pytest.mark.parametrize(('platform', 'release', 'platforms', 'worker',  # noqa
-                              'arrangement_version', 'raises_exception'), [
-        # worker build
-        ("plat", 'rel', None, True, None, True),
-        # orchestrator build
-        (None, None, 'platforms', False, None, False),
-    ])
-    def test_arrangement_version(self, caplog, osbs, platform, release, platforms,
-                                 worker, arrangement_version, raises_exception):
-        koji_upload_dir = 'upload' if worker else None
-
-        class MockArgs(object):
-            def __init__(self, platform, release, platforms, arrangement_version, worker):
-                self.platform = platform
-                self.release = release
-                self.platforms = platforms
-                self.arrangement_version = arrangement_version
-                self.worker = worker
-                self.orchestrator = not worker
-                self.scratch = None
-                self.isolated = None
-                self.koji_upload_dir = koji_upload_dir
-                self.git_uri = None
-                self.git_ref = None
-                self.git_branch = TEST_GIT_BRANCH
-                self.koji_parent_build = None
-                self.flatpak = False
-                self.signing_intent = 'release'
-                self.compose_ids = [1, 2]
-                self.operator_csv_modifications_url = None
-
-        expected_kwargs = {
-            'platform': platform,
-            'scratch': None,
-            'isolated': None,
-            'platforms': platforms,
-            'release': release,
-            'git_uri': None,
-            'git_ref': None,
-            'git_branch': TEST_GIT_BRANCH,
-            'user': None,
-            'tag': None,
-            'target': None,
-            'yum_repourls': None,
-            'dependency_replacements': None,
-            'koji_parent_build': None,
-            'signing_intent': 'release',
-            'compose_ids': [1, 2],
-            'operator_csv_modifications_url': None,
-        }
-        if arrangement_version:
-            expected_kwargs.update({
-                'arrangement_version': arrangement_version,
-            })
-        if koji_upload_dir:
-            expected_kwargs.update({
-                'koji_upload_dir': koji_upload_dir,
-            })
-
-        flexmock(osbs.build_conf, get_git_branch=lambda: TEST_GIT_BRANCH)
-
-        if not raises_exception:
-            # and_raise is called to prevent cmd_build to continue
-            # as we only want to check if arguments are correct
-            if worker:
-                (flexmock(osbs)
-                    .should_receive("create_worker_build")
-                    .once()
-                    .with_args(**expected_kwargs)
-                    .and_raise(CustomTestException))
-            else:
-                (flexmock(osbs)
-                    .should_receive("create_orchestrator_build")
-                    .once()
-                    .with_args(**expected_kwargs)
-                    .and_raise(CustomTestException))
-
-        if raises_exception:
-            with pytest.raises(OsbsException) as exc_info:
-                cmd_build(
-                    MockArgs(platform, release, platforms, arrangement_version, worker),
-                    osbs
-                )
-            assert isinstance(exc_info.value.cause, ValueError)
-            assert "Worker build missing required parameters" in exc_info.value.message
-        else:
-            with pytest.raises(CustomTestException):
-                cmd_build(
-                    MockArgs(platform, release, platforms, arrangement_version, worker),
-                    osbs
-                )
-
     # osbs is a fixture here
     @pytest.mark.parametrize('isolated', [True, False])  # noqa
     def test_flatpak_args_from_cli(self, caplog, osbs, isolated):
@@ -1750,7 +1536,6 @@ class TestOSBS(object):
                 self.platform = None
                 self.release = None
                 self.platforms = 'platforms'
-                self.arrangement_version = 6
                 self.worker = False
                 self.orchestrator = True
                 self.scratch = None
@@ -1775,7 +1560,6 @@ class TestOSBS(object):
             'git_uri': None,
             'git_ref': None,
             'git_branch': TEST_GIT_BRANCH,
-            'arrangement_version': 6,
             'user': None,
             'tag': None,
             'target': None,
@@ -1823,7 +1607,6 @@ class TestOSBS(object):
                 self.platform = None
                 self.release = None
                 self.platforms = 'platforms'
-                self.arrangement_version = 6
                 self.worker = False
                 self.orchestrator = True
                 self.scratch = None
@@ -1846,7 +1629,6 @@ class TestOSBS(object):
             'git_uri': None,
             'git_ref': None,
             'git_branch': TEST_GIT_BRANCH,
-            'arrangement_version': 6,
             'user': None,
             'tag': None,
             'target': None,
