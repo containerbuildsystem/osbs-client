@@ -15,8 +15,7 @@ from distutils.version import LooseVersion
 import sys
 import logging
 import json
-from six.moves import http_client
-
+import http
 
 from osbs.exceptions import OsbsException, OsbsNetworkException, OsbsResponseException
 from osbs.constants import (
@@ -53,6 +52,9 @@ class HttpSession(object):
 
     def put(self, url, **kwargs):
         return self.request(url, "put", **kwargs)
+
+    def patch(self, url, **kwargs):
+        return self.request(url, "patch", **kwargs)
 
     def delete(self, url, **kwargs):
         return self.request(url, "delete", **kwargs)
@@ -137,12 +139,12 @@ class HttpStream(object):
         headers = headers or {}
         method = method.lower()
 
-        if method not in ['post', 'get', 'put', 'delete']:
+        if method not in ['post', 'get', 'put', 'patch', 'delete']:
             raise RuntimeError("Unsupported method '%s' for curl call!" % method)
 
         args = {}
 
-        if method in ['post', 'put']:
+        if method in ['post', 'put', 'patch']:
             headers['Expect'] = ''
 
         if not verify_ssl:
@@ -208,7 +210,7 @@ class HttpStream(object):
             for line in self.req.iter_lines(**kwargs):
                 yield line
         except (requests.exceptions.ChunkedEncodingError,
-                http_client.IncompleteRead):
+                http.client.IncompleteRead):
             return
 
     def close(self):
