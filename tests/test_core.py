@@ -81,7 +81,7 @@ class TestCheckResponse(object):
             else:
                 check_response(response, log_level=log_type)
 
-        logged = [(l.getMessage(), l.levelno) for l in caplog.records]
+        logged = [(log.getMessage(), log.levelno) for log in caplog.records]
         assert len(logged) == 1
         assert logged[0][0] == '[{code}] {message}'.format(code=status_code,
                                                            message=b'iterlines')
@@ -103,7 +103,7 @@ class TestCheckResponse(object):
             else:
                 check_response(response, log_level=log_type)
 
-        logged = [(l.getMessage(), l.levelno) for l in caplog.records]
+        logged = [(log.getMessage(), log.levelno) for log in caplog.records]
         assert len(logged) == 1
         assert logged[0][0] == '[{code}] {message}'.format(code=status_code,
                                                            message=content)

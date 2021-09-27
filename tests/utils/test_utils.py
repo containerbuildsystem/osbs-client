@@ -623,7 +623,7 @@ def test_user_warnings_handler(message, expected, caplog):
         with caplog.at_level(USER_WARNING_LEVEL):
             logging.getLogger().user_warning(message)
 
-            logged = [(l.getMessage(), l.levelno) for l in caplog.records]
+            logged = [(log.getMessage(), log.levelno) for log in caplog.records]
             assert len(logged) == 1
             assert expected in logged[0][0]
             assert logged[0][1] == USER_WARNING_LEVEL
