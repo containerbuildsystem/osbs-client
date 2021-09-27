@@ -716,7 +716,7 @@ class TestPluginsConfiguration(object):
         build_json = plugins_conf.render()
         plugins = get_plugins_from_build_json(build_json)
 
-        log_messages = [l.getMessage() for l in caplog.records]
+        log_messages = [log.getMessage() for log in caplog.records]
         assert 'Invalid custom configuration found for disable_plugins' in log_messages
         assert 'Invalid custom configuration found for enable_plugins' in log_messages
         assert plugin_value_get(plugins, 'prebuild_plugins', 'pull_base_image', 'args',
