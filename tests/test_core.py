@@ -406,8 +406,9 @@ class TestOpenshift(object):
          "Build config not found for labels"),
         ([], None, "Build config not found for labels"),
         ([{"spam": "maps", "maps": {"spam": "value-3"}},
-          {"spam": "maps", "maps": {"spam": "value-3"}}], None,
-          "More than one build config found for labels"),
+          {"spam": "maps", "maps": {"spam": "value-3"}}],
+         None,
+         "More than one build config found for labels"),
     ])
     def test_get_build_config_by_labels_filtered_fail(self, openshift,
                                                       items, filter_value, error):
