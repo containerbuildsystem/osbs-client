@@ -159,6 +159,17 @@
               ]
           }
         },
+        "module_resolve_tags": {
+          "description": "Koji tags to use to resolve partially specified modules from the modules list. If True is used, tag from koji target will be used",
+          "type": ["array", "null", "boolean"],
+          "items": {
+              "type": "string",
+              "examples": [
+                "f30-modules",
+                "rhel-8.2.1-modules"
+              ]
+          }
+        },
         "build_only_content_sets": {
           "desription": "Content sets used only for building content, not for distribution",
           "type": ["object", "null"],
