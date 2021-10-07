@@ -3,4 +3,4 @@ jsonschema==2.3.0  # to match available in RHEL/CentOS 7
 requests
 requests-kerberos
 six
-PyYAML
+PyYAML<6
