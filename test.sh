@@ -4,8 +4,8 @@ set -eux
 # Prepare env vars
 ENGINE=${ENGINE:="podman"}
 OS=${OS:="centos"}
-OS_VERSION=${OS_VERSION:="7"}
-PYTHON_VERSION=${PYTHON_VERSION:="2"}
+OS_VERSION=${OS_VERSION:="8"}
+PYTHON_VERSION=${PYTHON_VERSION:="3"}
 ACTION=${ACTION:="test"}
 IMAGE="$OS:$OS_VERSION"
 CONTAINER_NAME="osbs-client-$OS-$OS_VERSION-py$PYTHON_VERSION"
@@ -46,8 +46,7 @@ function setup_osbs() {
 
   # Install dependencies
   $RUN $PKG install -y "${PKG_EXTRA[@]}"
-  [[ ${PYTHON_VERSION} == '3' ]] && WITH_PY3=1 || WITH_PY3=0
-  $RUN "${BUILDDEP[@]}" --define "with_python3 ${WITH_PY3}" -y osbs-client.spec
+  $RUN "${BUILDDEP[@]}" -y osbs-client.spec
   if [[ $OS = centos ]]; then
     # Install dependecies for test, as check is disabled for rhel
     $RUN yum install -y python-flexmock \
@@ -59,16 +58,8 @@ function setup_osbs() {
 
   # Install pip package
   $RUN $PKG install -y $PIP_PKG
-  if [[ $PYTHON_VERSION == 3 ]]; then
-    # https://fedoraproject.org/wiki/Changes/Making_sudo_pip_safe
-    $RUN mkdir -p /usr/local/lib/python3.6/site-packages/
-  fi
-
-  # pip update pip/setuptools for Cent
-  if [[ $OS == centos && $OS_VERSION == 7 ]]; then
-    $RUN "${PIP_INST[@]}" -U pip==20.3.4
-    $RUN "${PIP_INST[@]}" -U setuptools
-  fi
+  # https://fedoraproject.org/wiki/Changes/Making_sudo_pip_safe
+  $RUN mkdir -p /usr/local/lib/python3.6/site-packages/
 
   # Setuptools install osbs-client from source
   $RUN $PYTHON setup.py install
@@ -89,11 +80,7 @@ case ${ACTION} in
   ;;
 "bandit")
   setup_osbs
-  if [[ $PYTHON_VERSION == 2 ]]; then
-    $RUN $PIP install 'bandit==1.6.*'
-  else
-    $RUN $PIP install bandit
-  fi
+  $RUN $PIP install bandit
   TEST_CMD="bandit-baseline -r osbs -ll -ii"
   ;;
 *)

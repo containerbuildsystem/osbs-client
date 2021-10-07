@@ -1,14 +1,4 @@
-%if 0%{?rhel} && 0%{?rhel} <= 7
-%{!?py2_build: %global py2_build %{__python2} setup.py build}
-%{!?py2_install: %global py2_install %{__python2} setup.py install --skip-build --root %{buildroot}}
-%endif
-
-%if (0%{?fedora} >= 22 || 0%{?rhel} >= 8)
-%{!?with_python3:%global with_python3 1}
 %global binaries_py_version %{python3_version}
-%else
-%global binaries_py_version %{python2_version}
-%endif
 
 %if 0%{?fedora}
 # rhel/epel has older incompatible version of pytest (no caplog)
@@ -29,23 +19,13 @@ Source0:        https://github.com/containerbuildsystem/osbs-client/archive/%{ve
 
 BuildArch:      noarch
 
-%if 0%{?with_python3}
 Requires:       python3-osbs-client = %{version}-%{release}
-%else
-Requires:       python-osbs-client = %{version}-%{release}
-%endif
 
 BuildRequires:  git-core
-%if 0%{?with_python3}
 BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
-%else
-BuildRequires:  python2-devel
-BuildRequires:  python-setuptools
-%endif
 
 %if 0%{?with_check}
-%if 0%{?with_python3}
 BuildRequires:  python3-dateutil
 BuildRequires:  python3-pytest
 BuildRequires:  python3-flexmock
@@ -55,17 +35,7 @@ BuildRequires:  python3-requests
 BuildRequires:  python3-requests-kerberos
 BuildRequires:  python3-PyYAML
 BuildRequires:  python3-jsonschema
-%else
-BuildRequires:  pytest
-BuildRequires:  python-flexmock
-BuildRequires:  python-six
-BuildRequires:  python-dockerfile-parse
-BuildRequires:  python-requests
-BuildRequires:  python-requests-kerberos
-BuildRequires:  PyYAML
-%endif # with_python3
 %endif # with_check
-
 
 Provides:       osbs = %{version}-%{release}
 Obsoletes:      osbs < %{osbs_obsolete_vr}
@@ -75,7 +45,6 @@ It is able to query OpenShift v3 for various stuff related to building images.
 It can initiate builds, list builds, get info about builds, get build logs...
 This package contains osbs command line client.
 
-%if 0%{?with_python3}
 %package -n python3-osbs-client
 Summary:        Python 3 module for OpenShift Build Service
 Group:          Development/Tools
@@ -100,63 +69,23 @@ It is able to query OpenShift v3 for various stuff related to building images.
 It can initiate builds, list builds, get info about builds, get build logs...
 This package contains osbs Python 3 bindings.
 
-%else
-%package -n python-osbs-client
-Summary:        Python 2 module for OpenShift Build Service
-Group:          Development/Tools
-License:        BSD
-Requires:       python-dockerfile-parse
-Requires:       python-jsonschema
-Requires:       python-requests
-Requires:       python-requests-kerberos
-Requires:       python-setuptools
-Requires:       python-six
-Requires:       krb5-workstation
-Requires:       PyYAML
-Requires:       git-core
-
-Provides:       python-osbs = %{version}-%{release}
-Obsoletes:      python-osbs < %{osbs_obsolete_vr}
-%{?python_provide:%python_provide python-osbs-client}
-
-%description -n python-osbs-client
-It is able to query OpenShift v3 for various stuff related to building images.
-It can initiate builds, list builds, get info about builds, get build logs...
-This package contains osbs Python 2 bindings.
-%endif # with_python3
-
 
 %prep
 %setup -q
 
 %build
-%if 0%{?with_python3}
 %py3_build
-%else
-%py2_build
-%endif # with_python3
 
 
 %install
-%if 0%{?with_python3}
 %py3_install
 mv %{buildroot}%{_bindir}/osbs %{buildroot}%{_bindir}/osbs-%{python3_version}
 ln -s  %{_bindir}/osbs-%{python3_version} %{buildroot}%{_bindir}/osbs-3
-%else
-%py2_install
-mv %{buildroot}%{_bindir}/osbs %{buildroot}%{_bindir}/osbs-%{python2_version}
-ln -s  %{_bindir}/osbs-%{python2_version} %{buildroot}%{_bindir}/osbs-2
-%endif # with_python3
-
 ln -s  %{_bindir}/osbs-%{binaries_py_version} %{buildroot}%{_bindir}/osbs
 
 %if 0%{?with_check}
 %check
-%if 0%{?with_python3}
 LANG=en_US.utf8 py.test-%{python3_version} -vv tests
-%else
-LANG=en_US.utf8 py.test-%{python2_version} -vv tests
-%endif # with_python3
 %endif # with_check
 
 
@@ -166,7 +95,6 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %{!?_licensedir:%global license %doc}
 %license LICENSE
 
-%if 0%{?with_python3}
 %files -n python3-osbs-client
 %doc README.md
 %{!?_licensedir:%global license %doc}
@@ -179,20 +107,7 @@ LANG=en_US.utf8 py.test-%{python2_version} -vv tests
 %ghost %config(noreplace) %{_datadir}/osbs/orchestrator_customize.json
 %ghost %config(noreplace) %{_datadir}/osbs/prod_customize.json
 %ghost %config(noreplace) %{_datadir}/osbs/worker_customize.json
-%else
-%files -n python-osbs-client
-%doc README.md
-%{!?_licensedir:%global license %doc}
-%license LICENSE
-%{_bindir}/osbs-%{python2_version}
-%{_bindir}/osbs-2
-%{python2_sitelib}/osbs*
-%dir %{_datadir}/osbs
-%{_datadir}/osbs/*.json
-%ghost %config(noreplace) %{_datadir}/osbs/orchestrator_customize.json
-%ghost %config(noreplace) %{_datadir}/osbs/prod_customize.json
-%ghost %config(noreplace) %{_datadir}/osbs/worker_customize.json
-%endif # with_python3
+
 
 %changelog
 * Fri Jul 30 2021 mkosiarc <mkosiarc@redhat.com> 1.11.0-1
