@@ -8,7 +8,6 @@ of the BSD license. See the LICENSE file for details.
 """
 
 import re
-import sys
 import glob
 
 from setuptools import setup, find_packages
@@ -27,14 +26,6 @@ def _get_requirements(path):
     return [p.strip() for p in packages if not re.match(r"^\s*#", p)]
 
 
-def _install_requirements():
-    if sys.version_info[0] >= 3:
-        requirements = _get_requirements('requirements.txt')
-    else:
-        requirements = _get_requirements('requirements-py2.txt')
-    return requirements
-
-
 setup(
     name="osbs-client",
     description='Python module and command line client for OpenShift Build Service',
@@ -47,9 +38,17 @@ setup(
     entry_points={
           'console_scripts': ['osbs=osbs.cli.main:main'],
     },
-    install_requires=_install_requirements(),
+    install_requires=_get_requirements('requirements.txt'),
     package_data={'osbs': ['schemas/*.json']},
     data_files=data_files.items(),
     setup_requires=[],
     tests_require=_get_requirements('tests/requirements.txt'),
+    python_requires='>=3.6',
+    classifiers=[
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+    ],
 )
