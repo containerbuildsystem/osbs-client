@@ -122,10 +122,8 @@ Some options are also mandatory.
 
 ## Build JSON Templates
 
-In the `build_json_dir` there must be `prod.json` and `prod_inner.json` which
-define the OpenShift [Build][] specification which will be used to enable the
-specific [atomic-reactor][] plugins which should be enabled and the config
-values for each.
+In the `build_json_dir` there must be `prod.json`, which defines the OpenShift
+[Build][] specification.
 
 There is also a third file that is optional that can exist along side the
 previous two in `build_json_dir` which is `prod_customize.json` and it will
@@ -137,9 +135,6 @@ have same function as mentioned above, only these are specific for orchestrator
 or worker builds.
 
 Based on `prod.json` there are `worker.json` and `orchestrator.json`.
-
-Based on `prod_inner.json` there are `orchestrator_inner:6.json` and
-`worker_inner:6.json`.
 
 Based on `prod_customize.json` there are `orchestrator_customize.json` and
 `worker_customize.json`.

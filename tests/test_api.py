@@ -36,10 +36,8 @@ from osbs.exceptions import (OsbsValidationException, OsbsException, OsbsRespons
 from osbs.http import HttpResponse
 from osbs.cli.main import cmd_build
 from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
-                            DEFAULT_INNER_TEMPLATE, WORKER_INNER_TEMPLATE,
                             DEFAULT_CUSTOMIZE_CONF, WORKER_CUSTOMIZE_CONF,
-                            ORCHESTRATOR_OUTER_TEMPLATE, ORCHESTRATOR_INNER_TEMPLATE,
-                            DEFAULT_ARRANGEMENT_VERSION,
+                            ORCHESTRATOR_OUTER_TEMPLATE,
                             ORCHESTRATOR_CUSTOMIZE_CONF,
                             BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR,
                             REPO_CONTAINER_CONFIG)
@@ -274,14 +272,10 @@ class TestOSBS(object):
         assert isinstance(response, BuildResponse)
 
     # osbs is a fixture here
-    @pytest.mark.parametrize(('inner_template', 'outer_template',  # noqa
-                              'customize_conf', 'version'), (
-        (WORKER_INNER_TEMPLATE.format(
-            arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
-         WORKER_OUTER_TEMPLATE, WORKER_CUSTOMIZE_CONF, DEFAULT_ARRANGEMENT_VERSION),
-    ))
-    def test_create_build_build_request(self, osbs, inner_template,
-                                        outer_template, customize_conf, version):
+    @pytest.mark.parametrize(
+        ('outer_template', 'customize_conf'), [(WORKER_OUTER_TEMPLATE, WORKER_CUSTOMIZE_CONF)],
+    )
+    def test_create_build_build_request(self, osbs, outer_template, customize_conf):
         repo_info = self.mock_repo_info()
 
         user_params = BuildUserParams.make_params(
@@ -305,15 +299,13 @@ class TestOSBS(object):
 
         (flexmock(osbs)
             .should_call('get_build_request')
-            .with_args(inner_template=inner_template,
-                       outer_template=outer_template,
+            .with_args(outer_template=outer_template,
                        customize_conf=customize_conf,
                        user_params=user_params,
                        repo_info=repo_info)
             .once())
 
-        response = osbs.create_build(inner_template=inner_template,
-                                     outer_template=outer_template,
+        response = osbs.create_build(outer_template=outer_template,
                                      customize_conf=customize_conf,
                                      **REQUIRED_BUILD_ARGS)
         assert isinstance(response, BuildResponse)
@@ -357,8 +349,7 @@ class TestOSBS(object):
             .should_receive('create_build')
             .replace_with(mock_create_build))
 
-        osbs_obj.create_build(inner_template=DEFAULT_INNER_TEMPLATE,
-                              outer_template=DEFAULT_OUTER_TEMPLATE,
+        osbs_obj.create_build(outer_template=DEFAULT_OUTER_TEMPLATE,
                               customize_conf=DEFAULT_CUSTOMIZE_CONF,
                               **REQUIRED_BUILD_ARGS)
 
@@ -396,8 +387,6 @@ class TestOSBS(object):
             'platform': platform,
             'build_type': BUILD_TYPE_WORKER,
             'release': release,
-            'inner_template':
-                WORKER_INNER_TEMPLATE.format(arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
             'outer_template': WORKER_OUTER_TEMPLATE,
             'customize_conf': WORKER_CUSTOMIZE_CONF,
             'reactor_config_override': {'source_registry': {'url': 'source_registry'}}
@@ -416,25 +405,16 @@ class TestOSBS(object):
             assert isinstance(response, BuildResponse)
 
     # osbs is a fixture here
-    @pytest.mark.parametrize(('inner_template', 'outer_template',  # noqa
-                              'customize_conf',
-                              'exp_inner_template_if_different'), (
-        (WORKER_INNER_TEMPLATE.format(
-            arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
-         WORKER_OUTER_TEMPLATE, WORKER_CUSTOMIZE_CONF, None),
-
-        (None, WORKER_OUTER_TEMPLATE, None, None),
-
-        (WORKER_INNER_TEMPLATE.format(
-            arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
-         None, None, None),
-
-        (None, None, WORKER_CUSTOMIZE_CONF, None),
-
-        (None, None, None, None),
-    ))
-    def test_create_worker_build(self, osbs, inner_template, outer_template,
-                                 customize_conf, exp_inner_template_if_different):
+    @pytest.mark.parametrize(
+        ('outer_template', 'customize_conf'),
+        (
+            (WORKER_OUTER_TEMPLATE, WORKER_CUSTOMIZE_CONF),
+            (WORKER_OUTER_TEMPLATE, None),
+            (None, WORKER_CUSTOMIZE_CONF),
+            (None, None),
+        ),
+    )
+    def test_create_worker_build(self, osbs, outer_template, customize_conf):
         branch = TEST_GIT_BRANCH
         (flexmock(utils)
             .should_receive('get_repo_info')
@@ -461,24 +441,16 @@ class TestOSBS(object):
             'platform': kwargs['platform'],
             'build_type': BUILD_TYPE_WORKER,
             'release': kwargs['release'],
-            'inner_template': WORKER_INNER_TEMPLATE.format(
-                arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
             'outer_template': WORKER_OUTER_TEMPLATE,
             'customize_conf': WORKER_CUSTOMIZE_CONF,
         }
 
-        if inner_template is not None:
-            kwargs['inner_template'] = inner_template
-            expected_kwargs['inner_template'] = inner_template
         if outer_template is not None:
             kwargs['outer_template'] = outer_template
             expected_kwargs['outer_template'] = outer_template
         if customize_conf is not None:
             kwargs['customize_conf'] = customize_conf
             expected_kwargs['customize_conf'] = customize_conf
-
-        if exp_inner_template_if_different:
-            expected_kwargs['inner_template'] = exp_inner_template_if_different
 
         (flexmock(osbs)
             .should_receive('_do_create_prod_build')
@@ -488,48 +460,21 @@ class TestOSBS(object):
         osbs.create_worker_build(**kwargs)
 
     # osbs is a fixture here
-    def test_create_worker_build_ioerror(self, osbs):  # noqa
-        """
-        Test IOError raised by create_worker_build with valid arrangement_version is handled correct
-         i.e. OsbsException wraps it.
-        """
-        (flexmock(utils)
-            .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
-            .and_raise(IOError))
-
-        with pytest.raises(OsbsException) as ex:
-            osbs.create_worker_build(TEST_GIT_URI, TEST_GIT_REF,
-                                     TEST_GIT_BRANCH, TEST_USER,
-                                     platform='spam', release='bacon',
-                                     arrangement_version=DEFAULT_ARRANGEMENT_VERSION)
-
-        assert not isinstance(ex, OsbsValidationException)
-
-    # osbs is a fixture here
     @pytest.mark.parametrize(  # noqa
-        ('inner_template_fmt', 'outer_template', 'customize_conf', 'arrangement_version'), (
-            (ORCHESTRATOR_INNER_TEMPLATE, ORCHESTRATOR_OUTER_TEMPLATE, ORCHESTRATOR_CUSTOMIZE_CONF,
-             None),
-
-            (ORCHESTRATOR_INNER_TEMPLATE, None, None, None),
-
-            (None, ORCHESTRATOR_OUTER_TEMPLATE, None, None),
-
-            (None, None, ORCHESTRATOR_CUSTOMIZE_CONF, None),
-
-            (None, None, None, DEFAULT_ARRANGEMENT_VERSION),
-
-            (None, None, None, None),
-        )
+        ('outer_template', 'customize_conf'),
+        (
+            (ORCHESTRATOR_OUTER_TEMPLATE, ORCHESTRATOR_CUSTOMIZE_CONF),
+            (ORCHESTRATOR_OUTER_TEMPLATE, None),
+            (None, ORCHESTRATOR_CUSTOMIZE_CONF),
+            (None, None),
+        ),
     )
     @pytest.mark.parametrize('platforms', (
         None, [], ['spam'], ['spam', 'bacon'],
     ))
     @pytest.mark.parametrize(('flatpak'), (True, False))
-    def test_create_orchestrator_build(self, osbs, inner_template_fmt,
-                                       outer_template, customize_conf,
-                                       arrangement_version, platforms,
+    def test_create_orchestrator_build(self, osbs, outer_template, customize_conf,
+                                       platforms,
                                        flatpak):
         branch = TEST_GIT_BRANCH
         (flexmock(utils)
@@ -547,9 +492,6 @@ class TestOSBS(object):
             kwargs['git_branch'] = branch
         if platforms is not None:
             kwargs['platforms'] = platforms
-        if inner_template_fmt is not None:
-            kwargs['inner_template'] = inner_template_fmt.format(
-                arrangement_version=arrangement_version or DEFAULT_ARRANGEMENT_VERSION)
         if outer_template is not None:
             kwargs['outer_template'] = outer_template
         if customize_conf is not None:
@@ -564,8 +506,6 @@ class TestOSBS(object):
             'git_branch': branch,
             'user': TEST_USER,
             'build_type': BUILD_TYPE_ORCHESTRATOR,
-            'inner_template': ORCHESTRATOR_INNER_TEMPLATE.format(
-                arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
             'outer_template': ORCHESTRATOR_OUTER_TEMPLATE,
             'customize_conf': ORCHESTRATOR_CUSTOMIZE_CONF,
             'release': '1'
@@ -847,7 +787,6 @@ class TestOSBS(object):
         ('spam', 'spam', 'spam', True),
     ))
     def test_get_build_request_api(self, osbs, cpu, memory, storage, set_resource):
-        inner_template = 'inner.json'
         outer_template = 'outer.json'
         build_json_store = 'build/json/store'
 
@@ -869,7 +808,6 @@ class TestOSBS(object):
             .times(1 if set_resource else 0))
 
         get_build_request_kwargs = {
-            'inner_template': inner_template,
             'outer_template': outer_template,
         }
         osbs.get_build_request(**get_build_request_kwargs)
@@ -1113,8 +1051,6 @@ class TestOSBS(object):
             'user': TEST_USER,
             'platform': 'meal',
             'release': 'bacon',
-            'inner_template':
-                WORKER_INNER_TEMPLATE.format(arrangement_version=DEFAULT_ARRANGEMENT_VERSION),
             'outer_template': WORKER_OUTER_TEMPLATE,
             'customize_conf': WORKER_CUSTOMIZE_CONF,
             'reactor_config_override': {'source_registry': {'url': 'source_registry'}}
@@ -1675,7 +1611,6 @@ class TestOSBS(object):
         None
     ])
     def test_do_create_prod_build_branch_required(self, osbs, branch_name):
-        inner_template = DEFAULT_INNER_TEMPLATE
         outer_template = DEFAULT_OUTER_TEMPLATE
         customize_conf = DEFAULT_CUSTOMIZE_CONF
         repo_info = self.mock_repo_info()
@@ -1702,8 +1637,7 @@ class TestOSBS(object):
 
         (flexmock(osbs)
             .should_call('get_build_request')
-            .with_args(inner_template=inner_template,
-                       outer_template=outer_template,
+            .with_args(outer_template=outer_template,
                        customize_conf=customize_conf,
                        user_params=user_params,
                        repo_info=repo_info))
@@ -1711,7 +1645,6 @@ class TestOSBS(object):
         if branch_name:
             response = osbs._do_create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
                                                   branch_name, user=TEST_USER,
-                                                  inner_template=inner_template,
                                                   outer_template=outer_template,
                                                   customize_conf=customize_conf,
                                                   build_type=BUILD_TYPE_ORCHESTRATOR)
@@ -1720,7 +1653,6 @@ class TestOSBS(object):
             with pytest.raises(OsbsException):
                 osbs._do_create_prod_build(TEST_GIT_URI, TEST_GIT_REF,
                                            branch_name, user=TEST_USER,
-                                           inner_template=inner_template,
                                            outer_template=outer_template,
                                            customize_conf=customize_conf,
                                            build_type=BUILD_TYPE_ORCHESTRATOR)
@@ -1728,7 +1660,6 @@ class TestOSBS(object):
     def test_do_create_prod_build_missing_params(self, osbs, caplog):  # noqa
         with pytest.raises(OsbsException):
             osbs._do_create_prod_build(user=TEST_USER,
-                                       inner_template=DEFAULT_INNER_TEMPLATE,
                                        outer_template=DEFAULT_OUTER_TEMPLATE,
                                        customize_conf=DEFAULT_CUSTOMIZE_CONF,
                                        build_type=BUILD_TYPE_ORCHESTRATOR)
@@ -1736,7 +1667,6 @@ class TestOSBS(object):
 
         with pytest.raises(OsbsException):
             osbs._do_create_prod_build(TEST_GIT_URI, user=TEST_USER,
-                                       inner_template=DEFAULT_INNER_TEMPLATE,
                                        outer_template=DEFAULT_OUTER_TEMPLATE,
                                        customize_conf=DEFAULT_CUSTOMIZE_CONF,
                                        build_type=BUILD_TYPE_ORCHESTRATOR)
@@ -1745,7 +1675,6 @@ class TestOSBS(object):
 
         with pytest.raises(OsbsException):
             osbs._do_create_prod_build(TEST_GIT_URI, TEST_GIT_REF, user=TEST_USER,
-                                       inner_template=DEFAULT_INNER_TEMPLATE,
                                        outer_template=DEFAULT_OUTER_TEMPLATE,
                                        customize_conf=DEFAULT_CUSTOMIZE_CONF,
                                        build_type=BUILD_TYPE_ORCHESTRATOR)
@@ -1755,7 +1684,6 @@ class TestOSBS(object):
 
         with pytest.raises(OsbsException):
             osbs._do_create_prod_build(user=TEST_USER,
-                                       inner_template=DEFAULT_INNER_TEMPLATE,
                                        outer_template=DEFAULT_OUTER_TEMPLATE,
                                        customize_conf=DEFAULT_CUSTOMIZE_CONF,
                                        build_type=BUILD_TYPE_ORCHESTRATOR)
@@ -1890,7 +1818,6 @@ class TestOSBS(object):
             'git_ref': TEST_GIT_REF,
             'git_branch': TEST_GIT_BRANCH,
             'user': TEST_USER,
-            'inner_template': DEFAULT_INNER_TEMPLATE,
             'outer_template': DEFAULT_OUTER_TEMPLATE,
             'customize_conf': DEFAULT_CUSTOMIZE_CONF,
             'build_type': 'orchestrator',
@@ -1919,7 +1846,6 @@ class TestOSBS(object):
             'git_ref': TEST_GIT_REF,
             'git_branch': TEST_GIT_BRANCH,
             'user': TEST_USER,
-            'inner_template': DEFAULT_INNER_TEMPLATE,
             'outer_template': DEFAULT_OUTER_TEMPLATE,
             'customize_conf': DEFAULT_CUSTOMIZE_CONF,
             'build_type': 'orchestrator',

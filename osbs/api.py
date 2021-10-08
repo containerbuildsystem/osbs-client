@@ -26,25 +26,18 @@ from osbs.build.build_requestv2 import (
     SourceBuildRequest,
 )
 from osbs.build.user_params import (
-    load_user_params_from_json,
     BuildUserParams,
     SourceContainerUserParams
-)
-from osbs.build.plugins_configuration import (
-    PluginsConfiguration,
-    SourceContainerPluginsConfiguration,
 )
 from osbs.build.build_response import BuildResponse
 from osbs.build.pod_response import PodResponse
 from osbs.build.config_map_response import ConfigMapResponse
-from osbs.constants import (WORKER_OUTER_TEMPLATE, WORKER_INNER_TEMPLATE, WORKER_CUSTOMIZE_CONF,
-                            ORCHESTRATOR_OUTER_TEMPLATE, ORCHESTRATOR_INNER_TEMPLATE,
+from osbs.constants import (WORKER_OUTER_TEMPLATE, WORKER_CUSTOMIZE_CONF,
+                            ORCHESTRATOR_OUTER_TEMPLATE,
                             ORCHESTRATOR_CUSTOMIZE_CONF, BUILD_TYPE_WORKER,
                             BUILD_TYPE_ORCHESTRATOR, BUILD_FINISHED_STATES,
                             RELEASE_LABEL_FORMAT, VERSION_LABEL_FORBIDDEN_CHARS,
-                            ORCHESTRATOR_SOURCES_OUTER_TEMPLATE, DEFAULT_ARRANGEMENT_VERSION,
-                            USER_PARAMS_KIND_IMAGE_BUILDS,
-                            USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS,
+                            ORCHESTRATOR_SOURCES_OUTER_TEMPLATE,
                             )
 from osbs.core import Openshift
 from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsResponseException,
@@ -201,15 +194,13 @@ class OSBS(object):
                                               storage=storage_limit)
 
     @osbsapi
-    def get_build_request(self, inner_template=None,
-                          outer_template=None, customize_conf=None,
+    def get_build_request(self, outer_template=None, customize_conf=None,
                           user_params=None, repo_info=None, **kwargs
                           ):
         """
         return instance of BuildRequestV2
 
         :param build_type: str, unused
-        :param inner_template: str, name of inner template for BuildRequest
         :param outer_template: str, name of outer template for BuildRequest
         :param customize_conf: str, name of customization config for BuildRequest
         :param repo_info: RepoInfo, git repo data for the build
@@ -390,7 +381,6 @@ class OSBS(object):
     def _do_create_prod_build(self,
                               git_uri=_REQUIRED_PARAM, git_ref=_REQUIRED_PARAM,
                               git_branch=_REQUIRED_PARAM,
-                              inner_template=None,
                               outer_template=None,
                               customize_conf=None,
                               build_type=None,
@@ -453,8 +443,7 @@ class OSBS(object):
             operator_csv_modifications_url=operator_csv_modifications_url,
             **kwargs)
 
-        build_request = self.get_build_request(inner_template=inner_template,
-                                               outer_template=outer_template,
+        build_request = self.get_build_request(outer_template=outer_template,
                                                customize_conf=customize_conf,
                                                user_params=user_params,
                                                repo_info=repo_info)
@@ -562,8 +551,6 @@ class OSBS(object):
         modifications:
             - platform param is required
             - release param is required
-              select which worker_inner:n.json template to use
-            - inner template set to worker_inner:n.json if not set
             - outer template set to worker.json if not set
             - customize configuration set to worker_customize.json if not set
 
@@ -581,19 +568,10 @@ class OSBS(object):
         if kwargs.get('platforms'):
             raise ValueError("Worker build called with unwanted platforms param")
 
-        kwargs.setdefault('inner_template', WORKER_INNER_TEMPLATE.format(
-            arrangement_version=DEFAULT_ARRANGEMENT_VERSION))
         kwargs.setdefault('outer_template', WORKER_OUTER_TEMPLATE)
         kwargs.setdefault('customize_conf', WORKER_CUSTOMIZE_CONF)
         kwargs['build_type'] = BUILD_TYPE_WORKER
-        try:
-            return self._do_create_prod_build(**kwargs)
-        except IOError as ex:
-            if os.path.basename(ex.filename) == kwargs['inner_template']:
-                raise OsbsValidationException("worker invalid arrangement_version %s" %
-                                              DEFAULT_ARRANGEMENT_VERSION)
-
-            raise
+        return self._do_create_prod_build(**kwargs)
 
     @osbsapi
     def create_orchestrator_build(self, **kwargs):
@@ -603,7 +581,6 @@ class OSBS(object):
         Pass through method to create_prod_build with the following
         modifications:
             - platforms param is required
-            - inner template set to orchestrator_inner:n.json if not set
             - outer template set to orchestrator.json if not set
             - customize configuration set to orchestrator_customize.json if not set
 
@@ -617,19 +594,10 @@ class OSBS(object):
             raise ValueError("Orchestrator build called with unwanted parameters: %s" %
                              extra)
 
-        kwargs.setdefault('inner_template', ORCHESTRATOR_INNER_TEMPLATE.format(
-            arrangement_version=DEFAULT_ARRANGEMENT_VERSION))
         kwargs.setdefault('outer_template', ORCHESTRATOR_OUTER_TEMPLATE)
         kwargs.setdefault('customize_conf', ORCHESTRATOR_CUSTOMIZE_CONF)
         kwargs['build_type'] = BUILD_TYPE_ORCHESTRATOR
-        try:
-            return self._do_create_prod_build(**kwargs)
-        except IOError as ex:
-            if os.path.basename(ex.filename) == kwargs['inner_template']:
-                raise OsbsValidationException("orchestrator invalid arrangement_version %s" %
-                                              DEFAULT_ARRANGEMENT_VERSION)
-
-            raise
+        return self._do_create_prod_build(**kwargs)
 
     def _decode_build_logs_generator(self, logs):
         for line in logs:
@@ -904,16 +872,3 @@ class OSBS(object):
         self.os.retries_enabled = False
         yield
         self.os.retries_enabled = True
-
-    @osbsapi
-    def render_plugins_configuration(self, user_params_json):
-        user_params = load_user_params_from_json(user_params_json)
-
-        if user_params.KIND == USER_PARAMS_KIND_IMAGE_BUILDS:
-            return PluginsConfiguration(user_params).render()
-        elif user_params.KIND == USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS:
-            return SourceContainerPluginsConfiguration(user_params).render()
-        else:
-            raise RuntimeError(
-                "Unexpected user params kind: {}".format(user_params.KIND)
-            )
