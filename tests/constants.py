@@ -89,29 +89,3 @@ TEST_BUILD_JSON = {
         }
     }
 }
-
-TEST_INNER_DOCK_JSON = {
-    "prebuild_plugins": [
-        {
-            "name": "change_from_in_dockerfile"
-        },
-        {
-            "args": {
-                "key1": {
-                    "a": "1",
-                    "b": "2"
-                },
-                "key2": "b"
-            },
-            "name": "a_plugin"
-        },
-    ],
-    "postbuild_plugins": [
-        {
-            "args": {
-                "image_id": "BUILT_IMAGE_ID"
-            },
-            "name": "all_rpm_packages"
-        },
-    ]
-}
