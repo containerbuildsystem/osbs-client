@@ -53,7 +53,8 @@ disable=I,
         useless-else-on-loop,
         wrong-import-order,
         wrong-import-position,
-        raise-missing-from  # nice to have, but has to work with Python 2
+        raise-missing-from,  # nice to have, but has to work with Python 2
+        no-absolute-import # not needed for python3 anymore
 
 [REPORTS]
 
