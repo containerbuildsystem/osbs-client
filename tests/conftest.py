@@ -15,7 +15,7 @@ import json
 import logging
 import fnmatch
 from osbs.core import Openshift
-from osbs.http import HttpResponse
+from osbs.osbs_http import HttpResponse
 from osbs.conf import Configuration
 from osbs.api import OSBS
 from osbs.constants import ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO

@@ -14,7 +14,7 @@ import time
 import json
 import logging
 
-from osbs.http import HttpResponse
+from osbs.osbs_http import HttpResponse
 from osbs.constants import (BUILD_FINISHED_STATES, BUILD_CANCELLED_STATE,
                             OS_CONFLICT_MAX_RETRIES)
 from osbs.exceptions import (OsbsResponseException, OsbsException,

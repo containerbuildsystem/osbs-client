@@ -27,7 +27,7 @@ from requests.utils import guess_json_utf
 from six.moves import http_client
 from six.moves.urllib.parse import urljoin, urlencode, urlparse, parse_qs
 
-from .http import HttpSession
+from osbs.osbs_http import HttpSession
 
 
 logger = logging.getLogger(__name__)

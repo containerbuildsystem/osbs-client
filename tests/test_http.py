@@ -13,10 +13,11 @@ import logging
 from flexmock import flexmock
 import pytest
 import requests
+import http
 
 from urllib3 import __version__ as urllib3_version
 from urllib3.util import Retry
-from osbs.http import HttpSession, HttpStream, http_client, HttpResponse
+from osbs.osbs_http import HttpSession, HttpStream, HttpResponse
 from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsResponseException
 from osbs.constants import HTTP_RETRIES_STATUS_FORCELIST, HTTP_REQUEST_TIMEOUT
 
@@ -145,7 +146,7 @@ class TestHttpSession(object):
     @pytest.mark.parametrize('raise_exc', (
         requests.exceptions.ChunkedEncodingError,
         requests.exceptions.ConnectionError,
-        http_client.IncompleteRead
+        http.client.IncompleteRead
     ))
     def test_osbs_exception_wrapping(self, s, raise_exc):
         (flexmock(HttpStream)
@@ -218,7 +219,7 @@ class TestHttpSession(object):
            'headers': {}
         }
 
-        fake_response = flexmock(status_code=http_client.OK, headers={})
+        fake_response = flexmock(status_code=http.client.OK, headers={})
 
         (flexmock(requests.Session)
             .should_receive('request')
@@ -230,12 +231,12 @@ class TestHttpSession(object):
 
     @pytest.mark.parametrize('exc', [
         requests.exceptions.ChunkedEncodingError,
-        http_client.IncompleteRead,
+        http.client.IncompleteRead,
     ])
     def test_iter_empty(self, s, exc):
         class MockRequest(object):
             def __init__(self):
-                self.status_code = http_client.OK
+                self.status_code = http.client.OK
                 self.headers = {}
 
             def iter_lines(self, **kwargs):
@@ -262,7 +263,7 @@ class TestHttpSession(object):
     def test_iter_exception(self, s):
         class MockRequest(object):
             def __init__(self):
-                self.status_code = http_client.OK
+                self.status_code = http.client.OK
                 self.headers = {}
 
             def iter_lines(self, **kwargs):
@@ -294,12 +295,12 @@ class TestHttpResponse(object):
     def test_simple_response(self):
         content_json = b'"this is content"'
         content_str = "this is content"
-        response = HttpResponse(status_code=http_client.OK, headers={}, content=content_json)
+        response = HttpResponse(status_code=http.client.OK, headers={}, content=content_json)
         assert content_str == response.json()
 
     def test_bad_coding_guess(self):
         bad_json = b'[\"cat\", \"dog\"][\"cat\", \"dog\"]'
-        response = HttpResponse(status_code=http_client.OK, headers={}, content=bad_json)
+        response = HttpResponse(status_code=http.client.OK, headers={}, content=bad_json)
         with pytest.raises(OsbsResponseException) as exc_info:
             response.json()
         assert 'HtttpResponse has corrupt json' in exc_info.value.message
