@@ -33,7 +33,7 @@ from osbs.build.pod_response import PodResponse
 from osbs.build.config_map_response import ConfigMapResponse
 from osbs.exceptions import (OsbsValidationException, OsbsException, OsbsResponseException,
                              OsbsOrchestratorNotEnabled)
-from osbs.http import HttpResponse
+from osbs.osbs_http import HttpResponse
 from osbs.cli.main import cmd_build
 from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             DEFAULT_INNER_TEMPLATE, WORKER_INNER_TEMPLATE,
