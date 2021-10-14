@@ -23,8 +23,8 @@ from requests.utils import guess_json_utf
 
 logger = logging.getLogger(__name__)
 
-# Retry each connection attempt after 30 seconds, for a maximum of 10 times
-WATCH_RETRY_SECS = 30
+# Retry each connection attempt after 5 seconds, for a maximum of 10 times
+WATCH_RETRY_SECS = 5
 WATCH_RETRY = 10
 MAX_BAD_RESPONSES = WATCH_RETRY // 3
 # Give up after 12 hours
@@ -282,40 +282,26 @@ class Openshift(object):
 
         return result
 
-    def watch_resource(self, api_path, api_version, resource_type, resource_name=None,
+    def watch_resource(self, api_path, api_version, resource_type, resource_name,
                        **request_args):
         """
-        Generator function which yields tuples of (change_type, object)
-        where:
-
-        - change_type is one of:
-          - 'modified', the object was modified
-          - 'deleted', the object was deleted
-          - None, a fresh version of the object was retrieved using
-            GET (only when resource_name is provided)
-
-        - object is the latest version of the object
+        Watch for changes in openshift object and return it's json representation
+        after each update to the object
         """
-
         def log_and_sleep():
             logger.debug("connection closed, reconnecting in %ds", WATCH_RETRY_SECS)
             time.sleep(WATCH_RETRY_SECS)
 
-        watch_path = f"watch/namespaces/{self.namespace}/{resource_type}/"
-        if resource_name is not None:
-            watch_path += f"{resource_name}/"
+        watch_path = f"watch/namespaces/{self.namespace}/{resource_type}/{resource_name}/"
         watch_url = self.build_url(
             api_path, api_version, watch_path, _prepend_namespace=False, **request_args
         )
-
-        get_url = None
-        if resource_name is not None:
-            get_url = self.build_url(api_path, api_version,
-                                     f"{resource_type}/{resource_name}")
+        get_url = self.build_url(api_path, api_version,
+                                 f"{resource_type}/{resource_name}")
 
         bad_responses = 0
         for _ in range(WATCH_RETRY):
-            logger.debug("watching for updates")
+            logger.debug("watching for updates for %s, %s", resource_type, resource_name)
             try:
                 response = self.get(watch_url, stream=True,
                                     headers={'Connection': 'close'})
@@ -331,40 +317,29 @@ class Openshift(object):
                     log_and_sleep()
                     continue
 
-            encoding = None
-
-            # Avoid races. We've already asked the server to tell us
-            # about changes to the object, but now ask for a fresh
-            # copy of the object as well. This is to catch the
-            # situation where the object changed before the call to
-            # this method, or in between retries in this method.
-            if get_url is not None:
-                logger.debug("retrieving fresh version of object")
-                fresh_response = self.get(get_url)
-                check_response(fresh_response)
-                yield None, fresh_response.json()
-
             for line in response.iter_lines():
-                logger.debug('%r', line)
-
-                if not encoding:
-                    encoding = guess_json_utf(line)
-
+                encoding = guess_json_utf(line)
                 try:
                     j = json.loads(line.decode(encoding))
                 except ValueError:
                     logger.error("Cannot decode watch event: %s", line)
                     continue
-
                 if 'object' not in j:
                     logger.error("Watch event has no 'object': %s", j)
                     continue
-
                 if 'type' not in j:
                     logger.error("Watch event has no 'type': %s", j)
                     continue
 
-                yield (j['type'].lower(), j['object'])
+                # Avoid races. We've already asked the server to tell us
+                # about changes to the object, but now ask for a fresh
+                # copy of the object as well. This is to catch the
+                # situation where the object changed before the call to
+                # this method, or in between retries in this method.
+                logger.debug("retrieving fresh version of object %s", resource_name)
+                fresh_response = self.get(get_url)
+                check_response(fresh_response)
+                yield fresh_response.json()
 
             log_and_sleep()
 
@@ -424,7 +399,7 @@ class PipelineRun():
         data['metadata']['labels'] = labels
         return self.os.patch(
             self.pipeline_run_url,
-            data=data,
+            data=json.dumps(data),
             headers={
                 "Content-Type": "application/merge-patch+json",
                 "Accept": "application/json",
@@ -455,7 +430,7 @@ class PipelineRun():
         https://tekton.dev/docs/pipelines/pipelineruns/#monitoring-execution-status
         """
         logger.info("Waiting for pipeline run '%s' to start", self.pipeline_run_name)
-        for _, pipeline_run in self.os.watch_resource(
+        for pipeline_run in self.os.watch_resource(
                 self.api_path,
                 self.api_version,
                 resource_type="pipelineruns",
@@ -486,7 +461,7 @@ class PipelineRun():
         sequential tasks.
         """
         watched_task_runs = []
-        for _, pipeline_run in self.os.watch_resource(
+        for pipeline_run in self.os.watch_resource(
                 self.api_path,
                 self.api_version,
                 resource_type="pipelineruns",
@@ -501,18 +476,29 @@ class PipelineRun():
                 if task_run not in watched_task_runs:
                     watched_task_runs.append(task_run)
                     yield task_run
+            # all task runs accounted for
+            if len(pipeline_run['status']['pipelineSpec']['tasks']) == len(task_runs):
+                return
+
+    def _get_logs(self):
+        logs = {}
+        pipeline_run = self.get_info()
+        task_runs = pipeline_run['status']['taskRuns']
+        for task_run in task_runs:
+            logs[task_run] = TaskRun(os=self.os, task_run_name=task_run).get_logs()
+        return logs
+
+    def _get_logs_stream(self):
+        self.wait_for_start()
+        for task_run in self.wait_for_taskruns():
+            yield from TaskRun(os=self.os, task_run_name=task_run).get_logs(
+                follow=True, wait=True)
 
     def get_logs(self, follow=False, wait=False):
         if wait or follow:
-            self.wait_for_start()
-            for task_run in self.wait_for_taskruns():
-                yield from TaskRun(os=self.os, task_run_name=task_run).get_logs(
-                    follow=follow, wait=wait)
+            return self._get_logs_stream()
         else:
-            pipeline_run = self.get_info()
-            task_runs = pipeline_run['status']['taskRuns']
-            for task_run in task_runs:
-                yield from TaskRun(os=self.os, task_run_name=task_run).get_logs()
+            return self._get_logs()
 
 
 class TaskRun():
@@ -543,14 +529,14 @@ class TaskRun():
         pod_name = task_run['status']['podName']
         containers = [step['container'] for step in task_run['status']['steps']]
         pod = Pod(os=self.os, pod_name=pod_name, containers=containers)
-        yield from pod.get_logs(follow=follow, wait=wait)
+        return pod.get_logs(follow=follow, wait=wait)
 
     def wait_for_start(self):
         """
         https://tekton.dev/docs/pipelines/taskruns/#monitoring-execution-status
         """
         logger.info("Waiting for task run '%s' to start", self.task_run_name)
-        for _, task_run in self.os.watch_resource(
+        for task_run in self.os.watch_resource(
                 self.api_path,
                 self.api_version,
                 resource_type="taskruns",
@@ -591,41 +577,46 @@ class Pod():
         r = self.os.get(url)
         return r.json()
 
-    def get_logs(self, follow=False, wait=False):
-        if follow or wait:
-            self.wait_for_start()
-            for container in self.containers:
-                yield from self.stream_logs(container)
-            return
+    def _get_logs_no_container(self):
+        url = self.os.build_url(
+            self.api_path,
+            self.api_version,
+            f"pods/{self.pod_name}/log"
+        )
+        r = self.os.get(url)
+        check_response(r)
+        return r.content.decode('utf-8')
 
-        if self.containers:
-            logs = {}
-            for container in self.containers:
-                kwargs = {'container': container}
-                logger.debug("Getting log for container %s", container)
-                url = self.os.build_url(
-                    self.api_path,
-                    self.api_version,
-                    f"pods/{self.pod_name}/log",
-                    **kwargs
-                )
-                r = self.os.get(url)
-                check_response(r)
-                logs[container] = r.content
-            yield logs
-
-        # one default container only
-        else:
+    def _get_logs(self):
+        logs = {}
+        for container in self.containers:
+            kwargs = {'container': container}
+            logger.debug("Getting log for container %s", container)
             url = self.os.build_url(
                 self.api_path,
                 self.api_version,
-                f"pods/{self.pod_name}/log"
+                f"pods/{self.pod_name}/log",
+                **kwargs
             )
             r = self.os.get(url)
             check_response(r)
-            return r.content
+            logs[container] = r.content.decode('utf-8')
+        return logs
 
-    def stream_logs(self, container):
+    def _get_logs_stream(self):
+        self.wait_for_start()
+        for container in self.containers:
+            yield from self._stream_logs(container)
+
+    def get_logs(self, follow=False, wait=False):
+        if follow or wait:
+            return self._get_logs_stream()
+        if self.containers:
+            return self._get_logs()
+        else:
+            return self._get_logs_no_container()
+
+    def _stream_logs(self, container):
         kwargs = {'follow': True}
         if container:
             kwargs['container'] = container
@@ -642,7 +633,7 @@ class Pod():
             url = self.os.build_url(
                 self.api_path,
                 self.api_version,
-                f"pods/{self.pod_name}/log/",
+                f"pods/{self.pod_name}/log",
                 **kwargs
             )
             try:
@@ -653,7 +644,7 @@ class Pod():
 
                 for line in response.iter_lines():
                     connected = time.time()
-                    yield line
+                    yield line.decode('utf-8')
             # NOTE1: If self.get causes ChunkedEncodingError, ConnectionError,
             # or IncompleteRead to be raised, they'll be wrapped in
             # OsbsNetworkException or OsbsException
@@ -681,7 +672,7 @@ class Pod():
 
     def wait_for_start(self):
         logger.info("Waiting for pod to start '%s'", self.pod_name)
-        for _, pod in self.os.watch_resource(
+        for pod in self.os.watch_resource(
                 self.api_path, self.api_version, resource_type="pods", resource_name=self.pod_name
         ):
             try:
