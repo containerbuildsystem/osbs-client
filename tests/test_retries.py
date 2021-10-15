@@ -22,6 +22,7 @@ from osbs.exceptions import OsbsNetworkException, OsbsResponseException
 from osbs.constants import HTTP_RETRIES_STATUS_FORCELIST, HTTP_RETRIES_METHODS_WHITELIST
 from osbs.core import Openshift
 from osbs.osbs_http import HttpSession, HttpStream
+from osbs import osbs_http
 logger = logging.getLogger(__file__)
 
 
@@ -52,7 +53,7 @@ class TestHttpRetries(object):
     @pytest.mark.parametrize('status_code', HTTP_RETRIES_STATUS_FORCELIST)
     @pytest.mark.parametrize('method', HTTP_RETRIES_METHODS_WHITELIST)
     def test_fail_after_retries(self, s, status_code, method):
-        flexmock(Retry).new_instances(fake_retry)
+        (flexmock(osbs_http).should_receive('make_retry').and_return(fake_retry))
         # latest python-requests throws OsbsResponseException, 2.6.x - OsbsNetworkException
         with pytest.raises((OsbsNetworkException, OsbsResponseException)) as exc_info:
             s.request(method=method, url='http://httpbin.org/status/%s' % status_code).json()
@@ -60,7 +61,7 @@ class TestHttpRetries(object):
             assert exc_info.value.status_code == status_code
 
     def test_stream_logs_not_decoded(self, caplog):
-        flexmock(Retry).new_instances(fake_retry)
+        (flexmock(osbs_http).should_receive('make_retry').and_return(fake_retry))
         server = Openshift('http://apis/', 'http://oauth/authorize',
                            k8s_api_url='http://api/v1/')
 
