@@ -83,12 +83,6 @@ mv %{buildroot}%{_bindir}/osbs %{buildroot}%{_bindir}/osbs-%{python3_version}
 ln -s  %{_bindir}/osbs-%{python3_version} %{buildroot}%{_bindir}/osbs-3
 ln -s  %{_bindir}/osbs-%{binaries_py_version} %{buildroot}%{_bindir}/osbs
 
-%if 0%{?with_check}
-%check
-LANG=en_US.utf8 py.test-%{python3_version} -vv tests
-%endif # with_check
-
-
 %files
 %doc README.md
 %{_bindir}/osbs
