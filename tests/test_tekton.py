@@ -1,10 +1,13 @@
 import responses
 import pytest
+import yaml
+from copy import deepcopy
 
 from osbs.tekton import Openshift, PipelineRun, TaskRun, Pod
+from tests.constants import TEST_PIPELINE_RUN_TEMPLATE
 
-PIPELINE_NAME = 'test-pipeline'
-PIPELINE_RUN_NAME = 'test-pipeline-run-1'
+PIPELINE_NAME = 'source-container-0-1'
+PIPELINE_RUN_NAME = 'source-container-x-x-default'
 TASK_RUN_NAME = 'test-task-run-1'
 OPENSHIFT_NAMESPACE = 'test-namespace'
 PIPELINE_RUN_URL = f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{OPENSHIFT_NAMESPACE}/pipelineruns/{PIPELINE_RUN_NAME}' # noqa E501
@@ -118,6 +121,10 @@ POD_WATCH_JSON = {
     "object": POD_JSON
 }
 
+with open(TEST_PIPELINE_RUN_TEMPLATE) as f:
+    yaml_data = f.read()
+PIPELINE_RUN_DATA = yaml.safe_load(yaml_data)
+
 
 @pytest.fixture(scope='module')
 def openshift():
@@ -128,8 +135,8 @@ def openshift():
 
 @pytest.fixture(scope='module')
 def pipeline_run(openshift):
-    return PipelineRun(os=openshift, pipeline_name=PIPELINE_NAME,
-                       pipeline_run_name=PIPELINE_RUN_NAME)
+    return PipelineRun(os=openshift, pipeline_run_name=PIPELINE_RUN_NAME,
+                       pipeline_run_data=PIPELINE_RUN_DATA)
 
 
 @pytest.fixture(scope='module')
@@ -144,12 +151,7 @@ def pod(openshift):
 
 @pytest.fixture(scope='function')
 def expected_request_body_pipeline_run():
-    return {
-        'apiVersion': 'tekton.dev/v1beta1',
-        'kind': 'PipelineRun',
-        'metadata': {'name': PIPELINE_RUN_NAME},
-        'spec': {'pipelineRef': {'name': PIPELINE_NAME}}
-    }
+    return PIPELINE_RUN_DATA
 
 
 class TestPod():
@@ -326,6 +328,18 @@ class TestPipelineRun():
 
         assert len(responses.calls) == 1
         assert resp == PIPELINE_RUN_JSON
+
+    @responses.activate
+    @pytest.mark.parametrize(('reason', 'succeeded'), [
+        ('Running', False),
+        ('Succeeded', True),
+    ])
+    def test_status(self, pipeline_run, reason, succeeded):
+        run_json = deepcopy(PIPELINE_RUN_JSON)
+        run_json['status']['conditions'][0]['reason'] = reason
+        responses.add(responses.GET, PIPELINE_RUN_URL, json=run_json)
+        assert succeeded == pipeline_run.has_succeeded()
+        assert pipeline_run.status_reason == reason
 
     @responses.activate
     def test_wait_for_start(self, pipeline_run):
