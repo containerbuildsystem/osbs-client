@@ -1,0 +1,39 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: source-container-x-x-default
+spec:
+  pipelineRef:
+    name: source-container-0-1
+  params:
+    - name: OSBS_IMAGE
+      value: "tests_image"
+    - name: USER_PARAMS
+      value: >-
+        {}
+  workspaces:
+    - name: ws-context-dir
+      emptyDir: {}
+    - name: ws-build-dir
+      volumeClaimTemplate:
+        metadata:
+          name: source-containter-build-pvc
+          namespace: default-namespace
+          annotations:
+            kubernetes.io/reclaimPolicy: Delete
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 300Mi
+    - name: ws-registries-secret
+      secret:
+        secretName: registries-secret
+    - name: ws-koji-secret
+      secret:
+        secretName: koji-secret
+    - name: ws-reactor-config-map
+      configmap:
+        name: default-rcm
+  timeout: 3h

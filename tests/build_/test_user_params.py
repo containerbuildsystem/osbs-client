@@ -403,17 +403,19 @@ class TestSourceContainerUserParams(object):
         with pytest.raises(OsbsValidationException):
             SourceContainerUserParams.make_params(**kwargs)
 
+    @pytest.mark.parametrize('scratch', [True, False])
     @pytest.mark.parametrize('origin_nvr, origin_id', [
         ('test-1-123', 12345),
         ('test-dashed-nvr-1-123', 12345),
         ('test-dashed-nvr-1-123', None),
     ])
-    def test_all_values_and_json(self, origin_nvr, origin_id):
+    def test_all_values_and_json(self, scratch, origin_nvr, origin_id):
         conf_args = {
             "build_from": "image:buildroot:latest",
             'orchestrator_max_run_hours': 5,
-            'reactor_config_map': 'reactor-config-map-scratch',
-            'scratch': True,
+            'reactor_config_map_scratch': 'reactor-config-map-scratch',
+            'reactor_config_map': 'reactor-config-map',
+            'scratch': scratch,
             'worker_max_run_hours': 3,
         }
         param_kwargs = self.get_minimal_kwargs(origin_nvr, conf_args=conf_args)
@@ -451,13 +453,17 @@ class TestSourceContainerUserParams(object):
             "koji_target": "tothepoint",
             "orchestrator_deadline": 5,
             "platform": "x86_64",
-            'reactor_config_map': 'reactor-config-map-scratch',
-            'scratch': True,
+            'reactor_config_map': 'reactor-config-map',
             "user": TEST_USER,
             "worker_deadline": 3,
         }
+        if scratch:
+            expected_json['reactor_config_map'] = 'reactor-config-map-scratch'
+            expected_json['scratch'] = scratch
+
         if origin_id:
             expected_json['sources_for_koji_build_id'] = origin_id
+
         assert spec.to_json() == json.dumps(expected_json, sort_keys=True)
 
         spec2 = SourceContainerUserParams.from_json(spec.to_json())

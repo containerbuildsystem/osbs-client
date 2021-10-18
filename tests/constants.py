@@ -11,7 +11,9 @@ import os
 
 HERE = os.path.dirname(__file__)
 INPUTS_PATH = os.path.join(HERE, '..', 'inputs')
+FILES = os.path.join(HERE, 'files')
 
+TEST_PIPELINE_RUN_TEMPLATE = os.path.join(FILES, 'example-source-pipepiline-run.yaml')
 TEST_BUILD = "test-build-123"
 TEST_ORCHESTRATOR_BUILD = "test-orchestrator-build-123"
 TEST_CANCELLED_BUILD = "test-build-cancel-123"

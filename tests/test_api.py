@@ -40,7 +40,8 @@ from osbs.constants import (DEFAULT_OUTER_TEMPLATE, WORKER_OUTER_TEMPLATE,
                             ORCHESTRATOR_OUTER_TEMPLATE,
                             ORCHESTRATOR_CUSTOMIZE_CONF,
                             BUILD_TYPE_WORKER, BUILD_TYPE_ORCHESTRATOR,
-                            REPO_CONTAINER_CONFIG)
+                            REPO_CONTAINER_CONFIG, PRUN_TEMPLATE_USER_PARAMS,
+                            PRUN_TEMPLATE_REACTOR_CONFIG_WS, PRUN_TEMPLATE_BUILD_DIR_WS)
 from osbs import utils
 from osbs.utils.labels import Labels
 from osbs.repo_utils import RepoInfo, RepoConfiguration, ModuleSpec
@@ -48,8 +49,9 @@ from osbs.repo_utils import RepoInfo, RepoConfiguration, ModuleSpec
 from tests.constants import (TEST_ARCH, TEST_BUILD, TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
                              TEST_GIT_URI, TEST_TARGET, TEST_USER, INPUTS_PATH,
                              TEST_KOJI_TASK_ID, TEST_FILESYSTEM_KOJI_TASK_ID, TEST_VERSION,
-                             TEST_ORCHESTRATOR_BUILD)
+                             TEST_ORCHESTRATOR_BUILD, TEST_PIPELINE_RUN_TEMPLATE)
 from osbs.core import Openshift
+from osbs.tekton import PipelineRun
 # needed for mocking input() (because it is imported from six)
 from osbs import api as _osbs_api
 from six.moves import http_client
@@ -143,6 +145,11 @@ class MockConfiguration(object):
 
     def is_autorebuild_enabled(self):
         return False
+
+
+class Mock_Start_Pipeline(object):
+    def json(self):
+        return {}
 
 
 class TestOSBS(object):
@@ -282,7 +289,7 @@ class TestOSBS(object):
             build_json_dir=osbs.os_conf.get_build_json_store(),
             base_image='fedora23/python',
             build_from='image:whatever',
-            build_conf=osbs.build_conf,
+            build_conf=osbs.os_conf,
             name_label='whatever',
             repo_info=repo_info,
             **REQUIRED_BUILD_ARGS
@@ -310,6 +317,7 @@ class TestOSBS(object):
                                      **REQUIRED_BUILD_ARGS)
         assert isinstance(response, BuildResponse)
 
+    @pytest.mark.skip(reason="tekton openshift class doesn't have create_build")
     @pytest.mark.parametrize('has_task_id', [True, False])
     def test_create_build_remove_koji_task_id(self, has_task_id):
 
@@ -338,7 +346,7 @@ class TestOSBS(object):
         config = Configuration(conf_file=None,
                                openshift_url="www.example.com",
                                build_json_dir="inputs", build_from='image:buildroot:latest')
-        osbs_obj = OSBS(config, config)
+        osbs_obj = OSBS(config)
 
         (flexmock(utils)
             .should_receive('get_repo_info')
@@ -790,9 +798,9 @@ class TestOSBS(object):
         outer_template = 'outer.json'
         build_json_store = 'build/json/store'
 
-        flexmock(osbs.build_conf).should_receive('get_cpu_limit').and_return(cpu)
-        flexmock(osbs.build_conf).should_receive('get_memory_limit').and_return(memory)
-        flexmock(osbs.build_conf).should_receive('get_storage_limit').and_return(storage)
+        flexmock(osbs.os_conf).should_receive('get_cpu_limit').and_return(cpu)
+        flexmock(osbs.os_conf).should_receive('get_memory_limit').and_return(memory)
+        flexmock(osbs.os_conf).should_receive('get_storage_limit').and_return(storage)
 
         flexmock(osbs.os_conf).should_receive('get_build_json_store').and_return(build_json_store)
 
@@ -996,8 +1004,8 @@ class TestOSBS(object):
                 build_from = {build_from}
                 """.format(build_json_dir='inputs', build_from=build_from)))
             fp.flush()
-            config = Configuration(fp.name)
-            osbs_obj = OSBS(config, config)
+            config = Configuration(fp.name, conf_section='default')
+            osbs_obj = OSBS(config)
 
         assert config.get_build_from() == build_from
 
@@ -1039,8 +1047,8 @@ class TestOSBS(object):
                 build_from = {build_from}
                 """.format(build_json_dir='inputs', build_from=build_from)))
             fp.flush()
-            config = Configuration(fp.name)
-            osbs_obj = OSBS(config, config)
+            config = Configuration(fp.name, conf_section='default')
+            osbs_obj = OSBS(config)
 
         assert config.get_build_from() == build_from
 
@@ -1076,7 +1084,7 @@ class TestOSBS(object):
     ))
     def test_not_cancelled_buils(self, openshift, koji_task_id, count):
         config = Configuration(conf_name=None)
-        osbs_obj = OSBS(config, config)
+        osbs_obj = OSBS(config)
         osbs_obj.os = openshift
 
         builds_list = osbs_obj._get_not_cancelled_builds_for_koji_task(koji_task_id)
@@ -1148,6 +1156,7 @@ class TestOSBS(object):
         with pytest.raises(OsbsException, match=match_exception):
             osbs.create_build(**kwargs)
 
+    @pytest.mark.skip(reason="tekton openshift class doesn't have istag manipulation")
     @pytest.mark.parametrize(('kind', 'expect_name'), [
         ('ImageStreamTag', 'registry:5000/buildroot:latest'),
         ('DockerImage', 'buildroot:latest'),
@@ -1160,7 +1169,7 @@ class TestOSBS(object):
     def test_direct_build(self, kind, expect_name, build_variation, running_builds,
                           check_running, fail):
         config = Configuration(conf_name=None)
-        osbs_obj = OSBS(config, config)
+        osbs_obj = OSBS(config)
 
         build_json = {
             'apiVersion': "image.openshift.io/v1",
@@ -1269,7 +1278,7 @@ class TestOSBS(object):
     ))
     def test_create_direct_build(self, variation, delegate_method):
         config = Configuration(conf_file=None, build_from='image:buildroot:latest')
-        osbs_obj = OSBS(config, config)
+        osbs_obj = OSBS(config)
 
         kwargs = {
             'git_uri': TEST_GIT_URI,
@@ -1309,7 +1318,7 @@ class TestOSBS(object):
     def test_use_already_created_build(self, openshift, variation, delegate_method,
                                        koji_task_id, use_build, exc):
         config = Configuration(conf_file=None, build_from='image:buildroot:latest')
-        osbs_obj = OSBS(config, config)
+        osbs_obj = OSBS(config)
         osbs_obj.os = openshift
 
         kwargs = {
@@ -1358,9 +1367,10 @@ class TestOSBS(object):
             build_response = osbs_obj.create_build(**kwargs)
             assert build_response.json == {'spam': 'maps'}
 
+    @pytest.mark.skip(reason="tekton openshift class doesn't have istag manipulation")
     def test_get_image_stream_tag(self):
         config = Configuration(conf_name=None)
-        osbs_obj = OSBS(config, config)
+        osbs_obj = OSBS(config)
 
         name = 'buildroot:latest'
         (flexmock(osbs_obj.os)
@@ -1377,9 +1387,10 @@ class TestOSBS(object):
         ref = response.json()['image']['dockerImageReference']
         assert ref == 'spam:maps'
 
+    @pytest.mark.skip(reason="tekton openshift class doesn't have istag manipulation")
     def test_get_image_stream_tag_with_retry(self):
         config = Configuration(conf_name=None)
-        osbs_obj = OSBS(config, config)
+        osbs_obj = OSBS(config)
 
         name = 'buildroot:latest'
         (flexmock(osbs_obj.os)
@@ -1396,9 +1407,10 @@ class TestOSBS(object):
         ref = response.json()['image']['dockerImageReference']
         assert ref == 'spam:maps'
 
+    @pytest.mark.skip(reason="tekton openshift class doesn't have istag manipulation")
     def test_get_image_stream_tag_with_retry_retries(self):
         config = Configuration(conf_name=None)
-        osbs_obj = OSBS(config, config)
+        osbs_obj = OSBS(config)
 
         name = 'buildroot:latest'
         (flexmock(osbs_obj.os)
@@ -1440,8 +1452,8 @@ class TestOSBS(object):
                 build_from = image:buildroot:latest
                 """))
             fp.flush()
-            config = Configuration(fp.name)
-            osbs_obj = OSBS(config, config)
+            config = Configuration(fp.name, conf_section='default')
+            osbs_obj = OSBS(config)
 
         (flexmock(utils)
             .should_receive('get_repo_info')
@@ -1485,6 +1497,10 @@ class TestOSBS(object):
                 self.signing_intent = 'release'
                 self.compose_ids = [1, 2]
                 self.operator_csv_modifications_url = None
+                self.instance = 'default'
+                self.config = 'default'
+                self.can_orchestrate = True
+                self.build_from = 'some'
 
         expected_kwargs = {
             'platform': None,
@@ -1513,24 +1529,20 @@ class TestOSBS(object):
             .and_return(self.mock_repo_info(mock_config=MockConfiguration(modules=TEST_MODULES))))
 
         args = MockArgs(isolated)
-        # Some of the command line arguments are pulled through the config
-        # object, so add them there as well.
-        osbs.build_conf.args = args
-        flexmock(osbs.build_conf, get_git_branch=lambda: TEST_GIT_BRANCH)
 
         if not isolated:
             # and_raise is called to prevent cmd_build to continue
             # as we only want to check if arguments are correct
-            (flexmock(osbs)
+            (flexmock(OSBS)
                 .should_receive("create_orchestrator_build")
                 .once()
                 .with_args(**expected_kwargs)
                 .and_raise(CustomTestException))
             with pytest.raises(CustomTestException):
-                cmd_build(args, osbs)
+                cmd_build(args)
         else:
             with pytest.raises(OsbsException) as exc_info:
-                cmd_build(args, osbs)
+                cmd_build(args)
             assert isinstance(exc_info.value.cause, ValueError)
             assert "Flatpak build cannot be isolated" in exc_info.value.message
 
@@ -1555,6 +1567,10 @@ class TestOSBS(object):
                 self.signing_intent = 'release'
                 self.compose_ids = None
                 self.operator_csv_modifications_url = "https://example.com/updates.json"
+                self.instance = 'default'
+                self.config = 'default'
+                self.can_orchestrate = True
+                self.build_from = 'some'
 
         expected_kwargs = {
             'platform': None,
@@ -1582,24 +1598,20 @@ class TestOSBS(object):
             .and_return(self.mock_repo_info(mock_config=MockConfiguration(modules=TEST_MODULES))))
 
         args = MockArgs(isolated)
-        # Some of the command line arguments are pulled through the config
-        # object, so add them there as well.
-        osbs.build_conf.args = args
-        flexmock(osbs.build_conf, get_git_branch=lambda: TEST_GIT_BRANCH)
 
         if isolated:
             # and_raise is called to prevent cmd_build to continue
             # as we only want to check if arguments are correct
-            (flexmock(osbs)
+            (flexmock(OSBS)
                 .should_receive("create_orchestrator_build")
                 .once()
                 .with_args(**expected_kwargs)
                 .and_raise(CustomTestException))
             with pytest.raises(CustomTestException):
-                cmd_build(args, osbs)
+                cmd_build(args)
         else:
             with pytest.raises(OsbsException) as exc_info:
-                cmd_build(args, osbs)
+                cmd_build(args)
             assert (
                 "Only isolated build can update operator CSV metadata" in str(exc_info.value)
             )
@@ -1620,7 +1632,7 @@ class TestOSBS(object):
             build_json_dir=osbs.os_conf.get_build_json_store(),
             base_image='fedora23/python',
             build_from='image:whatever',
-            build_conf=osbs.build_conf,
+            build_conf=osbs.os_conf,
             name_label='whatever', repo_info=repo_info, user=TEST_USER,
             build_type=BUILD_TYPE_ORCHESTRATOR,
             **kwargs
@@ -1856,23 +1868,70 @@ class TestOSBS(object):
             for changetype, _ in osbs.watch_builds(field_selector):
                 assert changetype is None
 
-    # osbs is a fixture here
-    def test_create_source_container_build(self, osbs):
-        response = osbs.create_source_container_build(
+    def test_create_source_container_pipeline_run(self):
+        buildroot_image = 'buildroot:latest'
+        rcm = 'rcm'
+        namespace = 'test-namespace'
+        with NamedTemporaryFile(mode="wt") as fp:
+            fp.write("""
+    [general]
+    build_json_dir = {build_json_dir}
+    [default_source]
+    openshift_url = /
+    namespace = {namespace}
+    use_auth = false
+    pipeline_run_path = {pipeline_run_path}
+    build_from = image:{buildroot_image}
+    reactor_config_map = {rcm}
+    """.format(build_json_dir="inputs", namespace=namespace,
+               pipeline_run_path=TEST_PIPELINE_RUN_TEMPLATE,
+               buildroot_image=buildroot_image, rcm=rcm))
+            fp.flush()
+            dummy_config = Configuration(fp.name, conf_section='default_source')
+            osbs = OSBS(dummy_config)
+
+        with open(TEST_PIPELINE_RUN_TEMPLATE) as f:
+            yaml_data = f.read()
+        pipeline_run_expect = yaml.safe_load(yaml_data)
+        random_postfix = 'sha-timestamp'
+        (flexmock(utils)
+            .should_receive('generate_random_postfix')
+            .and_return(random_postfix))
+
+        pipeline_name = pipeline_run_expect['spec']['pipelineRef']['name']
+        pipeline_run_name = f'{pipeline_name}-{random_postfix}'
+
+        flexmock(PipelineRun).should_receive('start_pipeline_run').and_return(Mock_Start_Pipeline())
+        pipeline_run = osbs.create_source_container_pipeline_run(
             target=TEST_TARGET,
             signing_intent='signing_intent',
             **REQUIRED_SOURCE_CONTAINER_BUILD_ARGS
         )
-        assert isinstance(response, BuildResponse)
+        assert isinstance(pipeline_run, PipelineRun)
 
+        assert pipeline_run.data['metadata']['name'] == pipeline_run_name
+
+        for ws in pipeline_run.data['spec']['workspaces']:
+            if ws['name'] == PRUN_TEMPLATE_REACTOR_CONFIG_WS:
+                assert ws['configmap']['name'] == rcm
+
+            if ws['name'] == PRUN_TEMPLATE_BUILD_DIR_WS:
+                assert ws['volumeClaimTemplate']['metadata']['namespace'] == namespace
+
+        for param in pipeline_run.data['spec']['params']:
+            if param['name'] == PRUN_TEMPLATE_USER_PARAMS:
+                assert param['value'] != {}
+
+    # osbs_source is a fixture here
     @pytest.mark.parametrize(('additional_kwargs'), (  # noqa
         {'component': None, 'sources_for_koji_build_nvr': 'build_nvr'},
         {'component': 'build_component', 'sources_for_koji_build_nvr': None},
         {'component': None, 'sources_for_koji_build_nvr': None},
     ))
-    def test_create_source_container_build_required_args(self, osbs, additional_kwargs):
+    def test_create_source_container_required_args(self, osbs_source, additional_kwargs):
+        flexmock(PipelineRun).should_receive('start_pipeline_run').and_return(Mock_Start_Pipeline())
         with pytest.raises(OsbsValidationException):
-            osbs.create_source_container_build(
+            osbs_source.create_source_container_pipeline_run(
                 target=TEST_TARGET,
                 signing_intent='signing_intent',
                 **additional_kwargs)

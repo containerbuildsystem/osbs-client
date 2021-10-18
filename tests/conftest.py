@@ -20,7 +20,7 @@ from osbs.conf import Configuration
 from osbs.api import OSBS
 from osbs.constants import ANNOTATION_SOURCE_REPO, ANNOTATION_INSECURE_REPO
 from tests.constants import (TEST_BUILD, TEST_CANCELLED_BUILD, TEST_ORCHESTRATOR_BUILD,
-                             TEST_KOJI_TASK_ID)
+                             TEST_KOJI_TASK_ID, TEST_PIPELINE_RUN_TEMPLATE)
 from tempfile import NamedTemporaryFile
 from textwrap import dedent
 
@@ -422,10 +422,31 @@ def osbs(request, openshift):
 
         fp.write(config.format(**kwargs))
         fp.flush()
-        dummy_config = Configuration(fp.name)
-        osbs = OSBS(dummy_config, dummy_config)
+        dummy_config = Configuration(fp.name, conf_section='default')
+        osbs = OSBS(dummy_config)
 
     osbs.os = openshift
+    return osbs
+
+
+@pytest.fixture
+def osbs_source():
+    with NamedTemporaryFile(mode="wt") as fp:
+        fp.write("""
+[general]
+build_json_dir = {build_json_dir}
+[default_source]
+openshift_url = /
+namespace = test-namespace
+use_auth = false
+pipeline_run_path = {pipeline_run_path}
+build_from = image:buildroot:latest
+reactor_config_map = rcm
+""".format(build_json_dir="inputs", pipeline_run_path=TEST_PIPELINE_RUN_TEMPLATE))
+        fp.flush()
+        dummy_config = Configuration(fp.name, conf_section='default_source')
+        osbs = OSBS(dummy_config)
+
     return osbs
 
 
@@ -440,8 +461,8 @@ openshift_url = /
 use_auth = false
 """.format(build_json_dir="inputs"))
         fp.flush()
-        dummy_config = Configuration(fp.name)
-        osbs = OSBS(dummy_config, dummy_config)
+        dummy_config = Configuration(fp.name, conf_section='default')
+        osbs = OSBS(dummy_config)
 
     osbs.os = openshift
     return osbs
@@ -459,8 +480,8 @@ openshift_url = /
 build_from = image:buildroot:latest
 """.format(build_json_dir="inputs"))
         fp.flush()
-        dummy_config = Configuration(fp.name)
-        osbs = OSBS(dummy_config, dummy_config)
+        dummy_config = Configuration(fp.name, conf_section='default')
+        osbs = OSBS(dummy_config)
 
     osbs.os = openshift
     return osbs

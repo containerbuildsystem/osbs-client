@@ -195,7 +195,7 @@ class TestConfiguration(object):
 
         with self.build_cli_args(cli_args) as args:
             with self.config_file(config) as config_file:
-                conf = Configuration(conf_file=config_file, cli_args=args,
+                conf = Configuration(conf_file=config_file, conf_section='default', cli_args=args,
                                      **kwargs)
 
                 assert conf.get_oauth2_token() == expected
@@ -219,7 +219,7 @@ class TestConfiguration(object):
     def test_param_retrieval(self, config, kwargs, cli_args, expected):
         with self.build_cli_args(cli_args) as args:
             with self.config_file(config) as config_file:
-                conf = Configuration(conf_file=config_file, cli_args=args,
+                conf = Configuration(conf_file=config_file, conf_section='default', cli_args=args,
                                      **kwargs)
 
                 for fn, value in expected.items():
@@ -227,19 +227,54 @@ class TestConfiguration(object):
 
     @pytest.mark.parametrize(('config', 'expected'), [
         ({
-            'default': {'builder_build_json_dir': 'builder'},
-            'general': {'build_json_dir': 'general'},
-         }, 'builder'),
-        ({
-            'default': {},
             'general': {'build_json_dir': 'general'},
          }, 'general'),
+        ({
+            'general': {},
+         }, None),
     ])
     def test_builder_build_json_dir(self, config, expected):
         with self.config_file(config) as config_file:
             conf = Configuration(conf_file=config_file)
 
             assert conf.get_builder_build_json_store() == expected
+            assert conf.get_build_json_store() == expected
+
+    @pytest.mark.parametrize(('config', 'expected', 'expected_scratch'), [
+        ({
+            'default': {'reactor_config_map': 'rcm',
+                        'reactor_config_map_scratch': 'rcm_scratch'},
+         }, 'rcm', 'rcm_scratch'),
+        ({
+            'default': {'reactor_config_map': 'rcm'},
+         }, 'rcm', None),
+        ({
+            'default': {'reactor_config_map_scratch': 'rcm_scratch'},
+         }, None, 'rcm_scratch'),
+        ({
+            'default': {},
+         }, None, None),
+    ])
+    def test_reactor_config(self, config, expected, expected_scratch):
+        with self.config_file(config) as config_file:
+            conf = Configuration(conf_file=config_file, conf_section='default')
+
+            assert conf.get_reactor_config_map() == expected
+            assert conf.get_reactor_config_map_scratch() == expected_scratch
+
+    @pytest.mark.parametrize(('config', 'expected'), [
+        ({
+            'default': {'pipeline_run_path': 'pipeline_path'},
+         }, 'pipeline_path'),
+        ({
+            'default': {},
+         }, None),
+    ])
+    def test_pipeline_run_path(self, config, expected):
+        with self.config_file(config) as config_file:
+            conf = Configuration(conf_file=config_file, conf_section='default')
+
+            assert conf.get_pipeline_run_path() == expected
 
     @pytest.mark.parametrize(('platform', 'config', 'kwargs', 'expected'), [
         ('',
@@ -283,7 +318,7 @@ class TestConfiguration(object):
     ])
     def test_get_node_selector_platform(self, platform, kwargs, config, expected):
         with self.config_file(config) as config_file:
-            conf = Configuration(conf_file=config_file, **kwargs)
+            conf = Configuration(conf_file=config_file, conf_section='default', **kwargs)
             assert conf.get_platform_node_selector(platform) == expected
 
     @pytest.mark.parametrize('nodeselector_type', [
@@ -309,7 +344,7 @@ class TestConfiguration(object):
                 myconfig['default'][nodeselector_type] = myconfig['default'].pop('node_selector')
 
         with self.config_file(myconfig) as config_file:
-            conf = Configuration(conf_file=config_file)
+            conf = Configuration(conf_file=config_file, conf_section='default')
             assert getattr(conf, "get_" + nodeselector_type)() == expected
 
     def test_deprecated_warnings(self, caplog):  # noqa:F811
