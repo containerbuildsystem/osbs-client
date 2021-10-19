@@ -143,7 +143,7 @@ class BuildCommon(BuildParamsBase):
         :param component: str, name of the component
         :param koji_parent_build: str,
         :param koji_target: str, koji tag with packages used to build the image
-        :param koji_task_id: str, koji ID
+        :param koji_task_id: int, koji *task* ID
         :param koji_upload_dir: str, koji directory where the completed image will be uploaded
         :param platform: str, platform
         :param reactor_config_override: dict, data structure for reactor config to be injected as
