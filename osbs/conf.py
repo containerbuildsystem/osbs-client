@@ -10,15 +10,13 @@ from __future__ import print_function, absolute_import, unicode_literals
 import logging
 import os
 import os.path
-import warnings
 from pkg_resources import parse_version
 
 from six.moves import configparser
 from six.moves.urllib.parse import urljoin
 
-from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
-                            GENERAL_CONFIGURATION_SECTION, DEFAULT_NAMESPACE,
-                            WORKER_MAX_RUNTIME, ORCHESTRATOR_MAX_RUNTIME)
+from osbs.constants import (DEFAULT_CONFIGURATION_FILE, GENERAL_CONFIGURATION_SECTION,
+                            DEFAULT_NAMESPACE, WORKER_MAX_RUNTIME, ORCHESTRATOR_MAX_RUNTIME)
 from osbs import utils
 
 
@@ -35,7 +33,7 @@ class Configuration(object):
     """
 
     def __init__(self, conf_file=DEFAULT_CONFIGURATION_FILE,
-                 conf_section=DEFAULT_CONFIGURATION_SECTION,
+                 conf_section=GENERAL_CONFIGURATION_SECTION,
                  cli_args=None, **kwargs):
         """
         sample initialization:
@@ -129,14 +127,8 @@ class Configuration(object):
 
         :return: str
         """
-        deprecated_key = "openshift_uri"
         key = "openshift_url"
         val = self._get_value(key, self.conf_section, key)
-        if val:
-            return val
-        val = self._get_value(deprecated_key, self.conf_section, deprecated_key)
-        if val is not None:
-            warnings.warn("%r is deprecated, use %r instead" % (deprecated_key, key))
         return val
 
     @staticmethod
@@ -246,12 +238,7 @@ class Configuration(object):
         return self._get_value("use_auth", self.conf_section, "use_auth", is_bool_val=True)
 
     def get_builder_build_json_store(self):
-        key = "builder_build_json_dir"
-        builder_build_json_dir = self._get_deprecated(key, self.conf_section, key)
-        if builder_build_json_dir is None:
-            logger.warning("%r not found, falling back to build_json_dir", key)
-            builder_build_json_dir = self.get_build_json_store()
-        return builder_build_json_dir
+        return self.get_build_json_store()
 
     def get_cpu_limit(self):
         return self._get_value("cpu_limit", self.conf_section, "cpu_limit")
@@ -372,6 +359,14 @@ class Configuration(object):
     def get_reactor_config_map(self):
         return self._get_value("reactor_config_map", self.conf_section,
                                "reactor_config_map")
+
+    def get_reactor_config_map_scratch(self):
+        return self._get_value("reactor_config_map_scratch", self.conf_section,
+                               "reactor_config_map_scratch")
+
+    def get_pipeline_run_path(self):
+        return self._get_value("pipeline_run_path", self.conf_section,
+                               "pipeline_run_path")
 
     def get_worker_deadline(self):
         return self._get_value("worker_max_run_hours", self.conf_section, "worker_max_run_hours",

@@ -345,18 +345,12 @@ class Openshift(object):
 
 
 class PipelineRun():
-    def __init__(self, os, pipeline_name, pipeline_run_name):
+    def __init__(self, os, pipeline_run_name, pipeline_run_data):
         self.os = os
-        self.pipeline_name = pipeline_name
         self.pipeline_run_name = pipeline_run_name
         self.api_path = 'apis'
         self.api_version = API_VERSION
-        self.data = {
-            "apiVersion": API_VERSION,
-            "kind": "PipelineRun",
-            "metadata": {"name": self.pipeline_run_name},
-            "spec": {"pipelineRef": {"name": self.pipeline_name}},
-        }
+        self.data = pipeline_run_data
         self._pipeline_run_url = None
 
     @property
@@ -424,6 +418,15 @@ class PipelineRun():
             self.wait_for_start()
         r = self.os.get(self.pipeline_run_url)
         return r.json()
+
+    def has_succeeded(self):
+        info = self.get_info()
+        return info['status']['conditions'][0]['reason'] == 'Succeeded'
+
+    @property
+    def status_reason(self):
+        info = self.get_info()
+        return info['status']['conditions'][0]['reason']
 
     def wait_for_start(self):
         """

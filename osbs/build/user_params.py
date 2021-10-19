@@ -94,8 +94,9 @@ class BuildCommon(BuildParamsBase):
     image_tag = BuildParam("image_tag")
     koji_target = BuildParam("koji_target")
     koji_task_id = BuildParam("koji_task_id")
-    platform = BuildParam("platform")
     orchestrator_deadline = BuildParam("orchestrator_deadline")
+    pipeline_run_name = BuildParam("pipeline_run_name")
+    platform = BuildParam("platform")
     reactor_config_map = BuildParam("reactor_config_map")
     reactor_config_override = BuildParam("reactor_config_override")
     scratch = BuildParam("scratch")
@@ -115,6 +116,7 @@ class BuildCommon(BuildParamsBase):
                     component=None,
                     koji_target=None,
                     koji_task_id=None,
+                    pipeline_run_name=None,
                     platform=None,
                     reactor_config_override=None,
                     scratch=None,
@@ -145,6 +147,7 @@ class BuildCommon(BuildParamsBase):
         :param koji_target: str, koji tag with packages used to build the image
         :param koji_task_id: str, koji ID
         :param koji_upload_dir: str, koji directory where the completed image will be uploaded
+        :param pipeline_run_name: str, name of the pipeline run
         :param platform: str, platform
         :param reactor_config_override: dict, data structure for reactor config to be injected as
                                         an environment variable into a worker build;
@@ -184,6 +187,10 @@ class BuildCommon(BuildParamsBase):
         except (ValueError, TypeError):
             worker_deadline = WORKER_MAX_RUNTIME
 
+        if build_conf.get_scratch(scratch):
+            reactor_config = build_conf.get_reactor_config_map_scratch()
+        else:
+            reactor_config = build_conf.get_reactor_config_map()
         # Update kwargs with arguments explicitly accepted by this method
         kwargs.update({
             "build_json_dir": build_json_dir,
@@ -199,7 +206,8 @@ class BuildCommon(BuildParamsBase):
             "build_image": source_value,
             "buildroot_is_imagestream": (source_type == "imagestream"),
             "orchestrator_deadline": orchestrator_deadline,
-            "reactor_config_map": build_conf.get_reactor_config_map(),
+            "pipeline_run_name": pipeline_run_name,
+            "reactor_config_map": reactor_config,
             "scratch": build_conf.get_scratch(scratch),
             "worker_deadline": worker_deadline,
         })
