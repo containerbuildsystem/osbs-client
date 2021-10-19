@@ -21,8 +21,8 @@ from osbs.api import OSBS
 from osbs.build.build_response import BuildResponse
 from osbs.cli.render import TablePrinter
 from osbs.conf import Configuration
-from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONFIGURATION_SECTION,
-                            CLI_LIST_BUILDS_DEFAULT_COLS, PY3,
+from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONF_BINARY_SECTION,
+                            DEFAULT_CONF_SOURCE_SECTION, CLI_LIST_BUILDS_DEFAULT_COLS, PY3,
                             BUILD_FINISHED_STATES, CLI_WATCH_BUILDS_DEFAULT_COLS)
 from osbs.exceptions import (OsbsNetworkException, OsbsException, OsbsAuthException,
                              OsbsResponseException)
@@ -339,21 +339,55 @@ def _print_build_logs(args, osbs, build):
             return -1
 
 
-def cmd_build(args, osbs):
+def _print_pipeline_run_logs(pipeline_run):
+    user_warnings = UserWarningsStore()
+    pipeline_run_name = pipeline_run.pipeline_run_name
+
+    pipeline_run_logs = pipeline_run.get_logs(follow=True, wait=True)
+    if not isinstance(pipeline_run_logs, collections.Iterable):
+        logger.error("'%s' is not iterable; can't display logs", pipeline_run_name)
+        return
+    print(f"Pipeline run created ({pipeline_run_name}), watching logs (feel free to interrupt)")
+    try:
+        for line in pipeline_run_logs:
+            if user_warnings.is_user_warning(line):
+                user_warnings.store(line)
+                continue
+
+            print('{!r}'.format(line))
+    except Exception as ex:
+        logger.error("Error during fetching logs for pipeline run %s: %s",
+                     pipeline_run_name, repr(ex))
+
+    if user_warnings:
+        print("USER WARNINGS")
+        print(user_warnings)
+
+
+def cmd_build(args):
+    if args.instance is None:
+        conf_section = DEFAULT_CONF_BINARY_SECTION
+    else:
+        conf_section = args.instance
+    os_conf = Configuration(conf_file=args.config,
+                            conf_section=conf_section,
+                            cli_args=args)
+    osbs = OSBS(os_conf)
+
     if args.worker:
         create_func = osbs.create_worker_build
     else:
         create_func = osbs.create_orchestrator_build
 
     build_kwargs = {
-        'git_uri': osbs.build_conf.get_git_uri(),
-        'git_ref': osbs.build_conf.get_git_ref(),
-        'git_branch': osbs.build_conf.get_git_branch(),
-        'user': osbs.build_conf.get_user(),
-        'tag': osbs.build_conf.get_tag(),
-        'target': osbs.build_conf.get_koji_target(),
-        'yum_repourls': osbs.build_conf.get_yum_repourls(),
-        'dependency_replacements': osbs.build_conf.get_dependency_replacements(),
+        'git_uri': osbs.os_conf.get_git_uri(),
+        'git_ref': osbs.os_conf.get_git_ref(),
+        'git_branch': osbs.os_conf.get_git_branch(),
+        'user': osbs.os_conf.get_user(),
+        'tag': osbs.os_conf.get_tag(),
+        'target': osbs.os_conf.get_koji_target(),
+        'yum_repourls': osbs.os_conf.get_yum_repourls(),
+        'dependency_replacements': osbs.os_conf.get_dependency_replacements(),
         'scratch': args.scratch,
         'platform': args.platform,
         'platforms': args.platforms,
@@ -368,7 +402,7 @@ def cmd_build(args, osbs):
     if args.koji_upload_dir:
         build_kwargs['koji_upload_dir'] = args.koji_upload_dir
 
-    if osbs.build_conf.get_flatpak():
+    if osbs.os_conf.get_flatpak():
         build_kwargs['flatpak'] = True
 
     build = create_func(**build_kwargs)
@@ -376,10 +410,19 @@ def cmd_build(args, osbs):
     return _print_build_logs(args, osbs, build)
 
 
-def cmd_build_source_container(args, osbs):
+def cmd_build_source_container(args):
+    if args.instance is None:
+        conf_section = DEFAULT_CONF_SOURCE_SECTION
+    else:
+        conf_section = args.instance
+    os_conf = Configuration(conf_file=args.config,
+                            conf_section=conf_section,
+                            cli_args=args)
+    osbs = OSBS(os_conf)
+
     build_kwargs = {
-        'user': osbs.build_conf.get_user(),
-        'target': osbs.build_conf.get_koji_target(),
+        'user': osbs.os_conf.get_user(),
+        'target': osbs.os_conf.get_koji_target(),
         'scratch': args.scratch,
         'signing_intent': args.signing_intent,
         'sources_for_koji_build_nvr': args.sources_for_koji_build_nvr,
@@ -387,9 +430,16 @@ def cmd_build_source_container(args, osbs):
         'component': args.component,
     }
 
-    build = osbs.create_source_container_build(**build_kwargs)
+    pipeline_run = osbs.create_source_container_pipeline_run(**build_kwargs)
 
-    return _print_build_logs(args, osbs, build)
+    _print_pipeline_run_logs(pipeline_run)
+    _display_pipeline_run_summary(pipeline_run)
+
+    return_val = -1
+
+    if pipeline_run.has_succeeded():
+        return_val = 0
+    return return_val
 
 
 def _display_build_summary(build):
@@ -414,6 +464,28 @@ def _display_build_summary(build):
         print(line)
 
     return return_val
+
+
+def _display_pipeline_run_summary(pipeline_run):
+    output = [
+        "",  # Empty line for cleaner display
+        "pipeline run {} is {}".format(pipeline_run.pipeline_run_name, pipeline_run.status_reason),
+    ]
+
+    annotations = pipeline_run.get_info()['metadata']['annotations']
+
+    if pipeline_run.has_succeeded():
+        all_repositories = annotations.get('repositories', {})
+
+        for kind, repositories in all_repositories.items():
+            if not repositories:
+                continue
+            output.append('{} repositories:'.format(kind))
+            for repository in repositories:
+                output.append('\t{}'.format(repository))
+
+    for line in output:
+        print(line)
 
 
 def cmd_build_logs(args, osbs):
@@ -649,8 +721,6 @@ def cli():
                               help="not used; use com.redhat.component label in Dockerfile")
     build_parser.add_argument("-A", "--tag", action='store', required=False,
                               help="tag of the built image (simple builds only)")
-    build_parser.add_argument("--no-logs", action='store_true', required=False, default=False,
-                              help="don't print logs after submitting build")
     build_parser.add_argument("--add-yum-repo", action='append', metavar="URL",
                               dest="yum_repourls", help="URL of yum repo file")
     build_parser.add_argument("--cpu-limit", action='store', required=False,
@@ -695,6 +765,7 @@ def cli():
         type=int, metavar='ID',
         help="koji build ID"
     )
+    # most likely can be removed, source build should get component name from binary build OSBS2 TBD
     build_source_container_parser.add_argument(
         "-c", "--component", action='store', required=True,
         help="component for source container"
@@ -710,10 +781,6 @@ def cli():
     build_source_container_parser.add_argument(
         "-u", "--user", action='store', required=True,
         help="prefix for docker image repository"
-    )
-    build_source_container_parser.add_argument(
-        "--no-logs", action='store_true', required=False, default=False,
-        help="don't print logs after submitting build"
     )
     build_source_container_parser.add_argument(
         "--cpu-limit", action='store', required=False,
@@ -802,9 +869,9 @@ def cli():
                         default=DEFAULT_CONFIGURATION_FILE)
     parser.add_argument("--instance", "-i", action='store', metavar="SECTION_NAME",
                         help="section within config for requested instance."
-                             " If unspecified, osbs will load the section"
-                             " named '%s'" % DEFAULT_CONFIGURATION_SECTION,
-                        default=DEFAULT_CONFIGURATION_SECTION)
+                             " If unspecified, osbs will load the section based on the build type"
+                             " named '%s' or '%s'" % (DEFAULT_CONF_BINARY_SECTION,
+                                                      DEFAULT_CONF_SOURCE_SECTION))
     parser.add_argument("--username", action='store',
                         help="name of user to use for Basic Authentication in OSBS")
     parser.add_argument("--password", action='store',
@@ -855,13 +922,18 @@ def cli():
 
 def main():
     parser, args = cli()
+    # OSBS2 TBD if we remove setup_json_capture, we can just create configuration without instance
+    # as verbosity is read from general section
+    # also we could even just read verbosity from args and create configurations only in
+    # cmd functions
     try:
-        os_conf = Configuration(conf_file=args.config,
-                                conf_section=args.instance,
-                                cli_args=args)
-        build_conf = Configuration(conf_file=args.config,
-                                   conf_section=args.instance,
-                                   cli_args=args)
+        if args.instance:
+            os_conf = Configuration(conf_file=args.config,
+                                    conf_section=args.instance,
+                                    cli_args=args)
+        else:
+            os_conf = Configuration(conf_file=args.config,
+                                    cli_args=args)
     except OsbsException as ex:
         logger.error("Configuration error: %s", ex.message)
         return -1
@@ -876,14 +948,21 @@ def main():
     else:
         set_logging(level=logging.INFO)
 
-    osbs = OSBS(os_conf, build_conf)
+    # required just for setup_json_capture, if we don't need it anymore we could just remove it
+    # OSBS2 TBD
+    osbs = OSBS(os_conf)
 
     if args.capture_dir is not None:
         setup_json_capture(osbs, os_conf, args.capture_dir)
 
     return_value = -1
     try:
-        return_value = args.func(args, osbs)
+        # OSBS2 TBD
+        # this breaks all other commands which require 2nd osbs arg, which have to be cleaned,
+        # also if we will still use some, like login/token, we would have to require
+        # instance name, as we can't choose default since we have now 2 defaults
+        # one for binary and another for source
+        return_value = args.func(args)
     except AttributeError:
         if hasattr(args, 'func'):
             raise

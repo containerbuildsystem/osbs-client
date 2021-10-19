@@ -16,6 +16,7 @@ import stat
 import sys
 import warnings
 import getpass
+import yaml
 from functools import wraps
 from contextlib import contextmanager
 from types import GeneratorType
@@ -23,7 +24,6 @@ from types import GeneratorType
 from osbs.build.build_requestv2 import (
     BaseBuildRequest,
     BuildRequestV2,
-    SourceBuildRequest,
 )
 from osbs.build.user_params import (
     BuildUserParams,
@@ -37,9 +37,9 @@ from osbs.constants import (WORKER_OUTER_TEMPLATE, WORKER_CUSTOMIZE_CONF,
                             ORCHESTRATOR_CUSTOMIZE_CONF, BUILD_TYPE_WORKER,
                             BUILD_TYPE_ORCHESTRATOR, BUILD_FINISHED_STATES,
                             RELEASE_LABEL_FORMAT, VERSION_LABEL_FORBIDDEN_CHARS,
-                            ORCHESTRATOR_SOURCES_OUTER_TEMPLATE,
-                            )
-from osbs.core import Openshift
+                            PRUN_TEMPLATE_USER_PARAMS, PRUN_TEMPLATE_REACTOR_CONFIG_WS,
+                            PRUN_TEMPLATE_BUILD_DIR_WS)
+from osbs.tekton import Openshift, PipelineRun
 from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsResponseException,
                              OsbsOrchestratorNotEnabled)
 from osbs.utils.labels import Labels
@@ -96,11 +96,10 @@ class OSBS(object):
     _OLD_LABEL_KEYS = ('git-repo-name', 'git-branch')
 
     @osbsapi
-    def __init__(self, openshift_configuration, build_configuration):
+    def __init__(self, openshift_configuration):
         """ """
         self.os_conf = openshift_configuration
-        self.build_conf = build_configuration
-        self.os = Openshift(openshift_api_url=self.os_conf.get_openshift_api_uri(),
+        self.os = Openshift(openshift_api_url=self.os_conf.get_openshift_base_uri(),
                             openshift_oauth_url=self.os_conf.get_openshift_oauth_api_uri(),
                             k8s_api_url=self.os_conf.get_k8s_api_uri(),
                             verbose=self.os_conf.get_verbosity(),
@@ -182,9 +181,9 @@ class OSBS(object):
     def _set_build_request_resource_limits(self, build_request):
         """Apply configured resource limits to build_request"""
         assert isinstance(build_request, BaseBuildRequest)
-        cpu_limit = self.build_conf.get_cpu_limit()
-        memory_limit = self.build_conf.get_memory_limit()
-        storage_limit = self.build_conf.get_storage_limit()
+        cpu_limit = self.os_conf.get_cpu_limit()
+        memory_limit = self.os_conf.get_memory_limit()
+        storage_limit = self.os_conf.get_storage_limit()
         if any(
                 limit is not None
                 for limit in (cpu_limit, memory_limit, storage_limit)
@@ -214,23 +213,6 @@ class OSBS(object):
                 customize_conf=customize_conf,
                 user_params=user_params,
                 repo_info=repo_info,
-        )
-
-        self._set_build_request_resource_limits(build_request)
-        return build_request
-
-    @osbsapi
-    def get_source_container_build_request(self, outer_template=None, user_params=None):
-        """
-        return instance of SourceBuildRequest
-
-        :param str outer_template: name of outer template for SourceBuildRequest
-        :return: instance of SourceBuildRequest
-        """
-        build_request = SourceBuildRequest(
-            osbs_api=self,
-            outer_template=outer_template,
-            user_params=user_params,
         )
 
         self._set_build_request_resource_limits(build_request)
@@ -373,7 +355,7 @@ class OSBS(object):
         req_labels = req_labels or {}
         user_component = component or req_labels[Labels.LABEL_TYPE_COMPONENT]
         return BuildUserParams.make_params(build_json_dir=self.os_conf.get_build_json_store(),
-                                           build_conf=self.build_conf,
+                                           build_conf=self.os_conf,
                                            component=user_component,
                                            name_label=req_labels[Labels.LABEL_TYPE_NAME],
                                            **kwargs)
@@ -487,60 +469,79 @@ class OSBS(object):
         """
         return self._do_create_prod_build(**kwargs)
 
+    def _get_source_container_pipeline_data(self):
+        pipeline_run_postfix = utils.generate_random_postfix()
+        pipeline_run_path = self.os_conf.get_pipeline_run_path()
+
+        with open(pipeline_run_path) as f:
+            yaml_data = f.read()
+        pipeline_run_data = yaml.safe_load(yaml_data)
+
+        pipeline_name = pipeline_run_data['spec']['pipelineRef']['name']
+        pipeline_run_name = f'{pipeline_name}-{pipeline_run_postfix}'
+
+        return pipeline_run_name, pipeline_run_data
+
+    def _set_source_container_pipeline_data(self, pipeline_run_name, pipeline_run_data,
+                                            user_params):
+        # set pipeline run name
+        pipeline_run_data['metadata']['name'] = pipeline_run_name
+
+        # set user params
+        for param in pipeline_run_data['spec']['params']:
+            if param['name'] == PRUN_TEMPLATE_USER_PARAMS:
+                param['value'] = user_params.to_json()
+
+        for ws in pipeline_run_data['spec']['workspaces']:
+            # set reactor config map name
+            if ws['name'] == PRUN_TEMPLATE_REACTOR_CONFIG_WS:
+                ws['configmap']['name'] = user_params.reactor_config_map
+
+            # set namespace for volume claim template
+            if ws['name'] == PRUN_TEMPLATE_BUILD_DIR_WS:
+                ws['volumeClaimTemplate']['metadata']['namespace'] = self.os_conf.get_namespace()
+
     @osbsapi
-    def create_source_container_build(self,
-                                      outer_template=None,
-                                      component=None,
-                                      koji_task_id=None,
-                                      target=None,
-                                      **kwargs):
+    def create_source_container_pipeline_run(self,
+                                             component=None,
+                                             koji_task_id=None,
+                                             target=None,
+                                             **kwargs):
         """
-        Take input args, create build request and submit the source image build
+        Take input args, create source pipeline run
 
-        :return: instance of BuildRequest
+        :return: instance of PiplelineRun
         """
-        build_json_store = self.os_conf.get_build_json_store()
-        user_params = SourceContainerUserParams.make_params(
-            build_json_dir=build_json_store,
-            build_conf=self.build_conf,
-            component=component,
-            koji_target=target,
-            koji_task_id=koji_task_id,
-            **kwargs
-        )
-        build_request = self.get_source_container_build_request(
-            outer_template=outer_template or ORCHESTRATOR_SOURCES_OUTER_TEMPLATE,
-            user_params=user_params
-        )
-        build_request.set_openshift_required_version(self.os_conf.get_openshift_required_version())
-
         error_messages = []
+        # most likely can be removed, source build should get component name
+        # from binary build OSBS2 TBD
         if not component:
             error_messages.append("required argument 'component' can't be empty")
         if error_messages:
             raise OsbsValidationException(", ".join(error_messages))
 
-        builds_for_koji_task = []
-        if koji_task_id:
-            # try to find build for koji_task which isn't canceled and use that one
-            builds_for_koji_task = self._get_not_cancelled_builds_for_koji_task(koji_task_id)
+        pipeline_run_name, pipeline_run_data = self._get_source_container_pipeline_data()
 
-        builds_count = len(builds_for_koji_task)
-        if builds_count == 1:
-            logger.info("found running build for koji task: %s",
-                        builds_for_koji_task[0].get_build_name())
-            response =\
-                BuildResponse(self.os.get_build(builds_for_koji_task[0].get_build_name()).json(),
-                              self)
-        elif builds_count > 1:
-            raise OsbsException("Multiple builds %s for koji task id %s" %
-                                (builds_count, koji_task_id))
-        else:
-            logger.info("creating source container image build")
-            response = self._create_build_directly(build_request)
+        build_json_store = self.os_conf.get_build_json_store()
+        user_params = SourceContainerUserParams.make_params(
+            build_json_dir=build_json_store,
+            build_conf=self.os_conf,
+            component=component,
+            koji_target=target,
+            koji_task_id=koji_task_id,
+            pipeline_run_name=pipeline_run_name,
+            **kwargs
+        )
 
-        logger.debug(response.json)
-        return response
+        self._set_source_container_pipeline_data(pipeline_run_name, pipeline_run_data, user_params)
+
+        logger.info("creating source container image pipeline run: %s", pipeline_run_name)
+
+        pipeline_run = PipelineRun(self.os, pipeline_run_name, pipeline_run_data)
+
+        logger.info("pipeline run created: %s", pipeline_run.start_pipeline_run().json())
+
+        return pipeline_run
 
     @osbsapi
     def create_worker_build(self, **kwargs):
@@ -812,7 +813,7 @@ class OSBS(object):
 
     @osbsapi
     def can_orchestrate(self):
-        return self.build_conf.get_can_orchestrate()
+        return self.os_conf.get_can_orchestrate()
 
     @osbsapi
     def create_config_map(self, name, data):

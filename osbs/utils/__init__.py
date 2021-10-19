@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import os.path
+import random
 import re
 import shutil
 import string
@@ -29,7 +30,7 @@ from osbs.repo_utils import RepoConfiguration, RepoInfo, AdditionalTagsConfig
 from osbs.constants import (OS_CONFLICT_MAX_RETRIES, OS_CONFLICT_WAIT,
                             GIT_MAX_RETRIES, GIT_BACKOFF_FACTOR, GIT_FETCH_RETRY,
                             OS_NOT_FOUND_MAX_RETRIES, OS_NOT_FOUND_MAX_WAIT,
-                            USER_WARNING_LEVEL, USER_WARNING_LEVEL_NAME)
+                            USER_WARNING_LEVEL, USER_WARNING_LEVEL_NAME, RAND_DIGITS)
 
 # This was moved to a separate file - import here for external API compatibility
 from osbs.utils.labels import Labels  # noqa: F401
@@ -727,3 +728,20 @@ def stringify_values(d):
         k: val if isinstance(val, str) else json.dumps(val)
         for k, val in d.items()
     }
+
+
+def generate_random_postfix():
+    timestamp = utcnow().strftime('%Y%m%d%H%M%S')
+    # RNG is seeded once its imported, so in cli calls scratch builds would get unique name.
+    # On brew builders we import osbs once - thus RNG is seeded once and `randrange`
+    # returns the same values throughout the life of the builder.
+    # Before each `randrange` call we should be calling `.seed` to prevent this
+    random.seed()
+
+    postfix_segments = [
+        str(random.randrange(10**(RAND_DIGITS - 1), 10**RAND_DIGITS)),
+        timestamp
+    ]
+
+    postfix = '-'.join(postfix_segments)
+    return postfix
