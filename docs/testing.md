@@ -13,8 +13,8 @@ called "openshift". When unit tests call for an argument named
 of Openshift but using a special class, Connection, to provide the HTTP
 functionality.
 
-Other fixtures, such as "osbs" and "osbs106", make use of this fixture
-as well.
+Other fixtures, such as "osbs_binary" and "osbs_source",
+make use of this fixture as well.
 
 For all these fixtures, HTTP requests made during the unit test are
 intercepted and handled by the Connection class, which maps requests

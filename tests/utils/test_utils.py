@@ -14,10 +14,9 @@ import subprocess
 import pytest
 import datetime
 import re
-import sys
 import requests
 import logging
-from time import tzset, sleep
+from time import sleep
 import time
 from pkg_resources import parse_version
 from textwrap import dedent
@@ -25,14 +24,15 @@ from textwrap import dedent
 from osbs.constants import REPO_CONTAINER_CONFIG, USER_WARNING_LEVEL
 from osbs.repo_utils import RepoInfo
 from osbs.utils import (git_repo_humanish_part_from_uri, sanitize_strings_for_openshift,
-                        get_time_from_rfc3339, TarWriter, TarReader, make_name_from_git,
-                        wrap_name_from_git, get_instance_token_file_name, sanitize_version,
+                        TarWriter, TarReader, make_name_from_git,
+                        get_instance_token_file_name, sanitize_version,
                         clone_git_repo, get_repo_info, UserWarningsStore, ImageName,
                         stringify_values)
 from osbs.exceptions import OsbsException, OsbsCommitNotFound
 from tests.constants import (TEST_DOCKERFILE_GIT, TEST_DOCKERFILE_SHA1, TEST_DOCKERFILE_INIT_SHA1,
                              TEST_DOCKERFILE_BRANCH)
 import osbs.kerberos_ccache
+import osbs.utils
 
 
 BC_NAME_REGEX = r'^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
@@ -91,19 +91,6 @@ def test_git_repo_humanish_part_from_uri(uri, humanish):
     assert git_repo_humanish_part_from_uri(uri) == humanish
 
 
-@pytest.mark.parametrize('tz', [
-    'UTC',
-    'EST',
-])
-@pytest.mark.parametrize(('rfc3339', 'seconds'), [
-    ('2015-08-24T10:41:00Z', 1440412860.0),
-])
-def test_get_time_from_rfc3339_valid(rfc3339, seconds, tz):
-    os.environ['TZ'] = tz
-    tzset()
-    assert get_time_from_rfc3339(rfc3339) == seconds
-
-
 @pytest.mark.parametrize(('str1', 'str2', 'separator', 'limit', 'label', 'expected'), [
     ('spam', 'bacon', '-', 10, True, 'spam-bacon'),
     ('spam', 'bacon', '-', 5, True, 'sp-ba'),
@@ -151,40 +138,11 @@ def test_sanitize_string(str1, str2, limit, separator, label, expected):
 
 ])
 def test_make_name_from_git(repo, branch, limit, separator, expected, hash_size=5):
+    flexmock(osbs.utils).should_receive('generate_random_postfix').and_return('')
     bc_name = make_name_from_git(repo, branch, limit + len(separator) + hash_size, separator,
                                  hash_size=hash_size)
 
     assert expected == bc_name[:-(hash_size + len(separator))]
-
-    # Is this a valid name for OpenShift to use?
-    valid = re.compile(BC_NAME_REGEX)
-    assert valid.match(bc_name)
-
-
-@pytest.mark.parametrize(('prefix', 'expected_prefix'), (
-    ('prefix', 'prefix'),
-    ('p.r.e.f.i.x', 'prefix'),
-    ('p-r-e-f-i-x', 'p-r-e-f-i-x'),
-))
-@pytest.mark.parametrize(('suffix', 'expected_suffix'), (
-    ('suffix', 'suffix'),
-    ('s.u.f.f.i.x', 'suffix'),
-    ('s-u-f-f-i-x', 's-u-f-f-i-x'),
-))
-def test_wrap_name_from_git(prefix, expected_prefix, suffix, expected_suffix):
-    repo = 'repo'
-    branch = 'branch'
-    hash_size = 5
-    # Amount of separators when joining all segments:
-    #    repo, branch, hash, prefix, suffix
-    num_separators = 4
-    limit = len(suffix) + len(prefix) + hash_size + num_separators
-    bc_name = wrap_name_from_git(prefix, suffix, repo, branch, limit=limit, hash_size=hash_size)
-
-    assert bc_name.startswith(expected_prefix + '-')
-    assert bc_name.endswith('-' + expected_suffix)
-
-    assert len(bc_name) <= limit
 
     # Is this a valid name for OpenShift to use?
     valid = re.compile(BC_NAME_REGEX)
@@ -216,31 +174,6 @@ def test_make_name_from_git_all_from_file():
         assert valid.match(bc_name)
 
     assert len(lines) == len(all_sha)
-
-
-@pytest.mark.skipif(sys.version_info[0] < 3,
-                    reason="requires python3")
-@pytest.mark.parametrize('tz', [
-    'UTC',
-    'EST',
-])
-@pytest.mark.parametrize(('rfc3339', 'seconds'), [
-    # These tests only work in Python 3
-    ('2015-08-24T10:41:00.1Z', 1440412860.1),
-    ('2015-09-22T11:12:00+01:00', 1442916720),
-])
-def test_get_time_from_rfc3339_valid_alt_format(rfc3339, seconds, tz):
-    os.environ['TZ'] = tz
-    tzset()
-    assert get_time_from_rfc3339(rfc3339) == seconds
-
-
-@pytest.mark.parametrize('rfc3339', [
-    ('just completely invalid'),
-])
-def test_get_time_from_rfc3339_invalid(rfc3339):
-    with pytest.raises(ValueError):
-        get_time_from_rfc3339(rfc3339)
 
 
 KLIST_TEMPLATE = """

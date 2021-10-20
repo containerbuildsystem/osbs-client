@@ -11,7 +11,6 @@ from __future__ import absolute_import
 from contextlib import contextmanager
 from flexmock import flexmock
 import argparse
-from copy import deepcopy
 from osbs.conf import Configuration
 from osbs import utils
 import pytest
@@ -275,77 +274,6 @@ class TestConfiguration(object):
             conf = Configuration(conf_file=config_file, conf_section='default')
 
             assert conf.get_pipeline_run_path() == expected
-
-    @pytest.mark.parametrize(('platform', 'config', 'kwargs', 'expected'), [
-        ('',
-         {},
-         {},
-         {}),
-        ('',
-         {'default': {'node_selector.expense': 'ride=taxi.com'}},
-         {},
-         {}),
-        ('',
-         {'default': {}},
-         {'node_selector.expense': 'ride=taxi.com'},
-         {}),
-        ('meal',
-         {'default': {'node_selector.meal': 'breakfast=eggs.com',
-                      'node_selector.expense': 'ride=taxi.com'}},
-         {},
-         {'breakfast': 'eggs.com'}),
-        ('meal',
-         {'default': {'node_selector.meal': 'breakfast=eggs.com, lunch=ham.com',
-                      'node_selector.expense': 'ride=taxi.com'}},
-         {},
-         {'breakfast': 'eggs.com', 'lunch': 'ham.com'}),
-        ('meal',
-         {'default': {}},
-         {'node_selector.meal': 'breakfast=eggs.com', 'node_selector.expense': 'ride=taxi.com'},
-         {'breakfast': 'eggs.com'}),
-        ('meal',
-         {'default': {'node_selector.meal': 'breakfast=eggs.com'}},
-         {'node_selector.meal': 'breakfast=bacon.com', 'node_selector.expense': 'ride=taxi.com'},
-         {'breakfast': 'bacon.com'}),
-        ('meal',
-         {'default': {}},
-         {'node_selector.expense': 'ride=taxi.com'},
-         {}),
-        ('meal',
-         {'default': {'node_selector.meal': 'none'}},
-         {'node_selector.expense': 'ride=taxi.com'},
-         {}),
-    ])
-    def test_get_node_selector_platform(self, platform, kwargs, config, expected):
-        with self.config_file(config) as config_file:
-            conf = Configuration(conf_file=config_file, conf_section='default', **kwargs)
-            assert conf.get_platform_node_selector(platform) == expected
-
-    @pytest.mark.parametrize('nodeselector_type', [
-        'scratch_build_node_selector',
-        'explicit_build_node_selector',
-        'auto_build_node_selector',
-        'isolated_build_node_selector',
-    ])
-    @pytest.mark.parametrize(('config', 'expected'), [
-        ({},
-         {}),
-        ({'default': {}},
-         {}),
-        ({'default': {'node_selector': 'breakfast=eggs.com'}},
-         {'breakfast': 'eggs.com'}),
-        ({'default': {'node_selector': 'breakfast=eggs.com, lunch=ham.com'}},
-         {'breakfast': 'eggs.com', 'lunch': 'ham.com'}),
-    ])
-    def test_get_node_selector_types(self, nodeselector_type, config, expected):
-        myconfig = deepcopy(config)
-        if 'default' in myconfig:
-            if 'node_selector' in myconfig['default']:
-                myconfig['default'][nodeselector_type] = myconfig['default'].pop('node_selector')
-
-        with self.config_file(myconfig) as config_file:
-            conf = Configuration(conf_file=config_file, conf_section='default')
-            assert getattr(conf, "get_" + nodeselector_type)() == expected
 
     def test_deprecated_warnings(self, caplog):  # noqa:F811
         with caplog.at_level(logging.WARNING):
