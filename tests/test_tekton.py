@@ -4,21 +4,20 @@ import yaml
 from copy import deepcopy
 
 from osbs.tekton import Openshift, PipelineRun, TaskRun, Pod
-from tests.constants import TEST_PIPELINE_RUN_TEMPLATE
+from tests.constants import TEST_PIPELINE_RUN_TEMPLATE, TEST_OCP_NAMESPACE
 
 PIPELINE_NAME = 'source-container-0-1'
 PIPELINE_RUN_NAME = 'source-container-x-x-default'
 TASK_RUN_NAME = 'test-task-run-1'
-OPENSHIFT_NAMESPACE = 'test-namespace'
-PIPELINE_RUN_URL = f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{OPENSHIFT_NAMESPACE}/pipelineruns/{PIPELINE_RUN_NAME}' # noqa E501
-PIPELINE_WATCH_URL = f'https://openshift.testing/apis/tekton.dev/v1beta1/watch/namespaces/{OPENSHIFT_NAMESPACE}/pipelineruns/{PIPELINE_RUN_NAME}/' # noqa E501
-TASK_RUN_URL = f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{OPENSHIFT_NAMESPACE}/taskruns/{TASK_RUN_NAME}' # noqa E501
-TASK_RUN_WATCH_URL = f"https://openshift.testing/apis/tekton.dev/v1beta1/watch/namespaces/{OPENSHIFT_NAMESPACE}/taskruns/{TASK_RUN_NAME}/" # noqa E501
+PIPELINE_RUN_URL = f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/pipelineruns/{PIPELINE_RUN_NAME}' # noqa E501
+PIPELINE_WATCH_URL = f'https://openshift.testing/apis/tekton.dev/v1beta1/watch/namespaces/{TEST_OCP_NAMESPACE}/pipelineruns/{PIPELINE_RUN_NAME}/' # noqa E501
+TASK_RUN_URL = f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/taskruns/{TASK_RUN_NAME}' # noqa E501
+TASK_RUN_WATCH_URL = f"https://openshift.testing/apis/tekton.dev/v1beta1/watch/namespaces/{TEST_OCP_NAMESPACE}/taskruns/{TASK_RUN_NAME}/" # noqa E501
 
 POD_NAME = 'test-pod'
 CONTAINERS = ['step-hello', 'step-wait', 'step-bye']
-POD_URL = f'https://openshift.testing/api/v1/namespaces/{OPENSHIFT_NAMESPACE}/pods/{POD_NAME}'
-POD_WATCH_URL = f"https://openshift.testing/api/v1/watch/namespaces/{OPENSHIFT_NAMESPACE}/pods/{POD_NAME}/" # noqa E501
+POD_URL = f'https://openshift.testing/api/v1/namespaces/{TEST_OCP_NAMESPACE}/pods/{POD_NAME}'
+POD_WATCH_URL = f"https://openshift.testing/api/v1/watch/namespaces/{TEST_OCP_NAMESPACE}/pods/{POD_NAME}/" # noqa E501
 
 EXPECTED_LOGS = {
     'step-hello': 'Hello World\n',
@@ -99,7 +98,7 @@ POD_JSON = {
     "apiVersion": "v1",
     "metadata": {
         "name": POD_NAME,
-        "namespace": OPENSHIFT_NAMESPACE,
+        "namespace": TEST_OCP_NAMESPACE,
     },
     "status": {
         "phase": "Running",
@@ -130,7 +129,7 @@ PIPELINE_RUN_DATA = yaml.safe_load(yaml_data)
 def openshift():
     return Openshift(openshift_api_url="https://openshift.testing/",
                      openshift_oauth_url="https://openshift.testing/oauth/authorize",
-                     namespace=OPENSHIFT_NAMESPACE)
+                     namespace=TEST_OCP_NAMESPACE)
 
 
 @pytest.fixture(scope='module')
@@ -276,7 +275,7 @@ class TestPipelineRun():
     def test_start_pipeline(self, pipeline_run, expected_request_body_pipeline_run):
         responses.add(
             responses.POST,
-            f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{OPENSHIFT_NAMESPACE}/pipelineruns', # noqa E501
+            f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/pipelineruns', # noqa E501
             match=[responses.json_params_matcher(expected_request_body_pipeline_run)],
         )
 
@@ -298,7 +297,7 @@ class TestPipelineRun():
     @responses.activate
     def test_update_labels(self, pipeline_run, expected_request_body_pipeline_run):
         labels = {'label_key': 'label_value'}
-        expected_request_body_pipeline_run['metadata']['namespace'] = OPENSHIFT_NAMESPACE
+        expected_request_body_pipeline_run['metadata']['namespace'] = TEST_OCP_NAMESPACE
         expected_request_body_pipeline_run['metadata']['labels'] = labels
         responses.add(
             responses.PATCH,
@@ -311,7 +310,7 @@ class TestPipelineRun():
     @responses.activate
     def test_update_annotations(self, pipeline_run, expected_request_body_pipeline_run):
         annotations = {'annotation_key': 'annotation_value'}
-        expected_request_body_pipeline_run['metadata']['namespace'] = OPENSHIFT_NAMESPACE
+        expected_request_body_pipeline_run['metadata']['namespace'] = TEST_OCP_NAMESPACE
         expected_request_body_pipeline_run['metadata']['annotations'] = annotations
         responses.add(
             responses.PATCH,

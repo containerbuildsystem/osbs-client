@@ -32,20 +32,7 @@ def test_missing_section():
         Configuration(conf_file=f.name, conf_section="missing")
 
 
-def test_no_build_image():
-    with NamedTemporaryFile(mode='w+') as f:
-        f.write("""
-[default]
-build_host=localhost
-""")
-        f.flush()
-        f.seek(0)
-        os_conf = Configuration(conf_file=f.name,
-                                conf_section="default")
-        assert os_conf.get_build_from() is None
-
-
-def test_no_inputs():
+def test_no_branch():
     with NamedTemporaryFile(mode='w+') as f:
         f.write("""
 [general]
@@ -60,12 +47,6 @@ registry_uri=127.0.0.1:5000
         with pytest.raises(OsbsException):
             os_conf = Configuration(conf_file=f.name,
                                     conf_section="default")
-            build_conf = Configuration(conf_file=f.name,
-                                       conf_section="default")
-            osbs = OSBS(os_conf, build_conf)
-            osbs.create_build(git_uri="https://example.com/example.git",
-                              git_ref="master",
-                              user="user",
-                              component="component",
-                              target="target",
-                              architecture="arch")
+            osbs = OSBS(os_conf)
+            osbs.create_binary_container_pipeline_run(git_uri="https://example.com/example.git",
+                                                      git_ref="master")

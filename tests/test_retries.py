@@ -16,11 +16,9 @@ from flexmock import flexmock
 import pytest
 
 import requests
-import six
 from urllib3.util import Retry
 from osbs.exceptions import OsbsNetworkException, OsbsResponseException
 from osbs.constants import HTTP_RETRIES_STATUS_FORCELIST, HTTP_RETRIES_METHODS_WHITELIST
-from osbs.core import Openshift
 from osbs.osbs_http import HttpSession, HttpStream
 from osbs import osbs_http
 logger = logging.getLogger(__file__)
@@ -59,28 +57,3 @@ class TestHttpRetries(object):
             s.request(method=method, url='http://httpbin.org/status/%s' % status_code).json()
         if isinstance(exc_info, OsbsResponseException):
             assert exc_info.value.status_code == status_code
-
-    def test_stream_logs_not_decoded(self, caplog):
-        (flexmock(osbs_http).should_receive('make_retry').and_return(fake_retry))
-        server = Openshift('http://apis/', 'http://oauth/authorize',
-                           k8s_api_url='http://api/v1/')
-
-        logs = (
-            u'Lógs'.encode('utf-8'),
-            u'Lðgs'.encode('utf-8'),
-        )
-
-        fake_response = flexmock(status_code=requests.status_codes.codes.OK, headers={})
-
-        (fake_response
-            .should_receive('iter_lines')
-            .and_yield(*logs)
-            .with_args(decode_unicode=False))
-
-        (flexmock(requests)
-            .should_receive('request')
-            .and_return(fake_response))
-
-        with caplog.at_level(logging.ERROR):
-            for result in server.stream_logs('anything'):
-                assert isinstance(result, six.binary_type)
