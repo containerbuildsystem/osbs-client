@@ -501,6 +501,14 @@ class OSBS(object):
             if ws['name'] == PRUN_TEMPLATE_BUILD_DIR_WS:
                 ws['volumeClaimTemplate']['metadata']['namespace'] = self.os_conf.get_namespace()
 
+        # set labels
+        all_labels = {}
+
+        if user_params.koji_task_id is not None:
+            all_labels['koji-task-id'] = str(user_params.koji_task_id)
+
+        pipeline_run_data['metadata']['labels'] = all_labels
+
     @osbsapi
     def create_source_container_pipeline_run(self,
                                              component=None,
