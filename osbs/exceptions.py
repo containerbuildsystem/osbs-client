@@ -79,22 +79,5 @@ class OsbsValidationException(OsbsException):
     pass
 
 
-class OsbsOrchestratorNotEnabled(OsbsValidationException):
-    """Raised when an orchestrator build has been requested,
-    but orchestration is not enabled."""
-
-
-class OsbsWatchBuildNotFound(OsbsException):
-    """ watch stream ended and build was not found """
-
-
 class OsbsCommitNotFound(OsbsException):
     """Commit was not found in repo"""
-
-
-class ImportImageFailed(OsbsException):
-    """Import image via ImageStream failed"""
-
-
-class ImportImageFailedServerError(ImportImageFailed):
-    """Import image via ImageStream failed due to server error"""

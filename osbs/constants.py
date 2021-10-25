@@ -20,33 +20,7 @@ DEFAULT_CONF_SOURCE_SECTION = "default_source"
 PRUN_TEMPLATE_USER_PARAMS = "USER_PARAMS"
 PRUN_TEMPLATE_REACTOR_CONFIG_WS = "ws-reactor-config-map"
 PRUN_TEMPLATE_BUILD_DIR_WS = "ws-build-dir"
-WORKER_OUTER_TEMPLATE = "worker.json"
-ORCHESTRATOR_OUTER_TEMPLATE = "orchestrator.json"
-ORCHESTRATOR_SOURCES_OUTER_TEMPLATE = "orchestrator_sources.json"
-WORKER_CUSTOMIZE_CONF = "worker_customize.json"
-ORCHESTRATOR_CUSTOMIZE_CONF = "orchestrator_customize.json"
-DEFAULT_OUTER_TEMPLATE = WORKER_OUTER_TEMPLATE
-DEFAULT_SOURCES_OUTER_TEMPLATE = ORCHESTRATOR_SOURCES_OUTER_TEMPLATE
-DEFAULT_CUSTOMIZE_CONF = WORKER_CUSTOMIZE_CONF
 GENERAL_CONFIGURATION_SECTION = "general"
-POD_FINISHED_STATES = ["failed", "succeeded"]
-POD_FAILED_STATES = ["failed"]
-POD_SUCCEEDED_STATES = ["succeeded"]
-POD_RUNNING_STATES = ["pending", "running"]
-# https://github.com/GoogleCloudPlatform/kubernetes/blob/master/pkg/api/types.go
-# type PodPhase string
-BUILD_CANCELLED_STATE = "cancelled"
-BUILD_FINISHED_STATES = ["failed", "complete", "error", BUILD_CANCELLED_STATE]
-BUILD_FAILED_STATES = ["failed", "error", "cancelled"]  # meaning no image produced
-BUILD_SUCCEEDED_STATES = ["complete"]
-BUILD_PENDING_STATES = ["pending", "new"]
-BUILD_RUNNING_STATES = ["running"]
-
-# Watch response types
-WATCH_ADDED = 'added'
-WATCH_DELETED = 'deleted'
-WATCH_MODIFIED = 'modified'
-WATCH_ERROR = 'error'
 
 # https://github.com/openshift/origin/blob/master/pkg/build/api/types.go
 # type BuildStatus string
@@ -56,9 +30,6 @@ DEFAULT_NAMESPACE = "default"
 SERVICEACCOUNT_SECRET = "/var/run/secrets/kubernetes.io/serviceaccount"
 SERVICEACCOUNT_TOKEN = "token"
 SERVICEACCOUNT_CACRT = "ca.crt"
-
-# Where will secrets be mounted?
-SECRETS_PATH = "/var/run/secrets/atomic-reactor"
 
 CLI_LIST_BUILDS_DEFAULT_COLS = ["name", "status", "image"]
 CLI_WATCH_BUILDS_DEFAULT_COLS = ["changetype", "status", "created", "name"]
@@ -110,9 +81,6 @@ OS_NOT_FOUND_MAX_RETRIES = 6
 # number of seconds to wait, before retrying on openshift not found
 OS_NOT_FOUND_MAX_WAIT = 1
 
-BUILD_TYPE_ORCHESTRATOR = "orchestrator"
-BUILD_TYPE_WORKER = "worker"
-
 ISOLATED_RELEASE_FORMAT = re.compile(r'^\d+\.\d+(\..+)?$')
 RELEASE_LABEL_FORMAT = re.compile(r"""^\d+             # First character must be a digit
                                       ([._]?           # allow separators between groups
@@ -135,10 +103,6 @@ GIT_BACKOFF_FACTOR = 60
 # number of deepen operations to attempt if a requested commit is not
 # in the shallow depth of the original clone
 GIT_FETCH_RETRY = 9
-
-# completion deadlines in hours
-WORKER_MAX_RUNTIME = 3
-ORCHESTRATOR_MAX_RUNTIME = 4
 
 USER_PARAMS_KIND_IMAGE_BUILDS = 'build_user_params'
 USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS = 'source_containers_user_params'

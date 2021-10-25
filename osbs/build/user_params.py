@@ -13,11 +13,9 @@ import random
 import json
 
 from osbs.build.user_params_meta import BuildParam, BuildParamsBase
-from osbs.constants import (DEFAULT_GIT_REF, DEFAULT_CUSTOMIZE_CONF, RAND_DIGITS,
-                            WORKER_MAX_RUNTIME, ORCHESTRATOR_MAX_RUNTIME,
+from osbs.constants import (DEFAULT_GIT_REF, RAND_DIGITS,
                             USER_PARAMS_KIND_IMAGE_BUILDS,
-                            USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS,
-                            )
+                            USER_PARAMS_KIND_SOURCE_CONTAINER_BUILDS)
 from osbs.exceptions import OsbsValidationException
 from osbs.utils import (make_name_from_git, utcnow)
 
@@ -83,26 +81,17 @@ class BuildCommon(BuildParamsBase):
     # Must be defined in subclasses
     KIND = NotImplemented
 
-    # build_from contains the full build_from string, including the source type prefix
-    build_from = BuildParam("build_from")
-    # build_image contains the buildroot name, whether the buildroot is a straight image or an
-    # imagestream.  buildroot_is_imagestream indicates what type of buildroot
-    build_image = BuildParam("build_image")
-    buildroot_is_imagestream = BuildParam("buildroot_is_imagestream", default=False)
     build_json_dir = BuildParam("build_json_dir", required=True)
     component = BuildParam("component")
     image_tag = BuildParam("image_tag")
     koji_target = BuildParam("koji_target")
     koji_task_id = BuildParam("koji_task_id")
-    orchestrator_deadline = BuildParam("orchestrator_deadline")
     pipeline_run_name = BuildParam("pipeline_run_name")
     platform = BuildParam("platform")
     reactor_config_map = BuildParam("reactor_config_map")
-    reactor_config_override = BuildParam("reactor_config_override")
     scratch = BuildParam("scratch")
     signing_intent = BuildParam("signing_intent")
     user = BuildParam("user", required=True)
-    worker_deadline = BuildParam("worker_deadline")
 
     def __setattr__(self, name, value):
         super(BuildCommon, self).__setattr__(name, value)
@@ -111,14 +100,12 @@ class BuildCommon(BuildParamsBase):
     @classmethod
     def make_params(cls,
                     build_conf=None,
-                    build_from=None,
                     build_json_dir=None,
                     component=None,
                     koji_target=None,
                     koji_task_id=None,
                     pipeline_run_name=None,
                     platform=None,
-                    reactor_config_override=None,
                     scratch=None,
                     signing_intent=None,
                     user=None,
@@ -140,7 +127,6 @@ class BuildCommon(BuildParamsBase):
         these parameters are accepted:
         :param base_image: str, name of the parent image
         :param build_conf: BuildConfiguration, the build configuration
-        :param build_from: str, buildroot reference (image or imagestream)
         :param build_json_dir: str, path to directory with JSON build templates
         :param component: str, name of the component
         :param koji_parent_build: str,
@@ -149,9 +135,6 @@ class BuildCommon(BuildParamsBase):
         :param koji_upload_dir: str, koji directory where the completed image will be uploaded
         :param pipeline_run_name: str, name of the pipeline run
         :param platform: str, platform
-        :param reactor_config_override: dict, data structure for reactor config to be injected as
-                                        an environment variable into a worker build;
-                                        when used, reactor_config_map is ignored.
         :param scratch: bool, build as a scratch build (if not specified in build_conf)
         :param signing_intent: bool, True to sign the resulting image
         :param user: str, name of the user requesting the build
@@ -159,33 +142,11 @@ class BuildCommon(BuildParamsBase):
         Please keep the paramater list alphabetized for easier tracking of changes
 
         the following parameters are pulled from the BuildConfiguration (ie, build_conf)
-        :param build_from: str, buildroot reference (if not specified as argument)
-        :param orchestrator_deadline: int, orchestrator deadline in hours
         :param reactor_config_map: str, name of the config map containing the reactor environment
         :param scratch: bool, build as a scratch build
-        :param worker_deadline: int, worker completion deadline in hours
         """
         if not build_conf:
             raise OsbsValidationException('build_conf must be defined')
-
-        build_from = build_from or build_conf.get_build_from()
-        if not build_from:
-            raise OsbsValidationException('build_from must be defined')
-        if ':' not in build_from:
-            raise OsbsValidationException('build_from must be "source_type:source_value"')
-        source_type, source_value = build_from.split(':', 1)
-        if source_type not in ('image', 'imagestream'):
-            raise OsbsValidationException(
-                'first part in build_from, may be only image or imagestream')
-
-        try:
-            orchestrator_deadline = int(build_conf.get_orchestor_deadline())
-        except (ValueError, TypeError):
-            orchestrator_deadline = ORCHESTRATOR_MAX_RUNTIME
-        try:
-            worker_deadline = int(build_conf.get_worker_deadline())
-        except (ValueError, TypeError):
-            worker_deadline = WORKER_MAX_RUNTIME
 
         if build_conf.get_scratch(scratch):
             reactor_config = build_conf.get_reactor_config_map_scratch()
@@ -198,18 +159,12 @@ class BuildCommon(BuildParamsBase):
             "koji_target": koji_target,
             "koji_task_id": koji_task_id,
             "platform": platform,
-            "reactor_config_override": reactor_config_override,
             "signing_intent": signing_intent,
             "user": user,
             # Potentially pulled from build_conf
-            "build_from": build_from,
-            "build_image": source_value,
-            "buildroot_is_imagestream": (source_type == "imagestream"),
-            "orchestrator_deadline": orchestrator_deadline,
             "pipeline_run_name": pipeline_run_name,
             "reactor_config_map": reactor_config,
             "scratch": build_conf.get_scratch(scratch),
-            "worker_deadline": worker_deadline,
         })
 
         # Drop arguments that are:
@@ -296,9 +251,7 @@ class BuildUserParams(BuildCommon):
 
     additional_tags = BuildParam("additional_tags")
     base_image = BuildParam("base_image")
-    build_type = BuildParam("build_type", required=True)
     compose_ids = BuildParam("compose_ids")
-    customize_conf = BuildParam("customize_conf", default=DEFAULT_CUSTOMIZE_CONF)
     dependency_replacements = BuildParam("dependency_replacements")
     filesystem_koji_task_id = BuildParam("filesystem_koji_task_id")
     flatpak = BuildParam("flatpak", default=False)
@@ -306,7 +259,6 @@ class BuildUserParams(BuildCommon):
     git_commit_depth = BuildParam("git_commit_depth")
     git_ref = BuildParam("git_ref", default=DEFAULT_GIT_REF, required=True)
     git_uri = BuildParam("git_uri", required=True)
-    imagestream_name = BuildParam("imagestream_name")
     include_koji_repo = BuildParam("include_koji_repo", default=False)
     isolated = BuildParam("isolated")
     koji_parent_build = BuildParam("koji_parent_build")
@@ -320,26 +272,13 @@ class BuildUserParams(BuildCommon):
     release = BuildParam("release")
     remote_sources = BuildParam("remote_sources")
     tags_from_yaml = BuildParam("tags_from_yaml")
-    trigger_imagestreamtag = BuildParam("trigger_imagestreamtag")
     yum_repourls = BuildParam("yum_repourls")
-
-    auto_build_node_selector = BuildParam("auto_build_node_selector",
-                                          include_in_json=False)
-    explicit_build_node_selector = BuildParam("explicit_build_node_selector",
-                                              include_in_json=False)
-    isolated_build_node_selector = BuildParam("isolated_build_node_selector",
-                                              include_in_json=False)
-    platform_node_selector = BuildParam("platform_node_selector",
-                                        include_in_json=False)
-    scratch_build_node_selector = BuildParam("scratch_build_node_selector",
-                                             include_in_json=False)
 
     @classmethod
     def make_params(cls,
                     additional_tags=None,
                     base_image=None,
                     build_conf=None,
-                    build_type=None,
                     compose_ids=None,
                     dependency_replacements=None,
                     filesystem_koji_task_id=None,
@@ -375,7 +314,6 @@ class BuildUserParams(BuildCommon):
 
         these parameters are accepted:
         :param build_conf: BuildConfiguration, optional build configuration
-        :param build_type: str, orchestrator or worker
         :param compose_ids: list of int, ODCS composes to use instead of generating new ones
         :param dependency_replacements: list of str, dependencies to be replaced by cachito, as
         pkg_manager:name:version[:new_name]
@@ -401,9 +339,6 @@ class BuildUserParams(BuildCommon):
         :param platforms: list of str, platforms to build on
         :param platform: str, platform
         :param reactor_config_map: str, name of the config map containing the reactor environment
-        :param reactor_config_override: dict, data structure for reactor config to be injected as
-        an environment variable into a worker build;
-        when used, reactor_config_map is ignored.
         :param release: str,
         :param remote_sources: list of dicts, each dict contains info about particular
         remote source with the following keys:
@@ -422,11 +357,6 @@ class BuildUserParams(BuildCommon):
         Please keep the paramater list alphabetized for easier tracking of changes
 
         the following parameters are pulled from the BuildConfiguration (ie, build_conf)
-        :param auto_build_node_selector: dict, a nodeselector for auto builds
-        :param explicit_build_node_selector: dict, a nodeselector for explicit builds
-        :param isolated_build_node_selector: dict, a nodeselector for isolated builds
-        :param platform_node_selector: dict, a nodeselector for a user_paramsific platform
-        :param scratch_build_node_selector: dict, a nodeselector for scratch builds
 
         the following parameters can be pulled from the RepoInfo (ie, repo_info)
         :param git_branch: str, branch name of the branch to be pulled
@@ -463,12 +393,10 @@ class BuildUserParams(BuildCommon):
         kwargs.update({
             "base_image": base_image,
             "build_conf": build_conf,
-            "build_type": build_type,
             "compose_ids": compose_ids or [],
             "dependency_replacements": dependency_replacements or [],
             "filesystem_koji_task_id": filesystem_koji_task_id,
             "flatpak": flatpak,
-            "imagestream_name": name_label,
             "include_koji_repo": include_koji_repo,
             "isolated": isolated,
             "koji_parent_build": koji_parent_build,
@@ -481,7 +409,6 @@ class BuildUserParams(BuildCommon):
             "platforms": platforms,
             "release": release,
             "remote_sources": remote_sources,
-            "trigger_imagestreamtag": base_image,
             "yum_repourls": yum_repourls or [],
             # Potentially pulled from repo_info
             "additional_tags": additional_tags or set(),
@@ -491,12 +418,6 @@ class BuildUserParams(BuildCommon):
             "git_uri": git_uri,
             "name": make_name_from_git(git_uri, git_branch),
             "tags_from_yaml": tags_from_yaml,
-            # Pulled from build_conf
-            "auto_build_node_selector": build_conf.get_auto_build_node_selector() or {},
-            "explicit_build_node_selector": build_conf.get_explicit_build_node_selector() or {},
-            "isolated_build_node_selector": build_conf.get_isolated_build_node_selector() or {},
-            "platform_node_selector": build_conf.get_platform_node_selector(platform) or {},
-            "scratch_build_node_selector": build_conf.get_scratch_build_node_selector() or {},
         })
 
         params = cls._make_params_super(**kwargs)
@@ -510,7 +431,6 @@ class BuildUserParams(BuildCommon):
 
     def set_base_image(self, base_image):
         self.base_image = base_image
-        self.trigger_imagestreamtag = base_image
 
 
 @register_user_params
