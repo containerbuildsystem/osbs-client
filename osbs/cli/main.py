@@ -76,7 +76,6 @@ def cmd_build(args):
         'yum_repourls': osbs.os_conf.get_yum_repourls(),
         'dependency_replacements': osbs.os_conf.get_dependency_replacements(),
         'scratch': args.scratch,
-        'platform': args.platform,
         'platforms': args.platforms,
         'release': args.release,
         'koji_parent_build': args.koji_parent_build,
@@ -85,9 +84,6 @@ def cmd_build(args):
         'compose_ids': args.compose_ids,
         'operator_csv_modifications_url': args.operator_csv_modifications_url,
     }
-
-    if args.koji_upload_dir:
-        build_kwargs['koji_upload_dir'] = args.koji_upload_dir
 
     if osbs.os_conf.get_flatpak():
         build_kwargs['flatpak'] = True
@@ -214,12 +210,6 @@ def cli():
                               help="tag of the built image (simple builds only)")
     build_parser.add_argument("--add-yum-repo", action='append', metavar="URL",
                               dest="yum_repourls", help="URL of yum repo file")
-    build_parser.add_argument("--cpu-limit", action='store', required=False,
-                              help="CPU limit (KCU)")
-    build_parser.add_argument("--memory-limit", action='store', required=False,
-                              help="memory limit")
-    build_parser.add_argument("--storage-limit", action='store', required=False,
-                              help="storage limit")
     build_parser.add_argument("--scratch", action='store_true', required=False,
                               help="perform a scratch build")
     build_parser.add_argument("--yum-proxy", action='store', required=False,
@@ -246,6 +236,7 @@ def cli():
                               help='name of each platform to use (deprecated)')
     build_parser.add_argument('--source-registry-uri', action='store', required=False,
                               help="set source registry for pulling parent image")
+    build_parser.set_defaults(func=cmd_build)
 
     build_source_container_parser = subparsers.add_parser(
         str_on_2_unicode_on_3('build-source-container'),
@@ -278,18 +269,6 @@ def cli():
         help="prefix for docker image repository"
     )
     build_source_container_parser.add_argument(
-        "--cpu-limit", action='store', required=False,
-        help="CPU limit (KCU)"
-    )
-    build_source_container_parser.add_argument(
-        "--memory-limit", action='store', required=False,
-        help="memory limit"
-    )
-    build_source_container_parser.add_argument(
-        "--storage-limit", action='store', required=False,
-        help="storage limit"
-    )
-    build_source_container_parser.add_argument(
         "--scratch", action='store_true', required=False,
         help="perform a scratch build"
     )
@@ -297,17 +276,6 @@ def cli():
         '--signing-intent', action='store', required=False,
         help='override signing intent')
     build_source_container_parser.set_defaults(func=cmd_build_source_container)
-
-    group = build_parser.add_mutually_exclusive_group()
-    group.add_argument("--build-from", action='store', required=False,
-                       help="builder source to use, image:image_spec,"
-                            "or imagestream:imagestream_spec")
-    group.add_argument("--build-image", action='store', required=False,
-                       help="builder image to use, will be replaced by build-from")
-    group.add_argument("--build-imagestream", action='store', required=False,
-                       help="builder imagestream to use (overrides build-image),"
-                            "will be replaced by build-from")
-    build_parser.set_defaults(func=cmd_build)
 
     parser.add_argument("--openshift-uri", action='store', metavar="URL",
                         help="openshift URL to remote API")

@@ -8,7 +8,6 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import print_function, absolute_import, unicode_literals
 from functools import wraps
 import contextlib
-import copy
 import json
 import logging
 import os
@@ -16,7 +15,6 @@ import os.path
 import random
 import re
 import shutil
-import string
 import subprocess
 import sys
 import tempfile
@@ -37,17 +35,6 @@ from osbs.utils.labels import Labels  # noqa: F401
 
 from six.moves import http_client
 from six.moves.urllib.parse import urlparse
-
-try:
-    # py3
-    if not hasattr(datetime.now(), 'timestamp'):
-        raise ImportError
-
-    import dateutil.parser
-except ImportError:
-    # py2 workaround in get_time_from_rfc3339() below
-    from time import strptime
-    from calendar import timegm
 
 from dockerfile_parse import DockerfileParser
 from osbs.exceptions import (OsbsException, OsbsResponseException,
@@ -135,32 +122,6 @@ class TarReader(object):
 
     def close(self):
         self.tarfile.close()
-
-
-def graceful_chain_get(d, *args):
-    if not d:
-        return None
-    t = copy.deepcopy(d)
-    for arg in args:
-        try:
-            t = t[arg]
-        except (IndexError, KeyError):
-            return None
-    return t
-
-
-def graceful_chain_del(d, *args):
-    if not d:
-        return
-    for arg in args[:-1]:
-        try:
-            d = d[arg]
-        except (IndexError, KeyError):
-            return
-    try:
-        del d[args[-1]]
-    except (IndexError, KeyError):
-        pass
 
 
 @contextlib.contextmanager
@@ -291,10 +252,6 @@ def reset_git_repo(target_dir, git_reference, retry_depth=None):
     return commit_id, final_commit_depth
 
 
-def looks_like_git_hash(git_ref):
-    return all(ch in string.hexdigits for ch in git_ref) and len(git_ref) == 40
-
-
 def get_repo_info(git_uri, git_ref, git_branch=None, depth=None):
     with checkout_git_repo(git_uri, commit=git_ref, branch=git_branch,
                            depth=depth) as code_dir_info:
@@ -317,29 +274,6 @@ def git_repo_humanish_part_from_uri(git_uri):
         git_uri = git_uri[:-4]
 
     return os.path.basename(git_uri)
-
-
-def get_time_from_rfc3339(rfc3339):
-    """
-    return time tuple from an RFC 3339-formatted time string
-
-    :param rfc3339: str, time in RFC 3339 format
-    :return: float, seconds since the Epoch
-    """
-
-    try:
-        # py 3
-
-        dt = dateutil.parser.parse(rfc3339, ignoretz=False)
-        return dt.timestamp()
-    except NameError:
-        # py 2
-
-        # Decode the RFC 3339 date with no fractional seconds (the
-        # format Origin provides). Note that this will fail to parse
-        # valid ISO8601 timestamps not in this exact format.
-        time_tuple = strptime(rfc3339, '%Y-%m-%dT%H:%M:%SZ')
-        return timegm(time_tuple)
 
 
 def utcnow():
@@ -428,22 +362,6 @@ def make_name_from_git(repo, branch, limit=53, separator='-', hash_size=5):
 
     sanitized = sanitize_strings_for_openshift(repo, branch, limit, separator, False)
     return separator.join(filter(None, (sanitized, hash_str)))
-
-
-def wrap_name_from_git(prefix, suffix, *args, **kwargs):
-    """
-    wraps the result of make_name_from_git in a suffix and postfix
-    adding separators for each.
-
-    see docstring for make_name_from_git for a full list of parameters
-    """
-    # 64 is maximum length allowed by OpenShift
-    # 2 is the number of dashes that will be added
-    prefix = ''.join(filter(VALID_BUILD_CONFIG_NAME_CHARS.match, list(prefix)))
-    suffix = ''.join(filter(VALID_BUILD_CONFIG_NAME_CHARS.match, list(suffix)))
-    kwargs['limit'] = kwargs.get('limit', 64) - len(prefix) - len(suffix) - 2
-    name_from_git = make_name_from_git(*args, **kwargs)
-    return '-'.join([prefix, name_from_git, suffix])
 
 
 def get_instance_token_file_name(instance):

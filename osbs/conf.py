@@ -16,7 +16,7 @@ from six.moves import configparser
 from six.moves.urllib.parse import urljoin
 
 from osbs.constants import (DEFAULT_CONFIGURATION_FILE, GENERAL_CONFIGURATION_SECTION,
-                            DEFAULT_NAMESPACE, WORKER_MAX_RUNTIME, ORCHESTRATOR_MAX_RUNTIME)
+                            DEFAULT_NAMESPACE)
 from osbs import utils
 
 
@@ -240,18 +240,6 @@ class Configuration(object):
     def get_builder_build_json_store(self):
         return self.get_build_json_store()
 
-    def get_cpu_limit(self):
-        return self._get_value("cpu_limit", self.conf_section, "cpu_limit")
-
-    def get_memory_limit(self):
-        return self._get_value("memory_limit", self.conf_section, "memory_limit")
-
-    def get_storage_limit(self):
-        return self._get_value("storage_limit", self.conf_section, "storage_limit")
-
-    def get_build_from(self):
-        return self._get_value("build_from", self.conf_section, "build_from")
-
     def get_scratch(self, default_value):
         return self._get_value("scratch", self.conf_section, "scratch",
                                default=default_value, is_bool_val=True)
@@ -304,58 +292,6 @@ class Configuration(object):
 
         return value
 
-    def get_can_orchestrate(self):
-        return self._get_value("can_orchestrate", self.conf_section, "can_orchestrate",
-                               default=False, is_bool_val=True)
-
-    def generate_nodeselector_dict(self, nodeselector_str):
-        """
-        helper method for generating nodeselector dict
-        :param nodeselector_str:
-        :return: dict
-        """
-        nodeselector = {}
-        if nodeselector_str and nodeselector_str != 'none':
-            constraints = [x.strip() for x in nodeselector_str.split(',')]
-            raw_nodeselector = dict([constraint.split('=', 1) for constraint in constraints])
-            nodeselector = dict([k.strip(), v.strip()] for (k, v) in raw_nodeselector.items())
-
-        return nodeselector
-
-    def get_platform_node_selector(self, platform):
-        """
-        search the configuration for entries of the form node_selector.platform
-        :param platform: str, platform to search for, can be null
-        :return dict
-        """
-        nodeselector = {}
-        if platform:
-            nodeselector_str = self._get_value("node_selector." + platform, self.conf_section,
-                                               "node_selector." + platform)
-            nodeselector = self.generate_nodeselector_dict(nodeselector_str)
-
-        return nodeselector
-
-    def get_scratch_build_node_selector(self):
-        nodeselector_str = self._get_value("scratch_build_node_selector", self.conf_section,
-                                           "scratch_build_node_selector")
-        return self.generate_nodeselector_dict(nodeselector_str)
-
-    def get_explicit_build_node_selector(self):
-        nodeselector_str = self._get_value("explicit_build_node_selector", self.conf_section,
-                                           "explicit_build_node_selector")
-        return self.generate_nodeselector_dict(nodeselector_str)
-
-    def get_auto_build_node_selector(self):
-        nodeselector_str = self._get_value("auto_build_node_selector", self.conf_section,
-                                           "auto_build_node_selector")
-        return self.generate_nodeselector_dict(nodeselector_str)
-
-    def get_isolated_build_node_selector(self):
-        nodeselector_str = self._get_value("isolated_build_node_selector", self.conf_section,
-                                           "isolated_build_node_selector")
-        return self.generate_nodeselector_dict(nodeselector_str)
-
     def get_reactor_config_map(self):
         return self._get_value("reactor_config_map", self.conf_section,
                                "reactor_config_map")
@@ -367,14 +303,6 @@ class Configuration(object):
     def get_pipeline_run_path(self):
         return self._get_value("pipeline_run_path", self.conf_section,
                                "pipeline_run_path")
-
-    def get_worker_deadline(self):
-        return self._get_value("worker_max_run_hours", self.conf_section, "worker_max_run_hours",
-                               WORKER_MAX_RUNTIME)
-
-    def get_orchestor_deadline(self):
-        return self._get_value("orchestrator_max_run_hours", self.conf_section,
-                               "orchestrator_max_run_hours", ORCHESTRATOR_MAX_RUNTIME)
 
     # dummy function for use with the unit tests
     def get_deprecated_key(self):
