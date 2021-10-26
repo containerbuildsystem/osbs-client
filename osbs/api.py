@@ -406,6 +406,18 @@ class OSBS(object):
 
         return pipeline_run
 
+    @osbsapi
+    def update_annotations_on_build(self, pipeline_run_name, annotations):
+        pass
+
+    @osbsapi
+    def update_labels_on_build(self, pipeline_run_name, labels):
+        pass
+
+    @osbsapi
+    def get_build_logs(self, pipeline_run_name, follow=False, wait=False):
+        pass
+
     @contextmanager
     def retries_disabled(self):
         """
