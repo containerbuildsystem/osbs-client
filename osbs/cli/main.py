@@ -31,47 +31,6 @@ def print_json_nicely(decoded_json):
     print(json.dumps(decoded_json, indent=2))
 
 
-def _print_build_logs(args, osbs, build):
-    user_warnings = UserWarningsStore()
-    build_id = build.get_build_name()
-
-    # we need to wait for kubelet to schedule the build, otherwise it's 500
-    build = osbs.wait_for_build_to_get_scheduled(build_id)
-    if not args.no_logs:
-        build_logs = osbs.get_build_logs(build_id, follow=True, decode=True)
-        if not isinstance(build_logs, collections.Iterable):
-            logger.error("'%s' is not iterable; can't display logs", build_logs)
-            return
-        print("Build submitted (%s), watching logs (feel free to interrupt)" % build_id)
-        try:
-            for line in build_logs:
-                if user_warnings.is_user_warning(line):
-                    user_warnings.store(line)
-                    continue
-
-                print('{!r}'.format(line))
-        except Exception as ex:
-            logger.error("Error during fetching logs for build %s: %s", build_id, repr(ex))
-
-        osbs.wait_for_build_to_finish(build_id)
-
-        if user_warnings:
-            print("USER WARNINGS")
-            print(user_warnings)
-
-        return _display_build_summary(osbs.get_build(build_id))
-    else:
-        if args.output == 'json':
-            print_json_nicely(build.json)
-        elif args.output == 'text':
-            print(build_id)
-
-        if osbs.get_build(build_id).is_succeeded():
-            return 0
-        else:
-            return -1
-
-
 def _print_pipeline_run_logs(pipeline_run):
     user_warnings = UserWarningsStore()
     pipeline_run_name = pipeline_run.pipeline_run_name
@@ -107,11 +66,6 @@ def cmd_build(args):
                             cli_args=args)
     osbs = OSBS(os_conf)
 
-    if args.worker:
-        create_func = osbs.create_worker_build
-    else:
-        create_func = osbs.create_orchestrator_build
-
     build_kwargs = {
         'git_uri': osbs.os_conf.get_git_uri(),
         'git_ref': osbs.os_conf.get_git_ref(),
@@ -138,9 +92,16 @@ def cmd_build(args):
     if osbs.os_conf.get_flatpak():
         build_kwargs['flatpak'] = True
 
-    build = create_func(**build_kwargs)
+    pipeline_run = osbs.create_binary_container_pipeline_run(**build_kwargs)
 
-    return _print_build_logs(args, osbs, build)
+    _print_pipeline_run_logs(pipeline_run)
+    _display_pipeline_run_summary(pipeline_run)
+
+    return_val = -1
+
+    if pipeline_run.has_succeeded():
+        return_val = 0
+    return return_val
 
 
 def cmd_build_source_container(args):
@@ -172,30 +133,6 @@ def cmd_build_source_container(args):
 
     if pipeline_run.has_succeeded():
         return_val = 0
-    return return_val
-
-
-def _display_build_summary(build):
-    output = [
-        "",  # Empty line for cleaner display
-        "build {} is {}".format(build.get_build_name(), build.status),
-    ]
-    return_val = -1
-
-    if build.is_succeeded():
-        return_val = 0
-        all_repositories = build.get_repositories() or {}
-
-        for kind, repositories in all_repositories.items():
-            if not repositories:
-                continue
-            output.append('{} repositories:'.format(kind))
-            for repository in repositories:
-                output.append('\t{}'.format(repository))
-
-    for line in output:
-        print(line)
-
     return return_val
 
 
@@ -305,6 +242,10 @@ def cli():
     build_parser.add_argument("--operator-csv-modifications-url", action='store', required=False,
                               dest='operator_csv_modifications_url', metavar='URL',
                               help="URL to JSON file with operator CSV modification")
+    build_parser.add_argument('--platforms', action='append', metavar='PLATFORM',
+                              help='name of each platform to use (deprecated)')
+    build_parser.add_argument('--source-registry-uri', action='store', required=False,
+                              help="set source registry for pulling parent image")
 
     build_source_container_parser = subparsers.add_parser(
         str_on_2_unicode_on_3('build-source-container'),
@@ -356,29 +297,6 @@ def cli():
         '--signing-intent', action='store', required=False,
         help='override signing intent')
     build_source_container_parser.set_defaults(func=cmd_build_source_container)
-
-    worker_group = build_parser.add_argument_group(title='arguments for --worker',
-                                                   description='Required arguments for creating a '
-                                                   'worker build')
-    worker_group.add_argument('--platform', action='store', required=False,
-                              help='platform name to use')
-    worker_group.add_argument('--koji-upload-dir', action='store', required=False,
-                              help='path for uploading to koji')
-
-    orchestrator_group = build_parser.add_argument_group(title='arguments for --orchestrator',
-                                                         description='Required arguments for '
-                                                         'creating an orchestrator build')
-    orchestrator_group.add_argument('--platforms', action='append', metavar='PLATFORM',
-                                    help='name of each platform to use (deprecated)')
-
-    build_parser.add_argument('--source-registry-uri', action='store', required=False,
-                              help="set source registry for pulling parent image")
-
-    build_type_group = build_parser.add_mutually_exclusive_group()
-    build_type_group.add_argument("--worker", action="store_true", required=False,
-                                  default=False, help="create worker build")
-    build_type_group.add_argument("--orchestrator", action="store_true", required=False,
-                                  default=True, help="create orchestrator build")
 
     group = build_parser.add_mutually_exclusive_group()
     group.add_argument("--build-from", action='store', required=False,
