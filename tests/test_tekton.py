@@ -3,7 +3,8 @@ import pytest
 import yaml
 from copy import deepcopy
 
-from osbs.tekton import Openshift, PipelineRun, TaskRun, Pod
+from osbs.tekton import Openshift, PipelineRun, TaskRun, Pod, API_VERSION
+from osbs.exceptions import OsbsException
 from tests.constants import TEST_PIPELINE_RUN_TEMPLATE, TEST_OCP_NAMESPACE
 
 PIPELINE_NAME = 'source-container-0-1'
@@ -28,6 +29,7 @@ EXPECTED_LOGS = {
 PIPELINE_RUN_JSON = {
     "apiVersion": "tekton.dev/v1beta1",
     "kind": "PipelineRun",
+    "metadata": {},
     "status": {
         "conditions": [
             {
@@ -123,6 +125,13 @@ POD_WATCH_JSON = {
 with open(TEST_PIPELINE_RUN_TEMPLATE) as f:
     yaml_data = f.read()
 PIPELINE_RUN_DATA = yaml.safe_load(yaml_data)
+
+PIPELINE_MINIMAL_DATA = {
+    "apiVersion": API_VERSION,
+    "kind": "PipelineRun",
+    "metadata": {"name": PIPELINE_RUN_NAME},
+    "spec": {},
+}
 
 
 @pytest.fixture(scope='module')
@@ -272,71 +281,185 @@ class TestTaskRun():
 class TestPipelineRun():
 
     @responses.activate
-    def test_start_pipeline(self, pipeline_run, expected_request_body_pipeline_run):
+    @pytest.mark.parametrize('run_name_in_input', [PIPELINE_RUN_NAME, 'wrong'])
+    @pytest.mark.parametrize('input_data', [deepcopy(PIPELINE_RUN_DATA), None])
+    def test_start_pipeline(self, openshift, expected_request_body_pipeline_run,
+                            run_name_in_input, input_data):
+
+        if input_data:
+            input_data['metadata']['name'] = run_name_in_input
+
+        p_run = PipelineRun(os=openshift, pipeline_run_name=PIPELINE_RUN_NAME,
+                            pipeline_run_data=input_data)
+
         responses.add(
             responses.POST,
             f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/pipelineruns', # noqa E501
             match=[responses.json_params_matcher(expected_request_body_pipeline_run)],
+            json={},
         )
 
-        pipeline_run.start_pipeline_run()
-        assert len(responses.calls) == 1
+        if input_data:
+            if run_name_in_input == PIPELINE_RUN_NAME:
+                p_run.start_pipeline_run()
+                assert len(responses.calls) == 1
+            else:
+                msg = f"Pipeline run name provided '{PIPELINE_RUN_NAME}' is different " \
+                      f"than in input data '{run_name_in_input}'"
+                with pytest.raises(OsbsException, match=msg):
+                    p_run.start_pipeline_run()
+                assert len(responses.calls) == 0
+        else:
+            match_exception = "No input data provided for pipeline run to start"
+            with pytest.raises(OsbsException, match=match_exception):
+                p_run.start_pipeline_run()
+            assert len(responses.calls) == 0
 
     @responses.activate
-    def test_cancel_pipeline(self, pipeline_run, expected_request_body_pipeline_run):
-        expected_request_body_pipeline_run['spec']['status'] = 'PipelineRunCancelled'
+    @pytest.mark.parametrize(('get_json', 'status', 'raises'), [
+        (deepcopy(PIPELINE_RUN_JSON), 200, False),
+        ({}, 404, True),
+        ({}, 500, True),
+    ])
+    def test_cancel_pipeline(self, caplog, pipeline_run, get_json, status, raises):
+        exp_request_body_pipeline_run = deepcopy(PIPELINE_MINIMAL_DATA)
+        exp_request_body_pipeline_run['spec']['status'] = 'PipelineRunCancelled'
+
         responses.add(
             responses.PATCH,
             PIPELINE_RUN_URL,
-            match=[responses.json_params_matcher(expected_request_body_pipeline_run)],
+            match=[responses.json_params_matcher(exp_request_body_pipeline_run)],
+            json=get_json,
+            status=status,
         )
 
-        pipeline_run.cancel_pipeline_run()
+        if raises:
+            exc_msg = None
+            log_msg = None
+            if status == 404:
+                exc_msg = f"Pipeline run '{PIPELINE_RUN_NAME}' can't be canceled, " \
+                          f"because it doesn't exist"
+            elif status != 200:
+                log_msg = f"cancel pipeline run '{PIPELINE_RUN_NAME}' " \
+                          f"failed with : [{status}] {get_json}"
+
+            with pytest.raises(OsbsException) as exc:
+                pipeline_run.cancel_pipeline_run()
+
+            if exc_msg:
+                assert exc_msg == str(exc.value)
+            if log_msg:
+                assert log_msg in caplog.text
+        else:
+            pipeline_run.cancel_pipeline_run()
+
         assert len(responses.calls) == 1
 
     @responses.activate
-    def test_update_labels(self, pipeline_run, expected_request_body_pipeline_run):
+    @pytest.mark.parametrize(('get_json', 'status', 'raises'), [
+        (deepcopy(PIPELINE_RUN_JSON), 200, False),
+        ({}, 404, True),
+        ({}, 500, True),
+    ])
+    def test_update_labels(self, caplog, pipeline_run, get_json, status, raises):
         labels = {'label_key': 'label_value'}
-        expected_request_body_pipeline_run['metadata']['namespace'] = TEST_OCP_NAMESPACE
-        expected_request_body_pipeline_run['metadata']['labels'] = labels
+        exp_request_body_pipeline_run = deepcopy(PIPELINE_MINIMAL_DATA)
+        exp_request_body_pipeline_run['metadata']['labels'] = labels
+
         responses.add(
             responses.PATCH,
             PIPELINE_RUN_URL,
-            match=[responses.json_params_matcher(expected_request_body_pipeline_run)],
+            match=[responses.json_params_matcher(exp_request_body_pipeline_run)],
+            json=get_json,
+            status=status,
         )
-        pipeline_run.update_labels(labels)
+
+        if raises:
+            exc_msg = None
+            log_msg = None
+            if status == 404:
+                exc_msg = f"Can't update labels on pipeline run " \
+                          f"'{PIPELINE_RUN_NAME}', because it doesn't exist"
+            elif status != 200:
+                log_msg = f"update labels on pipeline run '{PIPELINE_RUN_NAME}' " \
+                          f"failed with : [{status}] {get_json}"
+
+            with pytest.raises(OsbsException) as exc:
+                pipeline_run.update_labels(labels)
+
+            if exc_msg:
+                assert exc_msg == str(exc.value)
+            if log_msg:
+                assert log_msg in caplog.text
+        else:
+            pipeline_run.update_labels(labels)
+
         assert len(responses.calls) == 1
 
     @responses.activate
-    def test_update_annotations(self, pipeline_run, expected_request_body_pipeline_run):
+    @pytest.mark.parametrize(('get_json', 'status', 'raises'), [
+        (deepcopy(PIPELINE_RUN_JSON), 200, False),
+        ({}, 404, True),
+        ({}, 500, True),
+    ])
+    def test_update_annotations(self, caplog, pipeline_run, get_json, status, raises):
         annotations = {'annotation_key': 'annotation_value'}
-        expected_request_body_pipeline_run['metadata']['namespace'] = TEST_OCP_NAMESPACE
-        expected_request_body_pipeline_run['metadata']['annotations'] = annotations
+        exp_request_body_pipeline_run = deepcopy(PIPELINE_MINIMAL_DATA)
+        exp_request_body_pipeline_run['metadata']['annotations'] = annotations
+
         responses.add(
             responses.PATCH,
             PIPELINE_RUN_URL,
-            match=[responses.json_params_matcher(expected_request_body_pipeline_run)],
+            match=[responses.json_params_matcher(exp_request_body_pipeline_run)],
+            json=get_json,
+            status=status,
         )
-        pipeline_run.update_annotations(annotations)
+
+        if raises:
+            exc_msg = None
+            log_msg = None
+            if status == 404:
+                exc_msg = f"Can't update annotations on pipeline run " \
+                          f"'{PIPELINE_RUN_NAME}', because it doesn't exist"
+            elif status != 200:
+                log_msg = f"update annotations on pipeline run '{PIPELINE_RUN_NAME}' " \
+                          f"failed with : [{status}] {get_json}"
+
+            with pytest.raises(OsbsException) as exc:
+                pipeline_run.update_annotations(annotations)
+
+            if exc_msg:
+                assert exc_msg == str(exc.value)
+            if log_msg:
+                assert log_msg in caplog.text
+        else:
+            pipeline_run.update_annotations(annotations)
+
         assert len(responses.calls) == 1
 
     @responses.activate
-    def test_get_info(self, pipeline_run):
-        responses.add(responses.GET, PIPELINE_RUN_URL, json=PIPELINE_RUN_JSON)
+    @pytest.mark.parametrize('get_json', [PIPELINE_RUN_JSON, {}, None])  # noqa
+    def test_get_info(self, pipeline_run, get_json):
+        if get_json is not None:
+            responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
+        else:
+            responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json, status=404)
+
         resp = pipeline_run.get_info()
 
         assert len(responses.calls) == 1
-        assert resp == PIPELINE_RUN_JSON
+        assert resp == get_json
 
     @responses.activate
-    @pytest.mark.parametrize(('reason', 'succeeded'), [
-        ('Running', False),
-        ('Succeeded', True),
+    @pytest.mark.parametrize(('get_json', 'reason', 'succeeded'), [
+        (deepcopy(PIPELINE_RUN_JSON), 'Running', False),
+        (deepcopy(PIPELINE_RUN_JSON), 'Succeeded', True),
+        ({}, None, False),
     ])
-    def test_status(self, pipeline_run, reason, succeeded):
-        run_json = deepcopy(PIPELINE_RUN_JSON)
-        run_json['status']['conditions'][0]['reason'] = reason
-        responses.add(responses.GET, PIPELINE_RUN_URL, json=run_json)
+    def test_status(self, pipeline_run, get_json, reason, succeeded):
+        if get_json:
+            get_json['status']['conditions'][0]['reason'] = reason
+        responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
         assert succeeded == pipeline_run.has_succeeded()
         assert pipeline_run.status_reason == reason
 
@@ -367,16 +490,24 @@ class TestPipelineRun():
         assert task_runs == [TASK_RUN_NAME]
 
     @responses.activate
-    def test_get_logs(self, pipeline_run):
-        responses.add(responses.GET, PIPELINE_RUN_URL, json=PIPELINE_RUN_JSON)
+    @pytest.mark.parametrize(('get_json', 'empty_logs'), [
+        (PIPELINE_RUN_JSON, False),
+        ({}, True),
+    ])
+    def test_get_logs(self, pipeline_run, get_json, empty_logs):
+        responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
         responses.add(responses.GET, TASK_RUN_URL, json=TASK_RUN_JSON)
         for container in CONTAINERS:
             url = f"{POD_URL}/log?container={container}"
             responses.add(responses.GET, url, body=EXPECTED_LOGS[container])
         logs = pipeline_run.get_logs()
 
-        assert len(responses.calls) == 5
-        assert logs == {TASK_RUN_NAME: EXPECTED_LOGS}
+        if empty_logs:
+            assert len(responses.calls) == 1
+            assert logs is None
+        else:
+            assert len(responses.calls) == 5
+            assert logs == {TASK_RUN_NAME: EXPECTED_LOGS}
 
     @responses.activate
     def test_get_logs_stream(self, pipeline_run):

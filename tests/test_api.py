@@ -20,7 +20,7 @@ from tempfile import NamedTemporaryFile
 
 from osbs.api import OSBS, osbsapi
 from osbs.conf import Configuration
-from osbs.exceptions import (OsbsValidationException, OsbsException)
+from osbs.exceptions import (OsbsValidationException, OsbsException, OsbsResponseException)
 from osbs.constants import (REPO_CONTAINER_CONFIG, PRUN_TEMPLATE_USER_PARAMS,
                             PRUN_TEMPLATE_REACTOR_CONFIG_WS, PRUN_TEMPLATE_BUILD_DIR_WS)
 from osbs import utils
@@ -292,10 +292,10 @@ class TestOSBS(object):
 
         if should_succeed:
             self.mock_start_pipeline()
-            osbs_binary.create_binary_container_pipeline_run(**create_build_args)
+            osbs_binary.create_binary_container_build(**create_build_args)
         else:
             with pytest.raises(OsbsValidationException):
-                osbs_binary.create_binary_container_pipeline_run(**create_build_args)
+                osbs_binary.create_binary_container_build(**create_build_args)
 
     @pytest.mark.parametrize('component_label_name', ['com.redhat.component', 'BZComponent'])  # noqa
     def test_component_is_changed_from_label(self, osbs_binary, component_label_name):
@@ -318,10 +318,9 @@ class TestOSBS(object):
             .and_return(self.mock_repo_info(mock_df_parser=MockParser())))
 
         self.mock_start_pipeline()
-        prun = osbs_binary.create_binary_container_pipeline_run(target=TEST_TARGET,
-                                                                **REQUIRED_BUILD_ARGS)
+        prun = osbs_binary.create_binary_container_build(target=TEST_TARGET, **REQUIRED_BUILD_ARGS)
 
-        for param in prun.data['spec']['params']:
+        for param in prun.input_data['spec']['params']:
             if param['name'] == PRUN_TEMPLATE_USER_PARAMS:
                 up = json.loads(param['value'])
                 assert up['component'] == component_override
@@ -333,7 +332,7 @@ class TestOSBS(object):
             .and_return(self.mock_repo_info()))
 
         self.mock_start_pipeline()
-        response = osbs_binary.create_binary_container_pipeline_run(**REQUIRED_BUILD_ARGS)
+        response = osbs_binary.create_binary_container_build(**REQUIRED_BUILD_ARGS)
         assert isinstance(response, PipelineRun)
 
     def test_create_build_flatpak(self, osbs_binary):  # noqa
@@ -365,7 +364,7 @@ class TestOSBS(object):
         osbs_binary.get_user_params = get_user_params
 
         self.mock_start_pipeline()
-        response = osbs_binary.create_binary_container_pipeline_run(**kwargs)
+        response = osbs_binary.create_binary_container_build(**kwargs)
         assert isinstance(response, PipelineRun)
 
     @pytest.mark.parametrize(('build_flatpak', 'repo_flatpak', 'match_exception'), [
@@ -392,7 +391,7 @@ class TestOSBS(object):
         }
 
         with pytest.raises(OsbsException, match=match_exception):
-            osbs_binary.create_binary_container_pipeline_run(**kwargs)
+            osbs_binary.create_binary_container_build(**kwargs)
 
     @pytest.mark.parametrize('isolated', [True, False])  # noqa
     def test_flatpak_and_isolated(self, osbs_binary, isolated):
@@ -404,17 +403,21 @@ class TestOSBS(object):
             .and_return(self.mock_repo_info(mock_config=MockConfiguration(modules=TEST_MODULES,
                                                                           is_flatpak=True))))
 
-        create_binary = osbs_binary.create_binary_container_pipeline_run
+        kwargs = {'git_uri': TEST_GIT_URI,
+                  'git_ref': TEST_GIT_REF,
+                  'git_branch': TEST_GIT_BRANCH,
+                  'user': TEST_USER,
+                  'release': '1.0',
+                  'flatpak': True,
+                  'isolated': isolated}
 
         if not isolated:
             self.mock_start_pipeline()
-            response = create_binary(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH, user=TEST_USER,
-                                     release='1.0', isolated=isolated, flatpak=True)
+            response = osbs_binary.create_binary_container_build(**kwargs)
             assert isinstance(response, PipelineRun)
         else:
-            with pytest.raises(ValueError) as exc_info:
-                create_binary(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH, user=TEST_USER,
-                              release='1.0', isolated=isolated, flatpak=True)
+            with pytest.raises(OsbsException) as exc_info:
+                osbs_binary.create_binary_container_build(**kwargs)
 
             assert "Flatpak build cannot be isolated" == str(exc_info.value)
 
@@ -427,21 +430,50 @@ class TestOSBS(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info(mock_config=MockConfiguration(modules=TEST_MODULES))))
 
-        create_binary = osbs_binary.create_binary_container_pipeline_run
+        kwargs = {'git_uri': TEST_GIT_URI,
+                  'git_ref': TEST_GIT_REF,
+                  'git_branch': TEST_GIT_BRANCH,
+                  'user': TEST_USER,
+                  'scratch': True,
+                  'isolated': isolated}
 
         if not isolated:
             self.mock_start_pipeline()
-            response = create_binary(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH, user=TEST_USER,
-                                     isolated=isolated, scratch=True)
+            response = osbs_binary.create_binary_container_build(**kwargs)
             assert isinstance(response, PipelineRun)
         else:
             with pytest.raises(OsbsValidationException) as exc_info:
-                create_binary(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH, user=TEST_USER,
-                              isolated=isolated, scratch=True)
+                osbs_binary.create_binary_container_build(**kwargs)
 
             msg = 'Build variations are mutually exclusive. ' \
                   'Must set either scratch, isolated, or none.'
             assert msg in str(exc_info.value)
+
+    @pytest.mark.parametrize('release', [None, '1'])
+    def test_isolated_release_checks(self, osbs_binary, release):
+        """Test if scratch with isolated option raises proper exception"""
+
+        (flexmock(utils)
+            .should_receive('get_repo_info')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
+            .and_return(self.mock_repo_info(mock_config=MockConfiguration(modules=TEST_MODULES))))
+
+        kwargs = {'git_uri': TEST_GIT_URI,
+                  'git_ref': TEST_GIT_REF,
+                  'git_branch': TEST_GIT_BRANCH,
+                  'user': TEST_USER,
+                  'release': release,
+                  'isolated': True}
+
+        with pytest.raises(OsbsValidationException) as exc_info:
+            osbs_binary.create_binary_container_build(**kwargs)
+
+        if release:
+            msg = 'For isolated builds, the release value must be in the format:'
+        else:
+            msg = 'The release parameter is required for isolated builds.'
+
+        assert msg in str(exc_info.value)
 
     @pytest.mark.parametrize('isolated', [True, False])
     def test_operator_csv_modifications_url_cli(self, osbs_binary, isolated):
@@ -453,20 +485,21 @@ class TestOSBS(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info(mock_config=MockConfiguration(modules=TEST_MODULES))))
 
-        create_binary = osbs_binary.create_binary_container_pipeline_run
-
-        kwargs = {'user': TEST_USER,
+        kwargs = {'git_uri': TEST_GIT_URI,
+                  'git_ref': TEST_GIT_REF,
+                  'git_branch': TEST_GIT_BRANCH,
+                  'user': TEST_USER,
                   'release': '1.0',
                   'isolated': isolated,
                   'operator_csv_modifications_url': "https://example.com/updates.json"}
 
         if isolated:
             self.mock_start_pipeline()
-            response = create_binary(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH, **kwargs)
+            response = osbs_binary.create_binary_container_build(**kwargs)
             assert isinstance(response, PipelineRun)
         else:
             with pytest.raises(OsbsException) as exc_info:
-                create_binary(TEST_GIT_URI, TEST_GIT_REF, TEST_GIT_BRANCH, **kwargs)
+                osbs_binary.create_binary_container_build(**kwargs)
             assert (
                 "Only isolated build can update operator CSV metadata" in str(exc_info.value)
             )
@@ -485,18 +518,17 @@ class TestOSBS(object):
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=branch_name, depth=None)
             .and_return(repo_info))
 
+        kwargs = {'git_uri': TEST_GIT_URI,
+                  'git_ref': TEST_GIT_REF,
+                  'git_branch': branch_name,
+                  'user': TEST_USER}
+
         if branch_name:
-            response = osbs_binary.create_binary_container_pipeline_run(TEST_GIT_URI,
-                                                                        TEST_GIT_REF,
-                                                                        branch_name,
-                                                                        user=TEST_USER)
+            response = osbs_binary.create_binary_container_build(**kwargs)
             assert isinstance(response, PipelineRun)
         else:
             with pytest.raises(OsbsException):
-                osbs_binary.create_binary_container_pipeline_run(TEST_GIT_URI,
-                                                                 TEST_GIT_REF,
-                                                                 branch_name,
-                                                                 user=TEST_USER)
+                osbs_binary.create_binary_container_build(**kwargs)
 
     def test_do_create_prod_build_missing_params(self, osbs_binary, caplog):  # noqa
         with pytest.raises(OsbsException):
@@ -621,7 +653,7 @@ class TestOSBS(object):
             'user': TEST_USER,
         }
         if not flatpak:
-            with pytest.raises(RuntimeError) as exc:
+            with pytest.raises(OsbsException) as exc:
                 osbs_binary.create_binary_container_pipeline_run(**kwargs)
             assert 'Could not parse Dockerfile in %s' % tmpdir in str(exc.value)
         else:
@@ -703,9 +735,9 @@ class TestOSBS(object):
         )
         assert isinstance(pipeline_run, PipelineRun)
 
-        assert pipeline_run.data['metadata']['name'] == pipeline_run_name
+        assert pipeline_run.input_data['metadata']['name'] == pipeline_run_name
 
-        for ws in pipeline_run.data['spec']['workspaces']:
+        for ws in pipeline_run.input_data['spec']['workspaces']:
             if ws['name'] == PRUN_TEMPLATE_REACTOR_CONFIG_WS:
                 if scratch:
                     assert ws['configmap']['name'] == rcm_scratch
@@ -715,7 +747,7 @@ class TestOSBS(object):
             if ws['name'] == PRUN_TEMPLATE_BUILD_DIR_WS:
                 assert ws['volumeClaimTemplate']['metadata']['namespace'] == TEST_OCP_NAMESPACE
 
-        for param in pipeline_run.data['spec']['params']:
+        for param in pipeline_run.input_data['spec']['params']:
             if param['name'] == PRUN_TEMPLATE_USER_PARAMS:
                 assert param['value'] != {}
 
@@ -764,7 +796,24 @@ class TestOSBS(object):
         all_labels['git-branch'] = TEST_GIT_BRANCH
         all_labels['git-full-repo'] = TEST_GIT_URI
 
-        assert pipeline_run.data['metadata']['labels'] == all_labels
+        assert pipeline_run.input_data['metadata']['labels'] == all_labels
+
+    def test_create_binary_container_start_fails(self, osbs_binary):
+        error_msg = 'failed to create pipeline run'
+
+        (flexmock(utils)
+            .should_receive('get_repo_info')
+            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
+            .and_return(self.mock_repo_info()))
+
+        (flexmock(PipelineRun)
+            .should_receive('start_pipeline_run')
+            .and_raise(OsbsResponseException(error_msg, 400)))
+
+        with pytest.raises(OsbsResponseException) as exc:
+            osbs_binary.create_binary_container_build(**REQUIRED_BUILD_ARGS)
+
+        assert error_msg == str(exc.value)
 
     @pytest.mark.parametrize('scratch', [True, False])
     @pytest.mark.parametrize('koji_task_id', [None, TEST_KOJI_TASK_ID])
@@ -815,7 +864,7 @@ class TestOSBS(object):
         image_tag = f'{TEST_USER}/{TEST_COMPONENT}:{TEST_TARGET}-{rand}-{timestr}'
 
         self.mock_start_pipeline()
-        pipeline_run = osbs.create_source_container_pipeline_run(
+        pipeline_run = osbs.create_source_container_build(
             target=TEST_TARGET,
             signing_intent=signing_intent,
             koji_task_id=koji_task_id,
@@ -825,9 +874,9 @@ class TestOSBS(object):
         )
         assert isinstance(pipeline_run, PipelineRun)
 
-        assert pipeline_run.data['metadata']['name'] == pipeline_run_name
+        assert pipeline_run.input_data['metadata']['name'] == pipeline_run_name
 
-        for ws in pipeline_run.data['spec']['workspaces']:
+        for ws in pipeline_run.input_data['spec']['workspaces']:
             if ws['name'] == PRUN_TEMPLATE_REACTOR_CONFIG_WS:
                 if scratch:
                     assert ws['configmap']['name'] == rcm_scratch
@@ -837,7 +886,7 @@ class TestOSBS(object):
             if ws['name'] == PRUN_TEMPLATE_BUILD_DIR_WS:
                 assert ws['volumeClaimTemplate']['metadata']['namespace'] == TEST_OCP_NAMESPACE
 
-        for param in pipeline_run.data['spec']['params']:
+        for param in pipeline_run.input_data['spec']['params']:
             if param['name'] == PRUN_TEMPLATE_USER_PARAMS:
                 assert param['value'] != {}
 
@@ -869,7 +918,7 @@ class TestOSBS(object):
         if koji_task_id:
             all_labels['koji-task-id'] = str(koji_task_id)
 
-        assert pipeline_run.data['metadata']['labels'] == all_labels
+        assert pipeline_run.input_data['metadata']['labels'] == all_labels
 
     @pytest.mark.parametrize(('additional_kwargs'), (  # noqa
         {'component': None, 'sources_for_koji_build_nvr': 'build_nvr'},
@@ -879,7 +928,155 @@ class TestOSBS(object):
     def test_create_source_container_required_args(self, osbs_source, additional_kwargs):
         self.mock_start_pipeline()
         with pytest.raises(OsbsValidationException):
-            osbs_source.create_source_container_pipeline_run(
+            osbs_source.create_source_container_build(
                 target=TEST_TARGET,
                 signing_intent='signing_intent',
                 **additional_kwargs)
+
+    def test_create_source_container_start_fails(self, osbs_source):
+        error_msg = 'failed to create pipeline run'
+        (flexmock(PipelineRun)
+            .should_receive('start_pipeline_run')
+            .and_raise(OsbsResponseException(error_msg, 400)))
+
+        with pytest.raises(OsbsResponseException) as exc:
+            osbs_source.create_source_container_build(**REQUIRED_SOURCE_CONTAINER_BUILD_ARGS)
+
+        assert error_msg == str(exc.value)
+
+    def test_get_build_name(self, osbs_binary):
+        name = 'run_name'
+        resp = {'metadata': {'name': name}}
+
+        assert name == osbs_binary.get_build_name(resp)
+
+    def test_get_build(self, osbs_binary):
+        resp = {'metadata': {'name': 'run_name'}}
+
+        flexmock(PipelineRun).should_receive('get_info').and_return(resp)
+
+        assert resp == osbs_binary.get_build('run_name')
+
+    def test_get_build_reason(self, osbs_binary):
+        reason = 'my_reason'
+        resp = {'metadata': {'name': 'run_name'}, 'status': {'conditions': [{'reason': reason}]}}
+
+        flexmock(PipelineRun).should_receive('get_info').and_return(resp)
+
+        assert reason == osbs_binary.get_build_reason('run_name')
+
+    @pytest.mark.parametrize(('reason', 'output'), [
+        ('Succeeded', True),
+        ('Failed', False),
+    ])
+    def test_build_has_succeeded(self, osbs_binary, reason, output):
+        resp = {'metadata': {'name': 'run_name'}, 'status': {'conditions': [{'reason': reason}]}}
+
+        flexmock(PipelineRun).should_receive('get_info').and_return(resp)
+
+        assert output == osbs_binary.build_has_succeeded('run_name')
+
+    @pytest.mark.parametrize(('status', 'reason', 'output'), [
+        ('Unknown', 'Running', True),
+        ('Unknown', 'Started', True),
+        ('Unknown', 'PipelineRunCancelled', False),
+        ('True', 'Succeeded', False),
+        ('False', 'Failed', False),
+    ])
+    def test_build_not_finished(self, osbs_binary, status, reason, output):
+        resp = {'metadata': {'name': 'run_name'},
+                'status': {'conditions': [{'reason': reason, 'status': status}]}}
+
+        flexmock(PipelineRun).should_receive('get_info').and_return(resp)
+
+        assert output == osbs_binary.build_not_finished('run_name')
+
+    @pytest.mark.parametrize(('reason', 'output'), [
+        ('Running', False),
+        ('PipelineRunCancelled', True),
+        ('Succeeded', False),
+        ('Failed', False),
+    ])
+    def test_build_was_cancelled(self, osbs_binary, reason, output):
+        resp = {'metadata': {'name': 'run_name'},
+                'status': {'conditions': [{'reason': reason}]}}
+
+        flexmock(PipelineRun).should_receive('get_info').and_return(resp)
+
+        assert output == osbs_binary.build_was_cancelled('run_name')
+
+    def test_get_build_annotations(self, osbs_binary):
+        annotations = {'some': 'ann1', 'some2': 'ann2'}
+        resp = {'metadata': {'name': 'run_name', 'annotations': annotations}}
+
+        flexmock(PipelineRun).should_receive('get_info').and_return(resp)
+
+        assert annotations == osbs_binary.get_build_annotations('run_name')
+
+    def test_get_build_labels(self, osbs_binary):
+        labels = {'some': 'ann1', 'some2': 'ann2'}
+        resp = {'metadata': {'name': 'run_name', 'annotations': labels}}
+
+        flexmock(PipelineRun).should_receive('get_info').and_return(resp)
+
+        assert labels == osbs_binary.get_build_annotations('run_name')
+
+    def test_cancel_build(self, osbs_binary):
+        resp = {'metadata': {'name': 'run_name'}}
+
+        flexmock(PipelineRun).should_receive('cancel_pipeline_run').and_return(resp)
+
+        assert resp == osbs_binary.cancel_build('run_name')
+
+    def test_update_annotations(self, osbs_binary):
+        annotations = {'some': 'ann1', 'some2': 'ann2'}
+        resp = {'metadata': {'name': 'run_name', 'annotations': annotations}}
+
+        (flexmock(PipelineRun)
+            .should_receive('update_annotations')
+            .with_args(annotations).and_return(resp))
+
+        assert resp == osbs_binary.update_annotations_on_build('run_name', annotations)
+
+    def test_update_labels(self, osbs_binary):
+        labels = {'some': 'ann1', 'some2': 'ann2'}
+        resp = {'metadata': {'name': 'run_name', 'labels': labels}}
+
+        (flexmock(PipelineRun)
+            .should_receive('update_labels')
+            .with_args(labels).and_return(resp))
+
+        assert resp == osbs_binary.update_labels_on_build('run_name', labels)
+
+    @pytest.mark.parametrize(('follow', 'wait'), [
+        (True, True),
+        (False, True),
+        (True, False),
+        (False, False),
+    ])
+    def test_get_build_logs(self, osbs_binary, follow, wait):
+        logs = ['first', 'second']
+        kwargs = {'follow': follow, 'wait': wait}
+
+        (flexmock(PipelineRun)
+            .should_receive('get_logs')
+            .with_args(**kwargs).and_return(logs))
+
+        assert logs == osbs_binary.get_build_logs('run_name', follow=follow, wait=wait)
+
+    def test_get_build_error_message(self, osbs_binary):
+        metadata = '{"errors": {"plugin1": "error1"}}'
+        steps = [{'name': 'step1', 'terminated': {'exitCode': 0}},
+                 {'name': 'step2', 'terminated': {'exitCode': 128, 'reason': 'bad thing'}}]
+        taskruns = {'task1': {'status': {'conditions': [{'reason': 'Succeeded'}]}},
+                    'task2': {'status': {'conditions': [{'reason': 'Failed'}], 'steps': steps}}}
+        resp = {'metadata': {'name': 'run_name', 'annotations': {'plugins-metadata': metadata}},
+                'status': {'taskRuns': taskruns}}
+
+        flexmock(PipelineRun).should_receive('get_info').and_return(resp)
+
+        error_msg = "plugin errors:\nplugin1 : error1\n\npipeline run errors:\n"
+        error_msg += "pipeline task 'task2' failed:\n"
+        error_msg += "task step 'step2' failed with exit code: 128 and reason: 'bad thing'"
+
+        assert error_msg == osbs_binary.get_build_error_message('run_name')
