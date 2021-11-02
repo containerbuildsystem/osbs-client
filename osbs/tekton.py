@@ -18,6 +18,7 @@ from osbs.constants import (DEFAULT_NAMESPACE, SERVICEACCOUNT_SECRET, SERVICEACC
                             SERVICEACCOUNT_CACRT)
 from osbs.osbs_http import HttpSession
 from osbs.kerberos_ccache import kerberos_ccache_init
+from osbs.utils import retry_on_conflict
 from urllib.parse import urljoin, urlencode, urlparse, parse_qs
 from requests.utils import guess_json_utf
 
@@ -345,13 +346,24 @@ class Openshift(object):
 
 
 class PipelineRun():
-    def __init__(self, os, pipeline_run_name, pipeline_run_data):
+    def __init__(self, os, pipeline_run_name, pipeline_run_data=None):
         self.os = os
         self.pipeline_run_name = pipeline_run_name
         self.api_path = 'apis'
         self.api_version = API_VERSION
-        self.data = pipeline_run_data
+        self.input_data = pipeline_run_data
         self._pipeline_run_url = None
+        self.minimal_data = {
+            "apiVersion": API_VERSION,
+            "kind": "PipelineRun",
+            "metadata": {"name": self.pipeline_run_name},
+            "spec": {},
+        }
+
+    @property
+    def data(self):
+        # always get fresh info
+        return self.get_info()
 
     @property
     def pipeline_run_url(self):
@@ -364,21 +376,46 @@ class PipelineRun():
         return self._pipeline_run_url
 
     def start_pipeline_run(self):
+        if not self.input_data:
+            raise OsbsException("No input data provided for pipeline run to start")
+
+        run_name = self.input_data.get('metadata', {}).get('name')
+
+        if run_name != self.pipeline_run_name:
+            msg = f"Pipeline run name provided '{self.pipeline_run_name}' is different " \
+                  f"than in input data '{run_name}'"
+            raise OsbsException(msg)
+
         url = self.os.build_url(
             self.api_path,
             self.api_version,
             "pipelineruns"
         )
-        return self.os.post(
+        response = self.os.post(
             url,
-            data=json.dumps(self.data),
+            data=json.dumps(self.input_data),
             headers={"Content-Type": "application/json", "Accept": "application/json"},
         )
+        return response.json()
 
+    def _check_response(self, response, cmd):
+        try:
+            run_json = response.json()
+        except OsbsResponseException as ex:
+            if ex.status_code == 404:
+                run_json = None
+            else:
+                logger.error("%s failed with : [%d] %s", cmd, ex.status_code, ex)
+                raise
+
+        return run_json
+
+    @retry_on_conflict
     def cancel_pipeline_run(self):
-        data = copy.deepcopy(self.data)
+        data = copy.deepcopy(self.minimal_data)
         data['spec']['status'] = 'PipelineRunCancelled'
-        return self.os.patch(
+
+        response = self.os.patch(
             self.pipeline_run_url,
             data=json.dumps(data),
             headers={
@@ -387,11 +424,20 @@ class PipelineRun():
             },
         )
 
+        msg = f"cancel pipeline run '{self.pipeline_run_name}'"
+        exc_msg = f"Pipeline run '{self.pipeline_run_name}' can't be canceled, " \
+                  f"because it doesn't exist"
+        response_json = self._check_response(response, msg)
+        if not response_json:
+            raise OsbsException(exc_msg)
+        return response_json
+
+    @retry_on_conflict
     def update_labels(self, labels):
-        data = copy.deepcopy(self.data)
-        data['metadata']['namespace'] = self.os.namespace
+        data = copy.deepcopy(self.minimal_data)
         data['metadata']['labels'] = labels
-        return self.os.patch(
+
+        response = self.os.patch(
             self.pipeline_run_url,
             data=json.dumps(data),
             headers={
@@ -400,11 +446,20 @@ class PipelineRun():
             },
         )
 
+        msg = f"update labels on pipeline run '{self.pipeline_run_name}'"
+        exc_msg = f"Can't update labels on pipeline run '{self.pipeline_run_name}', " \
+                  f"because it doesn't exist"
+        response_json = self._check_response(response, msg)
+        if not response_json:
+            raise OsbsException(exc_msg)
+        return response_json
+
+    @retry_on_conflict
     def update_annotations(self, annotations):
-        data = copy.deepcopy(self.data)
-        data['metadata']['namespace'] = self.os.namespace
+        data = copy.deepcopy(self.minimal_data)
         data['metadata']['annotations'] = annotations
-        return self.os.patch(
+
+        response = self.os.patch(
             self.pipeline_run_url,
             data=json.dumps(data),
             headers={
@@ -412,21 +467,104 @@ class PipelineRun():
                 "Accept": "application/json",
             },
         )
+
+        msg = f"update annotations on pipeline run '{self.pipeline_run_name}'"
+        exc_msg = f"Can't update annotations on pipeline run '{self.pipeline_run_name}', " \
+                  f"because it doesn't exist"
+        response_json = self._check_response(response, msg)
+        if not response_json:
+            raise OsbsException(exc_msg)
+        return response_json
 
     def get_info(self, wait=False):
         if wait:
             self.wait_for_start()
-        r = self.os.get(self.pipeline_run_url)
-        return r.json()
+        response = self.os.get(self.pipeline_run_url)
+
+        return self._check_response(response, 'get_info')
+
+    def get_error_message(self):
+        data = self.data
+
+        if not data:
+            return None
+
+        annotations = data['metadata']['annotations']
+
+        plugins_metadata = annotations.get('plugins-metadata')
+        plugin_errors = None
+
+        if plugins_metadata:
+            metadata_dict = json.loads(plugins_metadata)
+            plugin_errors = metadata_dict.get('errors')
+
+        err_message = ""
+
+        if plugin_errors:
+            err_message = "plugin errors:\n"
+            for plugin, error in plugin_errors.items():
+                err_message += f"{plugin} : {error}\n"
+
+        err_message += "\npipeline run errors:\n"
+        task_runs_status = data['status']['taskRuns']
+
+        for task_name, stats in task_runs_status.items():
+            if stats['status']['conditions'][0]['reason'] == 'Succeeded':
+                continue
+
+            err_message += f"pipeline task '{task_name}' failed:\n"
+
+            for step in stats['status']['steps']:
+                exit_code = step['terminated']['exitCode']
+                if exit_code == 0:
+                    continue
+
+                reason = step['terminated']['reason']
+                err_message += f"task step '{step['name']}' failed with exit code: {exit_code} " \
+                               f"and reason: '{reason}'"
+
+        return err_message
 
     def has_succeeded(self):
-        info = self.get_info()
-        return info['status']['conditions'][0]['reason'] == 'Succeeded'
+        return self.status_reason == 'Succeeded'
+
+    def has_not_finished(self):
+        return self.status_status == 'Unknown' and self.status_reason != 'PipelineRunCancelled'
+
+    def was_cancelled(self):
+        return self.status_reason == 'PipelineRunCancelled'
+
+    @property
+    def annotations(self):
+        data = self.data
+
+        if not data:
+            return None
+        return data['metadata']['annotations']
+
+    @property
+    def labels(self):
+        data = self.data
+
+        if not data:
+            return None
+        return data['metadata']['labels']
 
     @property
     def status_reason(self):
-        info = self.get_info()
-        return info['status']['conditions'][0]['reason']
+        data = self.data
+
+        if not data:
+            return None
+        return data['status']['conditions'][0]['reason']
+
+    @property
+    def status_status(self):
+        data = self.data
+
+        if not data:
+            return None
+        return data['status']['conditions'][0]['status']
 
     def wait_for_start(self):
         """
@@ -485,7 +623,11 @@ class PipelineRun():
 
     def _get_logs(self):
         logs = {}
-        pipeline_run = self.get_info()
+        pipeline_run = self.data
+
+        if not pipeline_run:
+            return None
+
         task_runs = pipeline_run['status']['taskRuns']
         for task_run in task_runs:
             logs[task_run] = TaskRun(os=self.os, task_run_name=task_run).get_logs()
