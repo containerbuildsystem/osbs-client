@@ -23,7 +23,7 @@ from osbs.constants import (RELEASE_LABEL_FORMAT, VERSION_LABEL_FORBIDDEN_CHARS,
                             PRUN_TEMPLATE_USER_PARAMS, PRUN_TEMPLATE_REACTOR_CONFIG_WS,
                             PRUN_TEMPLATE_BUILD_DIR_WS, ISOLATED_RELEASE_FORMAT)
 from osbs.tekton import Openshift, PipelineRun
-from osbs.exceptions import (OsbsException, OsbsValidationException)
+from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsResponseException)
 from osbs.utils.labels import Labels
 # import utils in this way, so that we can mock standalone functions with flexmock
 from osbs import utils
@@ -266,6 +266,11 @@ class OSBS(object):
 
         pipeline_run_data['metadata']['labels'] = all_labels
 
+    @osbsapi
+    def create_binary_container_build(self, **kwargs):
+        return self.create_binary_container_pipeline_run(**kwargs)
+
+    @osbsapi
     def create_binary_container_pipeline_run(self,
                                              git_uri=_REQUIRED_PARAM, git_ref=_REQUIRED_PARAM,
                                              git_branch=_REQUIRED_PARAM,
@@ -320,7 +325,11 @@ class OSBS(object):
 
         pipeline_run = PipelineRun(self.os, pipeline_run_name, pipeline_run_data)
 
-        logger.info("pipeline run created: %s", pipeline_run.start_pipeline_run().json())
+        try:
+            logger.info("pipeline run created: %s", pipeline_run.start_pipeline_run())
+        except OsbsResponseException:
+            logger.error("failed to create pipeline run %s", pipeline_run_name)
+            raise
 
         return pipeline_run
 
@@ -365,6 +374,10 @@ class OSBS(object):
         pipeline_run_data['metadata']['labels'] = all_labels
 
     @osbsapi
+    def create_source_container_build(self, **kwargs):
+        return self.create_source_container_pipeline_run(**kwargs)
+
+    @osbsapi
     def create_source_container_pipeline_run(self,
                                              component=None,
                                              koji_task_id=None,
@@ -402,21 +415,77 @@ class OSBS(object):
 
         pipeline_run = PipelineRun(self.os, pipeline_run_name, pipeline_run_data)
 
-        logger.info("pipeline run created: %s", pipeline_run.start_pipeline_run().json())
+        try:
+            logger.info("pipeline run created: %s", pipeline_run.start_pipeline_run())
+        except OsbsResponseException:
+            logger.error("failed to create pipeline run %s", pipeline_run_name)
+            raise
 
         return pipeline_run
 
     @osbsapi
-    def update_annotations_on_build(self, pipeline_run_name, annotations):
-        pass
+    def get_build_name(self, build_response):
+        return build_response['metadata']['name']
 
     @osbsapi
-    def update_labels_on_build(self, pipeline_run_name, labels):
-        pass
+    def get_build(self, build_name):
+        pipeline_run = PipelineRun(self.os, build_name)
+        return pipeline_run.get_info()
 
     @osbsapi
-    def get_build_logs(self, pipeline_run_name, follow=False, wait=False):
-        pass
+    def get_build_reason(self, build_name):
+        pipeline_run = PipelineRun(self.os, build_name)
+        return pipeline_run.status_reason
+
+    @osbsapi
+    def build_has_succeeded(self, build_name):
+        pipeline_run = PipelineRun(self.os, build_name)
+        return pipeline_run.has_succeeded()
+
+    @osbsapi
+    def build_not_finished(self, build_name):
+        pipeline_run = PipelineRun(self.os, build_name)
+        return pipeline_run.has_not_finished()
+
+    @osbsapi
+    def build_was_cancelled(self, build_name):
+        pipeline_run = PipelineRun(self.os, build_name)
+        return pipeline_run.was_cancelled()
+
+    @osbsapi
+    def get_build_annotations(self, build_name):
+        pipeline_run = PipelineRun(self.os, build_name)
+        return pipeline_run.annotations
+
+    @osbsapi
+    def get_build_labels(self, build_name):
+        pipeline_run = PipelineRun(self.os, build_name)
+        return pipeline_run.labels
+
+    @osbsapi
+    def cancel_build(self, build_name):
+        pipeline_run = PipelineRun(self.os, build_name)
+        return pipeline_run.cancel_pipeline_run()
+
+    @osbsapi
+    def update_annotations_on_build(self, build_name, annotations):
+        pipeline_run = PipelineRun(self.os, build_name)
+        return pipeline_run.update_annotations(annotations)
+
+    @osbsapi
+    def update_labels_on_build(self, build_name, labels):
+        pipeline_run = PipelineRun(self.os, build_name)
+        return pipeline_run.update_labels(labels)
+
+    @osbsapi
+    def get_build_logs(self, build_name, follow=False, wait=False):
+        pipeline_run = PipelineRun(self.os, build_name)
+        return pipeline_run.get_logs(follow=follow, wait=wait)
+
+    @osbsapi
+    def get_build_error_message(self, build_name):
+        pipeline_run = PipelineRun(self.os, build_name)
+        return pipeline_run.get_error_message()
 
     @contextmanager
     def retries_disabled(self):

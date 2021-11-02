@@ -149,6 +149,8 @@ def _display_pipeline_run_summary(pipeline_run):
             output.append('{} repositories:'.format(kind))
             for repository in repositories:
                 output.append('\t{}'.format(repository))
+    else:
+        output.append(pipeline_run.get_build_error_message())
 
     for line in output:
         print(line)
