@@ -1015,11 +1015,11 @@ class TestOSBS(object):
 
     def test_get_build_labels(self, osbs_binary):
         labels = {'some': 'ann1', 'some2': 'ann2'}
-        resp = {'metadata': {'name': 'run_name', 'annotations': labels}}
+        resp = {'metadata': {'name': 'run_name', 'labels': labels}}
 
         flexmock(PipelineRun).should_receive('get_info').and_return(resp)
 
-        assert labels == osbs_binary.get_build_annotations('run_name')
+        assert labels == osbs_binary.get_build_labels('run_name')
 
     def test_cancel_build(self, osbs_binary):
         resp = {'metadata': {'name': 'run_name'}}
