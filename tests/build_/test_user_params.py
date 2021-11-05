@@ -22,11 +22,13 @@ from osbs.build.user_params import (
     load_user_params_from_json,
 )
 from osbs.conf import Configuration
+from osbs.constants import DEFAULT_NAMESPACE
 from osbs.repo_utils import RepoInfo, RepoConfiguration
 from osbs.exceptions import OsbsValidationException
 from tests.constants import (TEST_COMPONENT, TEST_FILESYSTEM_KOJI_TASK_ID,
                              TEST_GIT_BRANCH, TEST_GIT_REF, TEST_GIT_URI,
-                             TEST_KOJI_TASK_ID, TEST_USER, INPUTS_PATH)
+                             TEST_KOJI_TASK_ID, TEST_USER, INPUTS_PATH,
+                             TEST_OCP_NAMESPACE)
 import osbs.utils
 
 
@@ -278,6 +280,7 @@ class TestBuildUserParams(object):
             "koji_parent_build": "fedora-26-9",
             "koji_target": "tothepoint",
             "name": "path-master-cd1e4" + f'{rand}-{timestr}',
+            "namespace": DEFAULT_NAMESPACE,
             'operator_bundle_replacement_pullspecs': {
                 'foo/fedora:30': 'bar/fedora@sha256:deadbeef'
             },
@@ -322,6 +325,7 @@ class TestBuildUserParams(object):
             "koji_parent_build": "fedora-26-9",
             "koji_target": "tothepoint",
             "name": "path-master-cd1e4",
+            "namespace": TEST_OCP_NAMESPACE,
             "orchestrator_deadline": 4,
             "platform": "x86_64",
             "platforms": ["x86_64"],
@@ -375,6 +379,7 @@ class TestSourceContainerUserParams(object):
     ])
     def test_all_values_and_json(self, scratch, origin_nvr, origin_id):
         conf_args = {
+            'namespace': TEST_OCP_NAMESPACE,
             'reactor_config_map_scratch': 'reactor-config-map-scratch',
             'reactor_config_map': 'reactor-config-map',
             'scratch': scratch,
@@ -410,6 +415,7 @@ class TestSourceContainerUserParams(object):
             "signing_intent": "test-signing-intent",
             "sources_for_koji_build_nvr": origin_nvr,
             "koji_target": "tothepoint",
+            "namespace": TEST_OCP_NAMESPACE,
             "platform": "x86_64",
             'reactor_config_map': 'reactor-config-map',
             "user": TEST_USER,
