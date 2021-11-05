@@ -86,6 +86,7 @@ class BuildCommon(BuildParamsBase):
     image_tag = BuildParam("image_tag")
     koji_target = BuildParam("koji_target")
     koji_task_id = BuildParam("koji_task_id")
+    namespace = BuildParam("namespace")
     pipeline_run_name = BuildParam("pipeline_run_name")
     platform = BuildParam("platform")
     reactor_config_map = BuildParam("reactor_config_map")
@@ -142,6 +143,7 @@ class BuildCommon(BuildParamsBase):
         Please keep the paramater list alphabetized for easier tracking of changes
 
         the following parameters are pulled from the BuildConfiguration (ie, build_conf)
+        :param namespace: str, openshift namespace
         :param reactor_config_map: str, name of the config map containing the reactor environment
         :param scratch: bool, build as a scratch build
         """
@@ -158,6 +160,7 @@ class BuildCommon(BuildParamsBase):
             "component": component,
             "koji_target": koji_target,
             "koji_task_id": koji_task_id,
+            "namespace": build_conf.get_namespace(),
             "platform": platform,
             "signing_intent": signing_intent,
             "user": user,
