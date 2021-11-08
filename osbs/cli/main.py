@@ -141,7 +141,8 @@ def _display_pipeline_run_summary(pipeline_run):
     annotations = pipeline_run.get_info()['metadata']['annotations']
 
     if pipeline_run.has_succeeded():
-        all_repositories = annotations.get('repositories', {})
+        str_repositories = annotations.get('repositories', '{}')
+        all_repositories = json.loads(str_repositories)
 
         for kind, repositories in all_repositories.items():
             if not repositories:
@@ -150,7 +151,7 @@ def _display_pipeline_run_summary(pipeline_run):
             for repository in repositories:
                 output.append('\t{}'.format(repository))
     else:
-        output.append(pipeline_run.get_build_error_message())
+        output.append(pipeline_run.get_error_message())
 
     for line in output:
         print(line)
