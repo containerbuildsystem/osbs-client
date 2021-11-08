@@ -2601,7 +2601,7 @@ class TestOSBS(object):
                 self.git_branch = TEST_GIT_BRANCH
                 self.koji_parent_build = None
                 self.flatpak = True
-                self.signing_intent = 'release'
+                self.signing_intent = None
                 self.compose_ids = [1, 2]
                 self.skip_build = False
                 self.operator_csv_modifications_url = None
@@ -2609,7 +2609,7 @@ class TestOSBS(object):
         expected_kwargs = {
             'platform': None,
             'scratch': None,
-            'isolated': False,
+            'isolated': isolated,
             'platforms': 'platforms',
             'release': None,
             'flatpak': True,
@@ -2623,7 +2623,7 @@ class TestOSBS(object):
             'yum_repourls': None,
             'dependency_replacements': None,
             'koji_parent_build': None,
-            'signing_intent': 'release',
+            'signing_intent': None,
             'compose_ids': [1, 2],
             'skip_build': False,
             'operator_csv_modifications_url': None,
@@ -2631,8 +2631,9 @@ class TestOSBS(object):
 
         (flexmock(utils)
             .should_receive('get_repo_info')
-            .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
-            .and_return(self.mock_repo_info(mock_config=MockConfiguration(modules=TEST_MODULES))))
+            .with_args(None, None, git_branch=TEST_GIT_BRANCH, depth=None)
+            .and_return(self.mock_repo_info(mock_config=MockConfiguration(modules=TEST_MODULES,
+                                                                          is_flatpak=True))))
 
         args = MockArgs(isolated)
         # Some of the command line arguments are pulled through the config
@@ -2640,21 +2641,29 @@ class TestOSBS(object):
         osbs.build_conf.args = args
         flexmock(osbs.build_conf, get_git_branch=lambda: TEST_GIT_BRANCH)
 
-        if not isolated:
-            # and_raise is called to prevent cmd_build to continue
-            # as we only want to check if arguments are correct
+        (flexmock(osbs)
+            .should_call("create_orchestrator_build")
+            .once()
+            .with_args(**expected_kwargs))
+
+        exc_msg = "stop for test"
+        # and_raise is called to prevent cmd_build to continue
+        # as we only want to check if arguments are correct
+        if isolated:
             (flexmock(osbs)
-                .should_receive("create_orchestrator_build")
+                .should_receive("_create_isolated_build")
                 .once()
-                .with_args(**expected_kwargs)
-                .and_raise(CustomTestException))
-            with pytest.raises(CustomTestException):
-                cmd_build(args, osbs)
+                .and_raise(CustomTestException(exc_msg)))
         else:
-            with pytest.raises(OsbsException) as exc_info:
-                cmd_build(args, osbs)
-            assert isinstance(exc_info.value.cause, ValueError)
-            assert "Flatpak build cannot be isolated" in exc_info.value.message
+            (flexmock(osbs)
+                .should_receive("_create_build_config_and_build")
+                .once()
+                .and_raise(CustomTestException(exc_msg)))
+
+        with pytest.raises(OsbsException) as exc:
+            cmd_build(args, osbs)
+
+        assert exc_msg in str(exc.value)
 
     @pytest.mark.parametrize('isolated', [True, False])
     def test_operator_csv_modifications_url_cli(self, osbs, isolated):

@@ -277,7 +277,7 @@ class PluginsConfigurationBase(object):
         # For flatpak, we want a name-version-release of
         # <name>-<stream>-<module_build_version>.<n>, where the .<n> makes
         # sure that the build is unique in Koji
-        if self.user_params.flatpak:
+        if self.user_params.flatpak and not self.user_params.isolated:
             self.pt.set_plugin_arg(phase, plugin, 'append', True)
 
     def render_check_and_set_platforms(self):

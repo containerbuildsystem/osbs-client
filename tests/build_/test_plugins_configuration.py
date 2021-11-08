@@ -291,6 +291,9 @@ class TestPluginsConfiguration(object):
                 with pytest.raises(NoSuchPluginException):
                     get_plugin(plugins, phase, plugin)
 
+    @pytest.mark.parametrize(('release', 'isolated'),
+                             [(None, False),
+                             ('1.0', True)])
     @pytest.mark.parametrize('build_type', (BUILD_TYPE_ORCHESTRATOR, BUILD_TYPE_WORKER))
     @pytest.mark.parametrize(('compose_ids', 'signing_intent'),
                              [(None, None),
@@ -299,13 +302,15 @@ class TestPluginsConfiguration(object):
                               ([], 'release'),
                               ([42], None),
                               ([42, 2], None)])
-    def test_render_flatpak(self, compose_ids, signing_intent, build_type):
+    def test_render_flatpak(self, release, isolated, compose_ids, signing_intent, build_type):
         extra_args = {
             'flatpak': True,
+            'isolated': isolated,
             'compose_ids': compose_ids,
             'signing_intent': signing_intent,
             'base_image': TEST_FLATPAK_BASE_IMAGE,
             'build_type': build_type,
+            'release': release,
         }
 
         user_params = get_sample_user_params(extra_args=extra_args)
@@ -343,8 +348,11 @@ class TestPluginsConfiguration(object):
             plugin = get_plugin(plugins, "prebuild_plugins", "bump_release")
             assert plugin
 
-            args = plugin['args']
-            assert args['append'] is True
+            if isolated:
+                assert 'args' not in plugin
+            else:
+                args = plugin['args']
+                assert args['append'] is True
         else:
             plugin = get_plugin(plugins, "prebuild_plugins", "koji")
             assert plugin
