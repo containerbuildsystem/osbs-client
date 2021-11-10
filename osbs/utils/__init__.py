@@ -38,7 +38,7 @@ from six.moves.urllib.parse import urlparse
 
 from dockerfile_parse import DockerfileParser
 from osbs.exceptions import (OsbsException, OsbsResponseException,
-                             OsbsValidationException, OsbsCommitNotFound)
+                             OsbsValidationException, OsbsCommitNotFound, OsbsLocallyModified)
 
 logger = logging.getLogger(__name__)
 ClonedRepoData = namedtuple('ClonedRepoData', ['repo_path', 'commit_id', 'commit_depth'])
@@ -207,7 +207,6 @@ def clone_git_repo(git_url, target_dir=None, commit=None, retry_times=GIT_MAX_RE
 def reset_git_repo(target_dir, git_reference, retry_depth=None):
     """
     hard reset git clone in target_dir to given git_reference
-
     :param target_dir: str, filesystem path where the repo is cloned
     :param git_reference: str, any valid git reference
     :param retry_depth: int, if the repo was cloned with --shallow, this is the expected
@@ -216,6 +215,12 @@ def reset_git_repo(target_dir, git_reference, retry_depth=None):
     """
     deepen = retry_depth or 0
     base_commit_depth = 0
+    cmd = ["git", "status"]
+    logger.debug("Checking if the repo is modified locally: '%s'", cmd)
+    output = subprocess.check_output(cmd, cwd=target_dir, stderr=subprocess.STDOUT)
+    if "nothing to commit" not in str(output):
+        raise OsbsLocallyModified("'{}' source is locally modified: '{}'".format(target_dir,
+                                                                                 output))
     for _ in range(GIT_FETCH_RETRY):
         try:
             if not deepen:

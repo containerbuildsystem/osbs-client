@@ -79,5 +79,9 @@ class OsbsValidationException(OsbsException):
     pass
 
 
+class OsbsLocallyModified(OsbsException):
+    """Local modifications found in repo"""
+
+
 class OsbsCommitNotFound(OsbsException):
     """Commit was not found in repo"""

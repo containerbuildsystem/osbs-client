@@ -26,9 +26,9 @@ from osbs.repo_utils import RepoInfo
 from osbs.utils import (git_repo_humanish_part_from_uri, sanitize_strings_for_openshift,
                         TarWriter, TarReader, make_name_from_git,
                         get_instance_token_file_name, sanitize_version,
-                        clone_git_repo, get_repo_info, UserWarningsStore, ImageName,
+                        clone_git_repo, get_repo_info, UserWarningsStore, ImageName, reset_git_repo,
                         stringify_values)
-from osbs.exceptions import OsbsException, OsbsCommitNotFound
+from osbs.exceptions import OsbsException, OsbsCommitNotFound, OsbsLocallyModified
 from tests.constants import (TEST_DOCKERFILE_GIT, TEST_DOCKERFILE_SHA1, TEST_DOCKERFILE_INIT_SHA1,
                              TEST_DOCKERFILE_BRANCH)
 import osbs.kerberos_ccache
@@ -329,15 +329,16 @@ def test_sanitize_version(version, valid):
             sanitize_version(parse_version(version))
 
 
-@pytest.mark.parametrize(('commit', 'branch', 'depth'), [
-    (None, None, None),
-    (TEST_DOCKERFILE_SHA1, None, None),
-    (TEST_DOCKERFILE_SHA1, TEST_DOCKERFILE_BRANCH, 1),
-    (TEST_DOCKERFILE_INIT_SHA1, TEST_DOCKERFILE_BRANCH, 1),
-    (TEST_DOCKERFILE_SHA1, None, 1),
+@pytest.mark.parametrize(('commit', 'branch', 'depth', 'modified'), [
+    (None, None, None, False),
+    (TEST_DOCKERFILE_SHA1, None, None, False),
+    (TEST_DOCKERFILE_SHA1, TEST_DOCKERFILE_BRANCH, 1, False),
+    (TEST_DOCKERFILE_INIT_SHA1, TEST_DOCKERFILE_BRANCH, 1, False),
+    (TEST_DOCKERFILE_SHA1, None, 1, False),
+    (TEST_DOCKERFILE_INIT_SHA1, TEST_DOCKERFILE_BRANCH, 1, True),
 ])
 @requires_internet
-def test_clone_git_repo(tmpdir, commit, branch, depth):
+def test_clone_git_repo(tmpdir, commit, branch, depth, modified):
     tmpdir_path = str(tmpdir.realpath())
     flexmock(time).should_receive('sleep').and_return(None)
     repo_data = clone_git_repo(TEST_DOCKERFILE_GIT, tmpdir_path, commit=commit,
@@ -348,6 +349,10 @@ def test_clone_git_repo(tmpdir, commit, branch, depth):
         assert commit == repo_data.commit_id
     assert len(repo_data.commit_id) == 40  # current git hashes are this long
     assert os.path.isdir(os.path.join(tmpdir_path, '.git'))
+    if modified:
+        os.mknod(os.path.join(tmpdir_path, 'test'))
+        with pytest.raises(OsbsLocallyModified):
+            reset_git_repo(tmpdir_path, commit)
 
 
 @requires_internet
