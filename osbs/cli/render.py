@@ -153,8 +153,8 @@ class TablePrinter(TableFormatter):
 
         self.header_format_str = "+".join(header_sepa_format_list)
         self.header_data = {}
-        for k in self.col_widths:
-            self.header_data[k] = "-" * self.col_widths[k]
+        for col, wid in self.col_widths.items():
+            self.header_data[col] = "-" * wid
 
     def get_all_longest_col_lengths(self):
         """
