@@ -8,7 +8,7 @@ of the BSD license. See the LICENSE file for details.
 """
 from __future__ import absolute_import
 
-from flexmock import flexmock, MethodCallError
+from flexmock import flexmock
 import pytest
 import json
 import copy
@@ -126,7 +126,7 @@ class TestOSBS(object):
             utils.get_repo_info(TEST_GIT_URI, TEST_GIT_REF)
 
         # Check we get the correct exception
-        with pytest.raises(MethodCallError):
+        with pytest.raises(OsbsException):
             dummy_api_function()
 
     def test_create_build_invalid_yaml(self, osbs_binary, tmpdir, monkeypatch):  # noqa
