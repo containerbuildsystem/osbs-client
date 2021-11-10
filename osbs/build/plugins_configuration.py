@@ -157,7 +157,8 @@ class PluginsConfigurationBase(object):
             customize_conf_path,
         )
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def pt_path(self):
         """Property returns path to plugins template JSON file
 
