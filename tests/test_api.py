@@ -395,7 +395,7 @@ class TestOSBS(object):
 
     @pytest.mark.parametrize('isolated', [True, False])  # noqa
     def test_flatpak_and_isolated(self, osbs_binary, isolated):
-        """Test if flatpak with isolated option raises proper exception"""
+        """Test if flatpak with isolated option works"""
 
         (flexmock(utils)
             .should_receive('get_repo_info')
@@ -411,15 +411,9 @@ class TestOSBS(object):
                   'flatpak': True,
                   'isolated': isolated}
 
-        if not isolated:
-            self.mock_start_pipeline()
-            response = osbs_binary.create_binary_container_build(**kwargs)
-            assert isinstance(response, PipelineRun)
-        else:
-            with pytest.raises(OsbsException) as exc_info:
-                osbs_binary.create_binary_container_build(**kwargs)
-
-            assert "Flatpak build cannot be isolated" == str(exc_info.value)
+        self.mock_start_pipeline()
+        response = osbs_binary.create_binary_container_build(**kwargs)
+        assert isinstance(response, PipelineRun)
 
     @pytest.mark.parametrize('isolated', [True, False])  # noqa
     def test_scratch_and_isolated(self, osbs_binary, isolated):
