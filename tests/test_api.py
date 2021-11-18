@@ -2449,6 +2449,7 @@ class TestOSBS(object):
                 self.compose_ids = [1, 2]
                 self.skip_build = False
                 self.operator_csv_modifications_url = None
+                self.userdata = None
 
         expected_kwargs = {
             'platform': platform,
@@ -2535,6 +2536,7 @@ class TestOSBS(object):
                 self.compose_ids = None
                 self.skip_build = skip_build
                 self.operator_csv_modifications_url = None
+                self.userdata = None
 
         expected_kwargs = {
             'platform': None,
@@ -2605,6 +2607,7 @@ class TestOSBS(object):
                 self.compose_ids = [1, 2]
                 self.skip_build = False
                 self.operator_csv_modifications_url = None
+                self.userdata = None
 
         expected_kwargs = {
             'platform': None,
@@ -2688,6 +2691,7 @@ class TestOSBS(object):
                 self.compose_ids = None
                 self.skip_build = False
                 self.operator_csv_modifications_url = "https://example.com/updates.json"
+                self.userdata = None
 
         expected_kwargs = {
             'platform': None,

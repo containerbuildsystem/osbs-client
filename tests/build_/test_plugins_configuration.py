@@ -931,6 +931,25 @@ class TestPluginsConfiguration(object):
             plugin_args = plugin_value_get(plugins, phase, plugin, 'args')
             assert plugin_args.get('remote_sources') == remote_sources
 
+    @pytest.mark.parametrize('userdata', (None, {}, {'custom': 'userdata'}))
+    def test_userdata(self, userdata):
+        phase = 'exit_plugins'
+        plugin = 'koji_import'
+        extra_args = {
+            'userdata': userdata,
+        }
+        user_params = get_sample_user_params(extra_args=extra_args)
+        build_json = PluginsConfiguration(user_params).render()
+        plugins = get_plugins_from_build_json(build_json)
+        assert get_plugin(plugins, phase, plugin)
+
+        if userdata is None:
+            assert 'args' not in plugin
+        else:
+            assert plugin_value_get(plugins, phase, plugin, 'args')
+            args = plugin_value_get(plugins, phase, plugin, 'args')
+            assert args['userdata'] == userdata
+
 
 class TestSourceContainerPluginsConfiguration(object):
 
@@ -979,3 +998,24 @@ class TestSourceContainerPluginsConfiguration(object):
             assert args['koji_build_id'] == expected_build_id
         if signing_intent:
             assert args['signing_intent'] == expected_intent
+
+    @pytest.mark.parametrize('userdata', (None, {}, {'custom': 'userdata'}))
+    def test_userdata(self, userdata):
+        plugin_type = 'exit_plugins'
+        plugin_name = 'koji_import_source_container'
+        additional_params = {
+            'userdata': userdata,
+        }
+
+        user_params = source_container_user_params(extra_args=additional_params)
+        build_json = SourceContainerPluginsConfiguration(user_params).render()
+        plugins = get_plugins_from_build_json(build_json)
+        assert get_plugin(plugins, plugin_type, plugin_name)
+        plugin = get_plugin(plugins, plugin_type, plugin_name)
+
+        if userdata is None:
+            assert 'args' not in plugin
+        else:
+            assert plugin_value_get(plugins, plugin_type, plugin_name, 'args')
+            args = plugin_value_get(plugins, plugin_type, plugin_name, 'args')
+            assert args['userdata'] == userdata

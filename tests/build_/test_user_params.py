@@ -224,6 +224,7 @@ class TestBuildUserParams(object):
         repo_info = RepoInfo(configuration=repo_conf)
         build_conf = Configuration(conf_file=None, build_from='image:buildroot:latest',
                                    orchestrator_deadline=4, scratch=False, worker_deadline=3)
+        userdata = {'custom': 'userdata'}
 
         # all values that BuildUserParams stores
         param_kwargs = {
@@ -269,6 +270,7 @@ class TestBuildUserParams(object):
             'task_id': TEST_KOJI_TASK_ID,
             # 'trigger_imagestreamtag': 'base_image:latest',  # generated from base_image
             'user': TEST_USER,
+            'userdata': userdata,
             # 'yum_repourls': ,  # not used with compose_ids
             # "worker_deadline": 3,  # set in config
         }
@@ -328,6 +330,7 @@ class TestBuildUserParams(object):
             "release": "29",
             "trigger_imagestreamtag": "buildroot:old",
             "user": TEST_USER,
+            "userdata": userdata,
             "worker_deadline": 3,
         }
         assert spec.to_json() == json.dumps(expected_json, sort_keys=True)
@@ -423,6 +426,7 @@ class TestSourceContainerUserParams(object):
             'scratch': True,
             'worker_max_run_hours': 3,
         }
+        userdata = {'custom': 'userdata'}
         param_kwargs = self.get_minimal_kwargs(origin_nvr, conf_args=conf_args)
         param_kwargs.update({
             'component': TEST_COMPONENT,
@@ -430,6 +434,7 @@ class TestSourceContainerUserParams(object):
             "platform": "x86_64",
             "signing_intent": "test-signing-intent",
             "sources_for_koji_build_id": origin_id,
+            "userdata": userdata,
         })
 
         rand = '12345'
@@ -462,6 +467,7 @@ class TestSourceContainerUserParams(object):
             'reactor_config_map': 'reactor-config-map-scratch',
             'scratch': True,
             "user": TEST_USER,
+            "userdata": userdata,
             "worker_deadline": 3,
         }
         if origin_id:

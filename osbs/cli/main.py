@@ -368,6 +368,9 @@ def cmd_build(args, osbs):
         'skip_build': args.skip_build,
         'operator_csv_modifications_url': args.operator_csv_modifications_url,
     }
+    if args.userdata:
+        build_kwargs['userdata'] = json.loads(args.userdata)
+
     if args.arrangement_version:
         if args.arrangement_version < 6:
             print("Arrangements less than 6 are no longer used.")
@@ -398,6 +401,8 @@ def cmd_build_source_container(args, osbs):
         'sources_for_koji_build_id': args.sources_for_koji_build_id,
         'component': args.component,
     }
+    if args.userdata:
+        build_kwargs['userdata'] = json.loads(args.userdata)
     if args.arrangement_version:
         if args.arrangement_version < 6:
             print("Arrangements less than 6 are no longer used.")
@@ -755,6 +760,8 @@ def cli():
     build_parser.add_argument("--operator-csv-modifications-url", action='store', required=False,
                               dest='operator_csv_modifications_url', metavar='URL',
                               help="URL to JSON file with operator CSV modification")
+    build_parser.add_argument("--userdata", required=False,
+                              help="JSON dictionary of user defined custom metadata")
 
     build_source_container_parser = subparsers.add_parser(
         str_on_2_unicode_on_3('build-source-container'),
@@ -813,6 +820,9 @@ def cli():
     build_source_container_parser.add_argument(
         '--signing-intent', action='store', required=False,
         help='override signing intent')
+    build_source_container_parser.add_argument(
+        '--userdata', required=False,
+        help='JSON dictionary of user defined custom metadata')
     build_source_container_parser.set_defaults(func=cmd_build_source_container)
 
     worker_group = build_parser.add_argument_group(title='arguments for --worker',
