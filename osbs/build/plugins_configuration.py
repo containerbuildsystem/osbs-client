@@ -511,6 +511,13 @@ class PluginsConfigurationBase(object):
             self.pt.set_plugin_arg_valid(phase, plugin, "dependency_replacements",
                                          self.user_params.dependency_replacements)
 
+    def render_koji_import(self, plugin):
+        phase = 'exit_plugins'
+
+        if self.pt.has_plugin_conf(phase, plugin):
+            self.pt.set_plugin_arg_valid(phase, plugin, "userdata",
+                                         self.user_params.userdata)
+
 
 class PluginsConfiguration(PluginsConfigurationBase):
     """Plugin configuration for image builds"""
@@ -550,6 +557,7 @@ class PluginsConfiguration(PluginsConfigurationBase):
         self.render_download_remote_source()
         self.render_resolve_remote_source()
         self.render_add_image_content_manifest()
+        self.render_koji_import('koji_import')
         return self.pt.to_json()
 
 
@@ -573,5 +581,6 @@ class SourceContainerPluginsConfiguration(PluginsConfigurationBase):
         self.render_koji()
         self.render_koji_tag_build()
         self.render_tag_and_push()
+        self.render_koji_import('koji_import_source_container')
 
         return self.pt.to_json()
