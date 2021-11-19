@@ -93,6 +93,7 @@ class BuildCommon(BuildParamsBase):
     scratch = BuildParam("scratch")
     signing_intent = BuildParam("signing_intent")
     user = BuildParam("user", required=True)
+    userdata = BuildParam("userdata")
 
     def __setattr__(self, name, value):
         super(BuildCommon, self).__setattr__(name, value)
@@ -110,6 +111,7 @@ class BuildCommon(BuildParamsBase):
                     scratch=None,
                     signing_intent=None,
                     user=None,
+                    userdata=None,
                     **kwargs):
         """
         Create a user_params instance.
@@ -139,6 +141,7 @@ class BuildCommon(BuildParamsBase):
         :param scratch: bool, build as a scratch build (if not specified in build_conf)
         :param signing_intent: bool, True to sign the resulting image
         :param user: str, name of the user requesting the build
+        :param userdata: dict, custom user data
 
         Please keep the paramater list alphabetized for easier tracking of changes
 
@@ -164,6 +167,7 @@ class BuildCommon(BuildParamsBase):
             "platform": platform,
             "signing_intent": signing_intent,
             "user": user,
+            "userdata": userdata,
             # Potentially pulled from build_conf
             "pipeline_run_name": pipeline_run_name,
             "reactor_config_map": reactor_config,
