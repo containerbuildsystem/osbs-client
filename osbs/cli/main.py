@@ -84,7 +84,8 @@ def cmd_build(args):
         'compose_ids': args.compose_ids,
         'operator_csv_modifications_url': args.operator_csv_modifications_url,
     }
-
+    if args.userdata:
+        build_kwargs['userdata'] = json.loads(args.userdata)
     if osbs.os_conf.get_flatpak():
         build_kwargs['flatpak'] = True
 
@@ -119,6 +120,8 @@ def cmd_build_source_container(args):
         'sources_for_koji_build_id': args.sources_for_koji_build_id,
         'component': args.component,
     }
+    if args.userdata:
+        build_kwargs['userdata'] = json.loads(args.userdata)
 
     pipeline_run = osbs.create_source_container_pipeline_run(**build_kwargs)
 
@@ -239,6 +242,8 @@ def cli():
                               help='name of each platform to use (deprecated)')
     build_parser.add_argument('--source-registry-uri', action='store', required=False,
                               help="set source registry for pulling parent image")
+    build_parser.add_argument("--userdata", required=False,
+                              help="JSON dictionary of user defined custom metadata")
     build_parser.set_defaults(func=cmd_build)
 
     build_source_container_parser = subparsers.add_parser(
@@ -278,6 +283,9 @@ def cli():
     build_source_container_parser.add_argument(
         '--signing-intent', action='store', required=False,
         help='override signing intent')
+    build_source_container_parser.add_argument(
+        '--userdata', required=False,
+        help='JSON dictionary of user defined custom metadata')
     build_source_container_parser.set_defaults(func=cmd_build_source_container)
 
     parser.add_argument("--openshift-uri", action='store', metavar="URL",
