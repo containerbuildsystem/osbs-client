@@ -31,8 +31,7 @@ def print_json_nicely(decoded_json):
     print(json.dumps(decoded_json, indent=2))
 
 
-def _print_pipeline_run_logs(pipeline_run):
-    user_warnings = UserWarningsStore()
+def _print_pipeline_run_logs(pipeline_run, user_warnings_store):
     pipeline_run_name = pipeline_run.pipeline_run_name
 
     pipeline_run_logs = pipeline_run.get_logs(follow=True, wait=True)
@@ -42,8 +41,8 @@ def _print_pipeline_run_logs(pipeline_run):
     print(f"Pipeline run created ({pipeline_run_name}), watching logs (feel free to interrupt)")
     try:
         for line in pipeline_run_logs:
-            if user_warnings.is_user_warning(line):
-                user_warnings.store(line)
+            if user_warnings_store.is_user_warning(line):
+                user_warnings_store.store(line)
                 continue
 
             print('{!r}'.format(line))
@@ -51,9 +50,43 @@ def _print_pipeline_run_logs(pipeline_run):
         logger.error("Error during fetching logs for pipeline run %s: %s",
                      pipeline_run_name, repr(ex))
 
-    if user_warnings:
-        print("USER WARNINGS")
-        print(user_warnings)
+
+def _get_build_metadata(pipeline_run, user_warnings_store):
+    output = {
+        "pipeline_run": {
+            "name": pipeline_run.pipeline_run_name,
+            "status": pipeline_run.status_reason,
+        },
+        "results": {
+            "user_warnings": [],
+            "repositories": {},
+            "error_msg": "",
+        },
+    }
+
+    if pipeline_run.has_succeeded():
+        annotations = pipeline_run.get_info()['metadata']['annotations']
+        str_repositories = annotations.get('repositories', '{}')
+        all_repositories = json.loads(str_repositories)
+        output['results']['repositories'] = all_repositories
+    else:
+        output['results']['error_msg'] = pipeline_run.get_error_message()
+
+    if user_warnings_store:
+        output['results']['user_warnings'] = list(user_warnings_store)
+
+    return output
+
+
+def print_output(pipeline_run, export_metadata_file=None):
+    user_warnings_store = UserWarningsStore()
+    _print_pipeline_run_logs(pipeline_run, user_warnings_store)
+    build_metadata = _get_build_metadata(pipeline_run, user_warnings_store)
+    _display_pipeline_run_summary(build_metadata)
+
+    if export_metadata_file:
+        with open(export_metadata_file, "w") as f:
+            json.dump(build_metadata, f)
 
 
 def cmd_build(args):
@@ -91,8 +124,7 @@ def cmd_build(args):
 
     pipeline_run = osbs.create_binary_container_pipeline_run(**build_kwargs)
 
-    _print_pipeline_run_logs(pipeline_run)
-    _display_pipeline_run_summary(pipeline_run)
+    print_output(pipeline_run, export_metadata_file=args.export_metadata_file)
 
     return_val = -1
 
@@ -125,8 +157,7 @@ def cmd_build_source_container(args):
 
     pipeline_run = osbs.create_source_container_pipeline_run(**build_kwargs)
 
-    _print_pipeline_run_logs(pipeline_run)
-    _display_pipeline_run_summary(pipeline_run)
+    print_output(pipeline_run, export_metadata_file=args.export_metadata_file)
 
     return_val = -1
 
@@ -135,26 +166,34 @@ def cmd_build_source_container(args):
     return return_val
 
 
-def _display_pipeline_run_summary(pipeline_run):
+def _display_pipeline_run_summary(build_metadata):
     output = [
         "",  # Empty line for cleaner display
-        "pipeline run {} is {}".format(pipeline_run.pipeline_run_name, pipeline_run.status_reason),
+        "pipeline run {} is {}".format(
+            build_metadata['pipeline_run']['name'],
+            build_metadata['pipeline_run']['status']
+        )
     ]
+    results = build_metadata['results']
 
-    annotations = pipeline_run.get_info()['metadata']['annotations']
+    for kind, repositories in results['repositories'].items():
+        if not repositories:
+            continue
+        output.append('{} repositories:'.format(kind))
+        for repository in repositories:
+            output.append('\t{}'.format(repository))
 
-    if pipeline_run.has_succeeded():
-        str_repositories = annotations.get('repositories', '{}')
-        all_repositories = json.loads(str_repositories)
+    user_warnings = results['user_warnings']
+    if user_warnings:
+        output.append("")
+        output.append('user warnings:')
+        for user_warning in user_warnings:
+            output.append('\t{}'.format(user_warning))
 
-        for kind, repositories in all_repositories.items():
-            if not repositories:
-                continue
-            output.append('{} repositories:'.format(kind))
-            for repository in repositories:
-                output.append('\t{}'.format(repository))
-    else:
-        output.append(pipeline_run.get_error_message())
+    error_msg = results['error_msg']
+    if error_msg:
+        output.append("")
+        output.append(error_msg)
 
     for line in output:
         print(line)
@@ -334,6 +373,8 @@ def cli():
                         help="OAuth 2.0 token")
     parser.add_argument("--token-file", metavar="TOKENFILE", action="store",
                         help="Read oauth 2.0 token from file")
+    parser.add_argument("--export-metadata-file", metavar="FILE", action="store",
+                        help="Export build metadata as JSON file")
     args = parser.parse_args()
 
     if getattr(args, 'func', None) is cmd_build_source_container:
