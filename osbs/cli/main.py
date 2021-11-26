@@ -6,7 +6,7 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 """
 from __future__ import print_function, absolute_import, unicode_literals
-import collections
+import collections.abc
 
 import json
 import logging
@@ -35,7 +35,7 @@ def _print_pipeline_run_logs(pipeline_run, user_warnings_store):
     pipeline_run_name = pipeline_run.pipeline_run_name
 
     pipeline_run_logs = pipeline_run.get_logs(follow=True, wait=True)
-    if not isinstance(pipeline_run_logs, collections.Iterable):
+    if not isinstance(pipeline_run_logs, collections.abc.Iterable):
         logger.error("'%s' is not iterable; can't display logs", pipeline_run_name)
         return
     print(f"Pipeline run created ({pipeline_run_name}), watching logs (feel free to interrupt)")
