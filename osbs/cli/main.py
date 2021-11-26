@@ -363,8 +363,6 @@ def cli():
                         help="get and supply oauth token with every request")
     parser.add_argument("--without-auth", action="store_false", dest="use_auth", default=None,
                         help="don't supply oauth tokens to requests")
-    parser.add_argument("--output", choices=["json", "text"], default="text",
-                        help="pick output type (default=text)")
     parser.add_argument("--namespace", help="name of namespace to query against",
                         metavar="NAMESPACE", action="store")
     parser.add_argument("--capture-dir", metavar="DIR", action="store",
