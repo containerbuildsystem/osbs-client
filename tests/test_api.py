@@ -941,10 +941,10 @@ class TestOSBS(object):
         assert error_msg == str(exc.value)
 
     def test_get_build_name(self, osbs_binary):
-        name = 'run_name'
-        resp = {'metadata': {'name': name}}
+        pipeline_run_name = 'test_pipeline'
+        pipeline_run = PipelineRun(os={}, pipeline_run_name=pipeline_run_name)
 
-        assert name == osbs_binary.get_build_name(resp)
+        assert pipeline_run_name == osbs_binary.get_build_name(pipeline_run)
 
     def test_get_build(self, osbs_binary):
         resp = {'metadata': {'name': 'run_name'}}
