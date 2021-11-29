@@ -417,8 +417,8 @@ class OSBS(object):
         return pipeline_run
 
     @osbsapi
-    def get_build_name(self, build_response):
-        return build_response['metadata']['name']
+    def get_build_name(self, build_response: PipelineRun):
+        return build_response.pipeline_run_name
 
     @osbsapi
     def get_build(self, build_name):
