@@ -451,6 +451,59 @@ class TestPipelineRun():
         assert resp == get_json
 
     @responses.activate
+    @pytest.mark.parametrize(('get_json', 'error_lines'), [
+        # no data
+        ({}, None),
+
+        # no taskRuns in status and no plugins-metadata
+        ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}]},
+          'metadata': {'annotations': {}}},
+         "\npipeline run errors:\npipeline "
+         "run source-container-x-x-default failed with reason: 'reason1' and message: 'message1'"),
+
+        # no taskRuns in status
+        ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}]},
+          'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
+                                                           '"plugin2": "error2"}}'}}},
+         "plugin errors:\nplugin1 : error1\nplugin2 : error2\n\npipeline run errors:\npipeline "
+         "run source-container-x-x-default failed with reason: 'reason1' and message: 'message1'"),
+
+        # taskRuns in status, without steps
+        ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
+                     'taskRuns': {'task1': {'status': {'conditions': [{'reason': 'reason2',
+                                                                       'message': 'message2'}]}}}},
+          'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
+                                                           '"plugin2": "error2"}}'}}},
+         "plugin errors:\nplugin1 : error1\nplugin2 : error2\n\npipeline run errors:\n"
+         "pipeline task 'task1' failed:\ntask run 'task1' failed with reason: 'reason2' "
+         "and message: 'message2'"),
+
+        # taskRuns in status, with steps
+        ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
+                     'taskRuns': {
+                         'task1': {'status': {'conditions': [
+                                               {'reason': 'reason2', 'message': 'message2'}],
+                                              'steps': [
+                                                  {'name': 'step_ok',
+                                                   'terminated': {'exitCode': 0}},
+                                                  {'name': 'step_ko',
+                                                   'terminated': {'exitCode': 1,
+                                                                  'reason': 'step_reason'}}]}}}},
+          'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
+                                                           '"plugin2": "error2"}}'}}},
+         "plugin errors:\nplugin1 : error1\nplugin2 : error2\n\npipeline run errors:\n"
+         "pipeline task 'task1' failed:\ntask step 'step_ko' failed with exit code: 1 "
+         "and reason: 'step_reason'"),
+    ])  # noqa
+    def test_get_error_message(self, pipeline_run, get_json, error_lines):
+        responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
+
+        resp = pipeline_run.get_error_message()
+
+        assert len(responses.calls) == 1
+        assert resp == error_lines
+
+    @responses.activate
     @pytest.mark.parametrize(('get_json', 'reason', 'succeeded'), [
         (deepcopy(PIPELINE_RUN_JSON), 'Running', False),
         (deepcopy(PIPELINE_RUN_JSON), 'Succeeded', True),

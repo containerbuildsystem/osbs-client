@@ -10,6 +10,7 @@ import os
 from textwrap import dedent
 
 from flexmock import flexmock
+import pytest
 
 from osbs.cli.main import print_output
 from osbs.tekton import PipelineRun
@@ -92,7 +93,9 @@ def test_print_output(tmpdir, capsys):
     assert metadata == expected_metadata
 
 
-def test_print_output_failure(tmpdir, capsys):
+@pytest.mark.parametrize('get_logs_failed', [True, False])
+@pytest.mark.parametrize('build_not_finished', [True, False])
+def test_print_output_failure(tmpdir, capsys, get_logs_failed, build_not_finished):
     """Test print_output function when build failed
 
     Tests:
@@ -103,13 +106,26 @@ def test_print_output_failure(tmpdir, capsys):
     ppln_run.should_receive('has_succeeded').and_return(False)
     ppln_run.should_receive('status_reason').and_return('failed')
     ppln_run.should_receive('get_error_message').and_return('Build failed ...')
-    (ppln_run
-     .should_receive('get_logs')
-     .and_return([
+
+    log_entries = [
         '2021-11-25 23:17:49,886 platform:- - atomic_reactor.inner - INFO - YOLO 1',
         '2021-11-25 23:17:50,000 platform:- - smth - USER_WARNING - {"message": "user warning"}',
         '2021-11-25 23:17:59,123 platform:- - atomic_reactor.inner - ERROR - YOLO 2',
-     ]))
+     ]
+
+    def get_logs():
+        for log in log_entries:
+            yield log
+        if get_logs_failed:
+            raise Exception("error reading logs")
+
+    ppln_run.should_receive('get_logs').and_return(get_logs())
+    ppln_run.should_receive('has_not_finished').and_return(build_not_finished)
+
+    if get_logs_failed and build_not_finished:
+        ppln_run.should_receive('cancel_pipeline_run').once()
+    else:
+        ppln_run.should_receive('cancel_pipeline_run').never()
 
     export_metadata_file = os.path.join(tmpdir, 'metadata.json')
     print_output(ppln_run, export_metadata_file=export_metadata_file)

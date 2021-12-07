@@ -506,7 +506,8 @@ class PipelineRun():
                 err_message += f"{plugin} : {error}\n"
 
         err_message += "\npipeline run errors:\n"
-        task_runs_status = data['status']['taskRuns']
+
+        task_runs_status = data['status'].get('taskRuns', {})
 
         for task_name, stats in task_runs_status.items():
             if stats['status']['conditions'][0]['reason'] == 'Succeeded':
@@ -514,14 +515,27 @@ class PipelineRun():
 
             err_message += f"pipeline task '{task_name}' failed:\n"
 
-            for step in stats['status']['steps']:
-                exit_code = step['terminated']['exitCode']
-                if exit_code == 0:
-                    continue
+            if 'steps' in stats['status']:
+                for step in stats['status']['steps']:
+                    exit_code = step['terminated']['exitCode']
+                    if exit_code == 0:
+                        continue
 
-                reason = step['terminated']['reason']
-                err_message += f"task step '{step['name']}' failed with exit code: {exit_code} " \
-                               f"and reason: '{reason}'"
+                    reason = step['terminated']['reason']
+                    err_message += f"task step '{step['name']}' failed with exit " \
+                                   f"code: {exit_code} " \
+                                   f"and reason: '{reason}'"
+            else:
+                task_condition = stats['status']['conditions'][0]
+                err_message += f"task run '{task_name}' failed with reason:" \
+                               f" '{task_condition['reason']}' and message:" \
+                               f" '{task_condition['message']}'"
+
+        if not task_runs_status:
+            pipeline_run_condition = data['status']['conditions'][0]
+            err_message += f"pipeline run {self.pipeline_run_name} failed with reason:" \
+                           f" '{pipeline_run_condition['reason']}' and message:" \
+                           f" '{pipeline_run_condition['message']}'"
 
         return err_message
 
