@@ -32,12 +32,18 @@ def print_json_nicely(decoded_json):
 
 
 def _print_pipeline_run_logs(pipeline_run, user_warnings_store):
+    """
+    prints pipeline run logs
+
+    :return: bool, True if logs are correctly returned,
+                   False when reading logs fails or is not iterable
+    """
     pipeline_run_name = pipeline_run.pipeline_run_name
 
     pipeline_run_logs = pipeline_run.get_logs(follow=True, wait=True)
     if not isinstance(pipeline_run_logs, collections.abc.Iterable):
         logger.error("'%s' is not iterable; can't display logs", pipeline_run_name)
-        return
+        return False
     print(f"Pipeline run created ({pipeline_run_name}), watching logs (feel free to interrupt)")
     try:
         for line in pipeline_run_logs:
@@ -46,9 +52,11 @@ def _print_pipeline_run_logs(pipeline_run, user_warnings_store):
                 continue
 
             print('{!r}'.format(line))
+        return True
     except Exception as ex:
         logger.error("Error during fetching logs for pipeline run %s: %s",
                      pipeline_run_name, repr(ex))
+        return False
 
 
 def _get_build_metadata(pipeline_run, user_warnings_store):
@@ -80,13 +88,21 @@ def _get_build_metadata(pipeline_run, user_warnings_store):
 
 def print_output(pipeline_run, export_metadata_file=None):
     user_warnings_store = UserWarningsStore()
-    _print_pipeline_run_logs(pipeline_run, user_warnings_store)
+    get_logs_passed = _print_pipeline_run_logs(pipeline_run, user_warnings_store)
     build_metadata = _get_build_metadata(pipeline_run, user_warnings_store)
     _display_pipeline_run_summary(build_metadata)
 
     if export_metadata_file:
         with open(export_metadata_file, "w") as f:
             json.dump(build_metadata, f)
+
+    if not get_logs_passed and pipeline_run.has_not_finished():
+        pipeline_run_name = pipeline_run.pipeline_run_name
+        try:
+            logger.debug("Will try to cancel pipeline run: %s", pipeline_run_name)
+            pipeline_run.cancel_pipeline_run()
+        except Exception as ex:
+            logger.error("Error during canceling pipeline run %s: %s", pipeline_run_name, repr(ex))
 
 
 def cmd_build(args):
