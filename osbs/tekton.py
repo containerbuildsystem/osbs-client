@@ -540,7 +540,9 @@ class PipelineRun():
         return err_message
 
     def has_succeeded(self):
-        return self.status_reason == 'Succeeded'
+        status_reason = self.status_reason
+        logger.info("Pipeline run info: '%s'", self.data)
+        return status_reason == 'Succeeded'
 
     def has_not_finished(self):
         return self.status_status == 'Unknown' and self.status_reason != 'PipelineRunCancelled'
