@@ -465,8 +465,9 @@ class TestPipelineRun():
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}]},
           'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
                                                            '"plugin2": "error2"}}'}}},
-         "plugin errors:\nplugin1 : error1\nplugin2 : error2\n\npipeline run errors:\npipeline "
-         "run source-container-x-x-default failed with reason: 'reason1' and message: 'message1'"),
+         "Error in plugin plugin1: error1\nError in plugin plugin2: error2\n\npipeline run errors:"
+         "\npipeline run source-container-x-x-default failed with reason: 'reason1' and message: "
+         "'message1'"),
 
         # taskRuns in status, without steps
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
@@ -474,8 +475,8 @@ class TestPipelineRun():
                                                                        'message': 'message2'}]}}}},
           'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
                                                            '"plugin2": "error2"}}'}}},
-         "plugin errors:\nplugin1 : error1\nplugin2 : error2\n\npipeline run errors:\n"
-         "pipeline task 'task1' failed:\ntask run 'task1' failed with reason: 'reason2' "
+         "Error in plugin plugin1: error1\nError in plugin plugin2: error2\n\npipeline run errors:"
+         "\npipeline task 'task1' failed:\ntask run 'task1' failed with reason: 'reason2' "
          "and message: 'message2'"),
 
         # taskRuns in status, with steps
@@ -491,8 +492,8 @@ class TestPipelineRun():
                                                                   'reason': 'step_reason'}}]}}}},
           'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
                                                            '"plugin2": "error2"}}'}}},
-         "plugin errors:\nplugin1 : error1\nplugin2 : error2\n\npipeline run errors:\n"
-         "pipeline task 'task1' failed:\ntask step 'step_ko' failed with exit code: 1 "
+         "Error in plugin plugin1: error1\nError in plugin plugin2: error2\n\npipeline run errors:"
+         "\npipeline task 'task1' failed:\ntask step 'step_ko' failed with exit code: 1 "
          "and reason: 'step_reason'"),
     ])  # noqa
     def test_get_error_message(self, pipeline_run, get_json, error_lines):
