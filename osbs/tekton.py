@@ -501,9 +501,8 @@ class PipelineRun():
         err_message = ""
 
         if plugin_errors:
-            err_message = "plugin errors:\n"
             for plugin, error in plugin_errors.items():
-                err_message += f"{plugin} : {error}\n"
+                err_message += f"Error in plugin {plugin}: {error}\n"
 
         err_message += "\npipeline run errors:\n"
 

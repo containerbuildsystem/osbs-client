@@ -1071,7 +1071,7 @@ class TestOSBS(object):
 
         flexmock(PipelineRun).should_receive('get_info').and_return(resp)
 
-        error_msg = "plugin errors:\nplugin1 : error1\n\npipeline run errors:\n"
+        error_msg = "Error in plugin plugin1: error1\n\npipeline run errors:\n"
         error_msg += "pipeline task 'task2' failed:\n"
         error_msg += "task step 'step2' failed with exit code: 128 and reason: 'bad thing'"
 
