@@ -94,7 +94,7 @@ def test_git_repo_humanish_part_from_uri(uri, humanish):
 @pytest.mark.parametrize(('str1', 'str2', 'separator', 'limit', 'label', 'expected'), [
     ('spam', 'bacon', '-', 10, True, 'spam-bacon'),
     ('spam', 'bacon', '-', 5, True, 'sp-ba'),
-    ('https://github.com/blah/my_very_very_very_long_and_broken_a$$_repo.git', 'bacon', '-', 65,
+    ('https://github.com/blah/my:very:very:very:long:and:broken:a$$:repo.git', 'bacon', '-', 65,
      True, 'httpsgithub.comblahmyveryveryverylongandbrokenarepo.git-bacon'),
     ('myveryveryveryveryveryveryveryveryveryveryveryveryverylongtestcase', '', '-', 65,
      True, 'myveryveryveryveryveryveryveryveryveryveryveryveryverylongtest'),
