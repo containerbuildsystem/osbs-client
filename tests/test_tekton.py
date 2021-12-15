@@ -283,23 +283,30 @@ class TestPipelineRun():
     @responses.activate
     @pytest.mark.parametrize('run_name_in_input', [PIPELINE_RUN_NAME, 'wrong'])
     @pytest.mark.parametrize('input_data', [deepcopy(PIPELINE_RUN_DATA), None])
+    @pytest.mark.parametrize('labels', [{'labelkey': 'labelvalue'}, None])
     def test_start_pipeline(self, openshift, expected_request_body_pipeline_run,
-                            run_name_in_input, input_data):
+                            run_name_in_input, input_data, labels):
 
-        if input_data:
-            input_data['metadata']['name'] = run_name_in_input
+        expected_request_body = deepcopy(expected_request_body_pipeline_run)
+        new_input_data = deepcopy(input_data)
+
+        if new_input_data:
+            new_input_data['metadata']['name'] = run_name_in_input
+            if labels:
+                new_input_data['metadata']['labels'] = labels
+                expected_request_body['metadata']['labels'] = labels
 
         p_run = PipelineRun(os=openshift, pipeline_run_name=PIPELINE_RUN_NAME,
-                            pipeline_run_data=input_data)
+                            pipeline_run_data=new_input_data)
 
         responses.add(
             responses.POST,
             f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/pipelineruns', # noqa E501
-            match=[responses.json_params_matcher(expected_request_body_pipeline_run)],
+            match=[responses.json_params_matcher(expected_request_body)],
             json={},
         )
 
-        if input_data:
+        if new_input_data:
             if run_name_in_input == PIPELINE_RUN_NAME:
                 p_run.start_pipeline_run()
                 assert len(responses.calls) == 1
@@ -362,9 +369,11 @@ class TestPipelineRun():
         ({}, 500, True),
     ])
     def test_update_labels(self, caplog, pipeline_run, get_json, status, raises):
-        labels = {'label_key': 'label_value'}
+        labels = {'label_key': 'label:v/alue'}
+        # sanitize_strings_for_openshift will remove : and /
+        expect_labels = {'label_key': 'labelvalue'}
         exp_request_body_pipeline_run = deepcopy(PIPELINE_MINIMAL_DATA)
-        exp_request_body_pipeline_run['metadata']['labels'] = labels
+        exp_request_body_pipeline_run['metadata']['labels'] = expect_labels
 
         responses.add(
             responses.PATCH,
