@@ -9,7 +9,7 @@
 
 Name:           osbs-client
 Version:        2.0.dev0
-Release:        4%{?dist}
+Release:        5%{?dist}
 
 Summary:        Python command line client for OpenShift Build Service
 Group:          Development/Tools
