@@ -7,6 +7,7 @@ of the BSD license. See the LICENSE file for details.
 """
 import json
 import os
+import time
 from textwrap import dedent
 
 from flexmock import flexmock
@@ -23,6 +24,7 @@ def test_print_output(tmpdir, capsys):
       * if STDOUT is correct
       * if JSON exported metadata are correct
     """
+    flexmock(time).should_receive('sleep').and_return(None)
     ppln_run = flexmock(PipelineRun(flexmock(), 'test_ppln'))
     (ppln_run
      .should_receive('get_info')
@@ -42,6 +44,7 @@ def test_print_output(tmpdir, capsys):
      ))
     ppln_run.should_receive('has_succeeded').and_return(True)
     ppln_run.should_receive('status_reason').and_return('complete')
+    ppln_run.should_receive('has_not_finished').and_return(False)
     (ppln_run
      .should_receive('get_logs')
      .and_return([
@@ -102,6 +105,7 @@ def test_print_output_failure(tmpdir, capsys, get_logs_failed, build_not_finishe
       * if STDOUT is correct when build failed
       * if JSON exported metadata are correct
     """
+    flexmock(time).should_receive('sleep').and_return(None)
     ppln_run = flexmock(PipelineRun(flexmock(), 'test_ppln'))
     ppln_run.should_receive('has_succeeded').and_return(False)
     ppln_run.should_receive('status_reason').and_return('failed')

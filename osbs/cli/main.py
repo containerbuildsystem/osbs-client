@@ -89,6 +89,7 @@ def _get_build_metadata(pipeline_run, user_warnings_store):
 def print_output(pipeline_run, export_metadata_file=None):
     user_warnings_store = UserWarningsStore()
     get_logs_passed = _print_pipeline_run_logs(pipeline_run, user_warnings_store)
+    pipeline_run.wait_for_finish()
     build_metadata = _get_build_metadata(pipeline_run, user_warnings_store)
     _display_pipeline_run_summary(build_metadata)
 
