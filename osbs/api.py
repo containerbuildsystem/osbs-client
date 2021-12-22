@@ -441,6 +441,11 @@ class OSBS(object):
         return pipeline_run.has_not_finished()
 
     @osbsapi
+    def wait_for_build_to_finish(self, build_name):
+        pipeline_run = PipelineRun(self.os, build_name)
+        return pipeline_run.wait_for_finish()
+
+    @osbsapi
     def build_was_cancelled(self, build_name):
         pipeline_run = PipelineRun(self.os, build_name)
         return pipeline_run.was_cancelled()

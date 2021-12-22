@@ -27,6 +27,9 @@ logger = logging.getLogger(__name__)
 # Retry each connection attempt after 5 seconds, for a maximum of 10 times
 WATCH_RETRY_SECS = 5
 WATCH_RETRY = 10
+# Retry waiting for pipeline to finish for 5 seconds, for a maximum of 10 times
+WAIT_RETRY_SECS = 5
+WAIT_RETRY = 10
 MAX_BAD_RESPONSES = WATCH_RETRY // 3
 # Give up after 12 hours
 WAIT_RETRY_HOURS = 12
@@ -555,6 +558,20 @@ class PipelineRun():
 
     def was_cancelled(self):
         return self.status_reason == 'PipelineRunCancelled'
+
+    def wait_for_finish(self):
+        """
+        use this method after reading logs finished, to ensure that pipeline run finished,
+        as pipeline run status doesn't change immediately when logs finished
+        """
+        for _ in range(WAIT_RETRY):
+            if self.has_not_finished():
+                logger.info("Waiting for pipeline run '%s' to finish, sleep for %ss",
+                            self.pipeline_run_name, WAIT_RETRY_SECS)
+                time.sleep(WAIT_RETRY_SECS)
+            else:
+                logger.info("Pipeline run '%s' finished", self.pipeline_run_name)
+                break
 
     @property
     def annotations(self):

@@ -1,9 +1,12 @@
+import time
 import responses
 import pytest
 import yaml
 from copy import deepcopy
+from flexmock import flexmock
 
-from osbs.tekton import Openshift, PipelineRun, TaskRun, Pod, API_VERSION
+from osbs.tekton import (Openshift, PipelineRun, TaskRun, Pod, API_VERSION, WAIT_RETRY_SECS,
+                         WAIT_RETRY)
 from osbs.exceptions import OsbsException
 from tests.constants import TEST_PIPELINE_RUN_TEMPLATE, TEST_OCP_NAMESPACE
 
@@ -525,6 +528,26 @@ class TestPipelineRun():
         responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
         assert succeeded == pipeline_run.has_succeeded()
         assert pipeline_run.status_reason == reason
+
+    @responses.activate
+    @pytest.mark.parametrize(('status', 'reason', 'sleep_times'), [
+        ('True', 'Succeeded', 0),
+        ('False', 'Failed', 0),
+        ('Unknown', 'PipelineRunCancelled', 0),
+        ('Unknown', 'Running', WAIT_RETRY),
+    ])
+    def test_wait_for_finish(self, pipeline_run, status, reason, sleep_times):
+        get_json = deepcopy(PIPELINE_RUN_JSON)
+        get_json['status']['conditions'][0]['reason'] = reason
+        get_json['status']['conditions'][0]['status'] = status
+        responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
+        (flexmock(time)
+            .should_receive('sleep')
+            .with_args(WAIT_RETRY_SECS)
+            .times(sleep_times)
+            .and_return(None))
+
+        pipeline_run.wait_for_finish()
 
     @responses.activate
     def test_wait_for_start(self, pipeline_run):
