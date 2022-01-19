@@ -445,7 +445,10 @@ class PipelineRun():
         data = copy.deepcopy(self.minimal_data)
 
         sanitized_labels = {k: sanitize_strings_for_openshift(v) for k, v in labels.items()}
+        logger.debug("update labels called with: %s", labels)
         data['metadata']['labels'] = sanitized_labels
+        logger.debug("sanitized labels: %s", sanitized_labels)
+        logger.debug("labels before update: %s", self.labels)
 
         response = self.os.patch(
             self.pipeline_run_url,
@@ -460,6 +463,8 @@ class PipelineRun():
         exc_msg = f"Can't update labels on pipeline run '{self.pipeline_run_name}', " \
                   f"because it doesn't exist"
         response_json = self._check_response(response, msg)
+        logger.debug("labels after update: %s", self.labels)
+        logger.debug("response_json: %s", response_json)
         if not response_json:
             raise OsbsException(exc_msg)
         return response_json
