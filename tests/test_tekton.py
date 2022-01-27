@@ -377,7 +377,6 @@ class TestPipelineRun():
         expect_labels = {'label_key': 'labelvalue'}
         exp_request_body_pipeline_run = deepcopy(PIPELINE_MINIMAL_DATA)
         exp_request_body_pipeline_run['metadata']['labels'] = expect_labels
-        labels_json = {'metadata': {'labels': {'label': 'key'}}}
 
         responses.add(
             responses.PATCH,
@@ -386,10 +385,6 @@ class TestPipelineRun():
             json=get_json,
             status=status,
         )
-        # this is just for debugging messages which report labels before and after update
-        responses.add(responses.GET, PIPELINE_RUN_URL, json=labels_json)
-
-        response_calls = 3
 
         if raises:
             exc_msg = None
@@ -398,7 +393,6 @@ class TestPipelineRun():
                 exc_msg = f"Can't update labels on pipeline run " \
                           f"'{PIPELINE_RUN_NAME}', because it doesn't exist"
             elif status != 200:
-                response_calls = 2
                 log_msg = f"update labels on pipeline run '{PIPELINE_RUN_NAME}' " \
                           f"failed with : [{status}] {get_json}"
 
@@ -412,7 +406,7 @@ class TestPipelineRun():
         else:
             pipeline_run.update_labels(labels)
 
-        assert len(responses.calls) == response_calls
+        assert len(responses.calls) == 1
 
     @responses.activate
     @pytest.mark.parametrize(('get_json', 'status', 'raises'), [
