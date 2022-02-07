@@ -1,5 +1,5 @@
 """
-Copyright (c) 2017 Red Hat, Inc
+Copyright (c) 2017-2022 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -140,6 +140,21 @@ class TestRepoInfo(object):
 
 
 class TestRepoConfiguration(object):
+
+    @pytest.mark.parametrize('deprecated_key, deprecated_value, deprecation_msg', [
+        ('autorebuild', '', "\'autorebuild\' config is deprecated in OSBS 2.0, this config will be "
+                            "ignored"),
+        ('image_build_method', 'imagebuilder', "\'image_build_method\' config is deprecated in "
+                                               "OSBS 2.0, this config will be ignored"),
+    ])
+    def test_deprecated_config(self, tmpdir, deprecated_key, deprecated_value, deprecation_msg,
+                               caplog):
+        with open(os.path.join(str(tmpdir), REPO_CONTAINER_CONFIG), 'w') as f:
+            f.write(dedent(f"""\
+                {deprecated_key}: {deprecated_value}
+                """))
+        RepoConfiguration(dir_path=str(tmpdir))
+        assert deprecation_msg in caplog.text
 
     def test_invalid_yaml(self, tmpdir):
         yaml_file = tmpdir.join(REPO_CONTAINER_CONFIG)
