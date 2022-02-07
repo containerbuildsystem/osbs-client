@@ -1,5 +1,5 @@
 """
-Copyright (c) 2017 Red Hat, Inc
+Copyright (c) 2017-2022 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -133,6 +133,16 @@ class RepoConfiguration(object):
             expected_filename=REPO_CONTENT_SETS_FILE,
             possible_filename_typos=REPO_CONTENT_SETS_FILE_POSSIBLE_TYPOS
         )
+
+        if 'autorebuild' in self.container:
+            logger.user_warning("'autorebuild' config is deprecated in OSBS 2.0, this config will "
+                                'be ignored')
+            del self.container['autorebuild']
+
+        if 'image_build_method' in self.container:
+            logger.user_warning("'image_build_method' config is deprecated in OSBS 2.0, this config"
+                                " will be ignored")
+            del self.container['image_build_method']
 
         # container values may be set to None
         container_compose = self.container.get('compose') or {}
