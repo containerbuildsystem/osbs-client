@@ -274,8 +274,6 @@ def cli():
                               dest="yum_repourls", help="URL of yum repo file")
     build_parser.add_argument("--scratch", action='store_true', required=False,
                               help="perform a scratch build")
-    build_parser.add_argument("--yum-proxy", action='store', required=False,
-                              help="set yum proxy to repos from koji/add-yum-repo params")
     build_parser.add_argument('--koji-parent-build', action='store', required=False,
                               help='overwrite parent image with image from koji build')
     build_parser.add_argument('--release', action='store', required=False,
