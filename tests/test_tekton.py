@@ -625,4 +625,4 @@ class TestPipelineRun():
         logs = [line for line in pipeline_run.get_logs(follow=True, wait=True)]
 
         assert len(responses.calls) == 11
-        assert logs == ['Hello World', 'Bye World']
+        assert logs == [('test-task-run-1', 'Hello World'), ('test-task-run-1', 'Bye World')]

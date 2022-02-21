@@ -675,8 +675,9 @@ class PipelineRun():
     def _get_logs_stream(self):
         self.wait_for_start()
         for task_run in self.wait_for_taskruns():
-            yield from TaskRun(os=self.os, task_run_name=task_run).get_logs(
-                follow=True, wait=True)
+            for log_line in TaskRun(os=self.os, task_run_name=task_run).get_logs(follow=True,
+                                                                                 wait=True):
+                yield task_run, log_line
 
     def get_logs(self, follow=False, wait=False):
         if wait or follow:
