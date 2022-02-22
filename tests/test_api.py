@@ -1076,3 +1076,24 @@ class TestOSBS(object):
         error_msg += "task step 'step2' failed with exit code: 128 and reason: 'bad thing'"
 
         assert error_msg == osbs_binary.get_build_error_message('run_name')
+
+    def test_get_build_results(self, osbs_binary):
+        pipeline_results = [
+            {'name': 'number', 'value': '42'},
+            {'name': 'string', 'value': '"spam"'},
+            {'name': 'filter_me_out', 'value': 'null'},
+        ]
+        flexmock(PipelineRun).should_receive('pipeline_results').and_return(pipeline_results)
+
+        assert osbs_binary.get_build_results('run_name') == {'number': 42, 'string': 'spam'}
+
+    def test_get_build_results_invalid_json(self, osbs_binary):
+        pipeline_results = [
+            {'name': 'invalid_string', 'value': 'spam'},
+        ]
+        flexmock(PipelineRun).should_receive('pipeline_results').and_return(pipeline_results)
+
+        err_msg = "invalid_string value is not valid JSON: 'spam'"
+
+        with pytest.raises(OsbsValidationException, match=err_msg):
+            osbs_binary.get_build_results('run_name')
