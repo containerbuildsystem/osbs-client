@@ -11,6 +11,7 @@ import base64
 import os
 import requests
 import copy
+from typing import Dict, List
 
 
 from osbs.exceptions import OsbsResponseException, OsbsAuthException, OsbsException
@@ -604,6 +605,14 @@ class PipelineRun():
         if not data:
             return None
         return data['status']['conditions'][0]['status']
+
+    @property
+    def pipeline_results(self) -> List[Dict[str, str]]:
+        data = self.data
+        if not data:
+            return []
+
+        return data['status'].get('pipelineResults', [])
 
     def wait_for_start(self):
         """

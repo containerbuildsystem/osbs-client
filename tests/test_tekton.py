@@ -530,6 +530,32 @@ class TestPipelineRun():
         assert pipeline_run.status_reason == reason
 
     @responses.activate
+    @pytest.mark.parametrize(
+        'get_json, expect_results',
+        [
+            ({}, []),
+            ({'status': {}}, []),
+            (
+                {"status": {"pipelineResults": [{'name': 'foo', 'value': '1234'}]}},
+                [{'name': 'foo', 'value': '1234'}],
+            ),
+            (
+                {
+                    "status": {
+                        "pipelineResults": [
+                            {'name': 'x', 'value': '1'}, {'name': 'y', 'value': '2'},
+                        ],
+                    },
+                },
+                [{'name': 'x', 'value': '1'}, {'name': 'y', 'value': '2'}],
+            ),
+        ],
+    )
+    def test_pipeline_results(self, pipeline_run, get_json, expect_results):
+        responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
+        assert pipeline_run.pipeline_results == expect_results
+
+    @responses.activate
     @pytest.mark.parametrize(('status', 'reason', 'sleep_times'), [
         ('True', 'Succeeded', 0),
         ('False', 'Failed', 0),
