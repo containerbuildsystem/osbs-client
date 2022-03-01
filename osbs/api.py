@@ -23,7 +23,8 @@ from osbs.build.user_params import (
 )
 from osbs.constants import (RELEASE_LABEL_FORMAT, VERSION_LABEL_FORBIDDEN_CHARS,
                             PRUN_TEMPLATE_USER_PARAMS, PRUN_TEMPLATE_REACTOR_CONFIG_WS,
-                            PRUN_TEMPLATE_BUILD_DIR_WS, ISOLATED_RELEASE_FORMAT)
+                            PRUN_TEMPLATE_BUILD_DIR_WS, PRUN_TEMPLATE_CONTEXT_DIR_WS,
+                            ISOLATED_RELEASE_FORMAT)
 from osbs.tekton import Openshift, PipelineRun
 from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsResponseException)
 from osbs.utils.labels import Labels
@@ -236,7 +237,7 @@ class OSBS(object):
                 ws['configmap']['name'] = user_params.reactor_config_map
 
             # set namespace for volume claim template
-            if ws['name'] == PRUN_TEMPLATE_BUILD_DIR_WS:
+            if ws['name'] in [PRUN_TEMPLATE_BUILD_DIR_WS, PRUN_TEMPLATE_CONTEXT_DIR_WS]:
                 ws['volumeClaimTemplate']['metadata']['namespace'] = self.os_conf.get_namespace()
 
         # set labels
@@ -357,7 +358,7 @@ class OSBS(object):
                 ws['configmap']['name'] = user_params.reactor_config_map
 
             # set namespace for volume claim template
-            if ws['name'] == PRUN_TEMPLATE_BUILD_DIR_WS:
+            if ws['name'] in [PRUN_TEMPLATE_BUILD_DIR_WS, PRUN_TEMPLATE_CONTEXT_DIR_WS]:
                 ws['volumeClaimTemplate']['metadata']['namespace'] = self.os_conf.get_namespace()
 
         # set labels
