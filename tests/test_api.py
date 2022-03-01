@@ -22,7 +22,8 @@ from osbs.api import OSBS, osbsapi
 from osbs.conf import Configuration
 from osbs.exceptions import (OsbsValidationException, OsbsException, OsbsResponseException)
 from osbs.constants import (REPO_CONTAINER_CONFIG, PRUN_TEMPLATE_USER_PARAMS,
-                            PRUN_TEMPLATE_REACTOR_CONFIG_WS, PRUN_TEMPLATE_BUILD_DIR_WS)
+                            PRUN_TEMPLATE_REACTOR_CONFIG_WS, PRUN_TEMPLATE_BUILD_DIR_WS,
+                            PRUN_TEMPLATE_CONTEXT_DIR_WS)
 from osbs import utils
 from osbs.utils.labels import Labels
 from osbs.repo_utils import RepoInfo, RepoConfiguration, ModuleSpec
@@ -738,7 +739,7 @@ class TestOSBS(object):
                 else:
                     assert ws['configmap']['name'] == rcm
 
-            if ws['name'] == PRUN_TEMPLATE_BUILD_DIR_WS:
+            if ws['name'] in [PRUN_TEMPLATE_BUILD_DIR_WS, PRUN_TEMPLATE_CONTEXT_DIR_WS]:
                 assert ws['volumeClaimTemplate']['metadata']['namespace'] == TEST_OCP_NAMESPACE
 
         for param in pipeline_run.input_data['spec']['params']:
@@ -878,7 +879,7 @@ class TestOSBS(object):
                 else:
                     assert ws['configmap']['name'] == rcm
 
-            if ws['name'] == PRUN_TEMPLATE_BUILD_DIR_WS:
+            if ws['name'] in [PRUN_TEMPLATE_BUILD_DIR_WS, PRUN_TEMPLATE_CONTEXT_DIR_WS]:
                 assert ws['volumeClaimTemplate']['metadata']['namespace'] == TEST_OCP_NAMESPACE
 
         for param in pipeline_run.input_data['spec']['params']:

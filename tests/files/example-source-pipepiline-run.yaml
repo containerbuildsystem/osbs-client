@@ -13,11 +13,22 @@ spec:
         {}
   workspaces:
     - name: ws-context-dir
-      emptyDir: {}
+      volumeClaimTemplate:
+        metadata:
+          name: source-container-context-pvc
+          namespace: default-namespace
+          annotations:
+            kubernetes.io/reclaimPolicy: Delete
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 100Mi
     - name: ws-build-dir
       volumeClaimTemplate:
         metadata:
-          name: source-containter-build-pvc
+          name: source-container-build-pvc
           namespace: default-namespace
           annotations:
             kubernetes.io/reclaimPolicy: Delete

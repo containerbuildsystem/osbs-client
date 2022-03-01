@@ -20,6 +20,7 @@ DEFAULT_CONF_SOURCE_SECTION = "default_source"
 PRUN_TEMPLATE_USER_PARAMS = "USER_PARAMS"
 PRUN_TEMPLATE_REACTOR_CONFIG_WS = "ws-reactor-config-map"
 PRUN_TEMPLATE_BUILD_DIR_WS = "ws-build-dir"
+PRUN_TEMPLATE_CONTEXT_DIR_WS = "ws-context-dir"
 GENERAL_CONFIGURATION_SECTION = "general"
 
 # https://github.com/openshift/origin/blob/master/pkg/build/api/types.go
