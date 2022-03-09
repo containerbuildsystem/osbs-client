@@ -45,13 +45,19 @@ def test_print_output(tmpdir, capsys):
     ppln_run.should_receive('has_succeeded').and_return(True)
     ppln_run.should_receive('status_reason').and_return('complete')
     ppln_run.should_receive('has_not_finished').and_return(False)
-    (ppln_run
-     .should_receive('get_logs')
-     .and_return([
+
+    log_entries = [
         '2021-11-25 23:17:49,886 platform:- - atomic_reactor.inner - INFO - YOLO 1',
         '2021-11-25 23:17:50,000 platform:- - smth - USER_WARNING - {"message": "user warning"}',
         '2021-11-25 23:17:59,123 platform:- - atomic_reactor.inner - INFO - YOLO 2',
-     ]))
+     ]
+
+    def get_logs():
+        task_run_name = "some-task-run"
+        for log in log_entries:
+            yield task_run_name, log
+
+    ppln_run.should_receive('get_logs').and_return(get_logs())
 
     export_metadata_file = os.path.join(tmpdir, 'metadata.json')
     print_output(ppln_run, export_metadata_file=export_metadata_file)
@@ -118,8 +124,9 @@ def test_print_output_failure(tmpdir, capsys, get_logs_failed, build_not_finishe
      ]
 
     def get_logs():
+        task_run_name = "some-task-run"
         for log in log_entries:
-            yield log
+            yield task_run_name, log
         if get_logs_failed:
             raise Exception("error reading logs")
 
