@@ -46,7 +46,7 @@ def _print_pipeline_run_logs(pipeline_run, user_warnings_store):
         return False
     print(f"Pipeline run created ({pipeline_run_name}), watching logs (feel free to interrupt)")
     try:
-        for line in pipeline_run_logs:
+        for _, line in pipeline_run_logs:
             if user_warnings_store.is_user_warning(line):
                 user_warnings_store.store(line)
                 continue
