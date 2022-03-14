@@ -240,7 +240,7 @@ class OSBS(object):
                 ws['volumeClaimTemplate']['metadata']['namespace'] = self.os_conf.get_namespace()
 
         # set labels
-        all_labels = {}
+        all_labels = pipeline_run_data['metadata'].get('labels', {})
 
         if user_params.koji_task_id is not None:
             all_labels['koji-task-id'] = str(user_params.koji_task_id)
@@ -359,7 +359,7 @@ class OSBS(object):
                 ws['volumeClaimTemplate']['metadata']['namespace'] = self.os_conf.get_namespace()
 
         # set labels
-        all_labels = {}
+        all_labels = pipeline_run_data['metadata'].get('labels', {})
 
         if user_params.koji_task_id is not None:
             all_labels['koji-task-id'] = str(user_params.koji_task_id)
