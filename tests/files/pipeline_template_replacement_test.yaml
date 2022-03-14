@@ -1,0 +1,5 @@
+---
+config_map: '$osbs_configmap_name'
+namespace: '$osbs_namespace'
+pipeline_run_name: '$osbs_pipeline_run_name'
+user_params_json: '$osbs_user_params_json'

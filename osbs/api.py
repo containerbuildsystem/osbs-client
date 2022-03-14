@@ -16,20 +16,27 @@ import yaml
 from functools import wraps
 from contextlib import contextmanager
 from typing import Any, Dict, Tuple
+from string import Template
 
 from osbs.build.user_params import (
     BuildUserParams,
     SourceContainerUserParams
 )
 from osbs.constants import (RELEASE_LABEL_FORMAT, VERSION_LABEL_FORBIDDEN_CHARS,
-                            PRUN_TEMPLATE_USER_PARAMS, PRUN_TEMPLATE_REACTOR_CONFIG_WS,
-                            PRUN_TEMPLATE_BUILD_DIR_WS, PRUN_TEMPLATE_CONTEXT_DIR_WS,
                             ISOLATED_RELEASE_FORMAT)
 from osbs.tekton import Openshift, PipelineRun
 from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsResponseException)
 from osbs.utils.labels import Labels
 # import utils in this way, so that we can mock standalone functions with flexmock
 from osbs import utils
+
+
+def _load_pipeline_from_template(pipeline_run_path, substitutions):
+    """Load pipeline run from template and apply substitutions"""
+    with open(pipeline_run_path) as f:
+        yaml_data = f.read()
+    template = Template(yaml_data)
+    return yaml.safe_load(template.safe_substitute(substitutions))
 
 
 # Decorator for API methods.
@@ -202,14 +209,28 @@ class OSBS(object):
                 "Not a flatpak build, "
                 "but repository has a container.yaml with a flatpak: section")
 
-    def _get_binary_container_pipeline_data(self, user_params):
+    def _get_pipeline_template_substitutions(
+            self, *, user_params, pipeline_run_name) -> Dict[str, str]:
+        """Return map of substitutions used by pipeline run template
+        to construct pipeline run data
+
+        These substitutions can be used in pipeline run template
+
+        Substitutions:
+          $osbs_configmap_name - name of configmap defined by user
+          $osbs_namespace - namespace where pipeline runs
+          $osbs_pipeline_run_name - name of pipeline run
+          $osbs_user_params_json - user params in json format
+        """
+        return {
+            'osbs_configmap_name': user_params.reactor_config_map,
+            'osbs_namespace': self.os_conf.get_namespace(),
+            'osbs_pipeline_run_name': pipeline_run_name,
+            'osbs_user_params_json': user_params.to_json(),
+        }
+
+    def _get_binary_container_pipeline_name(self, user_params):
         pipeline_run_postfix = utils.generate_random_postfix()
-        pipeline_run_path = self.os_conf.get_pipeline_run_path()
-
-        with open(pipeline_run_path) as f:
-            yaml_data = f.read()
-        pipeline_run_data = yaml.safe_load(yaml_data)
-
         pipeline_run_name = user_params.name
 
         if user_params.isolated:
@@ -217,28 +238,21 @@ class OSBS(object):
 
         elif user_params.scratch:
             pipeline_run_name = f'scratch-{pipeline_run_postfix}'
+        return pipeline_run_name
 
-        return pipeline_run_name, pipeline_run_data
+    def _get_binary_container_pipeline_data(self, *, user_params, pipeline_run_name):
+        pipeline_run_path = self.os_conf.get_pipeline_run_path()
 
-    def _set_binary_container_pipeline_data(self, pipeline_run_name, pipeline_run_data,
-                                            user_params):
-        # set pipeline run name
-        pipeline_run_data['metadata']['name'] = pipeline_run_name
+        substitutions = self._get_pipeline_template_substitutions(
+            user_params=user_params,
+            pipeline_run_name=pipeline_run_name
+        )
+        pipeline_run_data = _load_pipeline_from_template(pipeline_run_path, substitutions)
 
-        # set user params
-        for param in pipeline_run_data['spec']['params']:
-            if param['name'] == PRUN_TEMPLATE_USER_PARAMS:
-                param['value'] = user_params.to_json()
+        return pipeline_run_data
 
-        for ws in pipeline_run_data['spec']['workspaces']:
-            # set reactor config map name
-            if ws['name'] == PRUN_TEMPLATE_REACTOR_CONFIG_WS:
-                ws['configmap']['name'] = user_params.reactor_config_map
-
-            # set namespace for volume claim template
-            if ws['name'] in [PRUN_TEMPLATE_BUILD_DIR_WS, PRUN_TEMPLATE_CONTEXT_DIR_WS]:
-                ws['volumeClaimTemplate']['metadata']['namespace'] = self.os_conf.get_namespace()
-
+    def _set_binary_container_pipeline_labels(self, pipeline_run_data,
+                                              user_params):
         # set labels
         all_labels = pipeline_run_data['metadata'].get('labels', {})
 
@@ -310,9 +324,12 @@ class OSBS(object):
 
         self._checks_for_isolated(user_params)
 
-        pipeline_run_name, pipeline_run_data = self._get_binary_container_pipeline_data(user_params)
+        pipeline_run_name = self._get_binary_container_pipeline_name(user_params)
+        pipeline_run_data = self._get_binary_container_pipeline_data(
+            user_params=user_params,
+            pipeline_run_name=pipeline_run_name)
 
-        self._set_binary_container_pipeline_data(pipeline_run_name, pipeline_run_data, user_params)
+        self._set_binary_container_pipeline_labels(pipeline_run_data, user_params)
 
         logger.info("creating binary container image pipeline run: %s", pipeline_run_name)
 
@@ -326,38 +343,25 @@ class OSBS(object):
 
         return pipeline_run
 
-    def _get_source_container_pipeline_data(self):
+    def _get_source_container_pipeline_name(self):
         pipeline_run_postfix = utils.generate_random_postfix()
+        pipeline_run_name = f'source-{pipeline_run_postfix}'
+        return pipeline_run_name
+
+    def _get_source_container_pipeline_data(self, *, user_params, pipeline_run_name):
+
         pipeline_run_path = self.os_conf.get_pipeline_run_path()
 
-        with open(pipeline_run_path) as f:
-            yaml_data = f.read()
-        pipeline_run_data = yaml.safe_load(yaml_data)
+        substitutions = self._get_pipeline_template_substitutions(
+            user_params=user_params,
+            pipeline_run_name=pipeline_run_name,
+        )
+        pipeline_run_data = _load_pipeline_from_template(pipeline_run_path, substitutions)
 
-        pipeline_name = pipeline_run_data['spec']['pipelineRef']['name']
-        pipeline_run_name = f'{pipeline_name}-{pipeline_run_postfix}'
+        return pipeline_run_data
 
-        return pipeline_run_name, pipeline_run_data
-
-    def _set_source_container_pipeline_data(self, pipeline_run_name, pipeline_run_data,
-                                            user_params):
-        # set pipeline run name
-        pipeline_run_data['metadata']['name'] = pipeline_run_name
-
-        # set user params
-        for param in pipeline_run_data['spec']['params']:
-            if param['name'] == PRUN_TEMPLATE_USER_PARAMS:
-                param['value'] = user_params.to_json()
-
-        for ws in pipeline_run_data['spec']['workspaces']:
-            # set reactor config map name
-            if ws['name'] == PRUN_TEMPLATE_REACTOR_CONFIG_WS:
-                ws['configmap']['name'] = user_params.reactor_config_map
-
-            # set namespace for volume claim template
-            if ws['name'] in [PRUN_TEMPLATE_BUILD_DIR_WS, PRUN_TEMPLATE_CONTEXT_DIR_WS]:
-                ws['volumeClaimTemplate']['metadata']['namespace'] = self.os_conf.get_namespace()
-
+    def _set_source_container_pipeline_labels(self, pipeline_run_data,
+                                              user_params):
         # set labels
         all_labels = pipeline_run_data['metadata'].get('labels', {})
 
@@ -389,8 +393,6 @@ class OSBS(object):
         if error_messages:
             raise OsbsValidationException(", ".join(error_messages))
 
-        pipeline_run_name, pipeline_run_data = self._get_source_container_pipeline_data()
-
         user_params = SourceContainerUserParams.make_params(
             build_conf=self.os_conf,
             component=component,
@@ -399,7 +401,13 @@ class OSBS(object):
             **kwargs
         )
 
-        self._set_source_container_pipeline_data(pipeline_run_name, pipeline_run_data, user_params)
+        pipeline_run_name = self._get_source_container_pipeline_name()
+        pipeline_run_data = self._get_source_container_pipeline_data(
+            user_params=user_params,
+            pipeline_run_name=pipeline_run_name,
+        )
+
+        self._set_source_container_pipeline_labels(pipeline_run_data, user_params)
 
         logger.info("creating source container image pipeline run: %s", pipeline_run_name)
 
