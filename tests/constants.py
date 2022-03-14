@@ -13,6 +13,7 @@ HERE = os.path.dirname(__file__)
 FILES = os.path.join(HERE, 'files')
 
 TEST_PIPELINE_RUN_TEMPLATE = os.path.join(FILES, 'example-source-pipepiline-run.yaml')
+TEST_PIPELINE_REPLACEMENTS_TEMPLATE = os.path.join(FILES, 'pipeline_template_replacement_test.yaml')
 TEST_OCP_NAMESPACE = 'test-namespace'
 TEST_OCP_URL = 'http://test/'
 TEST_BUILD = "test-build-123"

@@ -15,7 +15,6 @@ import copy
 import sys
 import datetime
 import random
-import yaml
 from tempfile import NamedTemporaryFile
 
 from osbs.api import OSBS, osbsapi
@@ -31,7 +30,8 @@ from osbs.build.user_params import BuildUserParams, SourceContainerUserParams
 
 from tests.constants import (TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF, TEST_GIT_URI,
                              TEST_TARGET, TEST_USER, TEST_KOJI_TASK_ID, TEST_VERSION,
-                             TEST_PIPELINE_RUN_TEMPLATE, TEST_OCP_NAMESPACE)
+                             TEST_PIPELINE_RUN_TEMPLATE, TEST_PIPELINE_REPLACEMENTS_TEMPLATE,
+                             TEST_OCP_NAMESPACE)
 from osbs.tekton import PipelineRun
 
 
@@ -825,16 +825,12 @@ class TestOSBS(object):
             dummy_config = Configuration(fp.name, conf_section='default_source')
             osbs = OSBS(dummy_config)
 
-        with open(TEST_PIPELINE_RUN_TEMPLATE) as f:
-            yaml_data = f.read()
-        pipeline_run_expect = yaml.safe_load(yaml_data)
         random_postfix = 'sha-timestamp'
         (flexmock(utils)
             .should_receive('generate_random_postfix')
             .and_return(random_postfix))
 
-        pipeline_name = pipeline_run_expect['spec']['pipelineRef']['name']
-        pipeline_run_name = f'{pipeline_name}-{random_postfix}'
+        pipeline_run_name = f'source-{random_postfix}'
         sources_for_koji_build_id = 123456
         signing_intent = 'signing_intent'
 
@@ -1087,3 +1083,48 @@ class TestOSBS(object):
 
         with pytest.raises(OsbsValidationException, match=err_msg):
             osbs_binary.get_build_results('run_name')
+
+    @pytest.mark.parametrize('func', [
+        '_get_binary_container_pipeline_data',
+        '_get_source_container_pipeline_data',
+    ])
+    def test_template_substitution(self, func):
+        """Testcase for making sure that template variables are replaced"""
+        pipeline_run_name = 'test_pipeline'
+        rcm = 'rcm'
+        rcm_scratch = 'rcm_scratch'
+        user_params_json = '{"status": "it works!"}'
+
+        with NamedTemporaryFile(mode="wt") as fp:
+            fp.write("""
+        [default]
+        openshift_url = /
+        namespace = {namespace}
+        use_auth = false
+        pipeline_run_path = {pipeline_run_path}
+        reactor_config_map = {rcm}
+        reactor_config_map_scratch = {rcm_scratch}
+        """.format(namespace=TEST_OCP_NAMESPACE,
+                   pipeline_run_path=TEST_PIPELINE_REPLACEMENTS_TEMPLATE,
+                   rcm=rcm, rcm_scratch=rcm_scratch))
+            fp.flush()
+            dummy_config = Configuration(fp.name, conf_section='default')
+            osbs = OSBS(dummy_config)
+
+        user_params = flexmock(
+                reactor_config_map=rcm,
+                to_json=lambda: user_params_json,
+        )
+
+        data = getattr(osbs, func)(
+            user_params=user_params,
+            pipeline_run_name=pipeline_run_name
+        )
+
+        expected = {
+            'config_map': rcm,
+            'namespace': TEST_OCP_NAMESPACE,
+            'pipeline_run_name': pipeline_run_name,
+            'user_params_json': user_params_json,
+        }
+        assert data == expected

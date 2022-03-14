@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
 metadata:
-  name: source-container-x-x-default
+  name: $osbs_pipeline_run_name
 spec:
   pipelineRef:
     name: source-container-0-1
@@ -9,14 +9,14 @@ spec:
     - name: OSBS_IMAGE
       value: "tests_image"
     - name: USER_PARAMS
-      value: >-
-        {}
+      value: >
+        $osbs_user_params_json
   workspaces:
     - name: ws-context-dir
       volumeClaimTemplate:
         metadata:
           name: source-container-context-pvc
-          namespace: default-namespace
+          namespace: $osbs_namespace
           annotations:
             kubernetes.io/reclaimPolicy: Delete
         spec:
@@ -29,7 +29,7 @@ spec:
       volumeClaimTemplate:
         metadata:
           name: source-container-build-pvc
-          namespace: default-namespace
+          namespace: $osbs_namespace
           annotations:
             kubernetes.io/reclaimPolicy: Delete
         spec:
@@ -46,5 +46,5 @@ spec:
         secretName: koji-secret
     - name: ws-reactor-config-map
       configmap:
-        name: default-rcm
+        name: $osbs_configmap_name
   timeout: 3h

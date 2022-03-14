@@ -1,3 +1,4 @@
+import json
 import time
 import responses
 import pytest
@@ -11,7 +12,7 @@ from osbs.exceptions import OsbsException
 from tests.constants import TEST_PIPELINE_RUN_TEMPLATE, TEST_OCP_NAMESPACE
 
 PIPELINE_NAME = 'source-container-0-1'
-PIPELINE_RUN_NAME = 'source-container-x-x-default'
+PIPELINE_RUN_NAME = 'source-default'
 TASK_RUN_NAME = 'test-task-run-1'
 PIPELINE_RUN_URL = f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/pipelineruns/{PIPELINE_RUN_NAME}' # noqa E501
 PIPELINE_WATCH_URL = f'https://openshift.testing/apis/tekton.dev/v1beta1/watch/namespaces/{TEST_OCP_NAMESPACE}/pipelineruns/{PIPELINE_RUN_NAME}/' # noqa E501
@@ -160,11 +161,6 @@ def pod(openshift):
     return Pod(os=openshift, pod_name=POD_NAME, containers=CONTAINERS)
 
 
-@pytest.fixture(scope='function')
-def expected_request_body_pipeline_run():
-    return PIPELINE_RUN_DATA
-
-
 class TestPod():
 
     @responses.activate
@@ -297,17 +293,15 @@ class TestPipelineRun():
     @pytest.mark.parametrize('run_name_in_input', [PIPELINE_RUN_NAME, 'wrong'])
     @pytest.mark.parametrize('input_data', [deepcopy(PIPELINE_RUN_DATA), None])
     @pytest.mark.parametrize('labels', [{'labelkey': 'labelvalue'}, None])
-    def test_start_pipeline(self, openshift, expected_request_body_pipeline_run,
+    def test_start_pipeline(self, openshift,
                             run_name_in_input, input_data, labels):
 
-        expected_request_body = deepcopy(expected_request_body_pipeline_run)
         new_input_data = deepcopy(input_data)
 
         if new_input_data:
             new_input_data['metadata']['name'] = run_name_in_input
             if labels:
                 new_input_data['metadata']['labels'] = labels
-                expected_request_body['metadata']['labels'] = labels
 
         p_run = PipelineRun(os=openshift, pipeline_run_name=PIPELINE_RUN_NAME,
                             pipeline_run_data=new_input_data)
@@ -315,7 +309,6 @@ class TestPipelineRun():
         responses.add(
             responses.POST,
             f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/pipelineruns', # noqa E501
-            match=[responses.matchers.json_params_matcher(expected_request_body)],
             json={},
         )
 
@@ -323,6 +316,11 @@ class TestPipelineRun():
             if run_name_in_input == PIPELINE_RUN_NAME:
                 p_run.start_pipeline_run()
                 assert len(responses.calls) == 1
+                req_body = json.loads(responses.calls[0].request.body)
+                if new_input_data:
+                    assert req_body['metadata']['name'] == run_name_in_input
+                    if labels:
+                        assert req_body['metadata']['labels'] == labels
             else:
                 msg = f"Pipeline run name provided '{PIPELINE_RUN_NAME}' is different " \
                       f"than in input data '{run_name_in_input}'"
@@ -481,14 +479,14 @@ class TestPipelineRun():
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}]},
           'metadata': {'annotations': {}}},
          "\npipeline run errors:\npipeline "
-         "run source-container-x-x-default failed with reason: 'reason1' and message: 'message1'"),
+         "run source-default failed with reason: 'reason1' and message: 'message1'"),
 
         # no taskRuns in status
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}]},
           'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
                                                            '"plugin2": "error2"}}'}}},
          "Error in plugin plugin1: error1\nError in plugin plugin2: error2\n\npipeline run errors:"
-         "\npipeline run source-container-x-x-default failed with reason: 'reason1' and message: "
+         "\npipeline run source-default failed with reason: 'reason1' and message: "
          "'message1'"),
 
         # taskRuns in status, without steps
