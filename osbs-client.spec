@@ -96,11 +96,6 @@ ln -s  %{_bindir}/osbs-%{binaries_py_version} %{buildroot}%{_bindir}/osbs
 %{_bindir}/osbs-%{python3_version}
 %{_bindir}/osbs-3
 %{python3_sitelib}/osbs*
-%dir %{_datadir}/osbs
-%{_datadir}/osbs/*.json
-%ghost %config(noreplace) %{_datadir}/osbs/orchestrator_customize.json
-%ghost %config(noreplace) %{_datadir}/osbs/prod_customize.json
-%ghost %config(noreplace) %{_datadir}/osbs/worker_customize.json
 
 
 %changelog
