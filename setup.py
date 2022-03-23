@@ -8,13 +8,8 @@ of the BSD license. See the LICENSE file for details.
 """
 
 import re
-import glob
 
 from setuptools import setup, find_packages
-
-data_files = {
-    "share/osbs": [f for f in glob.glob("inputs/*.json") if 'customize' not in f],
-}
 
 
 def _get_requirements(path):
@@ -40,7 +35,6 @@ setup(
     },
     install_requires=_get_requirements('requirements.txt'),
     package_data={'osbs': ['schemas/*.json']},
-    data_files=data_files.items(),
     setup_requires=[],
     tests_require=_get_requirements('tests/requirements.txt'),
     python_requires='>=3.6',
