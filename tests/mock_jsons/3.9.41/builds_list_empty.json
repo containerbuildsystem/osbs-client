@@ -1,9 +1,0 @@
-{
-    "apiVersion": "build.openshift.io/v1",
-    "items": [],
-    "kind": "BuildList",
-    "metadata": {
-        "resourceVersion": "59462770",
-        "selfLink": "/apis/build.openshift.io/v1/namespaces/osbs-stage/builds/"
-    }
-}
