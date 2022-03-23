@@ -1,5 +1,5 @@
 """
-Copyright (c) 2015 Red Hat, Inc
+Copyright (c) 2015-2022 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -312,8 +312,6 @@ class OSBS(object):
 
         pipeline_run_name, pipeline_run_data = self._get_binary_container_pipeline_data(user_params)
 
-        user_params.pipeline_run_name = pipeline_run_name
-
         self._set_binary_container_pipeline_data(pipeline_run_name, pipeline_run_data, user_params)
 
         logger.info("creating binary container image pipeline run: %s", pipeline_run_name)
@@ -398,7 +396,6 @@ class OSBS(object):
             component=component,
             koji_target=target,
             koji_task_id=koji_task_id,
-            pipeline_run_name=pipeline_run_name,
             **kwargs
         )
 
