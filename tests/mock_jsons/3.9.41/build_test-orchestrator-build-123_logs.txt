@@ -1,4 +1,0 @@
-2017-06-23 17:18:41,791 platform:- - atomic_reactor.foo - DEBUG - this is from the orchestrator build
-2017-06-23 17:18:41,791 platform:x86_64 - atomic_reactor.foo - INFO - 2017-06-23 17:18:41,400 platform:- atomic_reactor.foo -  DEBUG - this is from a worker build
-2017-06-23 05:04:51,334 platform:x86_64 - atomic_reactor.plugins.orchestrate_build - INFO - "ContainersPaused": 0,
-2017-06-23 17:18:41,791 - I really like bacon
