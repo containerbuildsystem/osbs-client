@@ -85,7 +85,6 @@ class BuildCommon(BuildParamsBase):
     image_tag = BuildParam("image_tag")
     koji_target = BuildParam("koji_target")
     koji_task_id = BuildParam("koji_task_id")
-    pipeline_run_name = BuildParam("pipeline_run_name")
     platform = BuildParam("platform")
     reactor_config_map = BuildParam("reactor_config_map")
     scratch = BuildParam("scratch")
@@ -103,7 +102,6 @@ class BuildCommon(BuildParamsBase):
                     component=None,
                     koji_target=None,
                     koji_task_id=None,
-                    pipeline_run_name=None,
                     platform=None,
                     scratch=None,
                     signing_intent=None,
@@ -132,7 +130,6 @@ class BuildCommon(BuildParamsBase):
         :param koji_target: str, koji tag with packages used to build the image
         :param koji_task_id: int, koji *task* ID
         :param koji_upload_dir: str, koji directory where the completed image will be uploaded
-        :param pipeline_run_name: str, name of the pipeline run
         :param platform: str, platform
         :param scratch: bool, build as a scratch build (if not specified in build_conf)
         :param signing_intent: bool, True to sign the resulting image
@@ -162,7 +159,6 @@ class BuildCommon(BuildParamsBase):
             "user": user,
             "userdata": userdata,
             # Potentially pulled from build_conf
-            "pipeline_run_name": pipeline_run_name,
             "reactor_config_map": reactor_config,
             "scratch": build_conf.get_scratch(scratch),
         })
