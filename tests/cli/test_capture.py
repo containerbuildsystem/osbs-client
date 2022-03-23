@@ -38,14 +38,10 @@ PIPELINE_RUN_DATA = yaml.safe_load(yaml_data)
 
 
 def osbs_for_capture(tmpdir):
-    kwargs = {'build_json_dir': 'inputs', 'openshift_url': OPENSHIFT_URL,
-              'namespace': TEST_OCP_NAMESPACE}
+    kwargs = {'openshift_url': OPENSHIFT_URL, 'namespace': TEST_OCP_NAMESPACE}
 
     with NamedTemporaryFile(mode="wt") as fp:
         config = dedent("""\
-            [general]
-            build_json_dir = {build_json_dir}
-
             [default]
             openshift_url = {openshift_url}
             use_auth = false

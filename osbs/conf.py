@@ -227,18 +227,12 @@ class Configuration(object):
     def get_kerberos_ccache(self):
         return self._get_value("kerberos_ccache", self.conf_section, "kerberos_ccache")
 
-    def get_build_json_store(self):
-        return self._get_value("build_json_dir", GENERAL_CONFIGURATION_SECTION, "build_json_dir")
-
     def get_verify_ssl(self):
         return self._get_value("verify_ssl", self.conf_section, "verify_ssl",
                                default=True, is_bool_val=True)
 
     def get_use_auth(self):
         return self._get_value("use_auth", self.conf_section, "use_auth", is_bool_val=True)
-
-    def get_builder_build_json_store(self):
-        return self.get_build_json_store()
 
     def get_scratch(self, default_value):
         return self._get_value("scratch", self.conf_section, "scratch",

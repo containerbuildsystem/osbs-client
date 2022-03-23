@@ -224,21 +224,6 @@ class TestConfiguration(object):
                 for fn, value in expected.items():
                     assert getattr(conf, fn)() == value
 
-    @pytest.mark.parametrize(('config', 'expected'), [
-        ({
-            'general': {'build_json_dir': 'general'},
-         }, 'general'),
-        ({
-            'general': {},
-         }, None),
-    ])
-    def test_builder_build_json_dir(self, config, expected):
-        with self.config_file(config) as config_file:
-            conf = Configuration(conf_file=config_file)
-
-            assert conf.get_builder_build_json_store() == expected
-            assert conf.get_build_json_store() == expected
-
     @pytest.mark.parametrize(('config', 'expected', 'expected_scratch'), [
         ({
             'default': {'reactor_config_map': 'rcm',

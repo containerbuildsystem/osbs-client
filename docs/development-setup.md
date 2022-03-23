@@ -97,7 +97,6 @@ configuration file. Here's a really simple one you can use as a start:
 ```conf
 [general]
 verbose = true
-build_json_dir = inputs/
 
 [local]
 openshift_url = https://localhost:8443/
@@ -109,13 +108,6 @@ token = <enter-the-token-here>
 ```
 
 Copy the content and place it in a file named 'osbs.conf'.
-
-You have to ensure all the required json files exist in the directory configured
-for `build_json_dir`:
-
-```shell
-cp inputs/*.json $build_json_dir
-```
 
 You must fill in the `token` value
 
@@ -221,7 +213,6 @@ and a file 'osbs-client-conf/osbs.conf' which contains
 ```conf
 [general]
 verbose = true
-build_json_dir = <path to inputs in the build image>
 
 [worker01]
 openshift_url = https://<not-localhost-ip-address>:8443/

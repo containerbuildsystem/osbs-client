@@ -29,10 +29,9 @@ from osbs.utils.labels import Labels
 from osbs.repo_utils import RepoInfo, RepoConfiguration, ModuleSpec
 from osbs.build.user_params import BuildUserParams, SourceContainerUserParams
 
-from tests.constants import (TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF,
-                             TEST_GIT_URI, TEST_TARGET, TEST_USER, INPUTS_PATH,
-                             TEST_KOJI_TASK_ID, TEST_VERSION, TEST_PIPELINE_RUN_TEMPLATE,
-                             TEST_OCP_NAMESPACE)
+from tests.constants import (TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF, TEST_GIT_URI,
+                             TEST_TARGET, TEST_USER, TEST_KOJI_TASK_ID, TEST_VERSION,
+                             TEST_PIPELINE_RUN_TEMPLATE, TEST_OCP_NAMESPACE)
 from osbs.tekton import PipelineRun
 
 
@@ -672,8 +671,6 @@ class TestOSBS(object):
         rcm_scratch = 'rcm_scratch'
         with NamedTemporaryFile(mode="wt") as fp:
             fp.write("""
-    [general]
-    build_json_dir = {build_json_dir}
     [default_binary]
     openshift_url = /
     namespace = {namespace}
@@ -681,8 +678,8 @@ class TestOSBS(object):
     pipeline_run_path = {pipeline_run_path}
     reactor_config_map = {rcm}
     reactor_config_map_scratch = {rcm_scratch}
-    """.format(build_json_dir=INPUTS_PATH, namespace=TEST_OCP_NAMESPACE,
-               pipeline_run_path=TEST_PIPELINE_RUN_TEMPLATE, rcm=rcm, rcm_scratch=rcm_scratch))
+    """.format(namespace=TEST_OCP_NAMESPACE, pipeline_run_path=TEST_PIPELINE_RUN_TEMPLATE,
+               rcm=rcm, rcm_scratch=rcm_scratch))
             fp.flush()
             dummy_config = Configuration(fp.name, conf_section='default_binary')
             osbs = OSBS(dummy_config)
@@ -749,7 +746,6 @@ class TestOSBS(object):
                 up = json.loads(param['value'])
 
                 expect_up = {}
-                expect_up['build_json_dir'] = INPUTS_PATH
                 if scratch:
                     expect_up['reactor_config_map'] = rcm_scratch
                     expect_up['scratch'] = True
@@ -818,8 +814,6 @@ class TestOSBS(object):
         rcm_scratch = 'rcm_scratch'
         with NamedTemporaryFile(mode="wt") as fp:
             fp.write("""
-    [general]
-    build_json_dir = {build_json_dir}
     [default_source]
     openshift_url = /
     namespace = {namespace}
@@ -827,8 +821,8 @@ class TestOSBS(object):
     pipeline_run_path = {pipeline_run_path}
     reactor_config_map = {rcm}
     reactor_config_map_scratch = {rcm_scratch}
-    """.format(build_json_dir=INPUTS_PATH, namespace=TEST_OCP_NAMESPACE,
-               pipeline_run_path=TEST_PIPELINE_RUN_TEMPLATE, rcm=rcm, rcm_scratch=rcm_scratch))
+    """.format(namespace=TEST_OCP_NAMESPACE, pipeline_run_path=TEST_PIPELINE_RUN_TEMPLATE,
+               rcm=rcm, rcm_scratch=rcm_scratch))
             fp.flush()
             dummy_config = Configuration(fp.name, conf_section='default_source')
             osbs = OSBS(dummy_config)
@@ -889,7 +883,6 @@ class TestOSBS(object):
                 up = json.loads(param['value'])
 
                 expect_up = {}
-                expect_up['build_json_dir'] = INPUTS_PATH
                 if scratch:
                     expect_up['reactor_config_map'] = rcm_scratch
                     expect_up['scratch'] = True

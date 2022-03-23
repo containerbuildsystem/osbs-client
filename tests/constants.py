@@ -10,7 +10,6 @@ from __future__ import absolute_import, unicode_literals
 import os
 
 HERE = os.path.dirname(__file__)
-INPUTS_PATH = os.path.join(HERE, '..', 'inputs')
 FILES = os.path.join(HERE, 'files')
 
 TEST_PIPELINE_RUN_TEMPLATE = os.path.join(FILES, 'example-source-pipepiline-run.yaml')
