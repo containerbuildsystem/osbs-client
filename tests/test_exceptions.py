@@ -35,9 +35,6 @@ def test_missing_section():
 def test_no_branch():
     with NamedTemporaryFile(mode='w+') as f:
         f.write("""
-[general]
-build_json_dir=/nonexistent/path/
-
 [default]
 openshift_url=https://172.0.0.1:8443/
 registry_uri=127.0.0.1:5000

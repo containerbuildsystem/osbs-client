@@ -175,8 +175,7 @@ class OSBS(object):
     def get_user_params(self, component=None, req_labels=None, **kwargs):
         req_labels = req_labels or {}
         user_component = component or req_labels[Labels.LABEL_TYPE_COMPONENT]
-        return BuildUserParams.make_params(build_json_dir=self.os_conf.get_build_json_store(),
-                                           build_conf=self.os_conf,
+        return BuildUserParams.make_params(build_conf=self.os_conf,
                                            component=user_component,
                                            name_label=req_labels[Labels.LABEL_TYPE_NAME],
                                            **kwargs)
@@ -394,9 +393,7 @@ class OSBS(object):
 
         pipeline_run_name, pipeline_run_data = self._get_source_container_pipeline_data()
 
-        build_json_store = self.os_conf.get_build_json_store()
         user_params = SourceContainerUserParams.make_params(
-            build_json_dir=build_json_store,
             build_conf=self.os_conf,
             component=component,
             koji_target=target,

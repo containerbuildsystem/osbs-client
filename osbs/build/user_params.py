@@ -81,7 +81,6 @@ class BuildCommon(BuildParamsBase):
     # Must be defined in subclasses
     KIND = NotImplemented
 
-    build_json_dir = BuildParam("build_json_dir", required=True)
     component = BuildParam("component")
     image_tag = BuildParam("image_tag")
     koji_target = BuildParam("koji_target")
@@ -102,7 +101,6 @@ class BuildCommon(BuildParamsBase):
     @classmethod
     def make_params(cls,
                     build_conf=None,
-                    build_json_dir=None,
                     component=None,
                     koji_target=None,
                     koji_task_id=None,
@@ -130,7 +128,6 @@ class BuildCommon(BuildParamsBase):
         these parameters are accepted:
         :param base_image: str, name of the parent image
         :param build_conf: BuildConfiguration, the build configuration
-        :param build_json_dir: str, path to directory with JSON build templates
         :param component: str, name of the component
         :param koji_parent_build: str,
         :param koji_target: str, koji tag with packages used to build the image
@@ -159,7 +156,6 @@ class BuildCommon(BuildParamsBase):
             reactor_config = build_conf.get_reactor_config_map()
         # Update kwargs with arguments explicitly accepted by this method
         kwargs.update({
-            "build_json_dir": build_json_dir,
             "component": component,
             "koji_target": koji_target,
             "koji_task_id": koji_task_id,

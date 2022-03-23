@@ -33,7 +33,6 @@ Some options are also mandatory.
 
 ### `[general]` options
 
-- `build_json_dir` (mandatory, str): path to directory with build json templates
 - `verbose` (optional, boolean): enable verbose logging
 - `openshift_required_version` (optional, str): required version to run against
   (adjusts build template as appropriate)
@@ -119,67 +118,6 @@ Some options are also mandatory.
 
 - `architecture` (optional, str): platform's GOARCH (Go language platform name).
   If not declared, this option assumes the name of the platform being defined
-
-## Build JSON Templates
-
-In the `build_json_dir` there must be `prod.json`, which defines the OpenShift
-[Build][] specification.
-
-There is also a third file that is optional that can exist along side the
-previous two in `build_json_dir` which is `prod_customize.json` and it will
-provide the ability to set site-specific customizations such as removing,
-plugins, adding plugins, or overriding arguments passed to existing plugins.
-
-For orchestrator builds, there are required as well additional json files, which
-have same function as mentioned above, only these are specific for orchestrator
-or worker builds.
-
-Based on `prod.json` there are `worker.json` and `orchestrator.json`.
-
-Based on `prod_customize.json` there are `orchestrator_customize.json` and
-`worker_customize.json`.
-
-The syntax of `prod_customize.json` is as follows:
-
-```json
-{
-    "disable_plugins": [
-        {
-            "plugin_type": "foo_type",
-            "plugin_name": "foo_name"
-        },
-        {
-            "plugin_type": "bar_type",
-            "plugin_name": "bar_name"
-        }
-    ],
-
-    "enable_plugins": [
-        {
-            "plugin_type": "foo_type",
-            "plugin_name": "foo_name",
-            "plugin_args": {
-                "foo_arg1": "foo_value1",
-                "foo_arg2": "foo_value2"
-            }
-        }
-    ]
-}
-```
-
-Such that:
-
-- `disable_plugins` will define a list of dicts that define the plugin type of
-  the plugin that is to be removed (`prebuild_plugins`, `prepublish_plugins`,
-  `postbuild_plugins`, `exit_plugins`) and the name of the plugin.
-- `enable_plugins` will define a list of dicts that is used to add plugins or
-  modify already enabled plugins by overriding args passed to the plugin, these
-  must be defined as key-value pairs as illustrated above. It should be noted
-  that plugins added here will be executed at the end of the list of plugins in
-  that particular `plugin_type` (`prebuild_plugins`, `prepublish_plugins`,
-  `postbuild_plugins`, `exit_plugins`), unless the plugin has already been
-  previously added and this setting is only being used to override args. In the
-  case of arg override, the plugin order execution will not change.
 
 [kubernetes namespace]: https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/namespaces.md
 [keytab]: http://web.mit.edu/Kerberos/krb5-latest/doc/basic/keytab_def.html

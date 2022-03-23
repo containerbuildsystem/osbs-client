@@ -27,8 +27,7 @@ from osbs.repo_utils import RepoInfo, RepoConfiguration
 from osbs.exceptions import OsbsValidationException
 from tests.constants import (TEST_COMPONENT, TEST_FILESYSTEM_KOJI_TASK_ID,
                              TEST_GIT_BRANCH, TEST_GIT_REF, TEST_GIT_URI,
-                             TEST_KOJI_TASK_ID, TEST_USER, INPUTS_PATH,
-                             TEST_OCP_NAMESPACE)
+                             TEST_KOJI_TASK_ID, TEST_USER, TEST_OCP_NAMESPACE)
 import osbs.utils
 
 
@@ -57,7 +56,6 @@ class TestBuildUserParams(object):
         repo_conf = RepoConfiguration(**git_args)
         return {
             # Params needed to avoid exceptions.
-            'build_json_dir': INPUTS_PATH,
             'base_image': 'base_image',
             'build_conf': Configuration(**conf_args),
             'name_label': 'name_label',
@@ -207,7 +205,6 @@ class TestBuildUserParams(object):
         # all values that BuildUserParams stores
         param_kwargs = {
             'base_image': 'buildroot:old',
-            'build_json_dir': INPUTS_PATH,
             'component': TEST_COMPONENT,
             'compose_ids': [1, 2],
             'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID,
@@ -268,7 +265,6 @@ class TestBuildUserParams(object):
         spec = BuildUserParams.make_params(**param_kwargs)
         expected_json = {
             "base_image": "buildroot:old",
-            "build_json_dir": INPUTS_PATH,
             "component": TEST_COMPONENT,
             "compose_ids": [1, 2],
             "filesystem_koji_task_id": TEST_FILESYSTEM_KOJI_TASK_ID,
@@ -314,7 +310,6 @@ class TestBuildUserParams(object):
         expected_json = {
             "base_image": "buildroot:old",
             "build_image": "buildroot:latest",
-            "build_json_dir": "build_dir",
             "build_type": "worker",
             "component": TEST_COMPONENT,
             "compose_ids": [1, 2],
@@ -358,7 +353,6 @@ class TestSourceContainerUserParams(object):
             conf_args = {'build_from': 'image:buildroot:latest'}
         return {
             # Params needed to avoid exceptions.
-            'build_json_dir': INPUTS_PATH,
             'build_conf': Configuration(**conf_args),
             'user': TEST_USER,
             'sources_for_koji_build_nvr': origin_nvr,
@@ -412,7 +406,6 @@ class TestSourceContainerUserParams(object):
         spec = SourceContainerUserParams.make_params(**param_kwargs)
 
         expected_json = {
-            "build_json_dir": INPUTS_PATH,
             'component': TEST_COMPONENT,
             "image_tag": "{}/{}:tothepoint-{}-{}-x86_64".format(
                 TEST_USER, TEST_COMPONENT, rand, timestr),
