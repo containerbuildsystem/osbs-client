@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Copyright (c) 2015 Red Hat, Inc
+Copyright (c) 2015-2022 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -760,7 +760,6 @@ class TestOSBS(object):
                 if koji_task_id:
                     expect_up['koji_task_id'] = koji_task_id
                 expect_up['name'] = name
-                expect_up['namespace'] = TEST_OCP_NAMESPACE
                 expect_up['pipeline_run_name'] = pipeline_run_name
                 expect_up['koji_target'] = TEST_TARGET
                 expect_up['user'] = TEST_USER
@@ -892,7 +891,6 @@ class TestOSBS(object):
                 expect_up['kind'] = SourceContainerUserParams.KIND
                 if koji_task_id:
                     expect_up['koji_task_id'] = koji_task_id
-                expect_up['namespace'] = TEST_OCP_NAMESPACE
                 expect_up['pipeline_run_name'] = pipeline_run_name
                 expect_up['koji_target'] = TEST_TARGET
                 expect_up['user'] = TEST_USER
