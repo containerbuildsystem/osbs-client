@@ -7,7 +7,6 @@ of the BSD license. See the LICENSE file for details.
 """
 from __future__ import absolute_import
 
-from distutils.version import LooseVersion
 import logging
 
 from flexmock import flexmock
@@ -15,7 +14,6 @@ import pytest
 import requests
 import http
 
-from urllib3 import __version__ as urllib3_version
 from urllib3.util import Retry
 from osbs.osbs_http import HttpSession, HttpStream, HttpResponse
 from osbs.exceptions import OsbsNetworkException, OsbsException, OsbsResponseException
@@ -27,12 +25,6 @@ logger = logging.getLogger(__file__)
 @pytest.fixture
 def s():
     return HttpSession(verbose=True)
-
-
-@pytest.fixture(scope='module')
-def error_response_logged():
-    """Error response logging works only with urllib3>1.15"""
-    return LooseVersion(urllib3_version) < LooseVersion('1.15')
 
 
 def has_connection():
@@ -193,7 +185,7 @@ class TestHttpSession(object):
         s.get('http://httpbin.org/status/%s' % status_code)
 
     @pytest.mark.parametrize('status_code', (404, 409))
-    def test_fail_without_retries(self, caplog, error_response_logged, s, status_code):
+    def test_fail_without_retries(self, caplog, s, status_code):
         (flexmock(Retry)
             .should_receive(self.retry_method_name)
             .and_return(False))
@@ -205,10 +197,7 @@ class TestHttpSession(object):
             emsg = "Error response from \"'http://httpbin.org/status/{}'\": \"''\"".format(
                 status_code
             )
-            if error_response_logged:
-                assert emsg in caplog.text
-            else:
-                assert emsg not in caplog.text
+            assert emsg in caplog.text
         assert exc_info.value.status_code == status_code
 
     def test_set_timeout(self):
