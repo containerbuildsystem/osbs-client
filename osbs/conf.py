@@ -46,7 +46,7 @@ class Configuration(object):
         :param cli_args: instance of argument parser of argparse
         :param kwargs: keyword arguments, which have highest priority: key is cli argument name
         """
-        self.scp = configparser.SafeConfigParser()
+        self.scp = configparser.ConfigParser()
         if conf_file and os.path.isfile(conf_file) and os.access(conf_file, os.R_OK):
             self.scp.read(conf_file)
             if not self.scp.has_section(conf_section):
