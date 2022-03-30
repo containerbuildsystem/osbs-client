@@ -219,7 +219,12 @@ class TestPod():
         responses.add(responses.GET, POD_URL, json=POD_JSON)
         for container in CONTAINERS:
             url = f"{POD_URL}/log?follow=True&container={container}"
-            responses.add(responses.GET, url, body=EXPECTED_LOGS[container], stream=True)
+            responses.add(
+                responses.GET,
+                url,
+                body=EXPECTED_LOGS[container],
+                match=[responses.matchers.request_kwargs_matcher({"stream": True})],
+            )
 
         logs = [line for line in pod.get_logs(wait=True, follow=True)]
 
@@ -275,7 +280,12 @@ class TestTaskRun():
                       json=POD_JSON)
         for container in CONTAINERS:
             url = f"{POD_URL}/log?follow=True&container={container}"
-            responses.add(responses.GET, url, body=EXPECTED_LOGS[container], stream=True)
+            responses.add(
+                responses.GET,
+                url,
+                body=EXPECTED_LOGS[container],
+                match=[responses.matchers.request_kwargs_matcher({"stream": True})],
+            )
 
         logs = [line for line in task_run.get_logs(follow=True, wait=True)]
         assert logs == ['Hello World', 'Bye World']
@@ -647,7 +657,12 @@ class TestPipelineRun():
                       json=POD_JSON)
         for container in CONTAINERS:
             url = f"{POD_URL}/log?follow=True&container={container}"
-            responses.add(responses.GET, url, body=EXPECTED_LOGS[container], stream=True)
+            responses.add(
+                responses.GET,
+                url,
+                body=EXPECTED_LOGS[container],
+                match=[responses.matchers.request_kwargs_matcher({"stream": True})]
+            )
         logs = [line for line in pipeline_run.get_logs(follow=True, wait=True)]
 
         assert len(responses.calls) == 11
