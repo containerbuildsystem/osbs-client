@@ -51,7 +51,7 @@ class TestHttpRetries(object):
     @pytest.mark.parametrize('status_code', HTTP_RETRIES_STATUS_FORCELIST)
     @pytest.mark.parametrize('method', HTTP_RETRIES_ALLOWED_METHODS)
     def test_fail_after_retries(self, s, status_code, method):
-        (flexmock(osbs_http).should_receive('make_retry').and_return(fake_retry))
+        flexmock(osbs_http).should_receive('Retry').and_return(fake_retry)
         # latest python-requests throws OsbsResponseException, 2.6.x - OsbsNetworkException
         with pytest.raises((OsbsNetworkException, OsbsResponseException)) as exc_info:
             s.request(method=method, url='http://httpbin.org/status/%s' % status_code).json()

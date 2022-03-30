@@ -11,7 +11,6 @@ abstraction on top of http api calls
 
 from __future__ import print_function, absolute_import, unicode_literals
 
-from distutils.version import LooseVersion
 import sys
 import logging
 import json
@@ -31,7 +30,6 @@ try:
 except ImportError:
     HTTPKerberosAuth = None
 
-from urllib3 import __version__ as urllib3_version
 from urllib3.exceptions import InsecureRequestWarning
 from urllib3.util import Retry
 from urllib3 import disable_warnings
@@ -79,19 +77,6 @@ class HttpSession(object):
             raise OsbsException(cause=ex, traceback=sys.exc_info()[2])
 
 
-def make_retry(**kwargs):
-    """Make initialized Retry object based on urllib3 version
-
-    :param kwargs: kwargs acceptable by urllib3.util.Retry class
-    :return: urllib3.util.Retry object
-    """
-    if LooseVersion(urllib3_version) < LooseVersion('1.15'):
-        # `raise_on_status` is not supported with older versions of urllib3 (RHEL7)
-        kwargs.pop('raise_on_status', None)
-
-    return Retry(**kwargs)
-
-
 class HttpStream(object):
     """
     Handle on HTTP response that is mostly useful for reading the server response incrementally when
@@ -120,7 +105,7 @@ class HttpStream(object):
         self.status_code = 0
         self.headers = None
 
-        retry = make_retry(
+        retry = Retry(
             total=HTTP_MAX_RETRIES,
             connect=HTTP_MAX_RETRIES,
             backoff_factor=HTTP_BACKOFF_FACTOR,
