@@ -305,7 +305,7 @@ class TestPipelineRun():
         responses.add(
             responses.POST,
             f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/pipelineruns', # noqa E501
-            match=[responses.json_params_matcher(expected_request_body)],
+            match=[responses.matchers.json_params_matcher(expected_request_body)],
             json={},
         )
 
@@ -338,7 +338,7 @@ class TestPipelineRun():
         responses.add(
             responses.PATCH,
             PIPELINE_RUN_URL,
-            match=[responses.json_params_matcher(exp_request_body_pipeline_run)],
+            match=[responses.matchers.json_params_matcher(exp_request_body_pipeline_run)],
             json=get_json,
             status=status,
         )
@@ -381,7 +381,7 @@ class TestPipelineRun():
         responses.add(
             responses.PATCH,
             PIPELINE_RUN_URL,
-            match=[responses.json_params_matcher(exp_request_body_pipeline_run)],
+            match=[responses.matchers.json_params_matcher(exp_request_body_pipeline_run)],
             json=get_json,
             status=status,
         )
@@ -422,7 +422,7 @@ class TestPipelineRun():
         responses.add(
             responses.PATCH,
             PIPELINE_RUN_URL,
-            match=[responses.json_params_matcher(exp_request_body_pipeline_run)],
+            match=[responses.matchers.json_params_matcher(exp_request_body_pipeline_run)],
             json=get_json,
             status=status,
         )
