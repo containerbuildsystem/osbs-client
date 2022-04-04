@@ -32,7 +32,7 @@ from osbs.utils.labels import Labels
      TypeError),  # arg is required
     ({},
      ("get_new_names_by_old", None),
-     {"Vendor": "vendor", "Name": "name", "Build_Host": "com.redhat.build-host",
+     {"Vendor": "vendor", "Name": "name",
       "Version": "version", "Architecture": "architecture",
       "Release": "release", "BZComponent": "com.redhat.component",
       "Authoritative_Registry": "authoritative-source-url",
