@@ -18,7 +18,7 @@ import pytest
 import requests
 from urllib3.util import Retry
 from osbs.exceptions import OsbsNetworkException, OsbsResponseException
-from osbs.constants import HTTP_RETRIES_STATUS_FORCELIST, HTTP_RETRIES_ALLOWED_METHODS
+from osbs.constants import HTTP_RETRIES_STATUS_FORCELIST, HTTP_RETRIES_METHODS_WHITELIST
 from osbs.osbs_http import HttpSession, HttpStream
 from osbs import osbs_http
 logger = logging.getLogger(__file__)
@@ -49,7 +49,7 @@ fake_retry = Retry(total=1,
                     reason="requires internet connection")
 class TestHttpRetries(object):
     @pytest.mark.parametrize('status_code', HTTP_RETRIES_STATUS_FORCELIST)
-    @pytest.mark.parametrize('method', HTTP_RETRIES_ALLOWED_METHODS)
+    @pytest.mark.parametrize('method', HTTP_RETRIES_METHODS_WHITELIST)
     def test_fail_after_retries(self, s, status_code, method):
         flexmock(osbs_http).should_receive('Retry').and_return(fake_retry)
         # latest python-requests throws OsbsResponseException, 2.6.x - OsbsNetworkException
