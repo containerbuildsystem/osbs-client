@@ -6,9 +6,9 @@ spec:
   pipelineRef:
     name: source-container-0-1
   params:
-    - name: OSBS_IMAGE
+    - name: osbs-image
       value: "tests_image"
-    - name: USER_PARAMS
+    - name: user-params
       value: >
         $osbs_user_params_json
   workspaces:
