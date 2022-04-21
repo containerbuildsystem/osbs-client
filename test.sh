@@ -66,6 +66,9 @@ function setup_osbs() {
 
   # Pip install packages for unit tests
   $RUN "${PIP_INST[@]}" -r tests/requirements.txt
+
+  # workaround for https://github.com/actions/checkout/issues/766
+  $RUN git config --global --add safe.directory "$PWD"
 }
 
 case ${ACTION} in
