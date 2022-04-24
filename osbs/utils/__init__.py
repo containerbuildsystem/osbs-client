@@ -488,6 +488,20 @@ class RetryFunc(object):
 
 
 class ImageName(object):
+    """Represent an image.
+
+    Naming Conventions
+    ==================
+    registry.somewhere/namespace/image_name:tag
+    |-----------------|                          registry, reg_uri
+                      |---------|                namespace
+    |--------------------------------------|     repository
+                      |--------------------|     image name
+                                            |--| tag
+                      |------------------------| image
+    |------------------------------------------| image
+    """
+
     def __init__(self, registry=None, namespace=None, repo=None, tag=None):
         self.registry = registry
         self.namespace = namespace
