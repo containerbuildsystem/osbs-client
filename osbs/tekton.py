@@ -661,10 +661,10 @@ class PipelineRun():
             except KeyError:
                 logger.error("pipeline run does not have any task runs")
                 continue
-            for task_run in task_runs:
-                if task_run not in watched_task_runs:
-                    watched_task_runs.append(task_run)
-                    yield task_run
+            for task_run_name, task_run_data in task_runs.items():
+                if task_run_name not in watched_task_runs:
+                    watched_task_runs.append(task_run_name)
+                    yield task_run_data['pipelineTaskName'], task_run_name
             # all task runs accounted for
             if len(pipeline_run['status']['pipelineSpec']['tasks']) == len(task_runs):
                 return
@@ -677,16 +677,17 @@ class PipelineRun():
             return None
 
         task_runs = pipeline_run['status']['taskRuns']
-        for task_run in task_runs:
-            logs[task_run] = TaskRun(os=self.os, task_run_name=task_run).get_logs()
+        for task_run_name, task_run_data in task_runs.items():
+            pipeline_task_name = task_run_data['pipelineTaskName']
+            logs[pipeline_task_name] = TaskRun(os=self.os, task_run_name=task_run_name).get_logs()
         return logs
 
     def _get_logs_stream(self):
         self.wait_for_start()
-        for task_run in self.wait_for_taskruns():
-            for log_line in TaskRun(os=self.os, task_run_name=task_run).get_logs(follow=True,
-                                                                                 wait=True):
-                yield task_run, log_line
+        for pipeline_task_name, task_run_name in self.wait_for_taskruns():
+            for log_line in TaskRun(os=self.os, task_run_name=task_run_name).get_logs(follow=True,
+                                                                                      wait=True):
+                yield pipeline_task_name, log_line
 
     def get_logs(self, follow=False, wait=False):
         if wait or follow:

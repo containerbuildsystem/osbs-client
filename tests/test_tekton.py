@@ -491,8 +491,13 @@ class TestPipelineRun():
 
         # taskRuns in status, without steps
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
-                     'taskRuns': {'task1': {'status': {'conditions': [{'reason': 'reason2',
-                                                                       'message': 'message2'}]}}}},
+                     'taskRuns': {
+                         'task1': {
+                             'pipelineTaskName': 'binary-build-task1',
+                             'status': {'conditions': [{'reason': 'reason2',
+                                                        'message': 'message2'}]}
+                         }
+                     }},
           'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
                                                            '"plugin2": "error2"}}'}}},
          "Error in plugin plugin1: error1\nError in plugin plugin2: error2\n\npipeline run errors:"
@@ -502,14 +507,20 @@ class TestPipelineRun():
         # taskRuns in status, with steps
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
                      'taskRuns': {
-                         'task1': {'status': {'conditions': [
-                                               {'reason': 'reason2', 'message': 'message2'}],
-                                              'steps': [
-                                                  {'name': 'step_ok',
-                                                   'terminated': {'exitCode': 0}},
-                                                  {'name': 'step_ko',
-                                                   'terminated': {'exitCode': 1,
-                                                                  'reason': 'step_reason'}}]}}}},
+                         'task1': {
+                             'pipelineTaskName': 'binary-build-task1',
+                             'status': {
+                                 'conditions': [{'reason': 'reason2', 'message': 'message2'}],
+                                 'steps': [
+                                     {'name': 'step_ok',
+                                      'terminated': {'exitCode': 0}},
+                                     {'name': 'step_ko',
+                                      'terminated': {'exitCode': 1,
+                                                     'reason': 'step_reason'}}
+                                 ]
+                             }
+                         }
+                     }},
           'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
                                                            '"plugin2": "error2"}}'}}},
          "Error in plugin plugin1: error1\nError in plugin plugin2: error2\n\npipeline run errors:"
@@ -607,7 +618,9 @@ class TestPipelineRun():
         task_runs = [task_run for task_run in pipeline_run.wait_for_taskruns()]
 
         assert len(responses.calls) == 2
-        assert task_runs == [TASK_RUN_NAME]
+        assert task_runs == [
+            (PIPELINE_RUN_JSON['status']['taskRuns'][TASK_RUN_NAME]['pipelineTaskName'],
+             TASK_RUN_NAME)]
 
     @responses.activate
     @pytest.mark.parametrize(('get_json', 'empty_logs'), [
@@ -627,7 +640,8 @@ class TestPipelineRun():
             assert logs is None
         else:
             assert len(responses.calls) == 5
-            assert logs == {TASK_RUN_NAME: EXPECTED_LOGS}
+            assert logs == {get_json['status']['taskRuns'][TASK_RUN_NAME]['pipelineTaskName']:
+                            EXPECTED_LOGS}
 
     @responses.activate
     def test_get_logs_stream(self, pipeline_run):
@@ -664,4 +678,7 @@ class TestPipelineRun():
         logs = [line for line in pipeline_run.get_logs(follow=True, wait=True)]
 
         assert len(responses.calls) == 11
-        assert logs == [('test-task-run-1', 'Hello World'), ('test-task-run-1', 'Bye World')]
+        assert logs == [(PIPELINE_RUN_JSON['status']['taskRuns'][TASK_RUN_NAME]['pipelineTaskName'],
+                         'Hello World'),
+                        (PIPELINE_RUN_JSON['status']['taskRuns'][TASK_RUN_NAME]['pipelineTaskName'],
+                         'Bye World')]
