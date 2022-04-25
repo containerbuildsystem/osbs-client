@@ -19,7 +19,7 @@ from osbs.constants import (DEFAULT_NAMESPACE, SERVICEACCOUNT_SECRET, SERVICEACC
                             SERVICEACCOUNT_CACRT)
 from osbs.osbs_http import HttpSession
 from osbs.kerberos_ccache import kerberos_ccache_init
-from osbs.utils import retry_on_conflict, sanitize_strings_for_openshift
+from osbs.utils import retry_on_conflict
 from urllib.parse import urljoin, urlencode, urlparse, parse_qs
 from requests.utils import guess_json_utf
 
@@ -384,11 +384,6 @@ class PipelineRun():
             raise OsbsException("No input data provided for pipeline run to start")
 
         run_name = self.input_data.get('metadata', {}).get('name')
-        labels = self.input_data.get('metadata', {}).get('labels', {})
-
-        if labels:
-            sanitized_labels = {k: sanitize_strings_for_openshift(v) for k, v in labels.items()}
-            self.input_data['metadata']['labels'] = sanitized_labels
 
         if run_name != self.pipeline_run_name:
             msg = f"Pipeline run name provided '{self.pipeline_run_name}' is different " \
@@ -435,30 +430,6 @@ class PipelineRun():
 
         msg = f"cancel pipeline run '{self.pipeline_run_name}'"
         exc_msg = f"Pipeline run '{self.pipeline_run_name}' can't be canceled, " \
-                  f"because it doesn't exist"
-        response_json = self._check_response(response, msg)
-        if not response_json:
-            raise OsbsException(exc_msg)
-        return response_json
-
-    @retry_on_conflict
-    def update_labels(self, labels):
-        data = copy.deepcopy(self.minimal_data)
-
-        sanitized_labels = {k: sanitize_strings_for_openshift(v) for k, v in labels.items()}
-        data['metadata']['labels'] = sanitized_labels
-
-        response = self.os.patch(
-            self.pipeline_run_url,
-            data=json.dumps(data),
-            headers={
-                "Content-Type": "application/merge-patch+json",
-                "Accept": "application/json",
-            },
-        )
-
-        msg = f"update labels on pipeline run '{self.pipeline_run_name}'"
-        exc_msg = f"Can't update labels on pipeline run '{self.pipeline_run_name}', " \
                   f"because it doesn't exist"
         response_json = self._check_response(response, msg)
         if not response_json:
@@ -581,14 +552,6 @@ class PipelineRun():
         if not data:
             return None
         return data['metadata']['annotations']
-
-    @property
-    def labels(self):
-        data = self.data
-
-        if not data:
-            return None
-        return data['metadata']['labels']
 
     @property
     def status_reason(self):

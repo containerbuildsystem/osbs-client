@@ -771,23 +771,6 @@ class TestOSBS(object):
 
                 assert up == expect_up
 
-        all_labels = {}
-
-        if koji_task_id:
-            all_labels['koji-task-id'] = str(koji_task_id)
-        if scratch:
-            all_labels['scratch'] = 'true'
-        if isolated:
-            all_labels['isolated'] = 'true'
-            all_labels['isolated-release'] = release
-
-        repo_name = utils.git_repo_humanish_part_from_uri(TEST_GIT_URI)
-        all_labels['git-repo-name'] = repo_name
-        all_labels['git-branch'] = TEST_GIT_BRANCH
-        all_labels['git-full-repo'] = TEST_GIT_URI
-
-        assert pipeline_run.input_data['metadata']['labels'] == all_labels
-
     def test_create_binary_container_start_fails(self, osbs_binary):
         error_msg = 'failed to create pipeline run'
 
@@ -895,12 +878,6 @@ class TestOSBS(object):
 
                 assert up == expect_up
 
-        all_labels = {}
-
-        if koji_task_id:
-            all_labels['koji-task-id'] = str(koji_task_id)
-
-        assert pipeline_run.input_data['metadata']['labels'] == all_labels
 
     @pytest.mark.parametrize(('additional_kwargs'), (  # noqa
         {'component': None, 'sources_for_koji_build_nvr': 'build_nvr'},
@@ -995,14 +972,6 @@ class TestOSBS(object):
 
         assert annotations == osbs_binary.get_build_annotations('run_name')
 
-    def test_get_build_labels(self, osbs_binary):
-        labels = {'some': 'ann1', 'some2': 'ann2'}
-        resp = {'metadata': {'name': 'run_name', 'labels': labels}}
-
-        flexmock(PipelineRun).should_receive('get_info').and_return(resp)
-
-        assert labels == osbs_binary.get_build_labels('run_name')
-
     def test_cancel_build(self, osbs_binary):
         resp = {'metadata': {'name': 'run_name'}}
 
@@ -1019,16 +988,6 @@ class TestOSBS(object):
             .with_args(annotations).and_return(resp))
 
         assert resp == osbs_binary.update_annotations_on_build('run_name', annotations)
-
-    def test_update_labels(self, osbs_binary):
-        labels = {'some': 'ann1', 'some2': 'ann2'}
-        resp = {'metadata': {'name': 'run_name', 'labels': labels}}
-
-        (flexmock(PipelineRun)
-            .should_receive('update_labels')
-            .with_args(labels).and_return(resp))
-
-        assert resp == osbs_binary.update_labels_on_build('run_name', labels)
 
     @pytest.mark.parametrize(('follow', 'wait'), [
         (True, True),

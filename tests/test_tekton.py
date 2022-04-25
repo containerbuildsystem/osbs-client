@@ -292,16 +292,13 @@ class TestPipelineRun():
     @responses.activate
     @pytest.mark.parametrize('run_name_in_input', [PIPELINE_RUN_NAME, 'wrong'])
     @pytest.mark.parametrize('input_data', [deepcopy(PIPELINE_RUN_DATA), None])
-    @pytest.mark.parametrize('labels', [{'labelkey': 'labelvalue'}, None])
     def test_start_pipeline(self, openshift,
-                            run_name_in_input, input_data, labels):
+                            run_name_in_input, input_data):
 
         new_input_data = deepcopy(input_data)
 
         if new_input_data:
             new_input_data['metadata']['name'] = run_name_in_input
-            if labels:
-                new_input_data['metadata']['labels'] = labels
 
         p_run = PipelineRun(os=openshift, pipeline_run_name=PIPELINE_RUN_NAME,
                             pipeline_run_data=new_input_data)
@@ -319,8 +316,6 @@ class TestPipelineRun():
                 req_body = json.loads(responses.calls[0].request.body)
                 if new_input_data:
                     assert req_body['metadata']['name'] == run_name_in_input
-                    if labels:
-                        assert req_body['metadata']['labels'] == labels
             else:
                 msg = f"Pipeline run name provided '{PIPELINE_RUN_NAME}' is different " \
                       f"than in input data '{run_name_in_input}'"
@@ -370,49 +365,6 @@ class TestPipelineRun():
                 assert log_msg in caplog.text
         else:
             pipeline_run.cancel_pipeline_run()
-
-        assert len(responses.calls) == 1
-
-    @responses.activate
-    @pytest.mark.parametrize(('get_json', 'status', 'raises'), [
-        (deepcopy(PIPELINE_RUN_JSON), 200, False),
-        ({}, 404, True),
-        ({}, 500, True),
-    ])
-    def test_update_labels(self, caplog, pipeline_run, get_json, status, raises):
-        labels = {'label_key': 'label:v/alue'}
-        # sanitize_strings_for_openshift will remove : and /
-        expect_labels = {'label_key': 'labelvalue'}
-        exp_request_body_pipeline_run = deepcopy(PIPELINE_MINIMAL_DATA)
-        exp_request_body_pipeline_run['metadata']['labels'] = expect_labels
-
-        responses.add(
-            responses.PATCH,
-            PIPELINE_RUN_URL,
-            match=[responses.matchers.json_params_matcher(exp_request_body_pipeline_run)],
-            json=get_json,
-            status=status,
-        )
-
-        if raises:
-            exc_msg = None
-            log_msg = None
-            if status == 404:
-                exc_msg = f"Can't update labels on pipeline run " \
-                          f"'{PIPELINE_RUN_NAME}', because it doesn't exist"
-            elif status != 200:
-                log_msg = f"update labels on pipeline run '{PIPELINE_RUN_NAME}' " \
-                          f"failed with : [{status}] {get_json}"
-
-            with pytest.raises(OsbsException) as exc:
-                pipeline_run.update_labels(labels)
-
-            if exc_msg:
-                assert exc_msg == str(exc.value)
-            if log_msg:
-                assert log_msg in caplog.text
-        else:
-            pipeline_run.update_labels(labels)
 
         assert len(responses.calls) == 1
 

@@ -251,30 +251,6 @@ class OSBS(object):
 
         return pipeline_run_data
 
-    def _set_binary_container_pipeline_labels(self, pipeline_run_data,
-                                              user_params):
-        # set labels
-        all_labels = pipeline_run_data['metadata'].get('labels', {})
-
-        if user_params.koji_task_id is not None:
-            all_labels['koji-task-id'] = str(user_params.koji_task_id)
-
-        if user_params.scratch:
-            all_labels['scratch'] = 'true'
-
-        if user_params.isolated:
-            all_labels['isolated'] = 'true'
-            all_labels['isolated-release'] = user_params.release
-
-        repo_name = utils.git_repo_humanish_part_from_uri(user_params.git_uri)
-        # Use the repo name to differentiate different repos, but include the full url as an
-        # optional filter.
-        all_labels['git-repo-name'] = repo_name
-        all_labels['git-branch'] = user_params.git_branch
-        all_labels['git-full-repo'] = user_params.git_uri
-
-        pipeline_run_data['metadata']['labels'] = all_labels
-
     @osbsapi
     def create_binary_container_build(self, **kwargs):
         return self.create_binary_container_pipeline_run(**kwargs)
@@ -329,8 +305,6 @@ class OSBS(object):
             user_params=user_params,
             pipeline_run_name=pipeline_run_name)
 
-        self._set_binary_container_pipeline_labels(pipeline_run_data, user_params)
-
         logger.info("creating binary container image pipeline run: %s", pipeline_run_name)
 
         pipeline_run = PipelineRun(self.os, pipeline_run_name, pipeline_run_data)
@@ -359,16 +333,6 @@ class OSBS(object):
         pipeline_run_data = _load_pipeline_from_template(pipeline_run_path, substitutions)
 
         return pipeline_run_data
-
-    def _set_source_container_pipeline_labels(self, pipeline_run_data,
-                                              user_params):
-        # set labels
-        all_labels = pipeline_run_data['metadata'].get('labels', {})
-
-        if user_params.koji_task_id is not None:
-            all_labels['koji-task-id'] = str(user_params.koji_task_id)
-
-        pipeline_run_data['metadata']['labels'] = all_labels
 
     @osbsapi
     def create_source_container_build(self, **kwargs):
@@ -406,8 +370,6 @@ class OSBS(object):
             user_params=user_params,
             pipeline_run_name=pipeline_run_name,
         )
-
-        self._set_source_container_pipeline_labels(pipeline_run_data, user_params)
 
         logger.info("creating source container image pipeline run: %s", pipeline_run_name)
 
@@ -461,11 +423,6 @@ class OSBS(object):
         return pipeline_run.annotations
 
     @osbsapi
-    def get_build_labels(self, build_name):
-        pipeline_run = PipelineRun(self.os, build_name)
-        return pipeline_run.labels
-
-    @osbsapi
     def cancel_build(self, build_name):
         pipeline_run = PipelineRun(self.os, build_name)
         return pipeline_run.cancel_pipeline_run()
@@ -474,11 +431,6 @@ class OSBS(object):
     def update_annotations_on_build(self, build_name, annotations):
         pipeline_run = PipelineRun(self.os, build_name)
         return pipeline_run.update_annotations(annotations)
-
-    @osbsapi
-    def update_labels_on_build(self, build_name, labels):
-        pipeline_run = PipelineRun(self.os, build_name)
-        return pipeline_run.update_labels(labels)
 
     @osbsapi
     def get_build_logs(self, build_name, follow=False, wait=False):
