@@ -90,8 +90,6 @@ Some options are also mandatory.
   with optional mount path in the format `secret[:path]`, which can be used to
   hold service account tokens referenced by token_file in the osbs_client_secret
   osbs.conf
-- `can_orchestrate` (optional, boolean): allows using orchestrator build,
-  default is false
 - `scratch_build_node_selector` (optional, str): a node selector to be applied
   to the scratch builds
 - `explicit_build_node_selector` (optional, str): a node selector to be applied

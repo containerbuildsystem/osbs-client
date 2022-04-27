@@ -201,44 +201,17 @@ Then you'll need to create two configuration files. Create a file
 
 ```yaml
 version: 1
-clusters:
-  x86_64:
-  - name: worker01
-    max_concurrent_builds: 4
-    enabled: true
 ```
 
-and a file 'osbs-client-conf/osbs.conf' which contains
-
-```conf
-[general]
-verbose = true
-
-[worker01]
-openshift_url = https://<not-localhost-ip-address>:8443/
-namespace = worker01
-use_kerberos = false
-verify_ssl = false
-use_auth = true
-registry_uri = <registry URL>
-```
-
-And create the corresponding secrets
+And create the corresponding secret
 
 ```shell
-oc secrets -n myproject new osbs-client-conf osbs-client-conf/osbs.conf
 oc secrets -n myproject new reactor-conf reactor-conf/config.yaml
 ```
 
 Note that while the directory and secret names are arbitrary, the filenames
 ('osbs.conf', 'config.yaml') must be exactly as listed above, since filename
 determines the key under which the content is stored within the secret.
-
-Finally, edit the main 'osbs.conf' and add to the [local] section
-
-```conf
-can_orchestrate = true
-```
 
 You are now ready to perform an orchestrated build
 
