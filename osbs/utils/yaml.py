@@ -76,9 +76,9 @@ def validate_with_schema(data, schema):
     :param data: dict, data to be validated
     :param schema: dict, schema to validate with
     """
-    validator = jsonschema.Draft7Validator(schema=schema)
+    validator = jsonschema.Draft4Validator(schema=schema)
     try:
-        jsonschema.Draft7Validator.check_schema(schema)
+        jsonschema.Draft4Validator.check_schema(schema)
         validator.validate(data)
     except jsonschema.SchemaError:
         logger.error('invalid schema, cannot validate')
