@@ -243,10 +243,8 @@ def reset_git_repo(target_dir, git_reference, retry_depth=None):
         raise OsbsCommitNotFound('cannot find commit {} in repo {}'.format(
                                   git_reference, target_dir))
 
-    cmd = ["git", "rev-parse", "HEAD"]
     logger.debug("getting SHA-1 of provided ref '%s'", git_reference)
-    commit_id = subprocess.check_output(cmd, cwd=target_dir, universal_newlines=True)
-    commit_id = commit_id.strip()
+    commit_id = get_commit_id(target_dir)
     logger.info("commit ID = %s", commit_id)
 
     final_commit_depth = None
@@ -255,6 +253,12 @@ def reset_git_repo(target_dir, git_reference, retry_depth=None):
         final_commit_depth = int(subprocess.check_output(cmd, cwd=target_dir)) - base_commit_depth
 
     return commit_id, final_commit_depth
+
+
+def get_commit_id(repo_dir: str) -> str:
+    cmd = ["git", "rev-parse", "HEAD"]
+    commit_id = subprocess.check_output(cmd, cwd=repo_dir, universal_newlines=True).strip()
+    return commit_id
 
 
 def get_repo_info(git_uri, git_ref, git_branch=None, depth=None):
