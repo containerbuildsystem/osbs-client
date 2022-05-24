@@ -84,11 +84,11 @@ def validate_with_schema(data, schema):
         logger.error('invalid schema, cannot validate')
         raise
     except jsonschema.ValidationError as exc:
-        logger.debug("schema validation error: %s", exc)
+        logger.error("schema validation error: %s", exc)
         exc_message = get_error_message(exc)
         for error in validator.iter_errors(data):
             error_message = get_error_message(error)
-            logger.debug("validation error: %s", error_message)
+            logger.error("validation error: %s", error_message)
         raise OsbsValidationException(exc_message)
 
 
