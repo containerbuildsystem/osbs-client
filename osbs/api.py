@@ -418,6 +418,16 @@ class OSBS(object):
         return pipeline_run.was_cancelled()
 
     @osbsapi
+    def build_has_any_failed_tasks(self, build_name):
+        pipeline_run = PipelineRun(self.os, build_name)
+        return pipeline_run.any_task_failed()
+
+    @osbsapi
+    def build_has_any_cancelled_tasks(self, build_name):
+        pipeline_run = PipelineRun(self.os, build_name)
+        return pipeline_run.any_task_was_cancelled()
+
+    @osbsapi
     def get_build_annotations(self, build_name):
         pipeline_run = PipelineRun(self.os, build_name)
         return pipeline_run.annotations

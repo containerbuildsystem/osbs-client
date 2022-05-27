@@ -11,8 +11,7 @@ import base64
 import os
 import requests
 import copy
-from typing import Dict, List
-
+from typing import Dict, List, Callable, Any
 
 from osbs.exceptions import OsbsResponseException, OsbsAuthException, OsbsException
 from osbs.constants import (DEFAULT_NAMESPACE, SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
@@ -530,6 +529,52 @@ class PipelineRun():
 
     def was_cancelled(self):
         return self.status_reason == 'PipelineRunCancelled'
+
+    def any_task_failed(self) -> bool:
+        """
+        Check if any taskRun failed.
+
+        See table in https://tekton.dev/docs/pipelines/taskruns/#monitoring-execution-status
+        """
+        return self._any_task_run_in_state(
+            'failed',
+            lambda status, reason, has_completion_time: (
+                status == 'False' and reason != 'TaskRunCancelled' and has_completion_time
+            ),
+        )
+
+    def any_task_was_cancelled(self) -> bool:
+        """
+        Check if any taskRun was cancelled or is currently getting cancelled.
+
+        See table in https://tekton.dev/docs/pipelines/taskruns/#monitoring-execution-status
+        """
+        return self._any_task_run_in_state(
+            'cancelled',
+            lambda status, reason, has_completion_time: reason == 'TaskRunCancelled',
+        )
+
+    def _any_task_run_in_state(
+        self, state_name: str, match_state: Callable[[str, str, bool], bool]
+    ) -> bool:
+
+        def matches_state(task_run: Dict[str, Any]) -> bool:
+            task_run_status = task_run['status']
+            status = task_run_status['conditions'][0]['status']
+            reason = task_run_status['conditions'][0]['reason']
+            completion_time = task_run_status.get('completionTime')
+
+            if match_state(status, reason, completion_time is not None):
+                logger.debug(
+                    'found %s task: name=%s; status=%s; reason=%s; completionTime=%s',
+                    state_name, task_run['pipelineTaskName'], status, reason, completion_time,
+                )
+                return True
+
+            return False
+
+        task_runs = self.data['status'].get('taskRuns', {}).values()
+        return any(matches_state(tr) for tr in task_runs)
 
     def wait_for_finish(self):
         """
