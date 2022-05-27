@@ -497,14 +497,19 @@ class PipelineRun():
 
             if 'steps' in stats['status']:
                 for step in stats['status']['steps']:
-                    exit_code = step['terminated']['exitCode']
-                    if exit_code == 0:
-                        continue
+                    if 'terminated' in step:
+                        exit_code = step['terminated']['exitCode']
+                        if exit_code == 0:
+                            continue
 
-                    reason = step['terminated']['reason']
-                    err_message += f"task step '{step['name']}' failed with exit " \
-                                   f"code: {exit_code} " \
-                                   f"and reason: '{reason}'"
+                        reason = step['terminated']['reason']
+                        err_message += f"task step '{step['name']}' failed with exit " \
+                                       f"code: {exit_code} " \
+                                       f"and reason: '{reason}'"
+                    else:
+                        err_message += f"task step '{step['name']}' is missing 'terminated' key " \
+                                       f"with exit code and reason"
+
             else:
                 task_condition = stats['status']['conditions'][0]
                 err_message += f"task run '{task_name}' failed with reason:" \

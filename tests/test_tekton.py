@@ -457,6 +457,27 @@ class TestPipelineRun():
          "\npipeline task 'task1' failed:\ntask run 'task1' failed with reason: 'reason2' "
          "and message: 'message2'"),
 
+        # taskRuns in status, with steps and failed without terminated key
+        ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
+                     'taskRuns': {
+                         'task1': {
+                             'pipelineTaskName': 'binary-build-task1',
+                             'status': {
+                                 'conditions': [{'reason': 'reason2', 'message': 'message2'}],
+                                 'steps': [
+                                     {'name': 'step_ok',
+                                      'terminated': {'exitCode': 0}},
+                                     {'name': 'step_ko'},
+                                 ]
+                             }
+                         }
+                     }},
+          'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
+                                                           '"plugin2": "error2"}}'}}},
+         "Error in plugin plugin1: error1\nError in plugin plugin2: error2\n\npipeline run errors:"
+         "\npipeline task 'task1' failed:\ntask step 'step_ko' is missing 'terminated' "
+         "key with exit code and reason"),
+
         # taskRuns in status, with steps
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
                      'taskRuns': {
