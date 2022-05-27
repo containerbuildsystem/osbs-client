@@ -11,7 +11,9 @@ import base64
 import os
 import requests
 import copy
-from typing import Dict, List, Callable, Any
+from typing import Dict, List, Tuple, Callable, Any
+from datetime import datetime
+
 
 from osbs.exceptions import OsbsResponseException, OsbsAuthException, OsbsException
 from osbs.constants import (DEFAULT_NAMESPACE, SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
@@ -50,6 +52,12 @@ def check_response(response, log_level=logging.ERROR):
 
         logger.log(log_level, "[%d] %s", response.status_code, content)
         raise OsbsResponseException(message=content, status_code=response.status_code)
+
+
+def get_sorted_task_runs(task_runs: Dict[str, Any]) -> List[Tuple[str, Dict[str, Any]]]:
+    return sorted(task_runs.items(),
+                  key=lambda x: datetime.strptime(x[1]['status']['startTime'],
+                                                  '%Y-%m-%dT%H:%M:%SZ').timestamp())
 
 
 class Openshift(object):
@@ -489,7 +497,8 @@ class PipelineRun():
 
         task_runs_status = data['status'].get('taskRuns', {})
 
-        for task_name, stats in task_runs_status.items():
+        for _, stats in get_sorted_task_runs(task_runs_status):
+            task_name = stats['pipelineTaskName']
             if stats['status']['conditions'][0]['reason'] == 'Succeeded':
                 continue
 
@@ -505,22 +514,22 @@ class PipelineRun():
                         reason = step['terminated']['reason']
                         err_message += f"task step '{step['name']}' failed with exit " \
                                        f"code: {exit_code} " \
-                                       f"and reason: '{reason}'"
+                                       f"and reason: '{reason}'\n"
                     else:
                         err_message += f"task step '{step['name']}' is missing 'terminated' key " \
-                                       f"with exit code and reason"
+                                       f"with exit code and reason\n"
 
             else:
                 task_condition = stats['status']['conditions'][0]
                 err_message += f"task run '{task_name}' failed with reason:" \
                                f" '{task_condition['reason']}' and message:" \
-                               f" '{task_condition['message']}'"
+                               f" '{task_condition['message']}'\n"
 
         if not task_runs_status:
             pipeline_run_condition = data['status']['conditions'][0]
             err_message += f"pipeline run {self.pipeline_run_name} failed with reason:" \
                            f" '{pipeline_run_condition['reason']}' and message:" \
-                           f" '{pipeline_run_condition['message']}'"
+                           f" '{pipeline_run_condition['message']}'\n"
 
         return err_message
 
@@ -690,8 +699,10 @@ class PipelineRun():
             return None
 
         task_runs = pipeline_run['status']['taskRuns']
-        for task_run_name, task_run_data in task_runs.items():
+
+        for task_run_name, task_run_data in get_sorted_task_runs(task_runs):
             pipeline_task_name = task_run_data['pipelineTaskName']
+
             logs[pipeline_task_name] = TaskRun(os=self.os, task_run_name=task_run_name).get_logs()
         return logs
 

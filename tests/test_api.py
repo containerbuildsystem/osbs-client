@@ -1017,16 +1017,21 @@ class TestOSBS(object):
         metadata = '{"errors": {"plugin1": "error1"}}'
         steps = [{'name': 'step1', 'terminated': {'exitCode': 0}},
                  {'name': 'step2', 'terminated': {'exitCode': 128, 'reason': 'bad thing'}}]
-        taskruns = {'task1': {'status': {'conditions': [{'reason': 'Succeeded'}]}},
-                    'task2': {'status': {'conditions': [{'reason': 'Failed'}], 'steps': steps}}}
+        taskruns = {'task1': {'status': {'conditions': [{'reason': 'Succeeded'}],
+                                         'startTime': '2022-04-26T15:58:42Z'},
+                              'pipelineTaskName': 'prun-task1'},
+                    'task2': {'status': {'conditions': [{'reason': 'Failed'}],
+                                         'steps': steps,
+                                         'startTime': '2022-04-26T15:58:42Z'},
+                              'pipelineTaskName': 'prun-task2'}}
         resp = {'metadata': {'name': 'run_name', 'annotations': {'plugins-metadata': metadata}},
                 'status': {'taskRuns': taskruns}}
 
         flexmock(PipelineRun).should_receive('get_info').and_return(resp)
 
         error_msg = "Error in plugin plugin1: error1\n\npipeline run errors:\n"
-        error_msg += "pipeline task 'task2' failed:\n"
-        error_msg += "task step 'step2' failed with exit code: 128 and reason: 'bad thing'"
+        error_msg += "pipeline task 'prun-task2' failed:\n"
+        error_msg += "task step 'step2' failed with exit code: 128 and reason: 'bad thing'\n"
 
         assert error_msg == osbs_binary.get_build_error_message('run_name')
 

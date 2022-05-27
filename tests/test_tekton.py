@@ -15,20 +15,32 @@ from tests.constants import TEST_PIPELINE_RUN_TEMPLATE, TEST_OCP_NAMESPACE
 PIPELINE_NAME = 'source-container-0-1'
 PIPELINE_RUN_NAME = 'source-default'
 TASK_RUN_NAME = 'test-task-run-1'
+TASK_RUN_NAME2 = 'test-task-run-2'
 PIPELINE_RUN_URL = f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/pipelineruns/{PIPELINE_RUN_NAME}' # noqa E501
 PIPELINE_WATCH_URL = f'https://openshift.testing/apis/tekton.dev/v1beta1/watch/namespaces/{TEST_OCP_NAMESPACE}/pipelineruns/{PIPELINE_RUN_NAME}/' # noqa E501
 TASK_RUN_URL = f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/taskruns/{TASK_RUN_NAME}' # noqa E501
+TASK_RUN_URL2 = f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/taskruns/{TASK_RUN_NAME2}' # noqa E501
 TASK_RUN_WATCH_URL = f"https://openshift.testing/apis/tekton.dev/v1beta1/watch/namespaces/{TEST_OCP_NAMESPACE}/taskruns/{TASK_RUN_NAME}/" # noqa E501
+TASK_RUN_WATCH_URL2 = f"https://openshift.testing/apis/tekton.dev/v1beta1/watch/namespaces/{TEST_OCP_NAMESPACE}/taskruns/{TASK_RUN_NAME2}/" # noqa E501
 
 POD_NAME = 'test-pod'
+POD_NAME2 = 'test-pod2'
 CONTAINERS = ['step-hello', 'step-wait', 'step-bye']
+CONTAINERS2 = ['step2-hello', 'step2-wait', 'step2-bye']
 POD_URL = f'https://openshift.testing/api/v1/namespaces/{TEST_OCP_NAMESPACE}/pods/{POD_NAME}'
+POD_URL2 = f'https://openshift.testing/api/v1/namespaces/{TEST_OCP_NAMESPACE}/pods/{POD_NAME2}'
 POD_WATCH_URL = f"https://openshift.testing/api/v1/watch/namespaces/{TEST_OCP_NAMESPACE}/pods/{POD_NAME}/" # noqa E501
+POD_WATCH_URL2 = f"https://openshift.testing/api/v1/watch/namespaces/{TEST_OCP_NAMESPACE}/pods/{POD_NAME2}/" # noqa E501
 
 EXPECTED_LOGS = {
     'step-hello': 'Hello World\n',
     'step-wait': '',
-    'step-bye': 'Bye World\n'
+    'step-bye': 'Bye World\n',
+}
+EXPECTED_LOGS2 = {
+    'step2-hello': '2Hello World\n',
+    'step2-wait': '2',
+    'step2-bye': '2Bye World\n'
 }
 
 PIPELINE_RUN_JSON = {
@@ -44,7 +56,8 @@ PIPELINE_RUN_JSON = {
         ],
         "pipelineSpec": {
             "tasks": [
-                {"name": "short-sleep", "taskRef": {"kind": "Task", "name": "short-sleep"}}
+                {"name": "short-sleep", "taskRef": {"kind": "Task", "name": "short-sleep"}},
+                {"name": "short2-sleep", "taskRef": {"kind": "Task", "name": "short2-sleep"}}
             ]
         },
         "taskRuns": {
@@ -69,6 +82,31 @@ PIPELINE_RUN_JSON = {
                             "container": "step-bye",
                         },
                     ],
+                    "startTime": "2022-04-26T15:58:42Z"
+                },
+            },
+            TASK_RUN_NAME2: {
+                "pipelineTaskName": "short2-sleep",
+                "status": {
+                    "conditions": [
+                        {
+                            "reason": "Running",
+                            "status": "Unknown",
+                        }
+                    ],
+                    "podName": POD_NAME2,
+                    "steps": [
+                        {
+                            "container": "step2-hello",
+                        },
+                        {
+                            "container": "step2-wait",
+                        },
+                        {
+                            "container": "step2-bye",
+                        },
+                    ],
+                    "startTime": "2022-04-26T14:58:42Z"
                 },
             }
         },
@@ -99,12 +137,48 @@ TASK_RUN_JSON = {
         ],
     },
 }
+TASK_RUN_JSON2 = {
+    "apiVersion": "tekton.dev/v1beta1",
+    "kind": "TaskRun",
+    "status": {
+        "conditions": [
+            {
+                "reason": "Running",
+                "status": "Unknown",
+            }
+        ],
+        "podName": POD_NAME2,
+        "steps": [
+            {
+                "container": "step2-hello",
+            },
+            {
+                "container": "step2-wait",
+            },
+            {
+                "container": "step2-bye",
+            },
+        ],
+    },
+}
+
 
 POD_JSON = {
     "kind": "Pod",
     "apiVersion": "v1",
     "metadata": {
         "name": POD_NAME,
+        "namespace": TEST_OCP_NAMESPACE,
+    },
+    "status": {
+        "phase": "Running",
+    },
+}
+POD_JSON2 = {
+    "kind": "Pod",
+    "apiVersion": "v1",
+    "metadata": {
+        "name": POD_NAME2,
         "namespace": TEST_OCP_NAMESPACE,
     },
     "status": {
@@ -121,10 +195,18 @@ TASK_RUN_WATCH_JSON = {
     "type": "ADDED",
     "object": TASK_RUN_JSON
 }
+TASK_RUN_WATCH_JSON2 = {
+    "type": "ADDED",
+    "object": TASK_RUN_JSON2
+}
 
 POD_WATCH_JSON = {
     "type": "ADDED",
     "object": POD_JSON
+}
+POD_WATCH_JSON2 = {
+    "type": "ADDED",
+    "object": POD_JSON2
 }
 
 with open(TEST_PIPELINE_RUN_TEMPLATE) as f:
@@ -432,7 +514,7 @@ class TestPipelineRun():
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}]},
           'metadata': {'annotations': {}}},
          "\npipeline run errors:\npipeline "
-         "run source-default failed with reason: 'reason1' and message: 'message1'"),
+         "run source-default failed with reason: 'reason1' and message: 'message1'\n"),
 
         # no taskRuns in status
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}]},
@@ -440,7 +522,7 @@ class TestPipelineRun():
                                                            '"plugin2": "error2"}}'}}},
          "Error in plugin plugin1: error1\nError in plugin plugin2: error2\n\npipeline run errors:"
          "\npipeline run source-default failed with reason: 'reason1' and message: "
-         "'message1'"),
+         "'message1'\n"),
 
         # taskRuns in status, without steps
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
@@ -448,14 +530,15 @@ class TestPipelineRun():
                          'task1': {
                              'pipelineTaskName': 'binary-build-task1',
                              'status': {'conditions': [{'reason': 'reason2',
-                                                        'message': 'message2'}]}
+                                                        'message': 'message2'}],
+                                        "startTime": "2022-04-26T15:58:42Z"}
                          }
                      }},
           'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
                                                            '"plugin2": "error2"}}'}}},
          "Error in plugin plugin1: error1\nError in plugin plugin2: error2\n\npipeline run errors:"
-         "\npipeline task 'task1' failed:\ntask run 'task1' failed with reason: 'reason2' "
-         "and message: 'message2'"),
+         "\npipeline task 'binary-build-task1' failed:\n"
+         "task run 'binary-build-task1' failed with reason: 'reason2' and message: 'message2'\n"),
 
         # taskRuns in status, with steps and failed without terminated key
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
@@ -468,15 +551,16 @@ class TestPipelineRun():
                                      {'name': 'step_ok',
                                       'terminated': {'exitCode': 0}},
                                      {'name': 'step_ko'},
-                                 ]
+                                 ],
+                                 "startTime": "2022-04-26T15:58:42Z"
                              }
                          }
                      }},
           'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
                                                            '"plugin2": "error2"}}'}}},
-         "Error in plugin plugin1: error1\nError in plugin plugin2: error2\n\npipeline run errors:"
-         "\npipeline task 'task1' failed:\ntask step 'step_ko' is missing 'terminated' "
-         "key with exit code and reason"),
+         "Error in plugin plugin1: error1\nError in plugin plugin2: error2\n\n"
+         "pipeline run errors:\npipeline task 'binary-build-task1' failed:\n"
+         "task step 'step_ko' is missing 'terminated' key with exit code and reason\n"),
 
         # taskRuns in status, with steps
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
@@ -491,15 +575,36 @@ class TestPipelineRun():
                                      {'name': 'step_ko',
                                       'terminated': {'exitCode': 1,
                                                      'reason': 'step_reason'}}
-                                 ]
+                                 ],
+                                 "startTime": "2022-04-26T15:58:42Z"
                              }
-                         }
+                         },
+                         'task2': {
+                             'pipelineTaskName': 'binary-build-pretask',
+                             'status': {
+                                 'conditions': [{'reason': 'reason1', 'message': 'message1'}],
+                                 'steps': [
+                                     {'name': 'prestep_ok',
+                                      'terminated': {'exitCode': 0}},
+                                     {'name': 'prestep_ko',
+                                      'terminated': {'exitCode': 1,
+                                                     'reason': 'prestep_reason'}},
+                                     {'name': 'prestep_ko2',
+                                      'terminated': {'exitCode': 1,
+                                                     'reason': 'prestep_reason2'}},
+                                 ],
+                                 "startTime": "2022-04-26T14:58:42Z"
+                             }
+                         },
                      }},
           'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
                                                            '"plugin2": "error2"}}'}}},
          "Error in plugin plugin1: error1\nError in plugin plugin2: error2\n\npipeline run errors:"
-         "\npipeline task 'task1' failed:\ntask step 'step_ko' failed with exit code: 1 "
-         "and reason: 'step_reason'"),
+         "\npipeline task 'binary-build-pretask' failed:\n"
+         "task step 'prestep_ko' failed with exit code: 1 "
+         "and reason: 'prestep_reason'\ntask step 'prestep_ko2' failed with exit code: 1 "
+         "and reason: 'prestep_reason2'\npipeline task 'binary-build-task1' failed:\n"
+         "task step 'step_ko' failed with exit code: 1 and reason: 'step_reason'\n"),
     ])  # noqa
     def test_get_error_message(self, pipeline_run, get_json, error_lines):
         responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
@@ -703,7 +808,9 @@ class TestPipelineRun():
         assert len(responses.calls) == 2
         assert task_runs == [
             (PIPELINE_RUN_JSON['status']['taskRuns'][TASK_RUN_NAME]['pipelineTaskName'],
-             TASK_RUN_NAME)]
+             TASK_RUN_NAME),
+            (PIPELINE_RUN_JSON['status']['taskRuns'][TASK_RUN_NAME2]['pipelineTaskName'],
+             TASK_RUN_NAME2)]
 
     @responses.activate
     @pytest.mark.parametrize(('get_json', 'empty_logs'), [
@@ -713,17 +820,26 @@ class TestPipelineRun():
     def test_get_logs(self, pipeline_run, get_json, empty_logs):
         responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
         responses.add(responses.GET, TASK_RUN_URL, json=TASK_RUN_JSON)
+        responses.add(responses.GET, TASK_RUN_URL2, json=TASK_RUN_JSON2)
         for container in CONTAINERS:
             url = f"{POD_URL}/log?container={container}"
             responses.add(responses.GET, url, body=EXPECTED_LOGS[container])
+        for container in CONTAINERS2:
+            url = f"{POD_URL2}/log?container={container}"
+            responses.add(responses.GET, url, body=EXPECTED_LOGS2[container])
         logs = pipeline_run.get_logs()
 
         if empty_logs:
             assert len(responses.calls) == 1
             assert logs is None
         else:
-            assert len(responses.calls) == 5
-            assert logs == {get_json['status']['taskRuns'][TASK_RUN_NAME]['pipelineTaskName']:
+            # pipeline = 1
+            # tasks = 2
+            # 3 steps per task = 6
+            assert len(responses.calls) == 9
+            assert logs == {get_json['status']['taskRuns'][TASK_RUN_NAME2]['pipelineTaskName']:
+                            EXPECTED_LOGS2,
+                            get_json['status']['taskRuns'][TASK_RUN_NAME]['pipelineTaskName']:
                             EXPECTED_LOGS}
 
     @responses.activate
@@ -734,22 +850,29 @@ class TestPipelineRun():
             json=PIPELINE_RUN_WATCH_JSON,
         )
         responses.add(responses.GET, PIPELINE_RUN_URL, json=PIPELINE_RUN_JSON)
-        responses.add(
-            responses.GET,
-            PIPELINE_WATCH_URL,
-            json=PIPELINE_RUN_WATCH_JSON,
-        )
-        responses.add(responses.GET, PIPELINE_RUN_URL, json=PIPELINE_RUN_JSON)
+
         responses.add(
             responses.GET,
             TASK_RUN_WATCH_URL,
             json=TASK_RUN_WATCH_JSON,
         )
+        responses.add(
+            responses.GET,
+            TASK_RUN_WATCH_URL2,
+            json=TASK_RUN_WATCH_JSON2,
+        )
         responses.add(responses.GET, TASK_RUN_URL, json=TASK_RUN_JSON)
+        responses.add(responses.GET, TASK_RUN_URL2, json=TASK_RUN_JSON2)
+
         responses.add(responses.GET, POD_WATCH_URL,
                       json=POD_WATCH_JSON)
+        responses.add(responses.GET, POD_WATCH_URL2,
+                      json=POD_WATCH_JSON2)
         responses.add(responses.GET, POD_URL,
                       json=POD_JSON)
+        responses.add(responses.GET, POD_URL2,
+                      json=POD_JSON2)
+
         for container in CONTAINERS:
             url = f"{POD_URL}/log?follow=True&container={container}"
             responses.add(
@@ -758,10 +881,34 @@ class TestPipelineRun():
                 body=EXPECTED_LOGS[container],
                 match=[responses.matchers.request_kwargs_matcher({"stream": True})]
             )
+        for container in CONTAINERS2:
+            url = f"{POD_URL2}/log?follow=True&container={container}"
+            responses.add(
+                responses.GET,
+                url,
+                body=EXPECTED_LOGS2[container],
+                match=[responses.matchers.request_kwargs_matcher({"stream": True})]
+            )
         logs = [line for line in pipeline_run.get_logs(follow=True, wait=True)]
 
-        assert len(responses.calls) == 11
-        assert logs == [(PIPELINE_RUN_JSON['status']['taskRuns'][TASK_RUN_NAME]['pipelineTaskName'],
+        # wait for pipeline start, pipeline + watch = 2
+        # wait for tasks start, pipeline + watch = 2
+        # 2 tasks + watch = 4
+        # 2 pods + watch = 4
+        # logs 3 steps per pod in 2 pods = 6
+        assert len(responses.calls) == 18
+        assert logs == [(PIPELINE_RUN_JSON['status']['taskRuns']
+                         [TASK_RUN_NAME]['pipelineTaskName'],
                          'Hello World'),
-                        (PIPELINE_RUN_JSON['status']['taskRuns'][TASK_RUN_NAME]['pipelineTaskName'],
-                         'Bye World')]
+                        (PIPELINE_RUN_JSON['status']['taskRuns']
+                         [TASK_RUN_NAME]['pipelineTaskName'],
+                         'Bye World'),
+                        (PIPELINE_RUN_JSON['status']['taskRuns']
+                         [TASK_RUN_NAME2]['pipelineTaskName'],
+                         '2Hello World'),
+                        (PIPELINE_RUN_JSON['status']['taskRuns']
+                         [TASK_RUN_NAME2]['pipelineTaskName'],
+                         '2'),
+                        (PIPELINE_RUN_JSON['status']['taskRuns']
+                         [TASK_RUN_NAME2]['pipelineTaskName'],
+                         '2Bye World')]
