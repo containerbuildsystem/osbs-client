@@ -964,6 +964,14 @@ class TestOSBS(object):
 
         assert output == osbs_binary.build_was_cancelled('run_name')
 
+    def test_build_has_any_failed_tasks(self, osbs_binary):
+        flexmock(PipelineRun).should_receive('any_task_failed').once().and_return(False)
+        assert not osbs_binary.build_has_any_failed_tasks('run_name')
+
+    def test_build_has_any_cancelled_tasks(self, osbs_binary):
+        flexmock(PipelineRun).should_receive('any_task_was_cancelled').once().and_return(False)
+        assert not osbs_binary.build_has_any_cancelled_tasks('run_name')
+
     def test_get_build_annotations(self, osbs_binary):
         annotations = {'some': 'ann1', 'some2': 'ann2'}
         resp = {'metadata': {'name': 'run_name', 'annotations': annotations}}

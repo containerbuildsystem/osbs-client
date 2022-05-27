@@ -1,4 +1,5 @@
 import json
+import re
 import time
 import responses
 import pytest
@@ -499,6 +500,115 @@ class TestPipelineRun():
         responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
         assert succeeded == pipeline_run.has_succeeded()
         assert pipeline_run.status_reason == reason
+
+    @pytest.mark.parametrize(
+        'any_failed, any_canceled, task_run_states',
+        [
+            (False, False, None),
+            (False, False, []),
+            # all task runs are successful or still running
+            (
+                False,
+                False,
+                [
+                    ("clone", ("True", "Succeeded", "2022-05-27T08:07:27Z")),
+                    ("binary-container-prebuild", ("Unknown", "Running", None)),
+                ],
+            ),
+            # a task run failed
+            (
+                True,
+                False,
+                [
+                    ("clone", ("True", "Succeeded", "2022-05-27T08:07:27Z")),
+                    ("binary-container-prebuild", ("False", "Failed", "2022-05-27T08:07:50Z")),
+                    ("binary-container-exit", ("True", "Succeeded", "2022-05-27T08:08:07Z")),
+                ],
+            ),
+            # a task run was cancelled
+            (
+                False,
+                True,
+                [
+                    ("clone", ("True", "Succeeded", "2022-05-27T08:07:27Z")),
+                    ("binary-container-prebuild", ("True", "Succeeded", "2022-05-27T08:07:50Z")),
+                    (
+                        "binary-container-build-x86-64",
+                        ("False", "TaskRunCancelled", "2022-05-27T08:00:08Z"),
+                    )
+                ],
+            ),
+            # one task run failed and another was cancelled
+            (
+                True,
+                True,
+                [
+                    ("clone", ("True", "Succeeded", "2022-05-27T08:07:27Z")),
+                    ("binary-container-prebuild", ("True", "Succeeded", "2022-05-27T08:07:50Z")),
+                    (
+                        "binary-container-build-x86-64",
+                        ("False", "Failed", "2022-05-27T08:00:08Z"),
+                    ),
+                    (
+                        "binary-container-build-ppc64le",
+                        ("False", "TaskRunCancelled", "2022-05-27T08:00:15Z"),
+                    ),
+                ],
+            ),
+            # a task run encountered an error but might still succeed (considered not failed)
+            (
+                False,
+                False,
+                [("clone", ("False", "Failed, will retry", None))],
+            ),
+            # a task run is currently getting cancelled (considered cancelled)
+            (
+                False,
+                True,
+                [("clone", ("Unknown", "TaskRunCancelled", None))],
+            ),
+        ],
+    )
+    @responses.activate
+    def test_any_task_failed_or_cancelled(
+        self, pipeline_run, task_run_states, any_failed, any_canceled, caplog
+    ):
+        ppr_json = deepcopy(PIPELINE_RUN_JSON)
+
+        if task_run_states is not None:
+            ppr_json['status']['taskRuns'] = {
+                task_name: {
+                    "pipelineTaskName": task_name,
+                    "status": {
+                        "completionTime": completion_time,
+                        "conditions": [
+                            {"status": status, "reason": reason}
+                        ],
+                    },
+                }
+                for task_name, (status, reason, completion_time) in task_run_states
+            }
+        else:
+            ppr_json['status'].pop('taskRuns', None)
+
+        responses.add(responses.GET, PIPELINE_RUN_URL, json=ppr_json)
+
+        assert pipeline_run.any_task_failed() == any_failed
+        assert pipeline_run.any_task_was_cancelled() == any_canceled
+
+        failed_re = re.compile(
+            r"found failed task: name=.*; status=False; reason=Failed; completionTime=2022.*"
+        )
+        cancelled_re = re.compile(
+            r"found cancelled task: name=.*; status=(False|Unknown); "
+            r"reason=TaskRunCancelled; completionTime=.*"
+        )
+
+        if any_failed:
+            assert failed_re.search(caplog.text) is not None
+
+        if any_canceled:
+            assert cancelled_re.search(caplog.text) is not None
 
     @responses.activate
     @pytest.mark.parametrize(
