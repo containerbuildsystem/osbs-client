@@ -1,5 +1,5 @@
 """
-Copyright (c) 2015 Red Hat, Inc
+Copyright (c) 2015-2022 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -226,6 +226,10 @@ class Configuration(object):
 
     def get_kerberos_ccache(self):
         return self._get_value("kerberos_ccache", self.conf_section, "kerberos_ccache")
+
+    def get_cleanup_used_resources(self):
+        return self._get_value("cleanup_used_resources", self.conf_section,
+                               "cleanup_used_resources", default=True, is_bool_val=True)
 
     def get_verify_ssl(self):
         return self._get_value("verify_ssl", self.conf_section, "verify_ssl",
