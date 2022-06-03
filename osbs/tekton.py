@@ -1,5 +1,5 @@
 """
-Copyright (c) 2015, 2019, 2021 Red Hat, Inc
+Copyright (c) 2015-2022 Red Hat, Inc
 All rights reserved.
 This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
@@ -405,6 +405,18 @@ class PipelineRun():
         response = self.os.post(
             url,
             data=json.dumps(self.input_data),
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+        )
+        return response.json()
+
+    def remove_pipeline_run(self):
+        url = self.os.build_url(
+            self.api_path,
+            self.api_version,
+            f"pipelineruns/{self.pipeline_run_name}"
+        )
+        response = self.os.delete(
+            url,
             headers={"Content-Type": "application/json", "Accept": "application/json"},
         )
         return response.json()

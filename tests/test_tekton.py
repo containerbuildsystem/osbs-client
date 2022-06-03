@@ -1,3 +1,10 @@
+"""
+Copyright (c) 2022 Red Hat, Inc
+All rights reserved.
+
+This software may be modified and distributed under the terms
+of the BSD license. See the LICENSE file for details.
+"""
 import json
 import re
 import time
@@ -410,6 +417,27 @@ class TestPipelineRun():
             with pytest.raises(OsbsException, match=match_exception):
                 p_run.start_pipeline_run()
             assert len(responses.calls) == 0
+
+    @responses.activate
+    def test_remove_pipeline(self, openshift):
+        p_run = PipelineRun(os=openshift, pipeline_run_name=PIPELINE_RUN_NAME)
+        response_json = {'kind': 'Status',
+                         'apiVersion': 'v1',
+                         'metadata': {},
+                         'status': 'Success',
+                         'details': {'name': PIPELINE_RUN_NAME, 'group': 'tekton.dev',
+                                     'kind': 'pipelineruns',
+                                     'uid': '16a9ad64-89f1-4612-baec-ded3e8a6df26'}
+                         }
+        responses.add(
+            responses.DELETE,
+            f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/'
+            f'{TEST_OCP_NAMESPACE}/pipelineruns/{PIPELINE_RUN_NAME}',
+            json=response_json
+        )
+        result_response = p_run.remove_pipeline_run()
+        assert len(responses.calls) == 1
+        assert result_response == response_json
 
     @responses.activate
     @pytest.mark.parametrize(('get_json', 'status', 'raises'), [

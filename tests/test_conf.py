@@ -1,5 +1,5 @@
 """
-Copyright (c) 2016 Red Hat, Inc
+Copyright (c) 2016-2022 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -259,6 +259,23 @@ class TestConfiguration(object):
             conf = Configuration(conf_file=config_file, conf_section='default')
 
             assert conf.get_pipeline_run_path() == expected
+
+    @pytest.mark.parametrize(('config', 'expected'), [
+        ({
+            'default': {'cleanup_used_resources': False},
+         }, False),
+        ({
+            'default': {'cleanup_used_resources': True},
+         }, True),
+        ({
+            'default': {},
+         }, True),
+    ])
+    def test_cleanup_used_resources(self, config, expected):
+        with self.config_file(config) as config_file:
+            conf = Configuration(conf_file=config_file, conf_section='default')
+
+            assert conf.get_cleanup_used_resources() == expected
 
     def test_deprecated_warnings(self, caplog):  # noqa:F811
         with caplog.at_level(logging.WARNING):

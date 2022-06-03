@@ -1,5 +1,5 @@
 """
-Copyright (c) 2015, 2019 Red Hat, Inc
+Copyright (c) 2015-2022 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -147,6 +147,13 @@ def cmd_build(args):
 
     if pipeline_run.has_succeeded():
         return_val = 0
+    cleanup_used_resources = osbs.os_conf.get_cleanup_used_resources()
+    if cleanup_used_resources:
+        try:
+            logger.info("pipeline run removed: %s", pipeline_run.remove_pipeline_run())
+        except OsbsResponseException:
+            logger.error("failed to remove pipeline run %s", pipeline_run.pipeline_run_name)
+            raise
     return return_val
 
 
@@ -180,6 +187,13 @@ def cmd_build_source_container(args):
 
     if pipeline_run.has_succeeded():
         return_val = 0
+    cleanup_used_resources = osbs.os_conf.get_cleanup_used_resources()
+    if cleanup_used_resources:
+        try:
+            logger.info("pipeline run removed: %s", pipeline_run.remove_pipeline_run())
+        except OsbsResponseException:
+            logger.error("failed to remove pipeline run %s", pipeline_run.pipeline_run_name)
+            raise
     return return_val
 
 
