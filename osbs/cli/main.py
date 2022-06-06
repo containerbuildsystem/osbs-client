@@ -64,6 +64,7 @@ def _get_build_metadata(pipeline_run, user_warnings_store):
         "pipeline_run": {
             "name": pipeline_run.pipeline_run_name,
             "status": pipeline_run.status_reason,
+            "info": {}
         },
         "results": {
             "user_warnings": [],
@@ -73,7 +74,9 @@ def _get_build_metadata(pipeline_run, user_warnings_store):
     }
 
     if pipeline_run.has_succeeded():
-        annotations = pipeline_run.get_info()['metadata']['annotations']
+        info = pipeline_run.get_info()
+        output['pipeline_run']['info'] = info
+        annotations = info['metadata']['annotations']
         str_repositories = annotations.get('repositories', '{}')
         all_repositories = json.loads(str_repositories)
         output['results']['repositories'] = all_repositories
