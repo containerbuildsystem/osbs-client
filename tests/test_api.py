@@ -987,6 +987,11 @@ class TestOSBS(object):
 
         assert resp == osbs_binary.cancel_build('run_name')
 
+    def test_remove_build(self, osbs_binary):
+        resp = {'kind': 'Status', 'apiVersion': 'v1', 'status': 'Success'}
+        flexmock(PipelineRun).should_receive('remove_pipeline_run').once().and_return(resp)
+        assert osbs_binary.remove_build('run_name') == resp
+
     def test_update_annotations(self, osbs_binary):
         annotations = {'some': 'ann1', 'some2': 'ann2'}
         resp = {'metadata': {'name': 'run_name', 'annotations': annotations}}
