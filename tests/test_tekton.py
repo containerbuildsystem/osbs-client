@@ -812,6 +812,7 @@ class TestPipelineRun():
 
     @responses.activate
     def test_wait_for_start(self, pipeline_run):
+        flexmock(time).should_receive('sleep')
         responses.add(
             responses.GET,
             PIPELINE_WATCH_URL,
@@ -823,17 +824,23 @@ class TestPipelineRun():
         assert len(responses.calls) == 2
         assert resp == PIPELINE_RUN_JSON
 
-    @responses.activate
     def test_wait_for_taskruns(self, pipeline_run):
-        responses.add(
-            responses.GET,
-            PIPELINE_WATCH_URL,
-            json=PIPELINE_RUN_WATCH_JSON,
-        )
-        responses.add(responses.GET, PIPELINE_RUN_URL, json=PIPELINE_RUN_JSON)
+        flexmock(time).should_receive('sleep')
+        count = 0
+        completed_pipeline = deepcopy(PIPELINE_RUN_JSON)
+        completed_pipeline['status']['conditions'][0]['status'] = 'True'
+        def custom_watch(api_path, api_version, resource_type, resource_name,
+                         **request_args):
+            nonlocal count
+            if count == 1:
+                yield completed_pipeline
+            else:
+                count += 1
+                yield PIPELINE_RUN_JSON
+
+        flexmock(Openshift).should_receive('watch_resource').replace_with(custom_watch)
         task_runs = [task_run for task_run in pipeline_run.wait_for_taskruns()]
 
-        assert len(responses.calls) == 2
         assert task_runs == [
             (PIPELINE_RUN_JSON['status']['taskRuns'][TASK_RUN_NAME]['pipelineTaskName'],
              TASK_RUN_NAME),
@@ -877,29 +884,35 @@ class TestPipelineRun():
             PIPELINE_WATCH_URL,
             json=PIPELINE_RUN_WATCH_JSON,
         )
-        responses.add(responses.GET, PIPELINE_RUN_URL, json=PIPELINE_RUN_JSON)
+        flexmock(time).should_receive('sleep')
+        count = 0
+        completed_pipeline = deepcopy(PIPELINE_RUN_JSON)
+        completed_pipeline['status']['conditions'][0]['status'] = 'True'
 
-        responses.add(
-            responses.GET,
-            TASK_RUN_WATCH_URL,
-            json=TASK_RUN_WATCH_JSON,
-        )
-        responses.add(
-            responses.GET,
-            TASK_RUN_WATCH_URL2,
-            json=TASK_RUN_WATCH_JSON2,
-        )
-        responses.add(responses.GET, TASK_RUN_URL, json=TASK_RUN_JSON)
-        responses.add(responses.GET, TASK_RUN_URL2, json=TASK_RUN_JSON2)
+        def custom_watch(api_path, api_version, resource_type, resource_name,
+                         **request_args):
+            if resource_type == 'pipelineruns':
+                nonlocal count
+                # send pipeline finished response once all logs are collected
+                if count == 2:
+                    yield completed_pipeline
+                else:
+                    count += 1
+                    yield PIPELINE_RUN_JSON
+            elif resource_type == 'taskruns':
+                if resource_name == TASK_RUN_NAME:
+                    yield TASK_RUN_JSON
+                else:
+                    yield TASK_RUN_JSON2
+            elif resource_type == 'pods':
+                if resource_name == POD_NAME:
+                    yield POD_JSON
+                else:
+                    yield POD_JSON2
 
-        responses.add(responses.GET, POD_WATCH_URL,
-                      json=POD_WATCH_JSON)
-        responses.add(responses.GET, POD_WATCH_URL2,
-                      json=POD_WATCH_JSON2)
-        responses.add(responses.GET, POD_URL,
-                      json=POD_JSON)
-        responses.add(responses.GET, POD_URL2,
-                      json=POD_JSON2)
+        (flexmock(Openshift)
+         .should_receive('watch_resource')
+         .replace_with(custom_watch))
 
         for container in CONTAINERS:
             url = f"{POD_URL}/log?follow=True&container={container}"
@@ -919,12 +932,6 @@ class TestPipelineRun():
             )
         logs = [line for line in pipeline_run.get_logs(follow=True, wait=True)]
 
-        # wait for pipeline start, pipeline + watch = 2
-        # wait for tasks start, pipeline + watch = 2
-        # 2 tasks + watch = 4
-        # 2 pods + watch = 4
-        # logs 3 steps per pod in 2 pods = 6
-        assert len(responses.calls) == 18
         assert logs == [(PIPELINE_RUN_JSON['status']['taskRuns']
                          [TASK_RUN_NAME]['pipelineTaskName'],
                          'Hello World'),
