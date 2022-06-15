@@ -665,7 +665,7 @@ class PipelineRun():
             except KeyError:
                 logger.error("pipeline run does not have any status")
                 continue
-            # pipeline run finished succesfully or failed
+            # pipeline run finished successfully or failed
             if status in ['True', 'False']:
                 return pipeline_run
             elif status == 'Unknown' and reason == 'Running':
@@ -683,7 +683,7 @@ class PipelineRun():
         does not have information about all of its task runs, especially when there are multiple
         sequential tasks.
         """
-        watched_task_runs = []
+        watched_task_runs = set()
         for pipeline_run in self.os.watch_resource(
                 self.api_path,
                 self.api_version,
@@ -697,10 +697,16 @@ class PipelineRun():
                 continue
             for task_run_name, task_run_data in task_runs.items():
                 if task_run_name not in watched_task_runs:
-                    watched_task_runs.append(task_run_name)
+                    watched_task_runs.add(task_run_name)
                     yield task_run_data['pipelineTaskName'], task_run_name
-            # all task runs accounted for
-            if len(pipeline_run['status']['pipelineSpec']['tasks']) == len(task_runs):
+
+            try:
+                status = pipeline_run['status']['conditions'][0]['status']
+            except KeyError:
+                logger.error("pipeline run does not have any status")
+                return
+            # pipeline run finished successfully or failed
+            if status in ['True', 'False']:
                 return
 
     def _get_logs(self):
@@ -779,7 +785,7 @@ class TaskRun():
             except KeyError:
                 logger.error("Task run does not have any status")
                 continue
-            # task run finished succesfully or failed
+            # task run finished successfully or failed
             if status in ['True', 'False']:
                 return task_run
             elif status == 'Unknown' and reason == 'Running':
