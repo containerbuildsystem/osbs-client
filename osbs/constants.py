@@ -1,5 +1,5 @@
 """
-Copyright (c) 2015, 2016, 2017 Red Hat, Inc
+Copyright (c) 2015-2022 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -12,7 +12,6 @@ import sys
 
 PY3 = sys.version_info[0] >= 3
 
-BUILD_JSON_STORE = "/usr/share/osbs/"
 DEFAULT_GIT_REF = "master"
 DEFAULT_CONFIGURATION_FILE = "/etc/osbs.conf"
 DEFAULT_CONF_BINARY_SECTION = "default_binary"
@@ -31,9 +30,6 @@ DEFAULT_NAMESPACE = "default"
 SERVICEACCOUNT_SECRET = "/var/run/secrets/kubernetes.io/serviceaccount"
 SERVICEACCOUNT_TOKEN = "token"
 SERVICEACCOUNT_CACRT = "ca.crt"
-
-CLI_LIST_BUILDS_DEFAULT_COLS = ["name", "status", "image"]
-CLI_WATCH_BUILDS_DEFAULT_COLS = ["changetype", "status", "created", "name"]
 
 # number of digits used for unique image tags
 RAND_DIGITS = 5
@@ -88,12 +84,6 @@ RELEASE_LABEL_FORMAT = re.compile(r"""^\d+             # First character must be
                                       [a-zA-Z0-9]+)*$  # last characters must be alphanumeric
                                    """, re.X)
 VERSION_LABEL_FORBIDDEN_CHARS = ['-']
-
-ANNOTATION_SOURCE_REPO = 'osbs/source_repo'
-ANNOTATION_INSECURE_REPO = 'openshift.io/image.insecureRepository'
-
-# optional key path for filtering existing build config results
-FILTER_KEY = 'spec.source.git.uri'
 
 # number of retries for git clone operations
 GIT_MAX_RETRIES = 3
