@@ -21,7 +21,6 @@ from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONF_BINARY_SECT
                             DEFAULT_CONF_SOURCE_SECTION, PY3)
 from osbs.exceptions import (OsbsNetworkException, OsbsException, OsbsAuthException,
                              OsbsResponseException)
-from osbs.cli.capture import setup_json_capture
 from osbs.utils import UserWarningsStore
 
 logger = logging.getLogger('osbs')
@@ -423,18 +422,9 @@ def cli():
 
 def main():
     parser, args = cli()
-    # OSBS2 TBD if we remove setup_json_capture, we can just create configuration without instance
-    # as verbosity is read from general section
-    # also we could even just read verbosity from args and create configurations only in
-    # cmd functions
     try:
-        if args.instance:
-            os_conf = Configuration(conf_file=args.config,
-                                    conf_section=args.instance,
-                                    cli_args=args)
-        else:
-            os_conf = Configuration(conf_file=args.config,
-                                    cli_args=args)
+        os_conf = Configuration(conf_file=args.config,
+                                cli_args=args)
     except OsbsException as ex:
         logger.error("Configuration error: %s", ex.message)
         return -1
@@ -448,13 +438,6 @@ def main():
         logger.debug("Logging level set to debug")
     else:
         set_logging(level=logging.INFO)
-
-    # required just for setup_json_capture, if we don't need it anymore we could just remove it
-    # OSBS2 TBD
-    osbs = OSBS(os_conf)
-
-    if args.capture_dir is not None:
-        setup_json_capture(osbs, os_conf, args.capture_dir)
 
     return_value = -1
     try:
