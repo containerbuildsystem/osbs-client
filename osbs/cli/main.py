@@ -26,10 +26,6 @@ from osbs.utils import UserWarningsStore
 logger = logging.getLogger('osbs')
 
 
-def print_json_nicely(decoded_json):
-    print(json.dumps(decoded_json, indent=2))
-
-
 def _print_pipeline_run_logs(pipeline_run, user_warnings_store):
     """
     prints pipeline run logs
@@ -422,6 +418,7 @@ def cli():
 
 def main():
     parser, args = cli()
+
     try:
         os_conf = Configuration(conf_file=args.config,
                                 cli_args=args)
@@ -441,11 +438,6 @@ def main():
 
     return_value = -1
     try:
-        # OSBS2 TBD
-        # this breaks all other commands which require 2nd osbs arg, which have to be cleaned,
-        # also if we will still use some, like login/token, we would have to require
-        # instance name, as we can't choose default since we have now 2 defaults
-        # one for binary and another for source
         return_value = args.func(args)
     except AttributeError:
         if hasattr(args, 'func'):
