@@ -1,5 +1,5 @@
 """
-Copyright (c) 2015 Red Hat, Inc
+Copyright (c) 2015-2022 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -18,16 +18,13 @@ import requests
 import logging
 from time import sleep
 import time
-from pkg_resources import parse_version
 from textwrap import dedent
 
 from osbs.constants import REPO_CONTAINER_CONFIG, USER_WARNING_LEVEL
 from osbs.repo_utils import RepoInfo
 from osbs.utils import (git_repo_humanish_part_from_uri, sanitize_strings_for_openshift,
-                        TarWriter, TarReader, make_name_from_git,
-                        get_instance_token_file_name, sanitize_version,
-                        clone_git_repo, get_repo_info, UserWarningsStore, ImageName, reset_git_repo,
-                        stringify_values)
+                        make_name_from_git, get_instance_token_file_name, clone_git_repo,
+                        get_repo_info, UserWarningsStore, ImageName, reset_git_repo)
 from osbs.exceptions import OsbsException, OsbsCommitNotFound, OsbsLocallyModified
 from tests.constants import (TEST_DOCKERFILE_GIT, TEST_DOCKERFILE_SHA1, TEST_DOCKERFILE_INIT_SHA1,
                              TEST_DOCKERFILE_BRANCH)
@@ -276,21 +273,6 @@ def test_kinit_fails(custom_ccache):
                                                   CCACHE_PATH if custom_ccache else None)
 
 
-@pytest.mark.parametrize("prefix", ["", "some/thing"])
-def test_tarfile(tmpdir, prefix):
-    filename = str(tmpdir.join("archive.tar.bz2"))
-
-    with TarWriter(filename, directory=prefix) as t:
-        t.write_file("a/b.c", b"foobar")
-
-    assert os.path.exists(filename)
-
-    for f in TarReader(filename):
-        assert f.filename == os.path.join(prefix, "a/b.c")
-        content = f.fileobj.read()
-        assert content == b"foobar"
-
-
 def test_get_instance_token_file_name():
     expected = os.path.join(os.path.expanduser('~'), '.osbs', 'spam.token')
 
@@ -298,35 +280,6 @@ def test_get_instance_token_file_name():
 
 
 vstr_re = re.compile(r'\d+\.\d+\.\d+')
-
-
-@pytest.mark.parametrize(('version', 'valid'), [
-    ('1.0.4', True),
-    ('5.3', True),
-    ('2', True),
-    ('7.3.1', True),
-    ('9', True),
-    ('6.8', True),
-    ('10.127.43', True),
-    ('bacon', False),
-    ('5x3yj', False),
-    ('x.y.z', False),
-])
-def test_sanitize_version(version, valid):
-    if valid:
-        assert vstr_re.match(sanitize_version(parse_version(version)))
-    else:
-        # with old-style parse_version(), we'll get a numerical string
-        # back from sanitize_version(), but current parse_version() will
-        # give us a ValueError exception
-        try:
-            val = sanitize_version(parse_version(version))
-            if val != version:
-                return
-        except BaseException:
-            pass
-        with pytest.raises(ValueError):
-            sanitize_version(parse_version(version))
 
 
 @pytest.mark.parametrize(('commit', 'branch', 'depth', 'modified'), [
@@ -538,13 +491,3 @@ def test_store_user_warnings(logs, expected, wrong_input, caplog):
 
     user_warnings = str(user_warnings).splitlines()
     assert sorted(user_warnings) == sorted(expected)
-
-
-@pytest.mark.parametrize('d,expected', (
-    [{}, {}],
-    [{'a': [{}]}, {"a": '[{}]'}],
-    [{'b': 'test'}, {'b': 'test'}],
-    [{'a': 'test', 'b': {'c': 5}}, {'a': 'test', 'b': '{"c": 5}'}],
-))
-def test_stringify_values(d, expected):
-    assert stringify_values(d) == expected
