@@ -1,5 +1,5 @@
 """
-Copyright (c) 2015 Red Hat, Inc
+Copyright (c) 2015-2022 Red Hat, Inc
 All rights reserved.
 
 This software may be modified and distributed under the terms
@@ -18,16 +18,13 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import tarfile
 import time
 from collections import namedtuple
 from datetime import datetime
-from io import BytesIO
 from hashlib import sha256
 from osbs.repo_utils import RepoConfiguration, RepoInfo, AdditionalTagsConfig
 from osbs.constants import (OS_CONFLICT_MAX_RETRIES, OS_CONFLICT_WAIT,
                             GIT_MAX_RETRIES, GIT_BACKOFF_FACTOR, GIT_FETCH_RETRY,
-                            OS_NOT_FOUND_MAX_RETRIES, OS_NOT_FOUND_MAX_WAIT,
                             USER_WARNING_LEVEL, USER_WARNING_LEVEL_NAME, RAND_DIGITS)
 
 # This was moved to a separate file - import here for external API compatibility
@@ -70,58 +67,6 @@ class RegistryURI(object):
 
     def __repr__(self):
         return self.uri
-
-
-class TarWriter(object):
-    def __init__(self, outfile, directory=None):
-        mode = "w|bz2"
-        if hasattr(outfile, "write"):
-            self.tarfile = tarfile.open(fileobj=outfile, mode=mode)
-        else:
-            self.tarfile = tarfile.open(name=outfile, mode=mode)
-        self.directory = directory or ""
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, typ, val, tb):
-        self.tarfile.close()
-
-    def write_file(self, name, content):
-        buf = BytesIO(content)
-        arcname = os.path.join(self.directory, name)
-
-        ti = tarfile.TarInfo(arcname)
-        ti.size = len(content)
-        self.tarfile.addfile(ti, fileobj=buf)
-
-
-class TarReader(object):
-    TarFile = namedtuple('TarFile', ['filename', 'fileobj'])
-
-    def __init__(self, infile):
-        mode = "r|bz2"
-        if hasattr(infile, "read"):
-            self.tarfile = tarfile.open(fileobj=infile, mode=mode)
-        else:
-            self.tarfile = tarfile.open(name=infile, mode=mode)
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        ti = self.tarfile.next()    # pylint: disable=next-method-called
-
-        if ti is None:
-            self.close()
-            raise StopIteration()
-
-        return self.TarFile(ti.name, self.tarfile.extractfile(ti))
-
-    next = __next__     # py2 compatibility
-
-    def close(self):
-        self.tarfile.close()
 
 
 @contextlib.contextmanager
@@ -375,32 +320,6 @@ def get_instance_token_file_name(instance):
     return '{}/.osbs/{}.token'.format(os.path.expanduser('~'), instance)
 
 
-def sanitize_version(version):
-    """
-    Take parse_version() output and standardize output from older
-    setuptools' parse_version() to match current setuptools.
-    """
-    if hasattr(version, 'base_version'):
-        if version.base_version:
-            parts = version.base_version.split('.')
-        else:
-            parts = []
-    else:
-        parts = []
-        for part in version:
-            if part.startswith('*'):
-                break
-            parts.append(part)
-    parts = [int(p) for p in parts]
-
-    if len(parts) < 3:
-        parts += [0] * (3 - len(parts))
-
-    major, minor, micro = parts[:3]
-    cleaned_version = '{}.{}.{}'.format(major, minor, micro)
-    return cleaned_version
-
-
 def retry_on_conflict(func):
     @wraps(func)
     def retry(*args, **kwargs):
@@ -412,47 +331,6 @@ def retry_on_conflict(func):
         return retry_func.go(func, *args, **kwargs)
 
     return retry
-
-
-def retry_on_not_found(func):
-    @wraps(func)
-    def retry(*args, **kwargs):
-        # Only retry when OsbsResponseException was raised due to not found
-        def should_retry_cb(ex):
-            return ex.status_code == http_client.NOT_FOUND
-
-        retry_func = RetryFunc(OsbsResponseException, should_retry_cb=should_retry_cb,
-                               retry_times=OS_NOT_FOUND_MAX_RETRIES,
-                               retry_delay=OS_NOT_FOUND_MAX_WAIT)
-        return retry_func.go(func, *args, **kwargs)
-
-    return retry
-
-
-def retry_on_gateway_timeout(func):
-    @wraps(func)
-    def retry(*args, **kwargs):
-        # Only retry when OsbsResponseException was raised due to gateway error
-        def should_retry_cb(ex):
-            return ex.status_code == http_client.GATEWAY_TIMEOUT
-
-        retry_func = RetryFunc(OsbsResponseException, should_retry_cb=should_retry_cb,
-                               retry_times=OS_NOT_FOUND_MAX_RETRIES,
-                               retry_delay=OS_NOT_FOUND_MAX_WAIT)
-        return retry_func.go(func, *args, **kwargs)
-
-    return retry
-
-
-def retry_on_exception(exception_type):
-    def do_retry_on_exception(func):
-        @wraps(func)
-        def retry(*args, **kwargs):
-            return RetryFunc(exception_type).go(func, *args, **kwargs)
-
-        return retry
-
-    return do_retry_on_exception
 
 
 def user_warning_log_handler(self, message):
@@ -650,22 +528,6 @@ class UserWarningsStore(object):
 
     def __bool__(self):
         return bool(self._user_warnings)
-
-
-def stringify_values(d):
-    """All non-string values in dictionary will be json serialized.
-
-    Example of usage is for openshift annotations which must be strings only.
-
-    :param dict d: dict with values of various types
-    :return: new dict with values converted to string
-    """
-    assert isinstance(d, dict)
-
-    return {
-        k: val if isinstance(val, str) else json.dumps(val)
-        for k, val in d.items()
-    }
 
 
 def generate_random_postfix():
