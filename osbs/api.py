@@ -14,7 +14,6 @@ import sys
 import warnings
 import yaml
 from functools import wraps
-from contextlib import contextmanager
 from typing import Any, Dict, Tuple
 from string import Template
 
@@ -479,13 +478,3 @@ class OSBS(object):
         return {
             name: value for name, value in map(load_result, pipeline_results) if value is not None
         }
-
-    @contextmanager
-    def retries_disabled(self):
-        """
-        Context manager to disable retries on requests
-        :returns: OSBS object
-        """
-        self.os.retries_enabled = False
-        yield
-        self.os.retries_enabled = True

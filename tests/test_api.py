@@ -545,37 +545,6 @@ class TestOSBS(object):
             assert 'git_ref' not in caplog.text
             assert 'git_branch' in caplog.text
 
-    def test_retries_disabled(self, osbs_binary):  # noqa
-        pipeline_run_name = 'test-pipeline'
-        prun = PipelineRun(os=osbs_binary.os, pipeline_run_name=pipeline_run_name,
-                           pipeline_run_data={})
-        get_info_url = f"/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/" \
-                       f"pipelineruns/{pipeline_run_name}"
-
-        (flexmock(osbs_binary.os._con)
-            .should_receive('get')
-            .with_args(get_info_url, headers={},
-                       verify_ssl=True, retries_enabled=False).and_return(Mock_Start_Pipeline()))
-
-        with osbs_binary.retries_disabled():
-            response_list = prun.get_info()
-            assert response_list is not None
-
-        pipeline_run_name = 'test-pipeline2'
-        prun = PipelineRun(os=osbs_binary.os, pipeline_run_name=pipeline_run_name,
-                           pipeline_run_data={})
-        get_info_url = f"/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/" \
-                       f"pipelineruns/{pipeline_run_name}"
-
-        (flexmock(osbs_binary.os._con)
-            .should_receive('get')
-            .with_args(get_info_url, headers={},
-                       verify_ssl=True, retries_enabled=True).and_return(Mock_Start_Pipeline()))
-
-        # Verify that retries are re-enabled after contextmanager exits
-        prun.get_info()
-        assert response_list is not None
-
     @pytest.mark.parametrize(('label_type', 'label_value', 'raise_exception'), [
         (Labels.LABEL_TYPE_RELEASE, '1release with space', OsbsValidationException),
         (Labels.LABEL_TYPE_RELEASE, '1release_with/slash', OsbsValidationException),
