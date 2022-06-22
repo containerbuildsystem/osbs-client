@@ -10,7 +10,6 @@ from __future__ import print_function, absolute_import, unicode_literals
 import logging
 import os
 import os.path
-from pkg_resources import parse_version
 
 from six.moves import configparser
 from six.moves.urllib.parse import urljoin
@@ -106,20 +105,6 @@ class Configuration(object):
     def _get_deprecated(self, args_key, conf_section, conf_key, default=None, is_bool_val=False):
         return self._get_value(args_key, conf_section, conf_key, default, is_bool_val,
                                deprecated=True)
-
-    def get_openshift_required_version(self):
-        """
-        Get minimum version of openshift we require
-
-        :return: None, or else an object instance that allows comparisons
-        """
-        verstring = self._get_value("openshift_required_version",
-                                    GENERAL_CONFIGURATION_SECTION,
-                                    "openshift_required_version")
-        if verstring:
-            return parse_version(verstring)
-
-        return None
 
     def get_openshift_base_uri(self):
         """
