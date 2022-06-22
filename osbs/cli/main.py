@@ -18,7 +18,7 @@ from osbs import set_logging
 from osbs.api import OSBS
 from osbs.conf import Configuration
 from osbs.constants import (DEFAULT_CONFIGURATION_FILE, DEFAULT_CONF_BINARY_SECTION,
-                            DEFAULT_CONF_SOURCE_SECTION, PY3)
+                            DEFAULT_CONF_SOURCE_SECTION)
 from osbs.exceptions import (OsbsNetworkException, OsbsException, OsbsAuthException,
                              OsbsResponseException)
 from osbs.utils import UserWarningsStore
@@ -228,22 +228,6 @@ def _display_pipeline_run_summary(build_metadata):
         print(line)
 
 
-def str_on_2_unicode_on_3(s):
-    """
-    argparse is way too awesome when doing repr() on choices when printing usage
-
-    :param s: str or unicode
-    :return: str on 2, unicode on 3
-    """
-
-    if not PY3:
-        return str(s)
-    else:  # 3+
-        if not isinstance(s, str):
-            return str(s, encoding="utf-8")
-        return s
-
-
 def cli():
     try:
         version = pkg_resources.get_distribution("osbs-client").version
@@ -260,8 +244,7 @@ def cli():
 
     subparsers = parser.add_subparsers(help='commands')
 
-    build_parser = subparsers.add_parser(str_on_2_unicode_on_3('build'),
-                                         help='build an image in OSBS')
+    build_parser = subparsers.add_parser('build', help='build an image in OSBS')
     build_parser.add_argument("--build-json-dir", action="store", metavar="PATH",
                               help="directory with build jsons")
     build_parser.add_argument("-g", "--git-url", action='store', metavar="URL",
@@ -313,8 +296,7 @@ def cli():
     build_parser.set_defaults(func=cmd_build)
 
     build_source_container_parser = subparsers.add_parser(
-        str_on_2_unicode_on_3('build-source-container'),
-        help='build a source container image in OSBS'
+        'build-source-container', help='build a source container image in OSBS'
     )
     build_source_container_parser.add_argument(
         "--sources-for-koji-build-nvr", action='store',
