@@ -32,8 +32,7 @@ SERVICEACCOUNT_CACRT = "ca.crt"
 RAND_DIGITS = 5
 
 # Logging format used in Atomic Reactor
-ATOMIC_REACTOR_LOGGING_FMT = \
-    '%(asctime)s platform:%(arch)s - %(name)s - %(levelname)s - %(message)s'
+ATOMIC_REACTOR_LOGGING_FMT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 
 # Numeric representation of user warnings loggers' level
 # User warning level is logically between INFO (20) and WARNING (30) levels
