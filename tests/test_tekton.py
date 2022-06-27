@@ -447,7 +447,7 @@ class TestPipelineRun():
     ])
     def test_cancel_pipeline(self, caplog, pipeline_run, get_json, status, raises):
         exp_request_body_pipeline_run = deepcopy(PIPELINE_MINIMAL_DATA)
-        exp_request_body_pipeline_run['spec']['status'] = 'PipelineRunCancelled'
+        exp_request_body_pipeline_run['spec']['status'] = 'CancelledRunFinally'
 
         responses.add(
             responses.PATCH,

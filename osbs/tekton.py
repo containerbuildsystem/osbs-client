@@ -436,7 +436,7 @@ class PipelineRun():
     @retry_on_conflict
     def cancel_pipeline_run(self):
         data = copy.deepcopy(self.minimal_data)
-        data['spec']['status'] = 'PipelineRunCancelled'
+        data['spec']['status'] = 'CancelledRunFinally'
 
         response = self.os.patch(
             self.pipeline_run_url,
