@@ -108,6 +108,7 @@ class HttpStream(object):
         retry = Retry(
             total=HTTP_MAX_RETRIES,
             connect=HTTP_MAX_RETRIES,
+            read=HTTP_MAX_RETRIES,
             backoff_factor=HTTP_BACKOFF_FACTOR,
             status_forcelist=HTTP_RETRIES_STATUS_FORCELIST,
             method_whitelist=HTTP_RETRIES_METHODS_WHITELIST,
