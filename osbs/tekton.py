@@ -26,16 +26,15 @@ from requests.utils import guess_json_utf
 
 logger = logging.getLogger(__name__)
 
-# Retry each connection attempt after 5 seconds, for a maximum of 10 times
+# Retry each connection attempt after 5 seconds, for a maximum of 20 times
 WATCH_RETRY_SECS = 5
-WATCH_RETRY = 10
-# Retry waiting for pipeline to finish for 5 seconds, for a maximum of 10 times
+WATCH_RETRY = 20
+MAX_BAD_RESPONSES = 20
+
+# Retry waiting for pipeline to finish for 5 seconds, for a maximum of 5 hours
 WAIT_RETRY_SECS = 5
-WAIT_RETRY = 10
-MAX_BAD_RESPONSES = WATCH_RETRY // 3
-# Give up after 12 hours
-WAIT_RETRY_HOURS = 12
-WAIT_RETRY = WAIT_RETRY_HOURS * 3600 // (WATCH_RETRY_SECS * WATCH_RETRY)
+WAIT_RETRY_HOURS = 5
+WAIT_RETRY = (WAIT_RETRY_HOURS * 3600) // WAIT_RETRY_SECS
 
 API_VERSION = "tekton.dev/v1beta1"
 
@@ -318,40 +317,45 @@ class Openshift(object):
                 response = self.get(watch_url, stream=True,
                                     headers={'Connection': 'close'})
                 check_response(response)
+
+                for line in response.iter_lines():
+                    encoding = guess_json_utf(line)
+                    try:
+                        j = json.loads(line.decode(encoding))
+                    except ValueError:
+                        logger.error("Cannot decode watch event: %s", line)
+                        continue
+                    if 'object' not in j:
+                        logger.error("Watch event has no 'object': %s", j)
+                        continue
+                    if 'type' not in j:
+                        logger.error("Watch event has no 'type': %s", j)
+                        continue
+
+                    # Avoid races. We've already asked the server to tell us
+                    # about changes to the object, but now ask for a fresh
+                    # copy of the object as well. This is to catch the
+                    # situation where the object changed before the call to
+                    # this method, or in between retries in this method.
+                    logger.debug("retrieving fresh version of object %s", resource_name)
+                    fresh_response = self.get(get_url)
+                    check_response(fresh_response)
+                    yield fresh_response.json()
+
             # we're already retrying, so there's no need to panic just because of a bad response
             except OsbsResponseException as exc:
                 bad_responses += 1
                 if bad_responses > MAX_BAD_RESPONSES:
                     raise exc
-                else:
-                    # check_response() already logged the message, so just report that we're
-                    # sleeping and retry
-                    log_and_sleep()
-                    continue
 
-            for line in response.iter_lines():
-                encoding = guess_json_utf(line)
-                try:
-                    j = json.loads(line.decode(encoding))
-                except ValueError:
-                    logger.error("Cannot decode watch event: %s", line)
-                    continue
-                if 'object' not in j:
-                    logger.error("Watch event has no 'object': %s", j)
-                    continue
-                if 'type' not in j:
-                    logger.error("Watch event has no 'type': %s", j)
-                    continue
-
-                # Avoid races. We've already asked the server to tell us
-                # about changes to the object, but now ask for a fresh
-                # copy of the object as well. This is to catch the
-                # situation where the object changed before the call to
-                # this method, or in between retries in this method.
-                logger.debug("retrieving fresh version of object %s", resource_name)
-                fresh_response = self.get(get_url)
-                check_response(fresh_response)
-                yield fresh_response.json()
+            except OsbsException as exc:
+                if (not isinstance(exc.cause, requests.ConnectionError) and
+                        not isinstance(exc.cause, requests.Timeout)):
+                    raise
+            except requests.exceptions.ConnectionError:
+                pass
+            except requests.exceptions.Timeout:
+                pass
 
             log_and_sleep()
 
@@ -892,9 +896,12 @@ class Pod():
             # wrapped in OsbsException or OsbsNetworkException,
             # inspect cause to detect ConnectionError.
             except OsbsException as exc:
-                if not isinstance(exc.cause, requests.ConnectionError):
+                if (not isinstance(exc.cause, requests.ConnectionError) and
+                        not isinstance(exc.cause, requests.Timeout)):
                     raise
             except requests.exceptions.ConnectionError:
+                pass
+            except requests.exceptions.Timeout:
                 pass
 
             idle = time.time() - connected
