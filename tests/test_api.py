@@ -989,8 +989,9 @@ class TestOSBS(object):
 
     def test_get_build_error_message(self, osbs_binary):
         metadata = '{"errors": {"plugin1": "error1"}}'
+        message = [{'key': 'task_result', 'value': 'bad thing'}]
         steps = [{'name': 'step1', 'terminated': {'exitCode': 0}},
-                 {'name': 'step2', 'terminated': {'exitCode': 128, 'reason': 'bad thing'}}]
+                 {'name': 'step2', 'terminated': {'exitCode': 128, 'message': json.dumps(message)}}]
         taskruns = {'task1': {'status': {'conditions': [{'reason': 'Succeeded'}],
                                          'startTime': '2022-04-26T15:58:42Z'},
                               'pipelineTaskName': 'prun-task1'},
@@ -1003,10 +1004,8 @@ class TestOSBS(object):
 
         flexmock(PipelineRun).should_receive('get_info').and_return(resp)
 
-        error_msg = "Error in plugin plugin1: error1\n\npipeline run errors:\n"
-        error_msg += "pipeline task 'prun-task2' failed:\n"
-        error_msg += "task step 'step2' failed with exit code: 128 and reason: 'bad thing'\n"
-
+        error_msg = "Error in plugin plugin1: error1;\n"
+        error_msg += "Error in prun-task2: bad thing;\n"
         assert error_msg == osbs_binary.get_build_error_message('run_name')
 
     def test_get_build_results(self, osbs_binary):
