@@ -507,9 +507,7 @@ class PipelineRun():
 
         if plugin_errors:
             for plugin, error in plugin_errors.items():
-                err_message += f"Error in plugin {plugin}: {error}\n"
-
-        err_message += "\npipeline run errors:\n"
+                err_message += f"Error in plugin {plugin}: {error};\n"
 
         task_runs_status = data['status'].get('taskRuns', {})
 
@@ -518,8 +516,6 @@ class PipelineRun():
             if stats['status']['conditions'][0]['reason'] == 'Succeeded':
                 continue
 
-            err_message += f"pipeline task '{task_name}' failed:\n"
-
             if 'steps' in stats['status']:
                 for step in stats['status']['steps']:
                     if 'terminated' in step:
@@ -527,25 +523,19 @@ class PipelineRun():
                         if exit_code == 0:
                             continue
 
-                        reason = step['terminated']['reason']
-                        err_message += f"task step '{step['name']}' failed with exit " \
-                                       f"code: {exit_code} " \
-                                       f"and reason: '{reason}'\n"
-                    else:
-                        err_message += f"task step '{step['name']}' is missing 'terminated' key " \
-                                       f"with exit code and reason\n"
+                        if 'message' in step['terminated']:
+                            try:
+                                message_json = json.loads(step['terminated']['message'])
+                                for message in message_json:
+                                    if message['key'] == 'task_result':
+                                        err_message += f"Error in {task_name}: " \
+                                                       f"{message['value']};\n"
+                            except Exception as e:
+                                logger.info("failed to get error message: %s", repr(e))
+                                continue
 
-            else:
-                task_condition = stats['status']['conditions'][0]
-                err_message += f"task run '{task_name}' failed with reason:" \
-                               f" '{task_condition['reason']}' and message:" \
-                               f" '{task_condition['message']}'\n"
-
-        if not task_runs_status:
-            pipeline_run_condition = data['status']['conditions'][0]
-            err_message += f"pipeline run {self.pipeline_run_name} failed with reason:" \
-                           f" '{pipeline_run_condition['reason']}' and message:" \
-                           f" '{pipeline_run_condition['message']}'\n"
+        if not err_message:
+            err_message = "pipeline run failed;"
 
         return err_message
 

@@ -541,16 +541,13 @@ class TestPipelineRun():
         # no taskRuns in status and no plugins-metadata
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}]},
           'metadata': {'annotations': {}}},
-         "\npipeline run errors:\npipeline "
-         "run source-default failed with reason: 'reason1' and message: 'message1'\n"),
+         "pipeline run failed;"),
 
         # no taskRuns in status
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}]},
           'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
                                                            '"plugin2": "error2"}}'}}},
-         "Error in plugin plugin1: error1\nError in plugin plugin2: error2\n\npipeline run errors:"
-         "\npipeline run source-default failed with reason: 'reason1' and message: "
-         "'message1'\n"),
+         "Error in plugin plugin1: error1;\nError in plugin plugin2: error2;\n"),
 
         # taskRuns in status, without steps
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
@@ -564,9 +561,7 @@ class TestPipelineRun():
                      }},
           'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
                                                            '"plugin2": "error2"}}'}}},
-         "Error in plugin plugin1: error1\nError in plugin plugin2: error2\n\npipeline run errors:"
-         "\npipeline task 'binary-build-task1' failed:\n"
-         "task run 'binary-build-task1' failed with reason: 'reason2' and message: 'message2'\n"),
+         "Error in plugin plugin1: error1;\nError in plugin plugin2: error2;\n"),
 
         # taskRuns in status, with steps and failed without terminated key
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
@@ -586,9 +581,7 @@ class TestPipelineRun():
                      }},
           'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
                                                            '"plugin2": "error2"}}'}}},
-         "Error in plugin plugin1: error1\nError in plugin plugin2: error2\n\n"
-         "pipeline run errors:\npipeline task 'binary-build-task1' failed:\n"
-         "task step 'step_ko' is missing 'terminated' key with exit code and reason\n"),
+         "Error in plugin plugin1: error1;\nError in plugin plugin2: error2;\n"),
 
         # taskRuns in status, with steps
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
@@ -601,8 +594,10 @@ class TestPipelineRun():
                                      {'name': 'step_ok',
                                       'terminated': {'exitCode': 0}},
                                      {'name': 'step_ko',
-                                      'terminated': {'exitCode': 1,
-                                                     'reason': 'step_reason'}}
+                                      'terminated': {
+                                          'exitCode': 1,
+                                          'message': json.dumps([{'key': 'task_result',
+                                                                  'value': 'binary error'}])}}
                                  ],
                                  "startTime": "2022-04-26T15:58:42Z"
                              }
@@ -615,11 +610,15 @@ class TestPipelineRun():
                                      {'name': 'prestep_ok',
                                       'terminated': {'exitCode': 0}},
                                      {'name': 'prestep_ko',
-                                      'terminated': {'exitCode': 1,
-                                                     'reason': 'prestep_reason'}},
+                                      'terminated': {
+                                          'exitCode': 1,
+                                          'message': json.dumps([{'key': 'task_result',
+                                                                  'value': 'pre1 error'}])}},
                                      {'name': 'prestep_ko2',
-                                      'terminated': {'exitCode': 1,
-                                                     'reason': 'prestep_reason2'}},
+                                      'terminated': {
+                                          'exitCode': 1,
+                                          'message': json.dumps([{'key': 'task_result',
+                                                                  'value': 'pre2 error'}])}},
                                  ],
                                  "startTime": "2022-04-26T14:58:42Z"
                              }
@@ -627,12 +626,10 @@ class TestPipelineRun():
                      }},
           'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
                                                            '"plugin2": "error2"}}'}}},
-         "Error in plugin plugin1: error1\nError in plugin plugin2: error2\n\npipeline run errors:"
-         "\npipeline task 'binary-build-pretask' failed:\n"
-         "task step 'prestep_ko' failed with exit code: 1 "
-         "and reason: 'prestep_reason'\ntask step 'prestep_ko2' failed with exit code: 1 "
-         "and reason: 'prestep_reason2'\npipeline task 'binary-build-task1' failed:\n"
-         "task step 'step_ko' failed with exit code: 1 and reason: 'step_reason'\n"),
+         "Error in plugin plugin1: error1;\nError in plugin plugin2: error2;\n"
+         "Error in binary-build-pretask: pre1 error;\n"
+         "Error in binary-build-pretask: pre2 error;\n"
+         "Error in binary-build-task1: binary error;\n"),
     ])  # noqa
     def test_get_error_message(self, pipeline_run, get_json, error_lines):
         responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
