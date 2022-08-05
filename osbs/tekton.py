@@ -671,10 +671,9 @@ class PipelineRun():
                     "pipeline run '%s' does not have any status yet",
                     self.pipeline_run_name)
                 continue
-            # pipeline run finished successfully or failed
-            if status in ['True', 'False']:
-                return pipeline_run
-            elif status == 'Unknown' and reason == 'Running':
+            # pipeline run finished successfully or failed, or is still running
+            if status in ['True', 'False'] or (status == 'Unknown' and reason == 'Running'):
+                logger.info("pipeline run '%s' started", self.pipeline_run_name)
                 return pipeline_run
             else:
                 # (Unknown, Started), (Unknown, PipelineRunCancelled)
@@ -794,9 +793,8 @@ class TaskRun():
                 logger.debug("Task run '%s' does not have any status yet", self.task_run_name)
                 continue
             # task run finished successfully or failed
-            if status in ['True', 'False']:
-                return task_run
-            elif status == 'Unknown' and reason == 'Running':
+            if status in ['True', 'False'] or (status == 'Unknown' and reason == 'Running'):
+                logger.info("Task run '%s' started", self.task_run_name)
                 return task_run
             else:
                 # (Unknown, Started), (Unknown, Pending), (Unknown, TaskRunCancelled)
@@ -929,6 +927,7 @@ class Pod():
                 logger.debug("Pod '%s' does not have any status yet", self.pod_name)
                 continue
             if status in ['Running', 'Succeeded', 'Failed']:
+                logger.info("Pod '%s' started", self.pod_name)
                 return pod
             else:
                 # unknown or pending
