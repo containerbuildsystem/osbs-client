@@ -300,7 +300,7 @@ class Openshift(object):
         after each update to the object
         """
         def log_and_sleep():
-            logger.debug("connection closed, reconnecting in %ds", WATCH_RETRY_SECS)
+            logger.debug("Connection closed, reconnecting in %ds", WATCH_RETRY_SECS)
             time.sleep(WATCH_RETRY_SECS)
 
         watch_path = f"watch/namespaces/{self.namespace}/{resource_type}/{resource_name}/"
@@ -312,7 +312,7 @@ class Openshift(object):
 
         bad_responses = 0
         for _ in range(WATCH_RETRY):
-            logger.debug("watching for updates for %s, %s", resource_type, resource_name)
+            logger.debug("Watching for updates for %s, %s", resource_type, resource_name)
             try:
                 response = self.get(watch_url, stream=True,
                                     headers={'Connection': 'close'})
@@ -596,7 +596,7 @@ class PipelineRun():
 
             if match_state(status, reason, completion_time is not None):
                 logger.debug(
-                    'found %s task: name=%s; status=%s; reason=%s; completionTime=%s',
+                    'Found %s task: name=%s; status=%s; reason=%s; completionTime=%s',
                     state_name, task_run['pipelineTaskName'], status, reason, completion_time,
                 )
                 return True
@@ -668,12 +668,12 @@ class PipelineRun():
                 reason = pipeline_run['status']['conditions'][0]['reason']
             except KeyError:
                 logger.debug(
-                    "pipeline run '%s' does not have any status yet",
+                    "Pipeline run '%s' does not have any status yet",
                     self.pipeline_run_name)
                 continue
             # pipeline run finished successfully or failed, or is still running
             if status in ['True', 'False'] or (status == 'Unknown' and reason == 'Running'):
-                logger.info("pipeline run '%s' started", self.pipeline_run_name)
+                logger.info("Pipeline run '%s' started", self.pipeline_run_name)
                 return pipeline_run
             else:
                 # (Unknown, Started), (Unknown, PipelineRunCancelled)
@@ -699,7 +699,7 @@ class PipelineRun():
                 task_runs = pipeline_run['status']['taskRuns']
             except KeyError:
                 logger.debug(
-                    "pipeline run '%s' does not have any task runs yet",
+                    "Pipeline run '%s' does not have any task runs yet",
                     self.pipeline_run_name)
                 continue
             for task_run_name, task_run_data in task_runs.items():
@@ -710,7 +710,7 @@ class PipelineRun():
             try:
                 status = pipeline_run['status']['conditions'][0]['status']
             except KeyError:
-                logger.warning("pipeline run '%s' does not have any status", self.pipeline_run_name)
+                logger.warning("Pipeline run '%s' does not have any status", self.pipeline_run_name)
                 return
             # pipeline run finished successfully or failed
             if status in ['True', 'False']:
@@ -907,13 +907,13 @@ class Pod():
                 pass
 
             idle = time.time() - connected
-            logger.debug("connection closed after %ds", idle)
+            logger.debug("Connection closed after %ds", idle)
             if idle < min_idle_timeout:
                 # Finish output
                 return
 
             since = int(idle - 1)
-            logger.debug("fetching logs starting from %ds ago", since)
+            logger.debug("Fetching logs starting from %ds ago", since)
             kwargs['sinceSeconds'] = since
 
     def wait_for_start(self):

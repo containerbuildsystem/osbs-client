@@ -751,10 +751,10 @@ class TestPipelineRun():
         assert pipeline_run.any_task_was_cancelled() == any_canceled
 
         failed_re = re.compile(
-            r"found failed task: name=.*; status=False; reason=Failed; completionTime=2022.*"
+            r"Found failed task: name=.*; status=False; reason=Failed; completionTime=2022.*"
         )
         cancelled_re = re.compile(
-            r"found cancelled task: name=.*; status=(False|Unknown); "
+            r"Found cancelled task: name=.*; status=(False|Unknown); "
             r"reason=TaskRunCancelled; completionTime=.*"
         )
 
