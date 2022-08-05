@@ -323,13 +323,13 @@ class Openshift(object):
                     try:
                         j = json.loads(line.decode(encoding))
                     except ValueError:
-                        logger.error("Cannot decode watch event: %s", line)
+                        logger.warning("Cannot decode watch event: %s", line)
                         continue
                     if 'object' not in j:
-                        logger.error("Watch event has no 'object': %s", j)
+                        logger.warning("Watch event has no 'object': %s", j)
                         continue
                     if 'type' not in j:
-                        logger.error("Watch event has no 'type': %s", j)
+                        logger.warning("Watch event has no 'type': %s", j)
                         continue
 
                     # Avoid races. We've already asked the server to tell us
@@ -667,7 +667,9 @@ class PipelineRun():
                 status = pipeline_run['status']['conditions'][0]['status']
                 reason = pipeline_run['status']['conditions'][0]['reason']
             except KeyError:
-                logger.error("pipeline run does not have any status")
+                logger.debug(
+                    "pipeline run '%s' does not have any status yet",
+                    self.pipeline_run_name)
                 continue
             # pipeline run finished successfully or failed
             if status in ['True', 'False']:
@@ -697,7 +699,9 @@ class PipelineRun():
             try:
                 task_runs = pipeline_run['status']['taskRuns']
             except KeyError:
-                logger.error("pipeline run does not have any task runs")
+                logger.debug(
+                    "pipeline run '%s' does not have any task runs yet",
+                    self.pipeline_run_name)
                 continue
             for task_run_name, task_run_data in task_runs.items():
                 if task_run_name not in watched_task_runs:
@@ -707,7 +711,7 @@ class PipelineRun():
             try:
                 status = pipeline_run['status']['conditions'][0]['status']
             except KeyError:
-                logger.error("pipeline run does not have any status")
+                logger.warning("pipeline run '%s' does not have any status", self.pipeline_run_name)
                 return
             # pipeline run finished successfully or failed
             if status in ['True', 'False']:
@@ -787,7 +791,7 @@ class TaskRun():
                 status = task_run['status']['conditions'][0]['status']
                 reason = task_run['status']['conditions'][0]['reason']
             except KeyError:
-                logger.error("Task run does not have any status")
+                logger.debug("Task run '%s' does not have any status yet", self.task_run_name)
                 continue
             # task run finished successfully or failed
             if status in ['True', 'False']:
@@ -922,7 +926,7 @@ class Pod():
             try:
                 status = pod['status']['phase']
             except KeyError:
-                logger.error("Pod does not have any status")
+                logger.debug("Pod '%s' does not have any status yet", self.pod_name)
                 continue
             if status in ['Running', 'Succeeded', 'Failed']:
                 return pod
