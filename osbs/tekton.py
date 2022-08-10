@@ -539,6 +539,34 @@ class PipelineRun():
 
         return err_message
 
+    def get_final_platforms(self):
+        data = self.data
+
+        if not data:
+            return None
+
+        task_runs_status = data['status'].get('taskRuns', {})
+
+        for _, stats in get_sorted_task_runs(task_runs_status):
+            task_name = stats['pipelineTaskName']
+
+            if task_name != 'binary-container-prebuild':
+                continue
+
+            if stats['status']['conditions'][0]['reason'] != 'Succeeded':
+                continue
+
+            if 'taskResults' not in stats['status']:
+                continue
+
+            for result in stats['status']['taskResults']:
+                if result['name'] != 'platforms_result':
+                    continue
+
+                return json.loads(result['value'])
+
+        return None
+
     def has_succeeded(self):
         status_reason = self.status_reason
         logger.info("Pipeline run info: '%s'", self.data)

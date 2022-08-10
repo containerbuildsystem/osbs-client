@@ -392,6 +392,11 @@ class OSBS(object):
         return pipeline_run.get_info()
 
     @osbsapi
+    def get_final_platforms(self, build_name):
+        pipeline_run = PipelineRun(self.os, build_name)
+        return pipeline_run.get_final_platforms()
+
+    @osbsapi
     def get_build_reason(self, build_name):
         pipeline_run = PipelineRun(self.os, build_name)
         return pipeline_run.status_reason

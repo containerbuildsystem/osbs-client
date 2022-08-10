@@ -1008,6 +1008,18 @@ class TestOSBS(object):
         error_msg += "Error in prun-task2: bad thing;\n"
         assert error_msg == osbs_binary.get_build_error_message('run_name')
 
+    def test_get_final_platforms(self, osbs_binary):
+        taskruns = {'task1': {'status': {'conditions': [{'reason': 'Succeeded'}],
+                                         'taskResults': [{'name': 'platforms_result',
+                                                          'value': '["x86_64", "ppc64le"]'}],
+                                         'startTime': '2022-04-26T15:58:42Z'},
+                              'pipelineTaskName': 'binary-container-prebuild'}}
+
+        resp = {'metadata': {'name': 'run_name'}, 'status': {'taskRuns': taskruns}}
+
+        flexmock(PipelineRun).should_receive('get_info').and_return(resp)
+        assert osbs_binary.get_final_platforms('run_name') == ["x86_64", "ppc64le"]
+
     def test_get_build_results(self, osbs_binary):
         pipeline_results = [
             {'name': 'number', 'value': '42'},

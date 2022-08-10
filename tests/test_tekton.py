@@ -640,6 +640,102 @@ class TestPipelineRun():
         assert resp == error_lines
 
     @responses.activate
+    @pytest.mark.parametrize(('get_json', 'platforms'), [
+        # no data
+        ({}, None),
+
+        # no taskRuns in status
+        ({'status': {'conditions': []}},
+         None),
+
+        # taskRuns in status, no prebuild task
+        ({'status': {'conditions': [],
+                     'taskRuns': {
+                         'task1': {
+                             'pipelineTaskName': 'binary-build-task1',
+                             'status': {'startTime': '2022-04-26T15:58:42Z'}
+                         }
+                     }}},
+         None),
+
+        # taskRuns in status, prebuild task, not completed
+        ({'status': {'conditions': [],
+                     'taskRuns': {
+                         'task1': {
+                             'pipelineTaskName': 'binary-container-prebuild',
+                             'status': {'startTime': '2022-04-26T15:58:42Z',
+                                        'conditions': [{'reason': 'Running'}]}
+                         }
+                     }}},
+         None),
+
+        # taskRuns in status, prebuild task, completed, no taskResults
+        ({'status': {'conditions': [],
+                     'taskRuns': {
+                         'task1': {
+                             'pipelineTaskName': 'binary-container-prebuild',
+                             'status': {'startTime': '2022-04-26T15:58:42Z',
+                                        'conditions': [{'reason': 'Succeeded'}]}
+                         }
+                     }}},
+         None),
+
+        # taskRuns in status, prebuild task, completed, taskResults empty
+        ({'status': {'conditions': [],
+                     'taskRuns': {
+                         'task1': {
+                             'pipelineTaskName': 'binary-container-prebuild',
+                             'status': {'startTime': '2022-04-26T15:58:42Z',
+                                        'conditions': [{'reason': 'Succeeded'}],
+                                        'taskResults': []},
+                         }
+                     }}},
+         None),
+
+        # taskRuns in status, prebuild task, completed, taskResults but not platforms
+        ({'status': {'conditions': [],
+                     'taskRuns': {
+                         'task1': {
+                             'pipelineTaskName': 'binary-container-prebuild',
+                             'status': {'startTime': '2022-04-26T15:58:42Z',
+                                        'conditions': [{'reason': 'Succeeded'}],
+                                        'taskResults': [{'name': 'some_result'}]},
+                         }
+                     }}},
+         None),
+
+        # taskRuns in status, prebuild task, completed, taskResults with empty platforms
+        ({'status': {'conditions': [],
+                     'taskRuns': {
+                         'task1': {
+                             'pipelineTaskName': 'binary-container-prebuild',
+                             'status': {'startTime': '2022-04-26T15:58:42Z',
+                                        'conditions': [{'reason': 'Succeeded'}],
+                                        'taskResults': [{'name': 'platforms_result',
+                                                         'value': '[]'}]},
+                         }
+                     }}},
+         []),
+
+        # taskRuns in status, prebuild task, completed, taskResults with some platforms
+        ({'status': {'conditions': [],
+                     'taskRuns': {
+                         'task1': {
+                             'pipelineTaskName': 'binary-container-prebuild',
+                             'status': {'startTime': '2022-04-26T15:58:42Z',
+                                        'conditions': [{'reason': 'Succeeded'}],
+                                        'taskResults': [{'name': 'platforms_result',
+                                                         'value': '["x86_64", "ppc64le"]'}]},
+                         }
+                     }}},
+         ["x86_64", "ppc64le"]),
+    ])  # noqa
+    def test_get_final_platforms(self, pipeline_run, get_json, platforms):
+        responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
+
+        assert pipeline_run.get_final_platforms() == platforms
+
+    @responses.activate
     @pytest.mark.parametrize(('get_json', 'reason', 'succeeded'), [
         (deepcopy(PIPELINE_RUN_JSON), 'Running', False),
         (deepcopy(PIPELINE_RUN_JSON), 'Succeeded', True),
