@@ -23,6 +23,7 @@ PIPELINE_NAME = 'source-container-0-1'
 PIPELINE_RUN_NAME = 'source-default'
 TASK_RUN_NAME = 'test-task-run-1'
 TASK_RUN_NAME2 = 'test-task-run-2'
+TASK_RUN_NAME3 = 'test-task-run-3'
 PIPELINE_RUN_URL = f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/pipelineruns/{PIPELINE_RUN_NAME}' # noqa E501
 PIPELINE_WATCH_URL = f'https://openshift.testing/apis/tekton.dev/v1beta1/watch/namespaces/{TEST_OCP_NAMESPACE}/pipelineruns/{PIPELINE_RUN_NAME}/' # noqa E501
 TASK_RUN_URL = f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/taskruns/{TASK_RUN_NAME}' # noqa E501
@@ -32,10 +33,13 @@ TASK_RUN_WATCH_URL2 = f"https://openshift.testing/apis/tekton.dev/v1beta1/watch/
 
 POD_NAME = 'test-pod'
 POD_NAME2 = 'test-pod2'
+POD_NAME3 = 'test-pod3'
 CONTAINERS = ['step-hello', 'step-wait', 'step-bye']
 CONTAINERS2 = ['step2-hello', 'step2-wait', 'step2-bye']
+CONTAINERS3 = ['step3-hello', 'step3-wait', 'step3-bye']
 POD_URL = f'https://openshift.testing/api/v1/namespaces/{TEST_OCP_NAMESPACE}/pods/{POD_NAME}'
 POD_URL2 = f'https://openshift.testing/api/v1/namespaces/{TEST_OCP_NAMESPACE}/pods/{POD_NAME2}'
+POD_URL3 = f'https://openshift.testing/api/v1/namespaces/{TEST_OCP_NAMESPACE}/pods/{POD_NAME3}'
 POD_WATCH_URL = f"https://openshift.testing/api/v1/watch/namespaces/{TEST_OCP_NAMESPACE}/pods/{POD_NAME}/" # noqa E501
 POD_WATCH_URL2 = f"https://openshift.testing/api/v1/watch/namespaces/{TEST_OCP_NAMESPACE}/pods/{POD_NAME2}/" # noqa E501
 
@@ -48,6 +52,11 @@ EXPECTED_LOGS2 = {
     'step2-hello': '2Hello World\n',
     'step2-wait': '2',
     'step2-bye': '2Bye World\n'
+}
+EXPECTED_LOGS3 = {
+    'step3-hello': '3Hello World\n',
+    'step3-wait': '3',
+    'step3-bye': '3Bye World\n'
 }
 
 PIPELINE_RUN_JSON = {
@@ -168,6 +177,30 @@ TASK_RUN_JSON2 = {
         ],
     },
 }
+TASK_RUN_JSON3 = {
+    "apiVersion": "tekton.dev/v1beta1",
+    "kind": "TaskRun",
+    "status": {
+        "conditions": [
+            {
+                "reason": "Running",
+                "status": "Unknown",
+            }
+        ],
+        "podName": POD_NAME3,
+        "steps": [
+            {
+                "container": "step3-hello",
+            },
+            {
+                "container": "step3-wait",
+            },
+            {
+                "container": "step3-bye",
+            },
+        ],
+    },
+}
 
 
 POD_JSON = {
@@ -186,6 +219,17 @@ POD_JSON2 = {
     "apiVersion": "v1",
     "metadata": {
         "name": POD_NAME2,
+        "namespace": TEST_OCP_NAMESPACE,
+    },
+    "status": {
+        "phase": "Running",
+    },
+}
+POD_JSON3 = {
+    "kind": "Pod",
+    "apiVersion": "v1",
+    "metadata": {
+        "name": POD_NAME3,
         "namespace": TEST_OCP_NAMESPACE,
     },
     "status": {
@@ -934,11 +978,11 @@ class TestPipelineRun():
         flexmock(Openshift).should_receive('watch_resource').replace_with(custom_watch)
         task_runs = [task_run for task_run in pipeline_run.wait_for_taskruns()]
 
-        assert task_runs == [
+        assert task_runs == [[
             (PIPELINE_RUN_JSON['status']['taskRuns'][TASK_RUN_NAME]['pipelineTaskName'],
              TASK_RUN_NAME),
             (PIPELINE_RUN_JSON['status']['taskRuns'][TASK_RUN_NAME2]['pipelineTaskName'],
-             TASK_RUN_NAME2)]
+             TASK_RUN_NAME2)]]
 
     @responses.activate
     @pytest.mark.parametrize(('get_json', 'empty_logs'), [
@@ -978,30 +1022,56 @@ class TestPipelineRun():
             json=PIPELINE_RUN_WATCH_JSON,
         )
         flexmock(time).should_receive('sleep')
-        count = 0
+        second_set_tasks_pipeline = deepcopy(PIPELINE_RUN_JSON)
+        task_run_3 = {TASK_RUN_NAME3: {
+                "pipelineTaskName": "short3-sleep",
+                "status": {
+                    "conditions": [
+                        {
+                            "reason": "Running",
+                            "status": "Unknown",
+                        }
+                    ],
+                    "podName": POD_NAME3,
+                    "steps": [
+                        {
+                            "container": "step3-hello",
+                        },
+                        {
+                            "container": "step3-wait",
+                        },
+                        {
+                            "container": "step3-bye",
+                        },
+                    ],
+                    "startTime": "2022-08-29T14:58:42Z"
+                },
+            }}
+        second_set_tasks_pipeline['status']['taskRuns'] = task_run_3
         completed_pipeline = deepcopy(PIPELINE_RUN_JSON)
         completed_pipeline['status']['conditions'][0]['status'] = 'True'
 
         def custom_watch(api_path, api_version, resource_type, resource_name,
                          **request_args):
             if resource_type == 'pipelineruns':
-                nonlocal count
                 # send pipeline finished response once all logs are collected
-                if count == 2:
-                    yield completed_pipeline
-                else:
-                    count += 1
-                    yield PIPELINE_RUN_JSON
+                yield PIPELINE_RUN_JSON
+                yield second_set_tasks_pipeline
+                yield completed_pipeline
             elif resource_type == 'taskruns':
                 if resource_name == TASK_RUN_NAME:
                     yield TASK_RUN_JSON
-                else:
+                elif resource_name == TASK_RUN_NAME2:
                     yield TASK_RUN_JSON2
+                else:
+                    yield TASK_RUN_JSON3
             elif resource_type == 'pods':
                 if resource_name == POD_NAME:
                     yield POD_JSON
-                else:
+                elif resource_name == POD_NAME2:
                     yield POD_JSON2
+                else:
+                    yield POD_JSON3
 
         (flexmock(Openshift)
          .should_receive('watch_resource')
@@ -1023,20 +1093,31 @@ class TestPipelineRun():
                 body=EXPECTED_LOGS2[container],
                 match=[responses.matchers.request_kwargs_matcher({"stream": True})]
             )
+        for container in CONTAINERS3:
+            url = f"{POD_URL3}/log?follow=True&container={container}"
+            responses.add(
+                responses.GET,
+                url,
+                body=EXPECTED_LOGS3[container],
+                match=[responses.matchers.request_kwargs_matcher({"stream": True})]
+            )
         logs = [line for line in pipeline_run.get_logs(follow=True, wait=True)]
 
         assert logs == [(PIPELINE_RUN_JSON['status']['taskRuns']
                          [TASK_RUN_NAME]['pipelineTaskName'],
                          'Hello World'),
                         (PIPELINE_RUN_JSON['status']['taskRuns']
-                         [TASK_RUN_NAME]['pipelineTaskName'],
-                         'Bye World'),
-                        (PIPELINE_RUN_JSON['status']['taskRuns']
                          [TASK_RUN_NAME2]['pipelineTaskName'],
                          '2Hello World'),
+                        (PIPELINE_RUN_JSON['status']['taskRuns']
+                         [TASK_RUN_NAME]['pipelineTaskName'],
+                         'Bye World'),
                         (PIPELINE_RUN_JSON['status']['taskRuns']
                          [TASK_RUN_NAME2]['pipelineTaskName'],
                          '2'),
                         (PIPELINE_RUN_JSON['status']['taskRuns']
                          [TASK_RUN_NAME2]['pipelineTaskName'],
-                         '2Bye World')]
+                         '2Bye World'),
+                        (task_run_3[TASK_RUN_NAME3]['pipelineTaskName'], '3Hello World'),
+                        (task_run_3[TASK_RUN_NAME3]['pipelineTaskName'], '3'),
+                        (task_run_3[TASK_RUN_NAME3]['pipelineTaskName'], '3Bye World')]

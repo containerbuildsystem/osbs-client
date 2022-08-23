@@ -720,10 +720,13 @@ class PipelineRun():
                     "Pipeline run '%s' does not have any task runs yet",
                     self.pipeline_run_name)
                 continue
+            current_task_runs = []
             for task_run_name, task_run_data in task_runs.items():
                 if task_run_name not in watched_task_runs:
                     watched_task_runs.add(task_run_name)
-                    yield task_run_data['pipelineTaskName'], task_run_name
+                    current_task_runs.append((task_run_data['pipelineTaskName'], task_run_name))
+
+            yield current_task_runs
 
             try:
                 status = pipeline_run['status']['conditions'][0]['status']
@@ -751,10 +754,19 @@ class PipelineRun():
 
     def _get_logs_stream(self):
         self.wait_for_start()
-        for pipeline_task_name, task_run_name in self.wait_for_taskruns():
-            for log_line in TaskRun(os=self.os, task_run_name=task_run_name).get_logs(follow=True,
-                                                                                      wait=True):
-                yield pipeline_task_name, log_line
+        streaming_task_runs = {}
+        for task_runs in self.wait_for_taskruns():
+            for pipeline_task_name, task_run_name in task_runs:
+                streaming_task_runs[pipeline_task_name] = (TaskRun(os=self.os,
+                                                                   task_run_name=task_run_name)
+                                                           .get_logs(follow=True, wait=True))
+            while streaming_task_runs:
+                tasks = list(streaming_task_runs.items())
+                for pipeline_task_name, task_run in tasks:
+                    try:
+                        yield pipeline_task_name, next(task_run)
+                    except StopIteration:
+                        del streaming_task_runs[pipeline_task_name]
 
     def get_logs(self, follow=False, wait=False):
         if wait or follow:
