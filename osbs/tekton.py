@@ -15,7 +15,8 @@ from typing import Dict, List, Tuple, Callable, Any
 from datetime import datetime
 
 
-from osbs.exceptions import OsbsResponseException, OsbsAuthException, OsbsException
+from osbs.exceptions import (OsbsResponseException, OsbsAuthException, OsbsException,
+                             OsbsValidationException)
 from osbs.constants import (DEFAULT_NAMESPACE, SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
                             SERVICEACCOUNT_CACRT)
 from osbs.osbs_http import HttpSession
@@ -466,20 +467,61 @@ class PipelineRun():
 
         return self._check_response(response, 'get_info')
 
+    def _get_task_results(self):
+        data = self.data
+        task_results = {}
+
+        if not data:
+            return task_results
+
+        task_runs_status = data['status'].get('taskRuns', {})
+
+        for _, stats in get_sorted_task_runs(task_runs_status):
+            if not ('status' in stats and 'conditions' in stats['status']):
+                continue
+
+            if stats['status']['conditions'][0]['reason'] != 'Succeeded':
+                continue
+
+            if 'taskResults' not in stats['status']:
+                continue
+
+            task_name = stats['pipelineTaskName']
+            results = {}
+
+            for result in stats['status']['taskResults']:
+                results[result['name']] = result['value']
+
+            task_results[task_name] = results
+
+        return task_results
+
     def get_error_message(self):
         data = self.data
 
         if not data:
             return None
 
-        annotations = data['metadata']['annotations']
+        task_runs_status = data['status'].get('taskRuns', {})
+        sorted_tasks = get_sorted_task_runs(task_runs_status)
 
-        plugins_metadata = annotations.get('plugins-metadata')
         plugin_errors = None
+        annotations_str = None
+        task_results = self._get_task_results()
 
-        if plugins_metadata:
-            metadata_dict = json.loads(plugins_metadata)
-            plugin_errors = metadata_dict.get('errors')
+        for task_name in ('binary-container-exit', 'source-container-exit'):
+            if task_name not in task_results:
+                continue
+
+            if 'annotations' in task_results[task_name]:
+                annotations_str = task_results[task_name]['annotations']
+                break
+
+        if annotations_str:
+            plugins_metadata = json.loads(annotations_str).get('plugins-metadata')
+
+            if plugins_metadata:
+                plugin_errors = plugins_metadata.get('errors')
 
         err_message = ""
 
@@ -487,9 +529,7 @@ class PipelineRun():
             for plugin, error in plugin_errors.items():
                 err_message += f"Error in plugin {plugin}: {error};\n"
 
-        task_runs_status = data['status'].get('taskRuns', {})
-
-        for _, stats in get_sorted_task_runs(task_runs_status):
+        for _, stats in sorted_tasks:
             task_name = stats['pipelineTaskName']
             if stats['status']['conditions'][0]['reason'] == 'Succeeded':
                 continue
@@ -523,25 +563,13 @@ class PipelineRun():
         if not data:
             return None
 
-        task_runs_status = data['status'].get('taskRuns', {})
+        task_results = self._get_task_results()
 
-        for _, stats in get_sorted_task_runs(task_runs_status):
-            task_name = stats['pipelineTaskName']
+        if 'binary-container-prebuild' not in task_results:
+            return None
 
-            if task_name != 'binary-container-prebuild':
-                continue
-
-            if stats['status']['conditions'][0]['reason'] != 'Succeeded':
-                continue
-
-            if 'taskResults' not in stats['status']:
-                continue
-
-            for result in stats['status']['taskResults']:
-                if result['name'] != 'platforms_result':
-                    continue
-
-                return json.loads(result['value'])
+        if 'platforms_result' in task_results['binary-container-prebuild']:
+            return json.loads(task_results['binary-container-prebuild']['platforms_result'])
 
         return None
 
@@ -633,12 +661,31 @@ class PipelineRun():
         return data['status']['conditions'][0]['status']
 
     @property
-    def pipeline_results(self) -> List[Dict[str, str]]:
+    def pipeline_results(self) -> Dict[str, any]:
+        """
+        Fetch the pipelineResults for this build.
+
+        Converts the results array to a dict of {name: <JSON-decoded value>} and filters out
+        results with null values.
+        """
         data = self.data
         if not data:
-            return []
+            return {}
 
-        return data['status'].get('pipelineResults', [])
+        def load_result(result: Dict[str, str]) -> Tuple[str, Any]:
+            name = result['name']
+            raw_value = result['value']
+            try:
+                value = json.loads(raw_value)
+            except json.JSONDecodeError:
+                raise OsbsValidationException(f'{name} value is not valid JSON: {raw_value!r}')
+            return name, value
+
+        pipeline_results = data['status'].get('pipelineResults', [])
+
+        return {
+            name: value for name, value in map(load_result, pipeline_results) if value is not None
+        }
 
     def wait_for_start(self):
         """

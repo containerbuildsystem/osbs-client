@@ -16,7 +16,7 @@ from flexmock import flexmock
 
 from osbs.tekton import (Openshift, PipelineRun, TaskRun, Pod, API_VERSION, WAIT_RETRY_SECS,
                          WAIT_RETRY)
-from osbs.exceptions import OsbsException
+from osbs.exceptions import OsbsException, OsbsValidationException
 from tests.constants import TEST_PIPELINE_RUN_TEMPLATE, TEST_OCP_NAMESPACE
 
 PIPELINE_NAME = 'source-container-0-1'
@@ -543,14 +543,8 @@ class TestPipelineRun():
 
         # no taskRuns in status and no plugins-metadata
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}]},
-          'metadata': {'annotations': {}}},
+          'metadata': {}},
          "pipeline run failed;"),
-
-        # no taskRuns in status
-        ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}]},
-          'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
-                                                           '"plugin2": "error2"}}'}}},
-         "Error in plugin plugin1: error1;\nError in plugin plugin2: error2;\n"),
 
         # taskRuns in status, without steps
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
@@ -562,9 +556,8 @@ class TestPipelineRun():
                                         "startTime": "2022-04-26T15:58:42Z"}
                          }
                      }},
-          'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
-                                                           '"plugin2": "error2"}}'}}},
-         "Error in plugin plugin1: error1;\nError in plugin plugin2: error2;\n"),
+          'metadata': {}},
+         "pipeline run failed;"),
 
         # taskRuns in status, with steps and failed without terminated key
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
@@ -582,11 +575,10 @@ class TestPipelineRun():
                              }
                          }
                      }},
-          'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
-                                                           '"plugin2": "error2"}}'}}},
-         "Error in plugin plugin1: error1;\nError in plugin plugin2: error2;\n"),
+          'metadata': {}},
+         "pipeline run failed;"),
 
-        # taskRuns in status, with steps
+        # taskRuns in status, with steps, and no annotations in binary exit task
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
                      'taskRuns': {
                          'task1': {
@@ -626,9 +618,134 @@ class TestPipelineRun():
                                  "startTime": "2022-04-26T14:58:42Z"
                              }
                          },
+                         'task3': {
+                             'pipelineTaskName': 'binary-container-exit',
+                             'status': {
+                                 'conditions': [{'reason': 'Succeeded'}],
+                                 'startTime': '2022-04-26T14:58:42Z',
+                                 'taskResults': [{'name': 'not_annotations',
+                                                  'value': '{"plugins-metadata": {"errors": '
+                                                           '{"plugin1": "error1", '
+                                                           '"plugin2": "error2"}}}'}]
+                             }
+                         }
                      }},
-          'metadata': {'annotations': {'plugins-metadata': '{"errors": {"plugin1": "error1",'
-                                                           '"plugin2": "error2"}}'}}},
+          'metadata': {}},
+         "Error in binary-build-pretask: pre1 error;\n"
+         "Error in binary-build-pretask: pre2 error;\n"
+         "Error in binary-build-task1: binary error;\n"),
+
+        # taskRuns in status, with steps, and annotations in binary exit task
+        ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
+                     'taskRuns': {
+                         'task1': {
+                             'pipelineTaskName': 'binary-build-task1',
+                             'status': {
+                                 'conditions': [{'reason': 'reason2', 'message': 'message2'}],
+                                 'steps': [
+                                     {'name': 'step_ok',
+                                      'terminated': {'exitCode': 0}},
+                                     {'name': 'step_ko',
+                                      'terminated': {
+                                          'exitCode': 1,
+                                          'message': json.dumps([{'key': 'task_result',
+                                                                  'value': 'binary error'}])}}
+                                 ],
+                                 "startTime": "2022-04-26T15:58:42Z"
+                             }
+                         },
+                         'task2': {
+                             'pipelineTaskName': 'binary-build-pretask',
+                             'status': {
+                                 'conditions': [{'reason': 'reason1', 'message': 'message1'}],
+                                 'steps': [
+                                     {'name': 'prestep_ok',
+                                      'terminated': {'exitCode': 0}},
+                                     {'name': 'prestep_ko',
+                                      'terminated': {
+                                          'exitCode': 1,
+                                          'message': json.dumps([{'key': 'task_result',
+                                                                  'value': 'pre1 error'}])}},
+                                     {'name': 'prestep_ko2',
+                                      'terminated': {
+                                          'exitCode': 1,
+                                          'message': json.dumps([{'key': 'task_result',
+                                                                  'value': 'pre2 error'}])}},
+                                 ],
+                                 "startTime": "2022-04-26T14:58:42Z"
+                             }
+                         },
+                         'task3': {
+                             'pipelineTaskName': 'binary-container-exit',
+                             'status': {
+                                 'conditions': [{'reason': 'Succeeded'}],
+                                 'startTime': '2022-04-26T14:58:42Z',
+                                 'taskResults': [{'name': 'annotations',
+                                                  'value': '{"plugins-metadata": {"errors": '
+                                                           '{"plugin1": "error1", '
+                                                           '"plugin2": "error2"}}}'}]
+                             }
+                         }
+                     }},
+          'metadata': {}},
+         "Error in plugin plugin1: error1;\nError in plugin plugin2: error2;\n"
+         "Error in binary-build-pretask: pre1 error;\n"
+         "Error in binary-build-pretask: pre2 error;\n"
+         "Error in binary-build-task1: binary error;\n"),
+
+        # taskRuns in status, with steps, and annotations in source exit task
+        ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
+                     'taskRuns': {
+                         'task1': {
+                             'pipelineTaskName': 'binary-build-task1',
+                             'status': {
+                                 'conditions': [{'reason': 'reason2', 'message': 'message2'}],
+                                 'steps': [
+                                     {'name': 'step_ok',
+                                      'terminated': {'exitCode': 0}},
+                                     {'name': 'step_ko',
+                                      'terminated': {
+                                          'exitCode': 1,
+                                          'message': json.dumps([{'key': 'task_result',
+                                                                  'value': 'binary error'}])}}
+                                 ],
+                                 "startTime": "2022-04-26T15:58:42Z"
+                             }
+                         },
+                         'task2': {
+                             'pipelineTaskName': 'binary-build-pretask',
+                             'status': {
+                                 'conditions': [{'reason': 'reason1', 'message': 'message1'}],
+                                 'steps': [
+                                     {'name': 'prestep_ok',
+                                      'terminated': {'exitCode': 0}},
+                                     {'name': 'prestep_ko',
+                                      'terminated': {
+                                          'exitCode': 1,
+                                          'message': json.dumps([{'key': 'task_result',
+                                                                  'value': 'pre1 error'}])}},
+                                     {'name': 'prestep_ko2',
+                                      'terminated': {
+                                          'exitCode': 1,
+                                          'message': json.dumps([{'key': 'task_result',
+                                                                  'value': 'pre2 error'}])}},
+                                 ],
+                                 "startTime": "2022-04-26T14:58:42Z"
+                             }
+                         },
+                         'task3': {
+                             'pipelineTaskName': 'source-container-exit',
+                             'status': {
+                                 'conditions': [{'reason': 'Succeeded'}],
+                                 'startTime': '2022-04-26T14:58:42Z',
+                                 'taskResults': [{'name': 'annotations',
+                                                  'value': '{"plugins-metadata": {"errors": '
+                                                           '{"plugin1": "error1", '
+                                                           '"plugin2": "error2"}}}'}]
+                             }
+                         }
+                     }},
+          'metadata': {}},
          "Error in plugin plugin1: error1;\nError in plugin plugin2: error2;\n"
          "Error in binary-build-pretask: pre1 error;\n"
          "Error in binary-build-pretask: pre2 error;\n"
@@ -639,7 +756,7 @@ class TestPipelineRun():
 
         resp = pipeline_run.get_error_message()
 
-        assert len(responses.calls) == 1
+        assert len(responses.calls) == (2 if get_json else 1)
         assert resp == error_lines
 
     @responses.activate
@@ -702,7 +819,8 @@ class TestPipelineRun():
                              'pipelineTaskName': 'binary-container-prebuild',
                              'status': {'startTime': '2022-04-26T15:58:42Z',
                                         'conditions': [{'reason': 'Succeeded'}],
-                                        'taskResults': [{'name': 'some_result'}]},
+                                        'taskResults': [{'name': 'some_result',
+                                                         'value': 'some_value'}]},
                          }
                      }}},
          None),
@@ -864,27 +982,38 @@ class TestPipelineRun():
     @pytest.mark.parametrize(
         'get_json, expect_results',
         [
-            ({}, []),
-            ({'status': {}}, []),
+            ({}, {}),
+            ({'status': {}}, {}),
             (
-                {"status": {"pipelineResults": [{'name': 'foo', 'value': '1234'}]}},
-                [{'name': 'foo', 'value': '1234'}],
+                {"status": {"pipelineResults": [{'name': 'foo', 'value': '1234'},
+                                                {'name': 'exclude', 'value': 'null'}]}},
+                {'foo': 1234},
             ),
             (
                 {
                     "status": {
                         "pipelineResults": [
-                            {'name': 'x', 'value': '1'}, {'name': 'y', 'value': '2'},
+                            {'name': 'x', 'value': '{"key": "value"}'}, {'name': 'y', 'value': '2'},
                         ],
                     },
                 },
-                [{'name': 'x', 'value': '1'}, {'name': 'y', 'value': '2'}],
+                {'x': {'key': 'value'}, 'y': 2},
             ),
         ],
     )
     def test_pipeline_results(self, pipeline_run, get_json, expect_results):
         responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
         assert pipeline_run.pipeline_results == expect_results
+
+    @responses.activate
+    def test_get_build_results_invalid_json(self, pipeline_run):
+        get_json = {"status": {"pipelineResults": [{'name': 'invalid_string', 'value': 'spam'}]}}
+        responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
+
+        err_msg = "invalid_string value is not valid JSON: 'spam'"
+
+        with pytest.raises(OsbsValidationException, match=err_msg):
+            assert pipeline_run.pipeline_results is None
 
     @responses.activate
     @pytest.mark.parametrize(('status', 'reason', 'sleep_times'), [

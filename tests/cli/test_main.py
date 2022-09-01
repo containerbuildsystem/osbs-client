@@ -25,16 +25,13 @@ def test_print_output(tmpdir, capsys):
       * if JSON exported metadata are correct
     """
     test_metadata = {
-            'metadata': {
-                'annotations': {
-                    # annotations are JSON
-                    'repositories': """{
-                        "primary": ["test1"],
-                        "floating": ["test2a", "test2b"],
-                        "unique": ["test3"]
-                    }""",
-                }
-            }
+            'status': {
+                'pipelineResults': [{'name': 'repositories',
+                                     'value': '{"primary": ["test1"],'
+                                              '"floating": ["test2a", "test2b"],'
+                                              '"unique": ["test3"]}'}]
+            },
+            'metadata': {}
         }
     flexmock(time).should_receive('sleep').and_return(None)
     ppln_run = flexmock(PipelineRun(flexmock(), 'test_ppln'))

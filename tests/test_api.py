@@ -970,7 +970,7 @@ class TestOSBS(object):
         assert logs == osbs_binary.get_build_logs('run_name', follow=follow, wait=wait)
 
     def test_get_build_error_message(self, osbs_binary):
-        metadata = '{"errors": {"plugin1": "error1"}}'
+        metadata = '{"plugins-metadata": {"errors": {"plugin1": "error1"}}}'
         message = [{'key': 'task_result', 'value': 'bad thing'}]
         steps = [{'name': 'step1', 'terminated': {'exitCode': 0}},
                  {'name': 'step2', 'terminated': {'exitCode': 128, 'message': json.dumps(message)}}]
@@ -980,9 +980,14 @@ class TestOSBS(object):
                     'task2': {'status': {'conditions': [{'reason': 'Failed'}],
                                          'steps': steps,
                                          'startTime': '2022-04-26T15:58:42Z'},
-                              'pipelineTaskName': 'prun-task2'}}
-        resp = {'metadata': {'name': 'run_name', 'annotations': {'plugins-metadata': metadata}},
-                'status': {'taskRuns': taskruns}}
+                              'pipelineTaskName': 'prun-task2'},
+                    'task3': {'status': {'conditions': [{'reason': 'Succeeded'}],
+                                         'startTime': '2022-04-26T16:58:42Z',
+                                         'taskResults': [{'name': 'annotations',
+                                                          'value': metadata}]},
+                              'pipelineTaskName': 'binary-container-exit'}}
+
+        resp = {'metadata': {'name': 'run_name'}, 'status': {'taskRuns': taskruns}}
 
         flexmock(PipelineRun).should_receive('get_info').and_return(resp)
 
@@ -1003,25 +1008,13 @@ class TestOSBS(object):
         assert osbs_binary.get_final_platforms('run_name') == ["x86_64", "ppc64le"]
 
     def test_get_build_results(self, osbs_binary):
-        pipeline_results = [
-            {'name': 'number', 'value': '42'},
-            {'name': 'string', 'value': '"spam"'},
-            {'name': 'filter_me_out', 'value': 'null'},
-        ]
+        pipeline_results = {
+            'number': 42,
+            'string': "spam"
+        }
         flexmock(PipelineRun).should_receive('pipeline_results').and_return(pipeline_results)
 
-        assert osbs_binary.get_build_results('run_name') == {'number': 42, 'string': 'spam'}
-
-    def test_get_build_results_invalid_json(self, osbs_binary):
-        pipeline_results = [
-            {'name': 'invalid_string', 'value': 'spam'},
-        ]
-        flexmock(PipelineRun).should_receive('pipeline_results').and_return(pipeline_results)
-
-        err_msg = "invalid_string value is not valid JSON: 'spam'"
-
-        with pytest.raises(OsbsValidationException, match=err_msg):
-            osbs_binary.get_build_results('run_name')
+        assert osbs_binary.get_build_results('run_name') == pipeline_results
 
     @pytest.mark.parametrize('func', [
         '_get_binary_container_pipeline_data',
