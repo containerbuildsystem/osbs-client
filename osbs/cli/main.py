@@ -71,9 +71,8 @@ def _get_build_metadata(pipeline_run, user_warnings_store):
     if pipeline_run.has_succeeded():
         info = pipeline_run.get_info()
         output['pipeline_run']['info'] = info
-        annotations = info['metadata']['annotations']
-        str_repositories = annotations.get('repositories', '{}')
-        all_repositories = json.loads(str_repositories)
+        results = pipeline_run.pipeline_results
+        all_repositories = results.get('repositories', {})
         output['results']['repositories'] = all_repositories
     else:
         output['results']['error_msg'] = pipeline_run.get_error_message()

@@ -8,13 +8,12 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import print_function, unicode_literals, absolute_import
 
 from collections import namedtuple
-import json
 import logging
 import sys
 import warnings
 import yaml
 from functools import wraps
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 from string import Template
 
 from osbs.build.user_params import (
@@ -453,23 +452,6 @@ class OSBS(object):
 
     @osbsapi
     def get_build_results(self, build_name) -> Dict[str, Any]:
-        """Fetch the pipelineResults for this build.
-
-        Converts the results array to a dict of {name: <JSON-decoded value>} and filters out
-        results with null values.
-        """
+        """Fetch the pipelineResults for this build."""
         pipeline_run = PipelineRun(self.os, build_name)
-        pipeline_results = pipeline_run.pipeline_results
-
-        def load_result(result: Dict[str, str]) -> Tuple[str, Any]:
-            name = result['name']
-            raw_value = result['value']
-            try:
-                value = json.loads(raw_value)
-            except json.JSONDecodeError:
-                raise OsbsValidationException(f'{name} value is not valid JSON: {raw_value!r}')
-            return name, value
-
-        return {
-            name: value for name, value in map(load_result, pipeline_results) if value is not None
-        }
+        return pipeline_run.pipeline_results
