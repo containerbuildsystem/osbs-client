@@ -459,28 +459,6 @@ class PipelineRun():
             raise OsbsException(exc_msg)
         return response_json
 
-    @retry_on_conflict
-    def update_annotations(self, annotations):
-        data = copy.deepcopy(self.minimal_data)
-        data['metadata']['annotations'] = annotations
-
-        response = self.os.patch(
-            self.pipeline_run_url,
-            data=json.dumps(data),
-            headers={
-                "Content-Type": "application/merge-patch+json",
-                "Accept": "application/json",
-            },
-        )
-
-        msg = f"update annotations on pipeline run '{self.pipeline_run_name}'"
-        exc_msg = f"Can't update annotations on pipeline run '{self.pipeline_run_name}', " \
-                  f"because it doesn't exist"
-        response_json = self._check_response(response, msg)
-        if not response_json:
-            raise OsbsException(exc_msg)
-        return response_json
-
     def get_info(self, wait=False):
         if wait:
             self.wait_for_start()
@@ -637,14 +615,6 @@ class PipelineRun():
             else:
                 logger.info("Pipeline run '%s' finished", self.pipeline_run_name)
                 break
-
-    @property
-    def annotations(self):
-        data = self.data
-
-        if not data:
-            return None
-        return data['metadata']['annotations']
 
     @property
     def status_reason(self):

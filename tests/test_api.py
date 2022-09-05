@@ -941,14 +941,6 @@ class TestOSBS(object):
         flexmock(PipelineRun).should_receive('any_task_was_cancelled').once().and_return(False)
         assert not osbs_binary.build_has_any_cancelled_tasks('run_name')
 
-    def test_get_build_annotations(self, osbs_binary):
-        annotations = {'some': 'ann1', 'some2': 'ann2'}
-        resp = {'metadata': {'name': 'run_name', 'annotations': annotations}}
-
-        flexmock(PipelineRun).should_receive('get_info').and_return(resp)
-
-        assert annotations == osbs_binary.get_build_annotations('run_name')
-
     def test_cancel_build(self, osbs_binary):
         resp = {'metadata': {'name': 'run_name'}}
 
@@ -960,16 +952,6 @@ class TestOSBS(object):
         resp = {'kind': 'Status', 'apiVersion': 'v1', 'status': 'Success'}
         flexmock(PipelineRun).should_receive('remove_pipeline_run').once().and_return(resp)
         assert osbs_binary.remove_build('run_name') == resp
-
-    def test_update_annotations(self, osbs_binary):
-        annotations = {'some': 'ann1', 'some2': 'ann2'}
-        resp = {'metadata': {'name': 'run_name', 'annotations': annotations}}
-
-        (flexmock(PipelineRun)
-            .should_receive('update_annotations')
-            .with_args(annotations).and_return(resp))
-
-        assert resp == osbs_binary.update_annotations_on_build('run_name', annotations)
 
     @pytest.mark.parametrize(('follow', 'wait'), [
         (True, True),
