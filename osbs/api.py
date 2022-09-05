@@ -432,11 +432,6 @@ class OSBS(object):
         return pipeline_run.any_task_was_cancelled()
 
     @osbsapi
-    def get_build_annotations(self, build_name):
-        pipeline_run = PipelineRun(self.os, build_name)
-        return pipeline_run.annotations
-
-    @osbsapi
     def cancel_build(self, build_name):
         pipeline_run = PipelineRun(self.os, build_name)
         return pipeline_run.cancel_pipeline_run()
@@ -445,11 +440,6 @@ class OSBS(object):
     def remove_build(self, build_name):
         pipeline_run = PipelineRun(self.os, build_name)
         return pipeline_run.remove_pipeline_run()
-
-    @osbsapi
-    def update_annotations_on_build(self, build_name, annotations):
-        pipeline_run = PipelineRun(self.os, build_name)
-        return pipeline_run.update_annotations(annotations)
 
     @osbsapi
     def get_build_logs(self, build_name, follow=False, wait=False):

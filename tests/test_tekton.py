@@ -524,47 +524,6 @@ class TestPipelineRun():
         assert len(responses.calls) == 1
 
     @responses.activate
-    @pytest.mark.parametrize(('get_json', 'status', 'raises'), [
-        (deepcopy(PIPELINE_RUN_JSON), 200, False),
-        ({}, 404, True),
-        ({}, 500, True),
-    ])
-    def test_update_annotations(self, caplog, pipeline_run, get_json, status, raises):
-        annotations = {'annotation_key': 'annotation_value'}
-        exp_request_body_pipeline_run = deepcopy(PIPELINE_MINIMAL_DATA)
-        exp_request_body_pipeline_run['metadata']['annotations'] = annotations
-
-        responses.add(
-            responses.PATCH,
-            PIPELINE_RUN_URL,
-            match=[responses.matchers.json_params_matcher(exp_request_body_pipeline_run)],
-            json=get_json,
-            status=status,
-        )
-
-        if raises:
-            exc_msg = None
-            log_msg = None
-            if status == 404:
-                exc_msg = f"Can't update annotations on pipeline run " \
-                          f"'{PIPELINE_RUN_NAME}', because it doesn't exist"
-            elif status != 200:
-                log_msg = f"update annotations on pipeline run '{PIPELINE_RUN_NAME}' " \
-                          f"failed with : [{status}] {get_json}"
-
-            with pytest.raises(OsbsException) as exc:
-                pipeline_run.update_annotations(annotations)
-
-            if exc_msg:
-                assert exc_msg == str(exc.value)
-            if log_msg:
-                assert log_msg in caplog.text
-        else:
-            pipeline_run.update_annotations(annotations)
-
-        assert len(responses.calls) == 1
-
-    @responses.activate
     @pytest.mark.parametrize('get_json', [PIPELINE_RUN_JSON, {}, None])  # noqa
     def test_get_info(self, pipeline_run, get_json):
         if get_json is not None:
