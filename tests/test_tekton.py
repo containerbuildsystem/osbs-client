@@ -15,7 +15,7 @@ from copy import deepcopy
 from flexmock import flexmock
 
 from osbs.tekton import (Openshift, PipelineRun, TaskRun, Pod, API_VERSION, WAIT_RETRY_SECS,
-                         WAIT_RETRY)
+                         WAIT_RETRY, get_sorted_task_runs)
 from osbs.exceptions import OsbsException, OsbsValidationException
 from tests.constants import TEST_PIPELINE_RUN_TEMPLATE, TEST_OCP_NAMESPACE
 
@@ -1209,3 +1209,23 @@ class TestPipelineRun():
                         (task_run_3[TASK_RUN_NAME3]['pipelineTaskName'], '3Hello World'),
                         (task_run_3[TASK_RUN_NAME3]['pipelineTaskName'], '3'),
                         (task_run_3[TASK_RUN_NAME3]['pipelineTaskName'], '3Bye World')]
+
+
+def test_get_sorted_task_runs():
+    task_runs = {
+        "TaskRunSecond": {"status": {"startTime": "2022-09-07T18:23:51Z"}},
+        "TaskRunMissingKey": {"status": {}},
+        "TaskRunThird": {"status": {"startTime": "2022-09-07T18:24:51Z"}},
+        "TaskRunFirst": {"status": {"startTime": "2022-09-07T18:22:51Z"}},
+        "TaskRunMissingKeyAlso": {"status": {}},
+    }
+    expected_sorted = [
+        ("TaskRunFirst", {"status": {"startTime": "2022-09-07T18:22:51Z"}}),
+        ("TaskRunSecond", {"status": {"startTime": "2022-09-07T18:23:51Z"}}),
+        ("TaskRunThird", {"status": {"startTime": "2022-09-07T18:24:51Z"}}),
+        ("TaskRunMissingKey", {"status": {}}),
+        ("TaskRunMissingKeyAlso", {"status": {}}),
+    ]
+
+    actual_sorted = get_sorted_task_runs(task_runs)
+    assert actual_sorted == expected_sorted
