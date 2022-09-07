@@ -55,9 +55,22 @@ def check_response(response, log_level=logging.ERROR):
 
 
 def get_sorted_task_runs(task_runs: Dict[str, Any]) -> List[Tuple[str, Dict[str, Any]]]:
-    return sorted(task_runs.items(),
-                  key=lambda x: datetime.strptime(x[1]['status']['startTime'],
-                                                  '%Y-%m-%dT%H:%M:%SZ').timestamp())
+    def custom_key(x):
+        """
+        Handles cases where the startTime key is missing.
+        These items are put at the end.
+        """
+        missing_start_time = "startTime" not in x[1]["status"]
+        containing_start_time = (
+            datetime.strptime(
+                x[1]["status"]["startTime"], "%Y-%m-%dT%H:%M:%SZ"
+            ).timestamp()
+            if not missing_start_time
+            else None
+        )
+        return (missing_start_time, containing_start_time)
+
+    return sorted(task_runs.items(), key=custom_key)
 
 
 class Openshift(object):
