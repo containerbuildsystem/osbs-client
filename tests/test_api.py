@@ -1016,6 +1016,15 @@ class TestOSBS(object):
 
         assert osbs_binary.get_build_results('run_name') == pipeline_results
 
+    def test_get_task_results(self, osbs_binary):
+        task_results = {
+            'number': 42,
+            'string': "spam"
+        }
+        flexmock(PipelineRun).should_receive('get_task_results').and_return(task_results)
+
+        assert osbs_binary.get_task_results('run_name') == task_results
+
     @pytest.mark.parametrize('func', [
         '_get_binary_container_pipeline_data',
         '_get_source_container_pipeline_data',
