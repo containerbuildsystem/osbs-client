@@ -480,7 +480,7 @@ class PipelineRun():
 
         return self._check_response(response, 'get_info')
 
-    def _get_task_results(self):
+    def get_task_results(self):
         data = self.data
         task_results = {}
 
@@ -520,7 +520,7 @@ class PipelineRun():
 
         plugin_errors = None
         annotations_str = None
-        task_results = self._get_task_results()
+        task_results = self.get_task_results()
 
         for task_name in ('binary-container-exit', 'source-container-exit'):
             if task_name not in task_results:
@@ -576,7 +576,7 @@ class PipelineRun():
         if not data:
             return None
 
-        task_results = self._get_task_results()
+        task_results = self.get_task_results()
 
         if 'binary-container-prebuild' not in task_results:
             return None

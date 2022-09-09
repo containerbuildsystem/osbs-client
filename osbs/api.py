@@ -455,3 +455,9 @@ class OSBS(object):
         """Fetch the pipelineResults for this build."""
         pipeline_run = PipelineRun(self.os, build_name)
         return pipeline_run.pipeline_results
+
+    @osbsapi
+    def get_task_results(self, build_name) -> Dict[str, Any]:
+        """Fetch tasks results for this build."""
+        pipeline_run = PipelineRun(self.os, build_name)
+        return pipeline_run.get_task_results()
