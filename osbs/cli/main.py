@@ -145,7 +145,7 @@ def cmd_build(args):
     if pipeline_run.has_succeeded():
         return_val = 0
     cleanup_used_resources = osbs.os_conf.get_cleanup_used_resources()
-    if cleanup_used_resources:
+    if cleanup_used_resources and pipeline_run.data is not None:
         try:
             logger.info("pipeline run removed: %s", pipeline_run.remove_pipeline_run())
         except OsbsResponseException:
@@ -185,7 +185,7 @@ def cmd_build_source_container(args):
     if pipeline_run.has_succeeded():
         return_val = 0
     cleanup_used_resources = osbs.os_conf.get_cleanup_used_resources()
-    if cleanup_used_resources:
+    if cleanup_used_resources and pipeline_run.data is not None:
         try:
             logger.info("pipeline run removed: %s", pipeline_run.remove_pipeline_run())
         except OsbsResponseException:

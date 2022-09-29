@@ -320,6 +320,24 @@ class TestPod():
         assert resp == POD_JSON
 
     @responses.activate
+    @pytest.mark.parametrize(('get_info_json', 'calls'), [
+        (POD_JSON, 2),
+        ({}, 1),
+    ])
+    def test_wait_for_start_removed(self, pod, get_info_json, calls):
+        def custom_watch(api_path, api_version, resource_type, resource_name,
+                         **request_args):
+            yield {}
+            yield {}
+
+        flexmock(Openshift).should_receive('watch_resource').replace_with(custom_watch)
+        responses.add(responses.GET, POD_URL, json=get_info_json)
+        resp = pod.wait_for_start()
+
+        assert len(responses.calls) == calls
+        assert resp is None
+
+    @responses.activate
     def test_get_logs_no_containers_specified(self, openshift):
         url = f"{POD_URL}/log"
         responses.add(responses.GET, url, "log message")
@@ -361,6 +379,20 @@ class TestPod():
         assert len(responses.calls) == 5
         assert logs == ['Hello World', 'Bye World']
 
+    @responses.activate
+    def test_get_logs_stream_removed(self, pod):
+        def custom_watch(api_path, api_version, resource_type, resource_name,
+                         **request_args):
+            yield {}
+
+        flexmock(Openshift).should_receive('watch_resource').replace_with(custom_watch)
+        responses.add(responses.GET, POD_URL, json={})
+
+        logs = [line for line in pod.get_logs(wait=True, follow=True)]
+
+        assert len(responses.calls) == 2
+        assert logs == []
+
 
 class TestTaskRun():
 
@@ -384,6 +416,24 @@ class TestTaskRun():
 
         assert len(responses.calls) == 2
         assert resp == TASK_RUN_JSON
+
+    @responses.activate
+    @pytest.mark.parametrize(('get_info_json', 'calls'), [
+        (TASK_RUN_JSON, 2),
+        ({}, 1),
+    ])
+    def test_wait_for_start_removed(self, task_run, get_info_json, calls):
+        def custom_watch(api_path, api_version, resource_type, resource_name,
+                         **request_args):
+            yield {}
+            yield {}
+
+        flexmock(Openshift).should_receive('watch_resource').replace_with(custom_watch)
+        responses.add(responses.GET, TASK_RUN_URL, json=get_info_json)
+        resp = task_run.wait_for_start()
+
+        assert len(responses.calls) == calls
+        assert resp is None
 
     @responses.activate
     def test_get_logs(self, task_run):
@@ -419,6 +469,17 @@ class TestTaskRun():
 
         logs = [line for line in task_run.get_logs(follow=True, wait=True)]
         assert logs == ['Hello World', 'Bye World']
+
+    @responses.activate
+    def test_get_logs_wait_removed(self, task_run):
+        def custom_watch(api_path, api_version, resource_type, resource_name,
+                         **request_args):
+            yield {}
+
+        flexmock(Openshift).should_receive('watch_resource').replace_with(custom_watch)
+
+        responses.add(responses.GET, TASK_RUN_URL, json={})
+        assert task_run.get_logs(follow=True, wait=True) is None
 
 
 class TestPipelineRun():
@@ -539,7 +600,7 @@ class TestPipelineRun():
     @responses.activate
     @pytest.mark.parametrize(('get_json', 'error_lines'), [
         # no data
-        ({}, None),
+        ({}, 'pipeline run removed;'),
 
         # no taskRuns in status and no plugins-metadata
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}]},
@@ -1017,6 +1078,7 @@ class TestPipelineRun():
 
     @responses.activate
     @pytest.mark.parametrize(('status', 'reason', 'sleep_times'), [
+        (None, None, 0),
         ('True', 'Succeeded', 0),
         ('False', 'Failed', 0),
         ('Unknown', 'PipelineRunCancelled', 0),
@@ -1026,7 +1088,10 @@ class TestPipelineRun():
         get_json = deepcopy(PIPELINE_RUN_JSON)
         get_json['status']['conditions'][0]['reason'] = reason
         get_json['status']['conditions'][0]['status'] = status
+        if status is None and reason is None:
+            get_json = {}
         responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
+
         (flexmock(time)
             .should_receive('sleep')
             .with_args(WAIT_RETRY_SECS)
@@ -1048,6 +1113,24 @@ class TestPipelineRun():
 
         assert len(responses.calls) == 2
         assert resp == PIPELINE_RUN_JSON
+
+    @responses.activate
+    @pytest.mark.parametrize(('get_info_json', 'calls'), [
+        (PIPELINE_RUN_JSON, 2),
+        ({}, 1),
+    ])
+    def test_wait_for_start_removed(self, pipeline_run, get_info_json, calls):
+        def custom_watch(api_path, api_version, resource_type, resource_name,
+                         **request_args):
+            yield {}
+            yield {}
+
+        flexmock(Openshift).should_receive('watch_resource').replace_with(custom_watch)
+        responses.add(responses.GET, PIPELINE_RUN_URL, json=get_info_json)
+        resp = pipeline_run.wait_for_start()
+
+        assert len(responses.calls) == calls
+        assert resp is None
 
     def test_wait_for_taskruns(self, pipeline_run):
         flexmock(time).should_receive('sleep')
@@ -1071,6 +1154,20 @@ class TestPipelineRun():
              TASK_RUN_NAME),
             (PIPELINE_RUN_JSON['status']['taskRuns'][TASK_RUN_NAME2]['pipelineTaskName'],
              TASK_RUN_NAME2)]]
+
+    @responses.activate
+    def test_wait_for_taskruns_removed(self, pipeline_run):
+        flexmock(time).should_receive('sleep')
+
+        def custom_watch(api_path, api_version, resource_type, resource_name,
+                         **request_args):
+            yield {}
+
+        flexmock(Openshift).should_receive('watch_resource').replace_with(custom_watch)
+        responses.add(responses.GET, PIPELINE_RUN_URL, json={})
+        task_runs = [task_run for task_run in pipeline_run.wait_for_taskruns()]
+
+        assert task_runs == []
 
     @responses.activate
     @pytest.mark.parametrize(('get_json', 'empty_logs'), [
@@ -1209,6 +1306,52 @@ class TestPipelineRun():
                         (task_run_3[TASK_RUN_NAME3]['pipelineTaskName'], '3Hello World'),
                         (task_run_3[TASK_RUN_NAME3]['pipelineTaskName'], '3'),
                         (task_run_3[TASK_RUN_NAME3]['pipelineTaskName'], '3Bye World')]
+
+    @responses.activate
+    def test_get_logs_stream_removed(self, pipeline_run):
+        responses.add(
+            responses.GET,
+            PIPELINE_WATCH_URL,
+            json=PIPELINE_RUN_WATCH_JSON,
+        )
+
+        def custom_watch(api_path, api_version, resource_type, resource_name,
+                         **request_args):
+            if resource_type == 'pipelineruns':
+                yield PIPELINE_RUN_JSON
+            elif resource_type == 'taskruns':
+                if resource_name == TASK_RUN_NAME:
+                    yield TASK_RUN_JSON
+                # watcher for second task failed
+                elif resource_name == TASK_RUN_NAME2:
+                    yield {}
+
+            elif resource_type == 'pods':
+                yield POD_JSON
+
+        # second task removed
+        responses.add(responses.GET, TASK_RUN_URL2, json={})
+
+        (flexmock(Openshift)
+         .should_receive('watch_resource')
+         .replace_with(custom_watch))
+
+        for container in CONTAINERS:
+            url = f"{POD_URL}/log?follow=True&container={container}"
+            responses.add(
+                responses.GET,
+                url,
+                body=EXPECTED_LOGS[container],
+                match=[responses.matchers.request_kwargs_matcher({"stream": True})]
+            )
+        logs = [line for line in pipeline_run.get_logs(follow=True, wait=True)]
+
+        assert logs == [(PIPELINE_RUN_JSON['status']['taskRuns']
+                         [TASK_RUN_NAME]['pipelineTaskName'],
+                         'Hello World'),
+                        (PIPELINE_RUN_JSON['status']['taskRuns']
+                         [TASK_RUN_NAME]['pipelineTaskName'],
+                         'Bye World')]
 
 
 def test_get_sorted_task_runs():

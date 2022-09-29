@@ -40,7 +40,7 @@ WAIT_RETRY = (WAIT_RETRY_HOURS * 3600) // WAIT_RETRY_SECS
 API_VERSION = "tekton.dev/v1beta1"
 
 
-def check_response(response, log_level=logging.ERROR):
+def check_response(response, log_level=logging.INFO):
     if response.status_code not in (
             requests.status_codes.codes.ok,
             requests.status_codes.codes.created,
@@ -52,6 +52,19 @@ def check_response(response, log_level=logging.ERROR):
 
         logger.log(log_level, "[%d] %s", response.status_code, content)
         raise OsbsResponseException(message=content, status_code=response.status_code)
+
+
+def check_response_json(response, cmd):
+    try:
+        run_json = response.json()
+    except OsbsResponseException as ex:
+        if ex.status_code == 404:
+            run_json = None
+        else:
+            logger.info("%s failed with : [%d] %s", cmd, ex.status_code, ex)
+            raise
+
+    return run_json
 
 
 def get_sorted_task_runs(task_runs: Dict[str, Any]) -> List[Tuple[str, Dict[str, Any]]]:
@@ -367,9 +380,15 @@ class Openshift(object):
                         not isinstance(exc.cause, requests.Timeout)):
                     raise
             except requests.exceptions.ConnectionError:
-                pass
+                # resource might have been already removed, so yield None
+                # and check if resource still exists
+                logger.debug("Got Connection exception while watching resource %s", resource_name)
+                yield {}
             except requests.exceptions.Timeout:
-                pass
+                # resource might have been already removed, so yield None
+                # and check if resource still exists
+                logger.debug("Got Timeout exception while watching resource %s", resource_name)
+                yield {}
 
             log_and_sleep()
 
@@ -439,18 +458,6 @@ class PipelineRun():
         )
         return response.json()
 
-    def _check_response(self, response, cmd):
-        try:
-            run_json = response.json()
-        except OsbsResponseException as ex:
-            if ex.status_code == 404:
-                run_json = None
-            else:
-                logger.error("%s failed with : [%d] %s", cmd, ex.status_code, ex)
-                raise
-
-        return run_json
-
     @retry_on_conflict
     def cancel_pipeline_run(self):
         data = copy.deepcopy(self.minimal_data)
@@ -468,7 +475,7 @@ class PipelineRun():
         msg = f"cancel pipeline run '{self.pipeline_run_name}'"
         exc_msg = f"Pipeline run '{self.pipeline_run_name}' can't be canceled, " \
                   f"because it doesn't exist"
-        response_json = self._check_response(response, msg)
+        response_json = check_response_json(response, msg)
         if not response_json:
             raise OsbsException(exc_msg)
         return response_json
@@ -478,7 +485,7 @@ class PipelineRun():
             self.wait_for_start()
         response = self.os.get(self.pipeline_run_url)
 
-        return self._check_response(response, 'get_info')
+        return check_response_json(response, 'get_info')
 
     def get_task_results(self):
         data = self.data
@@ -513,7 +520,7 @@ class PipelineRun():
         data = self.data
 
         if not data:
-            return None
+            return "pipeline run removed;"
 
         task_runs_status = data['status'].get('taskRuns', {})
         sorted_tasks = get_sorted_task_runs(task_runs_status)
@@ -592,6 +599,11 @@ class PipelineRun():
         return status_reason == 'Succeeded'
 
     def has_not_finished(self):
+        data = self.data
+        if not data:
+            logger.info("Pipeline run removed '%s'", self.pipeline_run_name)
+            return False
+
         return self.status_status == 'Unknown' and self.status_reason != 'PipelineRunCancelled'
 
     def was_cancelled(self):
@@ -711,6 +723,11 @@ class PipelineRun():
                 resource_type="pipelineruns",
                 resource_name=self.pipeline_run_name,
         ):
+            # failed because connection or timeout and pipeline was removed
+            if not pipeline_run and not self.data:
+                logger.info("Pipeline run '%s' does not exist", self.pipeline_run_name)
+                return
+
             try:
                 status = pipeline_run['status']['conditions'][0]['status']
                 reason = pipeline_run['status']['conditions'][0]['reason']
@@ -743,6 +760,11 @@ class PipelineRun():
                 resource_type="pipelineruns",
                 resource_name=self.pipeline_run_name,
         ):
+            # failed because connection or timeout and pipeline was removed
+            if not pipeline_run and not self.data:
+                logger.info("Pipeline run '%s' does not exist", self.pipeline_run_name)
+                return []
+
             try:
                 task_runs = pipeline_run['status']['taskRuns']
             except KeyError:
@@ -794,6 +816,10 @@ class PipelineRun():
                 tasks = list(streaming_task_runs.items())
                 for pipeline_task_name, task_run in tasks:
                     try:
+                        if not task_run:
+                            del streaming_task_runs[pipeline_task_name]
+                            continue
+
                         yield pipeline_task_name, next(task_run)
                     except StopIteration:
                         del streaming_task_runs[pipeline_task_name]
@@ -821,14 +847,17 @@ class TaskRun():
             self.api_version,
             f"taskruns/{self.task_run_name}"
         )
-        r = self.os.get(url)
-        return r.json()
+        response = self.os.get(url)
+        return check_response_json(response, 'get_info')
 
     def get_logs(self, follow=False, wait=False):
         if follow or wait:
             task_run = self.wait_for_start()
         else:
             task_run = self.get_info()
+
+        if not task_run and not self.get_info():
+            return
 
         pod_name = task_run['status']['podName']
         containers = [step['container'] for step in task_run['status']['steps']]
@@ -846,6 +875,11 @@ class TaskRun():
                 resource_type="taskruns",
                 resource_name=self.task_run_name,
         ):
+            # failed because connection or timeout and task was removed
+            if not task_run and not self.get_info():
+                logger.info("Task run '%s' does not exist", self.task_run_name)
+                return
+
             try:
                 status = task_run['status']['conditions'][0]['status']
                 reason = task_run['status']['conditions'][0]['reason']
@@ -877,8 +911,8 @@ class Pod():
             self.api_version,
             f"pods/{self.pod_name}"
         )
-        r = self.os.get(url)
-        return r.json()
+        response = self.os.get(url)
+        return check_response_json(response, 'get_info')
 
     def _get_logs_no_container(self):
         url = self.os.build_url(
@@ -907,7 +941,11 @@ class Pod():
         return logs
 
     def _get_logs_stream(self):
-        self.wait_for_start()
+        pod = self.wait_for_start()
+
+        if not pod and not self.get_info():
+            return
+
         for container in self.containers:
             yield from self._stream_logs(container)
 
@@ -981,6 +1019,11 @@ class Pod():
         for pod in self.os.watch_resource(
                 self.api_path, self.api_version, resource_type="pods", resource_name=self.pod_name
         ):
+            # failed because connection or timeout and pod was removed
+            if not pod and not self.get_info():
+                logger.info("Pod '%s' does not exist", self.pod_name)
+                return
+
             try:
                 status = pod['status']['phase']
             except KeyError:
