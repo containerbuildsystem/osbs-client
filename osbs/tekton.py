@@ -639,6 +639,11 @@ class PipelineRun():
 
         def matches_state(task_run: Dict[str, Any]) -> bool:
             task_run_status = task_run['status']
+            if 'conditions' not in task_run_status:
+                logger.debug('conditions are missing from status in task %s : %s',
+                             task_run['pipelineTaskName'], task_run_status)
+                return False
+
             status = task_run_status['conditions'][0]['status']
             reason = task_run_status['conditions'][0]['reason']
             completion_time = task_run_status.get('completionTime')
