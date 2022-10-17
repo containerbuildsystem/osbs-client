@@ -987,7 +987,8 @@ class TestOSBS(object):
                                                           'value': metadata}]},
                               'pipelineTaskName': 'binary-container-exit'}}
 
-        resp = {'metadata': {'name': 'run_name'}, 'status': {'taskRuns': taskruns}}
+        resp = {'metadata': {'name': 'run_name'},
+                'status': {'taskRuns': taskruns, 'conditions': [{'message': 'error'}]}}
 
         flexmock(PipelineRun).should_receive('get_info').and_return(resp)
 

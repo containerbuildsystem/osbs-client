@@ -603,12 +603,12 @@ class TestPipelineRun():
         ({}, 'pipeline run removed;'),
 
         # no taskRuns in status and no plugins-metadata
-        ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}]},
+        ({'status': {'conditions': [{'reason': 'reason1', 'message': 'pipeline err message1'}]},
           'metadata': {}},
-         "pipeline run failed;"),
+         "pipeline err message1;"),
 
         # taskRuns in status, without steps
-        ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
+        ({'status': {'conditions': [{'reason': 'reason1', 'message': 'pipeline err message1'}],
                      'taskRuns': {
                          'task1': {
                              'pipelineTaskName': 'binary-build-task1',
@@ -618,10 +618,10 @@ class TestPipelineRun():
                          }
                      }},
           'metadata': {}},
-         "pipeline run failed;"),
+         "pipeline err message1;"),
 
         # taskRuns in status, with steps and failed without terminated key
-        ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
+        ({'status': {'conditions': [{'reason': 'reason1'}],
                      'taskRuns': {
                          'task1': {
                              'pipelineTaskName': 'binary-build-task1',
