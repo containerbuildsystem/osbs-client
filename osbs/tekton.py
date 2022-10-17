@@ -549,6 +549,8 @@ class PipelineRun():
             for plugin, error in plugin_errors.items():
                 err_message += f"Error in plugin {plugin}: {error};\n"
 
+        pipeline_error = data['status']['conditions'][0].get('message')
+
         for _, stats in sorted_tasks:
             task_name = stats['pipelineTaskName']
             if stats['status']['conditions'][0]['reason'] == 'Succeeded':
@@ -573,7 +575,10 @@ class PipelineRun():
                                 continue
 
         if not err_message:
-            err_message = "pipeline run failed;"
+            if pipeline_error:
+                err_message = f"{pipeline_error};"
+            else:
+                err_message = "pipeline run failed;"
 
         return err_message
 
