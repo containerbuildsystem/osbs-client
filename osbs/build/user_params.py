@@ -129,7 +129,6 @@ class BuildCommon(BuildParamsBase):
         :param koji_parent_build: str,
         :param koji_target: str, koji tag with packages used to build the image
         :param koji_task_id: int, koji *task* ID
-        :param koji_upload_dir: str, koji directory where the completed image will be uploaded
         :param platform: str, platform
         :param scratch: bool, build as a scratch build (if not specified in build_conf)
         :param signing_intent: bool, True to sign the resulting image
@@ -249,7 +248,6 @@ class BuildUserParams(BuildCommon):
     base_image = BuildParam("base_image")
     compose_ids = BuildParam("compose_ids")
     dependency_replacements = BuildParam("dependency_replacements")
-    filesystem_koji_task_id = BuildParam("filesystem_koji_task_id")
     flatpak = BuildParam("flatpak", default=False)
     git_branch = BuildParam("git_branch")
     git_commit_depth = BuildParam("git_commit_depth")
@@ -258,12 +256,8 @@ class BuildUserParams(BuildCommon):
     include_koji_repo = BuildParam("include_koji_repo", default=False)
     isolated = BuildParam("isolated")
     koji_parent_build = BuildParam("koji_parent_build")
-    koji_upload_dir = BuildParam("koji_upload_dir")
     name = BuildIDParam()
-    operator_bundle_replacement_pullspecs = BuildParam("operator_bundle_replacement_pullspecs")
     operator_csv_modifications_url = BuildParam("operator_csv_modifications_url")
-    operator_manifests_extract_platform = BuildParam("operator_manifests_extract_platform")
-    parent_images_digests = BuildParam("parent_images_digests")
     platforms = BuildParam("platforms")
     release = BuildParam("release")
     remote_sources = BuildParam("remote_sources")
@@ -277,7 +271,6 @@ class BuildUserParams(BuildCommon):
                     build_conf=None,
                     compose_ids=None,
                     dependency_replacements=None,
-                    filesystem_koji_task_id=None,
                     flatpak=None,
                     git_branch=None,
                     git_commit_depth=None,
@@ -286,12 +279,8 @@ class BuildUserParams(BuildCommon):
                     include_koji_repo=None,
                     isolated=None,
                     koji_parent_build=None,
-                    koji_upload_dir=None,
                     name_label=None,
-                    operator_bundle_replacement_pullspecs=None,
                     operator_csv_modifications_url=None,
-                    operator_manifests_extract_platform=None,
-                    parent_images_digests=None,
                     platform=None,
                     platforms=None,
                     release=None,
@@ -313,7 +302,6 @@ class BuildUserParams(BuildCommon):
         :param compose_ids: list of int, ODCS composes to use instead of generating new ones
         :param dependency_replacements: list of str, dependencies to be replaced by cachito, as
         pkg_manager:name:version[:new_name]
-        :param filesystem_koji_task_id: int, Koji Task that created the base filesystem
         :param flatpak: if we should build a Flatpak OCI Image
         :param git_branch: str, branch name of the branch to be pulled
         :param git_ref: str, commit ID of the branch to be pulled
@@ -322,16 +310,9 @@ class BuildUserParams(BuildCommon):
                                                    repourls are provided.
         :param isolated: bool, build as an isolated build
         :param koji_parent_build: str,
-        :param koji_upload_dir: str, koji directory where the completed image will be uploaded
         :param name_label: str, label of the parent image
         :param user: str, name of the user requesting the build
-        :param operator_bundle_replacement_pullspecs: dict, mapping of original pullspecs to
-                                                      replacement pullspecs for operator manifest
-                                                      bundle builds
         :param operator_csv_modifications_url: str, URL to JSON file describing operator CSV changes
-        :param operator_manifests_extract_platform: str, indicates which platform should upload
-                                                    operator manifests to koji
-        :param parent_images_digests: dict, mapping image digests to names and platforms
         :param platforms: list of str, platforms to build on
         :param platform: str, platform
         :param reactor_config_map: str, name of the config map containing the reactor environment
@@ -391,16 +372,11 @@ class BuildUserParams(BuildCommon):
             "build_conf": build_conf,
             "compose_ids": compose_ids or [],
             "dependency_replacements": dependency_replacements or [],
-            "filesystem_koji_task_id": filesystem_koji_task_id,
             "flatpak": flatpak,
             "include_koji_repo": include_koji_repo,
             "isolated": isolated,
             "koji_parent_build": koji_parent_build,
-            "koji_upload_dir": koji_upload_dir,
-            "operator_bundle_replacement_pullspecs": operator_bundle_replacement_pullspecs,
             "operator_csv_modifications_url": operator_csv_modifications_url,
-            "operator_manifests_extract_platform": operator_manifests_extract_platform,
-            "parent_images_digests": parent_images_digests,
             "platform": platform,
             "platforms": platforms,
             "release": release,

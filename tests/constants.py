@@ -38,7 +38,6 @@ TEST_BUILD_POD = "build-test-build-123"
 TEST_LABEL = "test-label"
 TEST_LABEL_VALUE = "sample-value"
 TEST_KOJI_TASK_ID = 12345
-TEST_FILESYSTEM_KOJI_TASK_ID = 67890
 TEST_KOJI_BUILD_ID = 1234567
 TEST_KOJI_BUILD_NVR = TEST_KOJI_NAME + "-" + TEST_VERSION + "-" + TEST_KOJI_RELEASE
 TEST_DOCKERFILE_GIT = "https://github.com/TomasTomecek/docker-hello-world.git"

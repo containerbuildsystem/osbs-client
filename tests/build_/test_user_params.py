@@ -24,8 +24,7 @@ from osbs.build.user_params import (
 from osbs.conf import Configuration
 from osbs.repo_utils import RepoInfo, RepoConfiguration
 from osbs.exceptions import OsbsValidationException
-from tests.constants import (TEST_COMPONENT, TEST_FILESYSTEM_KOJI_TASK_ID,
-                             TEST_GIT_BRANCH, TEST_GIT_REF, TEST_GIT_URI,
+from tests.constants import (TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF, TEST_GIT_URI,
                              TEST_KOJI_TASK_ID, TEST_USER)
 import osbs.utils
 
@@ -206,7 +205,6 @@ class TestBuildUserParams(object):
             'base_image': 'buildroot:old',
             'component': TEST_COMPONENT,
             'compose_ids': [1, 2],
-            'filesystem_koji_task_id': TEST_FILESYSTEM_KOJI_TASK_ID,
             'flatpak': False,
             # 'flatpak_base_image': self.flatpak_base_image,  # not used with false flatpack
             # 'git_branch': TEST_GIT_BRANCH,
@@ -217,16 +215,7 @@ class TestBuildUserParams(object):
             'isolated': False,
             'koji_parent_build': 'fedora-26-9',
             'koji_target': 'tothepoint',
-            'operator_bundle_replacement_pullspecs': {
-                'foo/fedora:30': 'bar/fedora@sha256:deadbeef'
-            },
             # "orchestrator_deadline": 4,  # set in config
-            'parent_images_digests': {
-                'registry.fedorahosted.org/fedora:29': {
-                    'x86_64': 'registry.fedorahosted.org/fedora@sha256:8b96f2f9f88179a065738b2b37'
-                              '35e386efb2534438c2a2f45b74358c0f344c81'
-                }
-            },
             # 'name': self.name,  # calculated value
             'platform': 'x86_64',
             'platforms': ['x86_64', ],
@@ -266,7 +255,6 @@ class TestBuildUserParams(object):
             "base_image": "buildroot:old",
             "component": TEST_COMPONENT,
             "compose_ids": [1, 2],
-            "filesystem_koji_task_id": TEST_FILESYSTEM_KOJI_TASK_ID,
             "include_koji_repo": True,
             "git_branch": TEST_GIT_BRANCH,
             "git_ref": TEST_GIT_REF,
@@ -277,15 +265,6 @@ class TestBuildUserParams(object):
             "koji_parent_build": "fedora-26-9",
             "koji_target": "tothepoint",
             "name": "path-master-cd1e4" + f'{rand}-{timestr}',
-            'operator_bundle_replacement_pullspecs': {
-                'foo/fedora:30': 'bar/fedora@sha256:deadbeef'
-            },
-            'parent_images_digests': {
-                'registry.fedorahosted.org/fedora:29': {
-                    'x86_64': 'registry.fedorahosted.org/fedora@sha256:8b96f2f9f88179a065738b2b37'
-                              '35e386efb2534438c2a2f45b74358c0f344c81'
-                }
-            },
             "platform": "x86_64",
             "platforms": ["x86_64"],
             "release": "29",
@@ -312,7 +291,6 @@ class TestBuildUserParams(object):
             "component": TEST_COMPONENT,
             "compose_ids": [1, 2],
             "customize_conf": "prod_customize.json",
-            "filesystem_koji_task_id": TEST_FILESYSTEM_KOJI_TASK_ID,
             "git_branch": TEST_GIT_BRANCH,
             "git_ref": TEST_GIT_REF,
             "git_uri": TEST_GIT_URI,
