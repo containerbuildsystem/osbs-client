@@ -167,9 +167,6 @@ class Configuration(object):
         """ user namespace when tagging and pushing image """
         return self._get_value("user", self.conf_section, "user")
 
-    def get_tag(self):
-        return self._get_value("tag", self.conf_section, "tag")
-
     def get_yum_repourls(self):
         return self._get_value("yum_repourls", self.conf_section, "yum_repourls")
 

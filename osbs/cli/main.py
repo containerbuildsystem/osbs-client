@@ -118,7 +118,6 @@ def cmd_build(args):
         'git_ref': osbs.os_conf.get_git_ref(),
         'git_branch': osbs.os_conf.get_git_branch(),
         'user': osbs.os_conf.get_user(),
-        'tag': osbs.os_conf.get_tag(),
         'target': osbs.os_conf.get_koji_target(),
         'yum_repourls': osbs.os_conf.get_yum_repourls(),
         'dependency_replacements': osbs.os_conf.get_dependency_replacements(),
@@ -262,8 +261,6 @@ def cli():
                               help="prefix for docker image repository")
     build_parser.add_argument("-c", "--component", action='store', required=False,
                               help="not used; use com.redhat.component label in Dockerfile")
-    build_parser.add_argument("-A", "--tag", action='store', required=False,
-                              help="tag of the built image (simple builds only)")
     build_parser.add_argument("--add-yum-repo", action='append', metavar="URL",
                               dest="yum_repourls", help="URL of yum repo file")
     build_parser.add_argument("--scratch", action='store_true', required=False,
