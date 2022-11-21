@@ -121,6 +121,8 @@ def cmd_build(args):
         'target': osbs.os_conf.get_koji_target(),
         'yum_repourls': osbs.os_conf.get_yum_repourls(),
         'dependency_replacements': osbs.os_conf.get_dependency_replacements(),
+        'default_buildtime_limit': osbs.os_conf.get_default_buildtime_limit(),
+        'max_buildtime_limit': osbs.os_conf.get_max_buildtime_limit(),
         'scratch': args.scratch,
         'platforms': args.platforms,
         'release': args.release,

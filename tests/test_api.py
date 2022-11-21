@@ -82,6 +82,7 @@ class MockConfiguration(object):
     def __init__(self,
                  is_flatpak=False,
                  modules=None):
+        self.buildtime_limit = 10800
         self.container = {'compose': {'modules': modules}}
         safe_modules = modules or []
         self.container_module_specs = [ModuleSpec.from_str(module) for module in safe_modules]
@@ -161,10 +162,13 @@ class TestOSBS(object):
             .should_receive('get_repo_info')
             .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
             .and_return(self.mock_repo_info(MockParser())))
+        kwargs = REQUIRED_BUILD_ARGS
+        kwargs['default_buildtime_limit'] = 10800
+        kwargs['max_buildtime_limit'] = 21600
 
         with pytest.raises(OsbsValidationException):
             osbs_binary.create_binary_container_pipeline_run(target=TEST_TARGET,
-                                                             **REQUIRED_BUILD_ARGS)
+                                                             **kwargs)
 
     @pytest.mark.parametrize(('all_labels', 'error_msgs' ), (  # noqa
         ({'BZComponent': 'component'},
@@ -288,6 +292,8 @@ class TestOSBS(object):
             'git_branch': TEST_GIT_BRANCH,
             'user': TEST_USER,
             'target': TEST_TARGET,
+            'default_buildtime_limit': 10800,
+            'max_buildtime_limit': 21600,
         }
 
         if should_succeed:
@@ -351,6 +357,8 @@ class TestOSBS(object):
             'yum_repourls': None,
             'koji_task_id': None,
             'scratch': False,
+            'default_buildtime_limit': 10800,
+            'max_buildtime_limit': 21600,
         }
 
         # Sanity check the user params we create
@@ -409,6 +417,8 @@ class TestOSBS(object):
                   'user': TEST_USER,
                   'release': '1.0',
                   'flatpak': True,
+                  'default_buildtime_limit': 10800,
+                  'max_buildtime_limit': 21600,
                   'isolated': isolated}
 
         self.mock_start_pipeline()
@@ -429,6 +439,8 @@ class TestOSBS(object):
                   'git_branch': TEST_GIT_BRANCH,
                   'user': TEST_USER,
                   'scratch': True,
+                  'default_buildtime_limit': 10800,
+                  'max_buildtime_limit': 21600,
                   'isolated': isolated}
 
         if not isolated:
@@ -457,6 +469,8 @@ class TestOSBS(object):
                   'git_branch': TEST_GIT_BRANCH,
                   'user': TEST_USER,
                   'release': release,
+                  'default_buildtime_limit': 10800,
+                  'max_buildtime_limit': 21600,
                   'isolated': True}
 
         with pytest.raises(OsbsValidationException) as exc_info:
@@ -485,6 +499,8 @@ class TestOSBS(object):
                   'user': TEST_USER,
                   'release': '1.0',
                   'isolated': isolated,
+                  'default_buildtime_limit': 10800,
+                  'max_buildtime_limit': 21600,
                   'operator_csv_modifications_url': "https://example.com/updates.json"}
 
         if isolated:
@@ -515,6 +531,8 @@ class TestOSBS(object):
         kwargs = {'git_uri': TEST_GIT_URI,
                   'git_ref': TEST_GIT_REF,
                   'git_branch': branch_name,
+                  'default_buildtime_limit': 10800,
+                  'max_buildtime_limit': 21600,
                   'user': TEST_USER}
 
         if branch_name:
@@ -544,6 +562,45 @@ class TestOSBS(object):
             assert 'git_uri' not in caplog.text
             assert 'git_ref' not in caplog.text
             assert 'git_branch' in caplog.text
+
+    def test_do_create_prod_build_buildtime_limit_exceeded(self, osbs_binary, caplog):  # noqa
+        repo_info = self.mock_repo_info()
+        repo_info.configuration.buildtime_limit = 30000
+        self.mock_start_pipeline()
+
+        (flexmock(utils)
+         .should_receive('get_repo_info')
+         .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
+         .and_return(repo_info))
+
+        kwargs = {'git_uri': TEST_GIT_URI,
+                  'git_ref': TEST_GIT_REF,
+                  'git_branch': TEST_GIT_BRANCH,
+                  'default_buildtime_limit': 10800,
+                  'max_buildtime_limit': 21600,
+                  'user': TEST_USER}
+        msg = 'Build limit cannot be more than 21600 and is set to 30000'
+        with pytest.raises(OsbsException, match=msg):
+            osbs_binary.create_binary_container_pipeline_run(**kwargs)
+
+    def test_do_create_prod_build_buildtime_limit_not_set(self, osbs_binary, caplog):  # noqa
+        repo_info = self.mock_repo_info()
+        repo_info.configuration.buildtime_limit = 0
+        self.mock_start_pipeline()
+
+        (flexmock(utils)
+         .should_receive('get_repo_info')
+         .with_args(TEST_GIT_URI, TEST_GIT_REF, git_branch=TEST_GIT_BRANCH, depth=None)
+         .and_return(repo_info))
+
+        kwargs = {'git_uri': TEST_GIT_URI,
+                  'git_ref': TEST_GIT_REF,
+                  'git_branch': TEST_GIT_BRANCH,
+                  'default_buildtime_limit': 10800,
+                  'max_buildtime_limit': 21600,
+                  'user': TEST_USER}
+        osbs_binary.create_binary_container_pipeline_run(**kwargs)
+        assert 'No build time limit is set, using default limit: 10800' in caplog.text
 
     @pytest.mark.parametrize(('label_type', 'label_value', 'raise_exception'), [
         (Labels.LABEL_TYPE_RELEASE, '1release with space', OsbsValidationException),
@@ -614,6 +671,8 @@ class TestOSBS(object):
             'git_ref': TEST_GIT_REF,
             'git_branch': TEST_GIT_BRANCH,
             'user': TEST_USER,
+            'default_buildtime_limit': 10800,
+            'max_buildtime_limit': 21600,
         }
         if not flatpak:
             with pytest.raises(OsbsException) as exc:
@@ -1058,10 +1117,17 @@ class TestOSBS(object):
                 to_json=lambda: user_params_json,
         )
 
-        data = getattr(osbs, func)(
-            user_params=user_params,
-            pipeline_run_name=pipeline_run_name
-        )
+        if 'source' in func:
+            data = getattr(osbs, func)(
+                user_params=user_params,
+                pipeline_run_name=pipeline_run_name
+            )
+        else:
+            data = getattr(osbs, func)(
+                buildtime_limit=11000,
+                user_params=user_params,
+                pipeline_run_name=pipeline_run_name
+            )
 
         expected = {
             'config_map': rcm,

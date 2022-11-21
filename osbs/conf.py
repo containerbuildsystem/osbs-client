@@ -213,6 +213,14 @@ class Configuration(object):
         return self._get_value("cleanup_used_resources", self.conf_section,
                                "cleanup_used_resources", default=True, is_bool_val=True)
 
+    def get_default_buildtime_limit(self):
+        return int(self._get_value("default_buildtime_limit", self.conf_section,
+                                   "default_buildtime_limit", default=10800))
+
+    def get_max_buildtime_limit(self):
+        return int(self._get_value("max_buildtime_limit", self.conf_section,
+                                   "max_buildtime_limit", default=21600))
+
     def get_verify_ssl(self):
         return self._get_value("verify_ssl", self.conf_section, "verify_ssl",
                                default=True, is_bool_val=True)
