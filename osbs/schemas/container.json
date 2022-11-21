@@ -9,6 +9,7 @@
       "properties": {
         "platforms": {"$ref": "#/definitions/all_platforms"},
         "autorebuild": {"$ref": "#/definitions/autorebuild"},
+        "buildtime_limit": {"$ref": "#/definitions/buildtime_limit"},
         "compose": {"$ref": "#/definitions/compose"},
         "flatpak": {"$ref": "#/definitions/flatpak"},
         "operator_manifests": {"$ref": "#/definitions/operator_manifests"},
@@ -24,6 +25,7 @@
       "properties": {
         "platforms": {"$ref": "#/definitions/all_platforms"},
         "autorebuild": {"$ref": "#/definitions/autorebuild"},
+        "buildtime_limit": {"$ref": "#/definitions/buildtime_limit"},
         "compose": {"$ref": "#/definitions/compose"},
         "flatpak": {"$ref": "#/definitions/flatpak"},
         "operator_manifests": {"$ref": "#/definitions/operator_manifests"},
@@ -39,6 +41,7 @@
       "properties": {
         "platforms": {"$ref": "#/definitions/all_platforms"},
         "autorebuild": {"$ref": "#/definitions/autorebuild"},
+        "buildtime_limit": {"$ref": "#/definitions/buildtime_limit"},
         "compose": {"$ref": "#/definitions/compose"},
         "flatpak": {"$ref": "#/definitions/flatpak"},
         "operator_manifests": {"$ref": "#/definitions/operator_manifests"},
@@ -105,6 +108,16 @@
       },
       "additionalProperties": false,
       "deprecated": true
+    },
+    "buildtime_limit": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Build time limit in seconds, it must be within a certain range that is preconfigured",
+      "examples": [
+        15000,
+        17000,
+        21600
+      ]
     },
     "compose": {
       "type": ["object", "null"],

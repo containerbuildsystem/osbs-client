@@ -277,6 +277,38 @@ class TestConfiguration(object):
 
             assert conf.get_cleanup_used_resources() == expected
 
+    @pytest.mark.parametrize(('config', 'expected'), [
+        ({
+             'default': {'default_buildtime_limit': 1500},
+         }, 1500),
+        ({
+             'default': {'default_buildtime_limit': 2500},
+         }, 2500),
+        ({
+             'default': {},
+         }, 10800),
+    ])
+    def test_default_buildtime_limit(self, config, expected):
+        with self.config_file(config) as config_file:
+            conf = Configuration(conf_file=config_file, conf_section='default')
+        assert conf.get_default_buildtime_limit() == expected
+
+    @pytest.mark.parametrize(('config', 'expected'), [
+        ({
+             'default': {'max_buildtime_limit': 1500},
+         }, 1500),
+        ({
+             'default': {'max_buildtime_limit': 2500},
+         }, 2500),
+        ({
+             'default': {},
+         }, 21600),
+    ])
+    def test_max_buildtime_limit(self, config, expected):
+        with self.config_file(config) as config_file:
+            conf = Configuration(conf_file=config_file, conf_section='default')
+        assert conf.get_max_buildtime_limit() == expected
+
     def test_deprecated_warnings(self, caplog):  # noqa:F811
         with caplog.at_level(logging.WARNING):
             assert "it has been deprecated" not in caplog.text

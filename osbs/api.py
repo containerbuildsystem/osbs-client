@@ -208,7 +208,7 @@ class OSBS(object):
                 "but repository has a container.yaml with a flatpak: section")
 
     def _get_pipeline_template_substitutions(
-            self, *, user_params, pipeline_run_name) -> Dict[str, str]:
+            self, *, buildtime_limit: int = 0, user_params, pipeline_run_name) -> Dict[str, str]:
         """Return map of substitutions used by pipeline run template
         to construct pipeline run data
 
@@ -221,6 +221,7 @@ class OSBS(object):
           $osbs_user_params_json - user params in json format
         """
         return {
+            'osbs_buildtime_limit': f'{buildtime_limit}s',
             'osbs_configmap_name': user_params.reactor_config_map,
             'osbs_namespace': self.os_conf.get_namespace(),
             'osbs_pipeline_run_name': pipeline_run_name,
@@ -238,10 +239,12 @@ class OSBS(object):
             pipeline_run_name = f'scratch-{pipeline_run_postfix}'
         return pipeline_run_name
 
-    def _get_binary_container_pipeline_data(self, *, user_params, pipeline_run_name):
+    def _get_binary_container_pipeline_data(self, *, buildtime_limit, user_params,
+                                            pipeline_run_name):
         pipeline_run_path = self.os_conf.get_pipeline_run_path()
 
         substitutions = self._get_pipeline_template_substitutions(
+            buildtime_limit=buildtime_limit,
             user_params=user_params,
             pipeline_run_name=pipeline_run_name
         )
@@ -282,6 +285,18 @@ class OSBS(object):
 
         self._checks_for_flatpak(flatpak, repo_info)
 
+        default_buildtime_limit = kwargs.get('default_buildtime_limit')
+        max_buildtime_limit = kwargs.get('max_buildtime_limit')
+
+        if repo_info.configuration.buildtime_limit > max_buildtime_limit:
+            raise OsbsException(f'Build limit cannot be more than {max_buildtime_limit} '
+                                f'and is set to {repo_info.configuration.buildtime_limit}')
+
+        if repo_info.configuration.buildtime_limit == 0:
+            logger.info('No build time limit is set, using default limit: %s',
+                        default_buildtime_limit)
+            repo_info.configuration.buildtime_limit = default_buildtime_limit
+
         req_labels = self._check_labels(repo_info)
 
         user_params = self.get_user_params(
@@ -300,6 +315,7 @@ class OSBS(object):
 
         pipeline_run_name = self._get_binary_container_pipeline_name(user_params)
         pipeline_run_data = self._get_binary_container_pipeline_data(
+            buildtime_limit=repo_info.configuration.buildtime_limit,
             user_params=user_params,
             pipeline_run_name=pipeline_run_name)
 

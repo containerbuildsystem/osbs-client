@@ -144,6 +144,7 @@ class RepoConfiguration(object):
                                 " will be ignored")
             del self.container['image_build_method']
 
+        self.buildtime_limit = self.container.get('buildtime_limit', 0)
         # container values may be set to None
         container_compose = self.container.get('compose') or {}
         modules = container_compose.get('modules') or []
