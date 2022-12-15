@@ -570,9 +570,13 @@ class PipelineRun():
                                     if message['key'] == 'task_result':
                                         err_message += f"Error in {task_name}: " \
                                                        f"{message['value']};\n"
+                                continue
                             except Exception as e:
                                 logger.info("failed to get error message: %s", repr(e))
                                 continue
+
+                    err_message += f"Error in {task_name}: " \
+                                   f"{stats['status']['conditions'][0]['message']};\n"
 
         if not err_message:
             if pipeline_error:
