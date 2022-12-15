@@ -637,7 +637,7 @@ class TestPipelineRun():
                          }
                      }},
           'metadata': {}},
-         "pipeline run failed;"),
+         "Error in binary-build-task1: message2;\n"),
 
         # taskRuns in status, with steps, and no annotations in binary exit task
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
