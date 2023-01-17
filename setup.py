@@ -24,7 +24,7 @@ def _get_requirements(path):
 setup(
     name="osbs-client",
     description='Python module and command line client for OpenShift Build Service',
-    version="2.2.0",
+    version="2.3.0",
     author='Red Hat, Inc.',
     author_email='atomic-devel@projectatomic.io',
     url='https://github.com/containerbuildsystem/osbs-client',
