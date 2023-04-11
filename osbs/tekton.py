@@ -553,6 +553,7 @@ class PipelineRun():
 
         for _, stats in sorted_tasks:
             task_name = stats['pipelineTaskName']
+            got_task_error = False
             if stats['status']['conditions'][0]['reason'] == 'Succeeded':
                 continue
 
@@ -570,13 +571,15 @@ class PipelineRun():
                                     if message['key'] == 'task_result':
                                         err_message += f"Error in {task_name}: " \
                                                        f"{message['value']};\n"
+                                got_task_error = True
                                 continue
                             except Exception as e:
                                 logger.info("failed to get error message: %s", repr(e))
                                 continue
 
-                    err_message += f"Error in {task_name}: " \
-                                   f"{stats['status']['conditions'][0]['message']};\n"
+            if not got_task_error:
+                err_message += f"Error in {task_name}: " \
+                               f"{stats['status']['conditions'][0]['message']};\n"
 
         if not err_message:
             if pipeline_error:

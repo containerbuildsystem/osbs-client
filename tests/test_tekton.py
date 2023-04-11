@@ -618,7 +618,7 @@ class TestPipelineRun():
                          }
                      }},
           'metadata': {}},
-         "pipeline err message1;"),
+         "Error in binary-build-task1: message2;\n"),
 
         # taskRuns in status, with steps and failed without terminated key
         ({'status': {'conditions': [{'reason': 'reason1'}],
