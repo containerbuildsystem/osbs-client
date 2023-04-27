@@ -15,8 +15,7 @@ from typing import Dict, List, Tuple, Callable, Any
 from datetime import datetime
 
 
-from osbs.exceptions import (OsbsResponseException, OsbsAuthException, OsbsException,
-                             OsbsValidationException)
+from osbs.exceptions import OsbsResponseException, OsbsAuthException, OsbsException
 from osbs.constants import (DEFAULT_NAMESPACE, SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
                             SERVICEACCOUNT_CACRT)
 from osbs.osbs_http import HttpSession
@@ -601,7 +600,15 @@ class PipelineRun():
             return None
 
         if 'platforms_result' in task_results['binary-container-prebuild']:
-            return json.loads(task_results['binary-container-prebuild']['platforms_result'])
+            raw_result = task_results['binary-container-prebuild']['platforms_result']
+
+            try:
+                value = json.loads(raw_result)
+            # TypeError is returned when value is list
+            except (json.JSONDecodeError, TypeError):
+                value = raw_result
+
+            return value
 
         return None
 
@@ -719,8 +726,10 @@ class PipelineRun():
             raw_value = result['value']
             try:
                 value = json.loads(raw_value)
-            except json.JSONDecodeError:
-                raise OsbsValidationException(f'{name} value is not valid JSON: {raw_value!r}')
+            # TypeError is returned when value is list
+            except (json.JSONDecodeError, TypeError):
+                logger.info("pipeline result '%s' is not json '%s'", name, raw_value)
+                value = raw_value
             return name, value
 
         pipeline_results = data['status'].get('pipelineResults', [])

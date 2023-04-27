@@ -16,7 +16,7 @@ from flexmock import flexmock
 
 from osbs.tekton import (Openshift, PipelineRun, TaskRun, Pod, API_VERSION, WAIT_RETRY_SECS,
                          WAIT_RETRY, get_sorted_task_runs)
-from osbs.exceptions import OsbsException, OsbsValidationException
+from osbs.exceptions import OsbsException
 from tests.constants import TEST_PIPELINE_RUN_TEMPLATE, TEST_OCP_NAMESPACE
 
 PIPELINE_NAME = 'source-container-0-1'
@@ -894,7 +894,7 @@ class TestPipelineRun():
                              'status': {'startTime': '2022-04-26T15:58:42Z',
                                         'conditions': [{'reason': 'Succeeded'}],
                                         'taskResults': [{'name': 'platforms_result',
-                                                         'value': '[]'}]},
+                                                         'value': []}]},
                          }
                      }}},
          []),
@@ -907,7 +907,7 @@ class TestPipelineRun():
                              'status': {'startTime': '2022-04-26T15:58:42Z',
                                         'conditions': [{'reason': 'Succeeded'}],
                                         'taskResults': [{'name': 'platforms_result',
-                                                         'value': '["x86_64", "ppc64le"]'}]},
+                                                         'value': ["x86_64", "ppc64le"]}]},
                          }
                      }}},
          ["x86_64", "ppc64le"]),
@@ -1051,6 +1051,21 @@ class TestPipelineRun():
                 {'foo': 1234},
             ),
             (
+                {"status": {"pipelineResults": [{'name': 'foo', 'value': '1234'},
+                                                {'name': 'bar', 'value': 'string'}]}},
+                {'foo': 1234, 'bar': 'string'},
+            ),
+            (
+                {"status": {"pipelineResults": [{'name': 'foo', 'value': '1234'},
+                                                {'name': 'barlist', 'value': ['string', 5]}]}},
+                {'foo': 1234, 'barlist': ['string', 5]},
+            ),
+            (
+                {"status": {"pipelineResults": [{'name': 'foo', 'value': '1234'},
+                                                {'name': 'barlist', 'value': '["string", 5]'}]}},
+                {'foo': 1234, 'barlist': ['string', 5]},
+            ),
+            (
                 {
                     "status": {
                         "pipelineResults": [
@@ -1065,16 +1080,6 @@ class TestPipelineRun():
     def test_pipeline_results(self, pipeline_run, get_json, expect_results):
         responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
         assert pipeline_run.pipeline_results == expect_results
-
-    @responses.activate
-    def test_get_build_results_invalid_json(self, pipeline_run):
-        get_json = {"status": {"pipelineResults": [{'name': 'invalid_string', 'value': 'spam'}]}}
-        responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
-
-        err_msg = "invalid_string value is not valid JSON: 'spam'"
-
-        with pytest.raises(OsbsValidationException, match=err_msg):
-            assert pipeline_run.pipeline_results is None
 
     @responses.activate
     @pytest.mark.parametrize(('status', 'reason', 'sleep_times'), [
