@@ -1055,10 +1055,14 @@ class TestOSBS(object):
         error_msg += "Error in prun-task2: bad thing;\n"
         assert error_msg == osbs_binary.get_build_error_message('run_name')
 
-    def test_get_final_platforms(self, osbs_binary):
+    @pytest.mark.parametrize('platforms_result', [
+        '["x86_64", "ppc64le"]',
+        ["x86_64", "ppc64le"],
+    ])
+    def test_get_final_platforms(self, osbs_binary, platforms_result):
         taskruns = {'task1': {'status': {'conditions': [{'reason': 'Succeeded'}],
                                          'taskResults': [{'name': 'platforms_result',
-                                                          'value': '["x86_64", "ppc64le"]'}],
+                                                          'value': platforms_result}],
                                          'startTime': '2022-04-26T15:58:42Z'},
                               'pipelineTaskName': 'binary-container-prebuild'}}
 
