@@ -1056,8 +1056,7 @@ class TestOSBS(object):
         assert error_msg == osbs_binary.get_build_error_message('run_name')
 
     @pytest.mark.parametrize('platforms_result', [
-        '["x86_64", "ppc64le"]',
-        ["x86_64", "ppc64le"],
+        '{"platforms": ["x86_64", "ppc64le"]}',
     ])
     def test_get_final_platforms(self, osbs_binary, platforms_result):
         taskruns = {'task1': {'status': {'conditions': [{'reason': 'Succeeded'}],
