@@ -894,7 +894,7 @@ class TestPipelineRun():
                              'status': {'startTime': '2022-04-26T15:58:42Z',
                                         'conditions': [{'reason': 'Succeeded'}],
                                         'taskResults': [{'name': 'platforms_result',
-                                                         'value': []}]},
+                                                         'value': '{"platforms": []}'}]},
                          }
                      }}},
          []),
@@ -907,7 +907,8 @@ class TestPipelineRun():
                              'status': {'startTime': '2022-04-26T15:58:42Z',
                                         'conditions': [{'reason': 'Succeeded'}],
                                         'taskResults': [{'name': 'platforms_result',
-                                                         'value': ["x86_64", "ppc64le"]}]},
+                                                         'value': '{"platforms": '
+                                                                  '["x86_64", "ppc64le"]}'}]},
                          }
                      }}},
          ["x86_64", "ppc64le"]),

@@ -600,15 +600,8 @@ class PipelineRun():
             return None
 
         if 'platforms_result' in task_results['binary-container-prebuild']:
-            raw_result = task_results['binary-container-prebuild']['platforms_result']
-
-            try:
-                value = json.loads(raw_result)
-            # TypeError is returned when value is list
-            except (json.JSONDecodeError, TypeError):
-                value = raw_result
-
-            return value
+            platforms = json.loads(task_results['binary-container-prebuild']['platforms_result'])
+            return platforms['platforms']
 
         return None
 
