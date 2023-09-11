@@ -19,6 +19,7 @@ from osbs.constants import (DEFAULT_GIT_REF, RAND_DIGITS,
 from osbs.exceptions import OsbsValidationException
 from osbs.utils import (make_name_from_git, utcnow)
 
+from osbs.utils.otel import get_current_traceparent
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,7 @@ class BuildCommon(BuildParamsBase):
     koji_target = BuildParam("koji_target")
     koji_task_id = BuildParam("koji_task_id")
     platform = BuildParam("platform")
+    opentelemetry_info = BuildParam("opentelemetry_info")
     reactor_config_map = BuildParam("reactor_config_map")
     scratch = BuildParam("scratch")
     signing_intent = BuildParam("signing_intent")
@@ -148,6 +150,17 @@ class BuildCommon(BuildParamsBase):
             reactor_config = build_conf.get_reactor_config_map_scratch()
         else:
             reactor_config = build_conf.get_reactor_config_map()
+        # we are effectively making current span as parent here
+        # if the traceparent is not updated then child call will
+        # be linked to the parent of current call
+        traceparent = get_current_traceparent()
+        otel_url = build_conf.get_otel_url()
+        opentelemetry_info = None
+        if traceparent or otel_url:
+            opentelemetry_info = {
+                "traceparent": traceparent,
+                "otel_url": otel_url,
+            }
         # Update kwargs with arguments explicitly accepted by this method
         kwargs.update({
             "component": component,
@@ -161,6 +174,11 @@ class BuildCommon(BuildParamsBase):
             "reactor_config_map": reactor_config,
             "scratch": build_conf.get_scratch(scratch),
         })
+
+        if opentelemetry_info:
+            kwargs.update({
+                "opentelemetry_info": opentelemetry_info
+            })
 
         # Drop arguments that are:
         # - unknown; some callers may pass deprecated params
