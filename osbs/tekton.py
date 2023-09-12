@@ -14,6 +14,7 @@ import copy
 from typing import Dict, List, Tuple, Callable, Any
 from datetime import datetime
 
+from otel_extensions import instrumented
 
 from osbs.exceptions import OsbsResponseException, OsbsAuthException, OsbsException
 from osbs.constants import (DEFAULT_NAMESPACE, SERVICEACCOUNT_SECRET, SERVICEACCOUNT_TOKEN,
@@ -422,6 +423,7 @@ class PipelineRun():
             )
         return self._pipeline_run_url
 
+    @instrumented
     def start_pipeline_run(self):
         if not self.input_data:
             raise OsbsException("No input data provided for pipeline run to start")
@@ -445,6 +447,7 @@ class PipelineRun():
         )
         return response.json()
 
+    @instrumented
     def remove_pipeline_run(self):
         url = self.os.build_url(
             self.api_path,
@@ -458,6 +461,7 @@ class PipelineRun():
         return response.json()
 
     @retry_on_conflict
+    @instrumented
     def cancel_pipeline_run(self):
         data = copy.deepcopy(self.minimal_data)
         data['spec']['status'] = 'CancelledRunFinally'
@@ -479,6 +483,7 @@ class PipelineRun():
             raise OsbsException(exc_msg)
         return response_json
 
+    @instrumented
     def get_info(self, wait=False):
         if wait:
             self.wait_for_start()
@@ -672,6 +677,7 @@ class PipelineRun():
         task_runs = self.data['status'].get('taskRuns', {}).values()
         return any(matches_state(tr) for tr in task_runs)
 
+    @instrumented
     def wait_for_finish(self):
         """
         use this method after reading logs finished, to ensure that pipeline run finished,
@@ -731,6 +737,7 @@ class PipelineRun():
             name: value for name, value in map(load_result, pipeline_results) if value is not None
         }
 
+    @instrumented
     def wait_for_start(self):
         """
         https://tekton.dev/docs/pipelines/pipelineruns/#monitoring-execution-status
@@ -764,6 +771,7 @@ class PipelineRun():
                 logger.debug("Waiting for pipeline run, current status %s, reason %s",
                              status, reason)
 
+    @instrumented
     def wait_for_taskruns(self):
         """
         This generator method watches new task runs in a pipeline run
@@ -857,6 +865,7 @@ class TaskRun():
         self.api_path = 'apis'
         self.api_version = API_VERSION
 
+    @instrumented
     def get_info(self, wait=False):
         if wait:
             self.wait_for_start()
@@ -883,6 +892,7 @@ class TaskRun():
         pod = Pod(os=self.os, pod_name=pod_name, containers=containers)
         return pod.get_logs(follow=follow, wait=wait)
 
+    @instrumented
     def wait_for_start(self):
         """
         https://tekton.dev/docs/pipelines/taskruns/#monitoring-execution-status
@@ -922,6 +932,7 @@ class Pod():
         self.api_version = 'v1'
         self.api_path = 'api'
 
+    @instrumented
     def get_info(self, wait=False):
         if wait:
             self.wait_for_start()
@@ -1033,6 +1044,7 @@ class Pod():
             logger.debug("Fetching logs starting from %ds ago", since)
             kwargs['sinceSeconds'] = since
 
+    @instrumented
     def wait_for_start(self):
         logger.info("Waiting for pod to start '%s'", self.pod_name)
         for pod in self.os.watch_resource(

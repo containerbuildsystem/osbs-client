@@ -16,17 +16,20 @@ from functools import wraps
 from typing import Any, Dict
 from string import Template
 
+from otel_extensions import get_tracer
+
 from osbs.build.user_params import (
     BuildUserParams,
     SourceContainerUserParams
 )
 from osbs.constants import (RELEASE_LABEL_FORMAT, VERSION_LABEL_FORBIDDEN_CHARS,
-                            ISOLATED_RELEASE_FORMAT)
+                            ISOLATED_RELEASE_FORMAT, OTEL_SERVICE_NAME)
 from osbs.tekton import Openshift, PipelineRun
 from osbs.exceptions import (OsbsException, OsbsValidationException, OsbsResponseException)
 from osbs.utils.labels import Labels
 # import utils in this way, so that we can mock standalone functions with flexmock
 from osbs import utils
+from osbs.utils.otel import get_current_traceparent, init_otel
 
 
 def _load_pipeline_from_template(pipeline_run_path, substitutions):
@@ -81,6 +84,7 @@ class OSBS(object):
     def __init__(self, openshift_configuration):
         """ """
         self.os_conf = openshift_configuration
+        init_otel(self.os_conf.get_otel_url(), traceparent=get_current_traceparent())
         self.os = Openshift(openshift_api_url=self.os_conf.get_openshift_base_uri(),
                             openshift_oauth_url=self.os_conf.get_openshift_oauth_api_uri(),
                             k8s_api_url=self.os_conf.get_k8s_api_uri(),
@@ -254,7 +258,15 @@ class OSBS(object):
 
     @osbsapi
     def create_binary_container_build(self, **kwargs):
-        return self.create_binary_container_pipeline_run(**kwargs)
+        span_name = 'binary_build'
+        tracer = get_tracer(module_name=span_name, service_name=OTEL_SERVICE_NAME)
+        with tracer.start_as_current_span(span_name) as span:
+            for k, v in kwargs.items():
+                if not v:
+                    continue
+                span.set_attribute(k, v)
+            result = self.create_binary_container_pipeline_run(**kwargs)
+        return result
 
     @osbsapi
     def create_binary_container_pipeline_run(self,
@@ -350,7 +362,15 @@ class OSBS(object):
 
     @osbsapi
     def create_source_container_build(self, **kwargs):
-        return self.create_source_container_pipeline_run(**kwargs)
+        span_name = 'source_build'
+        tracer = get_tracer(module_name=span_name, service_name=OTEL_SERVICE_NAME)
+        with tracer.start_as_current_span(span_name) as span:
+            for k, v in kwargs.items():
+                if not v:
+                    continue
+                span.set_attribute(k, v)
+            result = self.create_source_container_pipeline_run(**kwargs)
+        return result
 
     @osbsapi
     def create_source_container_pipeline_run(self,
