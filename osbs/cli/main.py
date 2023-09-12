@@ -137,7 +137,7 @@ def cmd_build(args):
     if osbs.os_conf.get_flatpak():
         build_kwargs['flatpak'] = True
 
-    pipeline_run = osbs.create_binary_container_pipeline_run(**build_kwargs)
+    pipeline_run = osbs.create_binary_container_build(**build_kwargs)
 
     print_output(pipeline_run, export_metadata_file=args.export_metadata_file)
 
@@ -177,7 +177,7 @@ def cmd_build_source_container(args):
     if args.userdata:
         build_kwargs['userdata'] = json.loads(args.userdata)
 
-    pipeline_run = osbs.create_source_container_pipeline_run(**build_kwargs)
+    pipeline_run = osbs.create_source_container_build(**build_kwargs)
 
     print_output(pipeline_run, export_metadata_file=args.export_metadata_file)
 
