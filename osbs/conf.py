@@ -116,6 +116,16 @@ class Configuration(object):
         val = self._get_value(key, self.conf_section, key)
         return val
 
+    def get_otel_url(self):
+        """
+        https://<host>[:<port>]/
+
+        :return: str
+        """
+        key = "otel_url"
+        val = self._get_value(key, self.conf_section, key)
+        return val
+
     @staticmethod
     def get_k8s_api_version():
         # This is not configurable.
