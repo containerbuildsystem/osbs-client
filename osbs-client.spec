@@ -35,6 +35,9 @@ BuildRequires:  python3-requests
 BuildRequires:  python3-requests-kerberos
 BuildRequires:  python3-PyYAML
 BuildRequires:  python3-jsonschema
+BuildRequires:  python3-opentelemetry-api==1.19.0
+BuildRequires:  python3-opentelemetry-exporter-otlp==1.19.0
+BuildRequires:  python3-opentelemetry-sdk==1.19.0
 %endif # with_check
 
 Provides:       osbs = %{version}-%{release}
