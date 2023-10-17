@@ -41,8 +41,6 @@ Some options are also mandatory.
 
 - `openshift_uri` (mandatory, str): root URL where openshift master API server
   is listening (e.g. 'localhost:8443')
-- `otel_url` (optional, str): root URL where opentelemetry collector is 
-  listening (e.g. 'localhost:4318')
 - `git_url` (optional, str): URL of git repository where dockerfile lives (it is
   used to perform `git clone`)
 - `git_ref` (optional, str): name of git ref (branch/commit) to check out

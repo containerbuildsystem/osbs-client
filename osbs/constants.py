@@ -74,8 +74,6 @@ OS_NOT_FOUND_MAX_RETRIES = 6
 # number of seconds to wait, before retrying on openshift not found
 OS_NOT_FOUND_MAX_WAIT = 1
 
-OTEL_SERVICE_NAME = "osbs"
-
 ISOLATED_RELEASE_FORMAT = re.compile(r'^\d+\.\d+(\..+)?$')
 RELEASE_LABEL_FORMAT = re.compile(r"""^\d+             # First character must be a digit
                                       ([._]?           # allow separators between groups
