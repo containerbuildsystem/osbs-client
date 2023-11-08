@@ -383,12 +383,29 @@ class ImageName(object):
                       |------------------------| image
     |------------------------------------------| image
     """
+    __DEFAULT = object()  # constant class variable to allow for None assignment
 
     def __init__(self, registry=None, namespace=None, repo=None, tag=None):
-        self.registry = registry
-        self.namespace = namespace
-        self.repo = repo
-        self.tag = tag or 'latest'
+        self.__registry = registry
+        self.__namespace = namespace
+        self.__repo = repo
+        self.__tag = tag or 'latest'
+
+    @property
+    def registry(self):
+        return self.__registry
+
+    @property
+    def namespace(self):
+        return self.__namespace
+
+    @property
+    def repo(self):
+        return self.__repo
+
+    @property
+    def tag(self):
+        return self.__tag
 
     @classmethod
     def parse(cls, image_name):
@@ -403,17 +420,16 @@ class ImageName(object):
 
         if len(s) == 2:
             if '.' in s[0] or ':' in s[0]:
-                result.registry = s[0]
+                result = result.replace(registry=s[0], repo=s[1])
             else:
-                result.namespace = s[0]
+                result = result.replace(namespace=s[0], repo=s[1])
         elif len(s) == 3:
-            result.registry = s[0]
-            result.namespace = s[1]
-        result.repo = s[-1]
+            result = result.replace(registry=s[0], namespace=s[1], repo=s[2])
 
         for sep in '@:':
             try:
-                result.repo, result.tag = result.repo.rsplit(sep, 1)
+                repo, tag = result.repo.rsplit(sep, 1)
+                result = result.replace(repo=repo, tag=tag)
             except ValueError:
                 continue
             break
@@ -449,14 +465,13 @@ class ImageName(object):
 
     def enclose(self, organization):
         if self.namespace == organization:
-            return
+            return self
 
         repo_parts = [self.repo]
         if self.namespace:
             repo_parts.insert(0, self.namespace)
 
-        self.namespace = organization
-        self.repo = '-'.join(repo_parts)
+        return self.replace(namespace=organization, repo='-'.join(repo_parts))
 
     def __str__(self):
         return self.to_str(registry=True, tag=True)
@@ -483,6 +498,13 @@ class ImageName(object):
             namespace=self.namespace,
             repo=self.repo,
             tag=self.tag)
+
+    def replace(self, registry=__DEFAULT, namespace=__DEFAULT, repo=__DEFAULT, tag=__DEFAULT):
+        return ImageName(
+            registry=self.registry if registry == self.__DEFAULT else registry,
+            namespace=self.namespace if namespace == self.__DEFAULT else namespace,
+            repo=self.repo if repo == self.__DEFAULT else repo,
+            tag=self.tag if tag == self.__DEFAULT else ('latest' if tag is None else tag))
 
 
 class UserWarningsStore(object):
