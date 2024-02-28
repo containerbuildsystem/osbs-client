@@ -15,7 +15,7 @@ from copy import deepcopy
 from flexmock import flexmock
 
 from osbs.tekton import (Openshift, PipelineRun, TaskRun, Pod, API_VERSION, WAIT_RETRY_SECS,
-                         WAIT_RETRY, get_sorted_task_runs)
+                         WAIT_RETRY)
 from osbs.exceptions import OsbsException
 from tests.constants import TEST_PIPELINE_RUN_TEMPLATE, TEST_OCP_NAMESPACE
 
@@ -28,6 +28,7 @@ PIPELINE_RUN_URL = f'https://openshift.testing/apis/tekton.dev/v1beta1/namespace
 PIPELINE_WATCH_URL = f'https://openshift.testing/apis/tekton.dev/v1beta1/watch/namespaces/{TEST_OCP_NAMESPACE}/pipelineruns/{PIPELINE_RUN_NAME}/' # noqa E501
 TASK_RUN_URL = f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/taskruns/{TASK_RUN_NAME}' # noqa E501
 TASK_RUN_URL2 = f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/taskruns/{TASK_RUN_NAME2}' # noqa E501
+TASK_RUN_URL3 = f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/taskruns/{TASK_RUN_NAME3}' # noqa E501
 TASK_RUN_WATCH_URL = f"https://openshift.testing/apis/tekton.dev/v1beta1/watch/namespaces/{TEST_OCP_NAMESPACE}/taskruns/{TASK_RUN_NAME}/" # noqa E501
 TASK_RUN_WATCH_URL2 = f"https://openshift.testing/apis/tekton.dev/v1beta1/watch/namespaces/{TEST_OCP_NAMESPACE}/taskruns/{TASK_RUN_NAME2}/" # noqa E501
 
@@ -76,62 +77,21 @@ PIPELINE_RUN_JSON = {
                 {"name": "short2-sleep", "taskRef": {"kind": "Task", "name": "short2-sleep"}}
             ]
         },
-        "taskRuns": {
-            TASK_RUN_NAME: {
-                "pipelineTaskName": "short-sleep",
-                "status": {
-                    "conditions": [
-                        {
-                            "reason": "Running",
-                            "status": "Unknown",
-                        }
-                    ],
-                    "podName": POD_NAME,
-                    "steps": [
-                        {
-                            "container": "step-hello",
-                        },
-                        {
-                            "container": "step-wait",
-                        },
-                        {
-                            "container": "step-bye",
-                        },
-                    ],
-                    "startTime": "2022-04-26T15:58:42Z"
-                },
-            },
-            TASK_RUN_NAME2: {
-                "pipelineTaskName": "short2-sleep",
-                "status": {
-                    "conditions": [
-                        {
-                            "reason": "Running",
-                            "status": "Unknown",
-                        }
-                    ],
-                    "podName": POD_NAME2,
-                    "steps": [
-                        {
-                            "container": "step2-hello",
-                        },
-                        {
-                            "container": "step2-wait",
-                        },
-                        {
-                            "container": "step2-bye",
-                        },
-                    ],
-                    "startTime": "2022-04-26T14:58:42Z"
-                },
-            }
-        },
+        "childReferences": [
+            {"name": TASK_RUN_NAME, "kind": "TaskRun"},
+            {"name": TASK_RUN_NAME2, "kind": "TaskRun"},
+        ],
     },
 }
 
 TASK_RUN_JSON = {
     "apiVersion": "tekton.dev/v1beta1",
     "kind": "TaskRun",
+    "metadata": {
+        "labels": {
+            "tekton.dev/pipelineTask": "short-sleep",
+        }
+    },
     "status": {
         "conditions": [
             {
@@ -156,6 +116,11 @@ TASK_RUN_JSON = {
 TASK_RUN_JSON2 = {
     "apiVersion": "tekton.dev/v1beta1",
     "kind": "TaskRun",
+    "metadata": {
+        "labels": {
+            "tekton.dev/pipelineTask": "short2-sleep",
+        }
+    },
     "status": {
         "conditions": [
             {
@@ -180,6 +145,11 @@ TASK_RUN_JSON2 = {
 TASK_RUN_JSON3 = {
     "apiVersion": "tekton.dev/v1beta1",
     "kind": "TaskRun",
+    "metadata": {
+        "labels": {
+            "tekton.dev/pipelineTask": "short3-sleep",
+        }
+    },
     "status": {
         "conditions": [
             {
@@ -598,323 +568,281 @@ class TestPipelineRun():
         assert resp == get_json
 
     @responses.activate
-    @pytest.mark.parametrize(('get_json', 'error_lines'), [
+    @pytest.mark.parametrize(('pipeline_json', 'tasks_json', 'error_lines'), [
         # no data
-        ({}, 'pipeline run removed;'),
+        ({}, [], 'pipeline run removed;'),
 
-        # no taskRuns in status and no plugins-metadata
+        # no childReferences in status and no plugins-metadata
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'pipeline err message1'}]},
           'metadata': {}},
+         [],
          "pipeline err message1;"),
 
-        # taskRuns in status, without steps
+        # childReferences in status, without steps
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'pipeline err message1'}],
-                     'taskRuns': {
-                         'task1': {
-                             'pipelineTaskName': 'binary-build-task1',
-                             'status': {'conditions': [{'reason': 'reason2',
-                                                        'message': 'message2'}],
-                                        "startTime": "2022-04-26T15:58:42Z"}
-                         }
-                     }},
+                     'childReferences': [{'name': 'task1', 'kind': 'TaskRun'}]},
           'metadata': {}},
+         [
+             {'metadata': {'name': 'task1',
+                           'labels': {'tekton.dev/pipelineTask': 'binary-build-task1'}},
+              'status': {'conditions': [{'reason': 'reason2', 'message': 'message2'}],
+                         'startTime': '2022-04-26T15:58:42Z'}},
+         ],
          "Error in binary-build-task1: message2;\n"),
 
-        # taskRuns in status, with steps and failed without terminated key
+        # childReferences in status, with steps and failed without terminated key
         ({'status': {'conditions': [{'reason': 'reason1'}],
-                     'taskRuns': {
-                         'task1': {
-                             'pipelineTaskName': 'binary-build-task1',
-                             'status': {
-                                 'conditions': [{'reason': 'reason2', 'message': 'message2'}],
-                                 'steps': [
-                                     {'name': 'step_ok',
-                                      'terminated': {'exitCode': 0}},
-                                     {'name': 'step_ko'},
-                                 ],
-                                 "startTime": "2022-04-26T15:58:42Z"
-                             }
-                         }
-                     }},
+                     'childReferences': [{'name': 'task1', 'kind': 'TaskRun'}]},
           'metadata': {}},
+         [
+             {'metadata': {'name': 'task1',
+                           'labels': {'tekton.dev/pipelineTask': 'binary-build-task1'}},
+              'status': {'conditions': [{'reason': 'reason2', 'message': 'message2'}],
+                         'steps': [{'name': 'step_ok',
+                                    'terminated': {'exitCode': 0}},
+                                   {'name': 'step_ko'}],
+                         'startTime': '2022-04-26T15:58:42Z'}},
+         ],
          "Error in binary-build-task1: message2;\n"),
 
-        # taskRuns in status, with steps, and no annotations in binary exit task
+        # childReferences in status, with steps, and no annotations in binary exit task
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
-                     'taskRuns': {
-                         'task1': {
-                             'pipelineTaskName': 'binary-build-task1',
-                             'status': {
-                                 'conditions': [{'reason': 'reason2', 'message': 'message2'}],
-                                 'steps': [
-                                     {'name': 'step_ok',
-                                      'terminated': {'exitCode': 0}},
-                                     {'name': 'step_ko',
-                                      'terminated': {
-                                          'exitCode': 1,
-                                          'message': json.dumps([{'key': 'task_result',
-                                                                  'value': 'binary error'}])}}
-                                 ],
-                                 "startTime": "2022-04-26T15:58:42Z"
-                             }
-                         },
-                         'task2': {
-                             'pipelineTaskName': 'binary-build-pretask',
-                             'status': {
-                                 'conditions': [{'reason': 'reason1', 'message': 'message1'}],
-                                 'steps': [
-                                     {'name': 'prestep_ok',
-                                      'terminated': {'exitCode': 0}},
-                                     {'name': 'prestep_ko',
-                                      'terminated': {
-                                          'exitCode': 1,
-                                          'message': json.dumps([{'key': 'task_result',
-                                                                  'value': 'pre1 error'}])}},
-                                     {'name': 'prestep_ko2',
-                                      'terminated': {
-                                          'exitCode': 1,
-                                          'message': json.dumps([{'key': 'task_result',
-                                                                  'value': 'pre2 error'}])}},
-                                 ],
-                                 "startTime": "2022-04-26T14:58:42Z"
-                             }
-                         },
-                         'task3': {
-                             'pipelineTaskName': 'binary-container-exit',
-                             'status': {
-                                 'conditions': [{'reason': 'Succeeded'}],
-                                 'startTime': '2022-04-26T14:58:42Z',
-                                 'taskResults': [{'name': 'not_annotations',
-                                                  'value': '{"plugins-metadata": {"errors": '
-                                                           '{"plugin1": "error1", '
-                                                           '"plugin2": "error2"}}}'}]
-                             }
-                         }
-                     }},
+                     'childReferences': [{'name': 'task1', 'kind': 'TaskRun'},
+                                         {'name': 'task2', 'kind': 'TaskRun'},
+                                         {'name': 'task3', 'kind': 'TaskRun'}]},
           'metadata': {}},
-         "Error in binary-build-pretask: pre1 error;\n"
-         "Error in binary-build-pretask: pre2 error;\n"
-         "Error in binary-build-task1: binary error;\n"),
+         [
+             {'metadata': {'name': 'task1',
+                           'labels': {'tekton.dev/pipelineTask': 'binary-build-task1'}},
+              'status': {'conditions': [{'reason': 'reason2', 'message': 'message2'}],
+                         'steps': [{'name': 'step_ok',
+                                    'terminated': {'exitCode': 0}},
+                                   {'name': 'step_ko',
+                                    'terminated':
+                                        {'exitCode': 1,
+                                         'message': json.dumps([{'key': 'task_result',
+                                                                 'value': 'binary error'}])}}],
+                         'startTime': '2022-04-26T15:58:42Z'}},
 
-        # taskRuns in status, with steps, and annotations in binary exit task
-        ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
-                     'taskRuns': {
-                         'task1': {
-                             'pipelineTaskName': 'binary-build-task1',
-                             'status': {
-                                 'conditions': [{'reason': 'reason2', 'message': 'message2'}],
-                                 'steps': [
-                                     {'name': 'step_ok',
-                                      'terminated': {'exitCode': 0}},
-                                     {'name': 'step_ko',
-                                      'terminated': {
-                                          'exitCode': 1,
-                                          'message': json.dumps([{'key': 'task_result',
-                                                                  'value': 'binary error'}])}}
-                                 ],
-                                 "startTime": "2022-04-26T15:58:42Z"
-                             }
-                         },
-                         'task2': {
-                             'pipelineTaskName': 'binary-build-pretask',
-                             'status': {
-                                 'conditions': [{'reason': 'reason1', 'message': 'message1'}],
-                                 'steps': [
-                                     {'name': 'prestep_ok',
-                                      'terminated': {'exitCode': 0}},
-                                     {'name': 'prestep_ko',
-                                      'terminated': {
-                                          'exitCode': 1,
-                                          'message': json.dumps([{'key': 'task_result',
-                                                                  'value': 'pre1 error'}])}},
-                                     {'name': 'prestep_ko2',
-                                      'terminated': {
-                                          'exitCode': 1,
-                                          'message': json.dumps([{'key': 'task_result',
-                                                                  'value': 'pre2 error'}])}},
-                                 ],
-                                 "startTime": "2022-04-26T14:58:42Z"
-                             }
-                         },
-                         'task3': {
-                             'pipelineTaskName': 'binary-container-exit',
-                             'status': {
-                                 'conditions': [{'reason': 'Succeeded'}],
-                                 'startTime': '2022-04-26T14:58:42Z',
-                                 'taskResults': [{'name': 'annotations',
-                                                  'value': '{"plugins-metadata": {"errors": '
-                                                           '{"plugin1": "error1", '
-                                                           '"plugin2": "error2"}}}'}]
-                             }
-                         }
-                     }},
-          'metadata': {}},
-         "Error in plugin plugin1: error1;\nError in plugin plugin2: error2;\n"
+             {'metadata': {'name': 'task2',
+                           'labels': {'tekton.dev/pipelineTask': 'binary-build-pretask'}},
+              'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
+                         'steps': [{'name': 'prestep_ok',
+                                    'terminated': {'exitCode': 0}},
+                                   {'name': 'prestep_ko',
+                                    'terminated':
+                                        {'exitCode': 1,
+                                         'message': json.dumps([{'key': 'task_result',
+                                                                 'value': 'pre1 error'}])}},
+                                   {'name': 'prestep_ko2',
+                                    'terminated':
+                                        {'exitCode': 1,
+                                         'message': json.dumps([{'key': 'task_result',
+                                                                 'value': 'pre2 error'}])}}],
+                         'startTime': '2022-04-26T14:58:42Z'}},
+
+             {'metadata': {'name': 'task3',
+                           'labels': {'tekton.dev/pipelineTask': 'binary-build-exit'}},
+              'status': {'conditions': [{'reason': 'Succeeded'}],
+                         'startTime': '2022-04-26T14:58:42Z',
+                         'taskResults': [{'name': 'not_annotations',
+                                          'value': '{"plugins-metadata": {"errors": ' '{"plugin1": '
+                                                   '"error1", ' '"plugin2": "error2"}}}'}]}},
+         ],
+         "Error in binary-build-task1: binary error;\n"
          "Error in binary-build-pretask: pre1 error;\n"
-         "Error in binary-build-pretask: pre2 error;\n"
-         "Error in binary-build-task1: binary error;\n"),
+         "Error in binary-build-pretask: pre2 error;\n"),
+
+        # childReferences in status, with steps, and annotations in binary exit task
+        ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
+                     'childReferences': [{'name': 'task1', 'kind': 'TaskRun'},
+                                         {'name': 'task2', 'kind': 'TaskRun'},
+                                         {'name': 'task3', 'kind': 'TaskRun'}]},
+          'metadata': {}},
+         [
+             {'metadata': {'name': 'task1',
+                           'labels': {'tekton.dev/pipelineTask': 'binary-build-task1'}},
+              'status': {'conditions': [{'reason': 'reason2', 'message': 'message2'}],
+                         'steps': [{'name': 'step_ok',
+                                    'terminated': {'exitCode': 0}},
+                                   {'name': 'step_ko',
+                                    'terminated':
+                                        {'exitCode': 1,
+                                         'message': json.dumps([{'key': 'task_result',
+                                                                 'value': 'binary error'}])}}],
+                         'startTime': '2022-04-26T15:58:42Z'}},
+
+             {'metadata': {'name': 'task2',
+                           'labels': {'tekton.dev/pipelineTask': 'binary-build-pretask'}},
+              'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
+                         'steps': [{'name': 'prestep_ok',
+                                    'terminated': {'exitCode': 0}},
+                                   {'name': 'prestep_ko',
+                                    'terminated':
+                                        {'exitCode': 1,
+                                         'message': json.dumps([{'key': 'task_result',
+                                                                 'value': 'pre1 error'}])}},
+                                   {'name': 'prestep_ko2',
+                                    'terminated':
+                                        {'exitCode': 1,
+                                         'message': json.dumps([{'key': 'task_result',
+                                                                 'value': 'pre2 error'}])}}],
+                         'startTime': '2022-04-26T14:58:42Z'}},
+
+             {'metadata': {'name': 'task3',
+                           'labels': {'tekton.dev/pipelineTask': 'binary-container-exit'}},
+              'status': {'conditions': [{'reason': 'Succeeded'}],
+                         'startTime': '2022-04-26T14:58:42Z',
+                         'taskResults': [{'name': 'annotations',
+                                          'value': '{"plugins-metadata": {"errors": ' '{"plugin1": '
+                                                   '"error1", ' '"plugin2": "error2"}}}'}]}},
+         ],
+         "Error in plugin plugin1: error1;\nError in plugin plugin2: error2;\n"
+         "Error in binary-build-task1: binary error;\n"
+         "Error in binary-build-pretask: pre1 error;\n"
+         "Error in binary-build-pretask: pre2 error;\n"),
 
         # taskRuns in status, with steps, and annotations in source exit task
         ({'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
-                     'taskRuns': {
-                         'task1': {
-                             'pipelineTaskName': 'binary-build-task1',
-                             'status': {
-                                 'conditions': [{'reason': 'reason2', 'message': 'message2'}],
-                                 'steps': [
-                                     {'name': 'step_ok',
-                                      'terminated': {'exitCode': 0}},
-                                     {'name': 'step_ko',
-                                      'terminated': {
-                                          'exitCode': 1,
-                                          'message': json.dumps([{'key': 'task_result',
-                                                                  'value': 'binary error'}])}}
-                                 ],
-                                 "startTime": "2022-04-26T15:58:42Z"
-                             }
-                         },
-                         'task2': {
-                             'pipelineTaskName': 'binary-build-pretask',
-                             'status': {
-                                 'conditions': [{'reason': 'reason1', 'message': 'message1'}],
-                                 'steps': [
-                                     {'name': 'prestep_ok',
-                                      'terminated': {'exitCode': 0}},
-                                     {'name': 'prestep_ko',
-                                      'terminated': {
-                                          'exitCode': 1,
-                                          'message': json.dumps([{'key': 'task_result',
-                                                                  'value': 'pre1 error'}])}},
-                                     {'name': 'prestep_ko2',
-                                      'terminated': {
-                                          'exitCode': 1,
-                                          'message': json.dumps([{'key': 'task_result',
-                                                                  'value': 'pre2 error'}])}},
-                                 ],
-                                 "startTime": "2022-04-26T14:58:42Z"
-                             }
-                         },
-                         'task3': {
-                             'pipelineTaskName': 'source-container-exit',
-                             'status': {
-                                 'conditions': [{'reason': 'Succeeded'}],
-                                 'startTime': '2022-04-26T14:58:42Z',
-                                 'taskResults': [{'name': 'annotations',
-                                                  'value': '{"plugins-metadata": {"errors": '
-                                                           '{"plugin1": "error1", '
-                                                           '"plugin2": "error2"}}}'}]
-                             }
-                         }
-                     }},
+                     'childReferences': [{'name': 'task1', 'kind': 'TaskRun'},
+                                         {'name': 'task2', 'kind': 'TaskRun'},
+                                         {'name': 'task3', 'kind': 'TaskRun'}]},
           'metadata': {}},
+         [
+             {'metadata': {'name': 'task1',
+                           'labels': {'tekton.dev/pipelineTask': 'binary-build-task1'}},
+              'status': {'conditions': [{'reason': 'reason2', 'message': 'message2'}],
+                         'steps': [{'name': 'step_ok',
+                                    'terminated': {'exitCode': 0}},
+                                   {'name': 'step_ko', 'terminated':
+                                       {'exitCode': 1,
+                                        'message': json.dumps([{'key': 'task_result',
+                                                                'value': 'binary error'}])}}],
+                         'startTime': '2022-04-26T15:58:42Z'}},
+
+             {'metadata': {'name': 'task2',
+                           'labels': {'tekton.dev/pipelineTask': 'binary-build-pretask'}},
+              'status': {'conditions': [{'reason': 'reason1', 'message': 'message1'}],
+                         'steps': [{'name': 'prestep_ok',
+                                    'terminated': {'exitCode': 0}},
+                                   {'name': 'prestep_ko',
+                                    'terminated':
+                                        {'exitCode': 1,
+                                         'message': json.dumps([{'key': 'task_result',
+                                                                 'value': 'pre1 error'}])}},
+                                   {'name': 'prestep_ko2',
+                                    'terminated':
+                                        {'exitCode': 1,
+                                         'message': json.dumps([{'key': 'task_result',
+                                                                 'value': 'pre2 error'}])}}],
+                         'startTime': '2022-04-26T14:58:42Z'}},
+
+             {'metadata': {'name': 'task3',
+                           'labels': {'tekton.dev/pipelineTask': 'source-container-exit'}},
+              'status': {'conditions': [{'reason': 'Succeeded'}],
+                         'startTime': '2022-04-26T14:58:42Z',
+                         'taskResults': [{'name': 'annotations',
+                                          'value': '{"plugins-metadata": {"errors": ' '{"plugin1":'
+                                                   ' "error1", ' '"plugin2": "error2"}}}'}]}},
+         ],
          "Error in plugin plugin1: error1;\nError in plugin plugin2: error2;\n"
+         "Error in binary-build-task1: binary error;\n"
          "Error in binary-build-pretask: pre1 error;\n"
-         "Error in binary-build-pretask: pre2 error;\n"
-         "Error in binary-build-task1: binary error;\n"),
+         "Error in binary-build-pretask: pre2 error;\n"),
     ])  # noqa
-    def test_get_error_message(self, pipeline_run, get_json, error_lines):
-        responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
+    def test_get_error_message(self, pipeline_run, pipeline_json, tasks_json, error_lines):
+        responses.add(responses.GET, PIPELINE_RUN_URL, json=pipeline_json)
+        taskrun_url = f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/' \
+                      f'{TEST_OCP_NAMESPACE}/taskruns/'
+
+        for task in tasks_json:
+            taskr_json = deepcopy(TASK_RUN_JSON)
+            taskr_json['metadata']['name'] = task['metadata']['name']
+            taskr_json['metadata']['labels'] = task['metadata']['labels']
+            taskr_json['status'] = task['status']
+            task_url = f"{taskrun_url}{task['metadata']['name']}"
+
+            responses.add(responses.GET, task_url, json=taskr_json)
 
         resp = pipeline_run.get_error_message()
 
-        assert len(responses.calls) == (2 if get_json else 1)
+        assert len(responses.calls) == (4 + 2*len(tasks_json) if pipeline_json else 1)
         assert resp == error_lines
 
     @responses.activate
-    @pytest.mark.parametrize(('get_json', 'platforms'), [
+    @pytest.mark.parametrize(('prun_json', 'taskrun_json', 'platforms'), [
         # no data
-        ({}, None),
+        ({}, {}, None),
 
-        # no taskRuns in status
+        # no childReferences in status
         ({'status': {'conditions': []}},
+         {},
          None),
 
-        # taskRuns in status, no prebuild task
+        # childReferences in status, no prebuild task
         ({'status': {'conditions': [],
-                     'taskRuns': {
-                         'task1': {
-                             'pipelineTaskName': 'binary-build-task1',
-                             'status': {'startTime': '2022-04-26T15:58:42Z'}
-                         }
-                     }}},
+                     'childReferences': [{'name': TASK_RUN_NAME, 'kind': 'TaskRun'}]}},
+         {'apiVersion': 'tekton.dev/v1beta1', 'kind': 'TaskRun',
+          'metadata': {'labels': {'tekton.dev/pipelineTask': 'binary-build-task1'}},
+          'status': {'startTime': '2022-04-26T15:58:42Z'}},
          None),
 
-        # taskRuns in status, prebuild task, not completed
+        # childReferences in status, prebuild task, not completed
         ({'status': {'conditions': [],
-                     'taskRuns': {
-                         'task1': {
-                             'pipelineTaskName': 'binary-container-prebuild',
-                             'status': {'startTime': '2022-04-26T15:58:42Z',
-                                        'conditions': [{'reason': 'Running'}]}
-                         }
-                     }}},
+                     'childReferences': [{'name': TASK_RUN_NAME, 'kind': 'TaskRun'}]}},
+         {'apiVersion': 'tekton.dev/v1beta1', 'kind': 'TaskRun',
+          'metadata': {'labels': {'tekton.dev/pipelineTask': 'binary-container-prebuild'}},
+          'status': {'startTime': '2022-04-26T15:58:42Z', 'conditions': [{'reason': 'Running'}]}},
          None),
 
-        # taskRuns in status, prebuild task, completed, no taskResults
+        # childReferences in status, prebuild task, completed, no taskResults
         ({'status': {'conditions': [],
-                     'taskRuns': {
-                         'task1': {
-                             'pipelineTaskName': 'binary-container-prebuild',
-                             'status': {'startTime': '2022-04-26T15:58:42Z',
-                                        'conditions': [{'reason': 'Succeeded'}]}
-                         }
-                     }}},
+                     'childReferences': [{'name': TASK_RUN_NAME, 'kind': 'TaskRun'}]}},
+         {'apiVersion': 'tekton.dev/v1beta1', 'kind': 'TaskRun',
+          'metadata': {'labels': {'tekton.dev/pipelineTask': 'binary-container-prebuild'}},
+          'status': {'startTime': '2022-04-26T15:58:42Z', 'conditions': [{'reason': 'Succeeded'}]}},
          None),
 
-        # taskRuns in status, prebuild task, completed, taskResults empty
+        # childReferences in status, prebuild task, completed, taskResults empty
         ({'status': {'conditions': [],
-                     'taskRuns': {
-                         'task1': {
-                             'pipelineTaskName': 'binary-container-prebuild',
-                             'status': {'startTime': '2022-04-26T15:58:42Z',
-                                        'conditions': [{'reason': 'Succeeded'}],
-                                        'taskResults': []},
-                         }
-                     }}},
+                     'childReferences': [{'name': TASK_RUN_NAME, 'kind': 'TaskRun'}]}},
+         {'apiVersion': 'tekton.dev/v1beta1', 'kind': 'TaskRun',
+          'metadata': {'labels': {'tekton.dev/pipelineTask': 'binary-container-prebuild'}},
+          'status': {'startTime': '2022-04-26T15:58:42Z', 'conditions': [{'reason': 'Succeeded'}],
+                     'taskResults': []}},
          None),
 
-        # taskRuns in status, prebuild task, completed, taskResults but not platforms
+        # childReferences in status, prebuild task, completed, taskResults but not platforms
         ({'status': {'conditions': [],
-                     'taskRuns': {
-                         'task1': {
-                             'pipelineTaskName': 'binary-container-prebuild',
-                             'status': {'startTime': '2022-04-26T15:58:42Z',
-                                        'conditions': [{'reason': 'Succeeded'}],
-                                        'taskResults': [{'name': 'some_result',
-                                                         'value': 'some_value'}]},
-                         }
-                     }}},
+                     'childReferences': [{'name': TASK_RUN_NAME, 'kind': 'TaskRun'}]}},
+         {'apiVersion': 'tekton.dev/v1beta1', 'kind': 'TaskRun',
+          'metadata': {'labels': {'tekton.dev/pipelineTask': 'binary-container-prebuild'}},
+          'status': {'startTime': '2022-04-26T15:58:42Z', 'conditions': [{'reason': 'Succeeded'}],
+                     'taskResults': [{'name': 'some_result', 'value': 'some_value'}]}},
          None),
 
-        # taskRuns in status, prebuild task, completed, taskResults with empty platforms
+        # childReferences in status, prebuild task, completed, taskResults with empty platforms
         ({'status': {'conditions': [],
-                     'taskRuns': {
-                         'task1': {
-                             'pipelineTaskName': 'binary-container-prebuild',
-                             'status': {'startTime': '2022-04-26T15:58:42Z',
-                                        'conditions': [{'reason': 'Succeeded'}],
-                                        'taskResults': [{'name': 'platforms_result',
-                                                         'value': '{"platforms": []}'}]},
-                         }
-                     }}},
+                     'childReferences': [{'name': TASK_RUN_NAME, 'kind': 'TaskRun'}]}},
+         {'apiVersion': 'tekton.dev/v1beta1', 'kind': 'TaskRun',
+          'metadata': {'labels': {'tekton.dev/pipelineTask': 'binary-container-prebuild'}},
+          'status': {'startTime': '2022-04-26T15:58:42Z', 'conditions': [{'reason': 'Succeeded'}],
+                     'taskResults': [{'name': 'platforms_result', 'value': '{"platforms": []}'}]}},
          []),
 
-        # taskRuns in status, prebuild task, completed, taskResults with some platforms
+        # childReferences in status, prebuild task, completed, taskResults with some platforms
         ({'status': {'conditions': [],
-                     'taskRuns': {
-                         'task1': {
-                             'pipelineTaskName': 'binary-container-prebuild',
-                             'status': {'startTime': '2022-04-26T15:58:42Z',
-                                        'conditions': [{'reason': 'Succeeded'}],
-                                        'taskResults': [{'name': 'platforms_result',
-                                                         'value': '{"platforms": '
-                                                                  '["x86_64", "ppc64le"]}'}]},
-                         }
-                     }}},
+                     'childReferences': [{'name': TASK_RUN_NAME, 'kind': 'TaskRun'}]}},
+         {'apiVersion': 'tekton.dev/v1beta1', 'kind': 'TaskRun',
+          'metadata': {'labels': {'tekton.dev/pipelineTask': 'binary-container-prebuild'}},
+          'status': {'startTime': '2022-04-26T15:58:42Z', 'conditions': [{'reason': 'Succeeded'}],
+                     'taskResults': [{'name': 'platforms_result',
+                                      'value': '{"platforms": ' '["x86_64", "ppc64le"]}'}]}},
          ["x86_64", "ppc64le"]),
     ])  # noqa
-    def test_get_final_platforms(self, pipeline_run, get_json, platforms):
-        responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
+    def test_get_final_platforms(self, pipeline_run, prun_json, taskrun_json, platforms):
+        responses.add(responses.GET, PIPELINE_RUN_URL, json=prun_json)
+        responses.add(responses.GET, TASK_RUN_URL, json=taskrun_json)
 
         assert pipeline_run.get_final_platforms() == platforms
 
@@ -1003,23 +931,30 @@ class TestPipelineRun():
     def test_any_task_failed_or_cancelled(
         self, pipeline_run, task_run_states, any_failed, any_canceled, caplog
     ):
+        taskrun_url = f'https://openshift.testing/apis/tekton.dev/v1beta1/namespaces/{TEST_OCP_NAMESPACE}/taskruns/' # noqa E501
         ppr_json = deepcopy(PIPELINE_RUN_JSON)
 
         if task_run_states is not None:
-            ppr_json['status']['taskRuns'] = {
-                task_name: {
-                    "pipelineTaskName": task_name,
-                    "status": {
-                        "completionTime": completion_time,
-                        "conditions": [
-                            {"status": status, "reason": reason}
-                        ],
-                    },
+            ppr_json['status']['childReferences'] = [
+                {
+                    "kind": "TaskRun",
+                    "name": f"task_run_{counter}",
                 }
-                for task_name, (status, reason, completion_time) in task_run_states
-            }
+                for counter in range(len(task_run_states))
+            ]
+
+            counter = 0
+            for task_name, (status, reason, completion_time) in task_run_states:
+                taskr_json = deepcopy(TASK_RUN_JSON)
+                taskr_json['metadata']['labels']['tekton.dev/pipelineTask'] = task_name
+                taskr_json['status'] = {"completionTime": completion_time,
+                                        "conditions": [{"status": status, "reason": reason}]}
+                task_url = f"{taskrun_url}task_run_{counter}"
+                counter += 1
+
+                responses.add(responses.GET, task_url, json=taskr_json)
         else:
-            ppr_json['status'].pop('taskRuns', None)
+            ppr_json['status'].pop('childReferences', None)
 
         responses.add(responses.GET, PIPELINE_RUN_URL, json=ppr_json)
 
@@ -1138,11 +1073,16 @@ class TestPipelineRun():
         assert len(responses.calls) == calls
         assert resp is None
 
+    @responses.activate
     def test_wait_for_taskruns(self, pipeline_run):
         flexmock(time).should_receive('sleep')
         count = 0
         completed_pipeline = deepcopy(PIPELINE_RUN_JSON)
         completed_pipeline['status']['conditions'][0]['status'] = 'True'
+        responses.add(responses.GET, PIPELINE_RUN_URL, json=deepcopy(PIPELINE_RUN_JSON))
+        responses.add(responses.GET, TASK_RUN_URL, json=deepcopy(TASK_RUN_JSON))
+        responses.add(responses.GET, TASK_RUN_URL2, json=deepcopy(TASK_RUN_JSON2))
+
         def custom_watch(api_path, api_version, resource_type, resource_name,
                          **request_args):
             nonlocal count
@@ -1156,10 +1096,10 @@ class TestPipelineRun():
         task_runs = [task_run for task_run in pipeline_run.wait_for_taskruns()]
 
         assert task_runs == [[
-            (PIPELINE_RUN_JSON['status']['taskRuns'][TASK_RUN_NAME]['pipelineTaskName'],
-             TASK_RUN_NAME),
-            (PIPELINE_RUN_JSON['status']['taskRuns'][TASK_RUN_NAME2]['pipelineTaskName'],
-             TASK_RUN_NAME2)]]
+            (TASK_RUN_JSON['metadata']['labels']['tekton.dev/pipelineTask'],
+             PIPELINE_RUN_JSON['status']['childReferences'][0]['name']),
+            (TASK_RUN_JSON2['metadata']['labels']['tekton.dev/pipelineTask'],
+             PIPELINE_RUN_JSON['status']['childReferences'][1]['name'])]]
 
     @responses.activate
     def test_wait_for_taskruns_removed(self, pipeline_run):
@@ -1184,6 +1124,7 @@ class TestPipelineRun():
         responses.add(responses.GET, PIPELINE_RUN_URL, json=get_json)
         responses.add(responses.GET, TASK_RUN_URL, json=TASK_RUN_JSON)
         responses.add(responses.GET, TASK_RUN_URL2, json=TASK_RUN_JSON2)
+
         for container in CONTAINERS:
             url = f"{POD_URL}/log?container={container}"
             responses.add(responses.GET, url, body=EXPECTED_LOGS[container])
@@ -1196,13 +1137,13 @@ class TestPipelineRun():
             assert len(responses.calls) == 1
             assert logs is None
         else:
-            # pipeline = 1
+            # pipeline = 4
             # tasks = 2
             # 3 steps per task = 6
-            assert len(responses.calls) == 9
-            assert logs == {get_json['status']['taskRuns'][TASK_RUN_NAME2]['pipelineTaskName']:
+            assert len(responses.calls) == 12
+            assert logs == {TASK_RUN_JSON2['metadata']['labels']['tekton.dev/pipelineTask']:
                             EXPECTED_LOGS2,
-                            get_json['status']['taskRuns'][TASK_RUN_NAME]['pipelineTaskName']:
+                            TASK_RUN_JSON['metadata']['labels']['tekton.dev/pipelineTask']:
                             EXPECTED_LOGS}
 
     @responses.activate
@@ -1212,33 +1153,17 @@ class TestPipelineRun():
             PIPELINE_WATCH_URL,
             json=PIPELINE_RUN_WATCH_JSON,
         )
+        responses.add(responses.GET, PIPELINE_RUN_URL, json=deepcopy(PIPELINE_RUN_JSON))
+        responses.add(responses.GET, TASK_RUN_URL, json=deepcopy(TASK_RUN_JSON))
+        responses.add(responses.GET, TASK_RUN_URL2, json=deepcopy(TASK_RUN_JSON2))
+        responses.add(responses.GET, TASK_RUN_URL3, json=deepcopy(TASK_RUN_JSON3))
+
         flexmock(time).should_receive('sleep')
         second_set_tasks_pipeline = deepcopy(PIPELINE_RUN_JSON)
-        task_run_3 = {TASK_RUN_NAME3: {
-                "pipelineTaskName": "short3-sleep",
-                "status": {
-                    "conditions": [
-                        {
-                            "reason": "Running",
-                            "status": "Unknown",
-                        }
-                    ],
-                    "podName": POD_NAME3,
-                    "steps": [
-                        {
-                            "container": "step3-hello",
-                        },
-                        {
-                            "container": "step3-wait",
-                        },
-                        {
-                            "container": "step3-bye",
-                        },
-                    ],
-                    "startTime": "2022-08-29T14:58:42Z"
-                },
-            }}
-        second_set_tasks_pipeline['status']['taskRuns'] = task_run_3
+        child_references = [{'name': TASK_RUN_NAME3, 'kind': 'TaskRun'}]
+        second_set_tasks_pipeline['status']['childReferences'] = child_references
+        responses.add(responses.GET, PIPELINE_RUN_URL, json=deepcopy(second_set_tasks_pipeline))
+
         completed_pipeline = deepcopy(PIPELINE_RUN_JSON)
         completed_pipeline['status']['conditions'][0]['status'] = 'True'
 
@@ -1294,24 +1219,22 @@ class TestPipelineRun():
             )
         logs = [line for line in pipeline_run.get_logs(follow=True, wait=True)]
 
-        assert logs == [(PIPELINE_RUN_JSON['status']['taskRuns']
-                         [TASK_RUN_NAME]['pipelineTaskName'],
+        assert logs == [(TASK_RUN_JSON['metadata']['labels']['tekton.dev/pipelineTask'],
                          'Hello World'),
-                        (PIPELINE_RUN_JSON['status']['taskRuns']
-                         [TASK_RUN_NAME2]['pipelineTaskName'],
+                        (TASK_RUN_JSON2['metadata']['labels']['tekton.dev/pipelineTask'],
                          '2Hello World'),
-                        (PIPELINE_RUN_JSON['status']['taskRuns']
-                         [TASK_RUN_NAME]['pipelineTaskName'],
+                        (TASK_RUN_JSON['metadata']['labels']['tekton.dev/pipelineTask'],
                          'Bye World'),
-                        (PIPELINE_RUN_JSON['status']['taskRuns']
-                         [TASK_RUN_NAME2]['pipelineTaskName'],
+                        (TASK_RUN_JSON2['metadata']['labels']['tekton.dev/pipelineTask'],
                          '2'),
-                        (PIPELINE_RUN_JSON['status']['taskRuns']
-                         [TASK_RUN_NAME2]['pipelineTaskName'],
+                        (TASK_RUN_JSON2['metadata']['labels']['tekton.dev/pipelineTask'],
                          '2Bye World'),
-                        (task_run_3[TASK_RUN_NAME3]['pipelineTaskName'], '3Hello World'),
-                        (task_run_3[TASK_RUN_NAME3]['pipelineTaskName'], '3'),
-                        (task_run_3[TASK_RUN_NAME3]['pipelineTaskName'], '3Bye World')]
+                        (TASK_RUN_JSON3['metadata']['labels']['tekton.dev/pipelineTask'],
+                         '3Hello World'),
+                        (TASK_RUN_JSON3['metadata']['labels']['tekton.dev/pipelineTask'],
+                         '3'),
+                        (TASK_RUN_JSON3['metadata']['labels']['tekton.dev/pipelineTask'],
+                         '3Bye World')]
 
     @responses.activate
     def test_get_logs_stream_removed(self, pipeline_run):
@@ -1320,6 +1243,9 @@ class TestPipelineRun():
             PIPELINE_WATCH_URL,
             json=PIPELINE_RUN_WATCH_JSON,
         )
+        responses.add(responses.GET, PIPELINE_RUN_URL, json=deepcopy(PIPELINE_RUN_JSON))
+        responses.add(responses.GET, TASK_RUN_URL, json=deepcopy(TASK_RUN_JSON))
+        responses.add(responses.GET, TASK_RUN_URL2, json=deepcopy(TASK_RUN_JSON2))
 
         def custom_watch(api_path, api_version, resource_type, resource_name,
                          **request_args):
@@ -1352,29 +1278,7 @@ class TestPipelineRun():
             )
         logs = [line for line in pipeline_run.get_logs(follow=True, wait=True)]
 
-        assert logs == [(PIPELINE_RUN_JSON['status']['taskRuns']
-                         [TASK_RUN_NAME]['pipelineTaskName'],
+        assert logs == [(TASK_RUN_JSON['metadata']['labels']['tekton.dev/pipelineTask'],
                          'Hello World'),
-                        (PIPELINE_RUN_JSON['status']['taskRuns']
-                         [TASK_RUN_NAME]['pipelineTaskName'],
+                        (TASK_RUN_JSON['metadata']['labels']['tekton.dev/pipelineTask'],
                          'Bye World')]
-
-
-def test_get_sorted_task_runs():
-    task_runs = {
-        "TaskRunSecond": {"status": {"startTime": "2022-09-07T18:23:51Z"}},
-        "TaskRunMissingKey": {"status": {}},
-        "TaskRunThird": {"status": {"startTime": "2022-09-07T18:24:51Z"}},
-        "TaskRunFirst": {"status": {"startTime": "2022-09-07T18:22:51Z"}},
-        "TaskRunMissingKeyAlso": {"status": {}},
-    }
-    expected_sorted = [
-        ("TaskRunFirst", {"status": {"startTime": "2022-09-07T18:22:51Z"}}),
-        ("TaskRunSecond", {"status": {"startTime": "2022-09-07T18:23:51Z"}}),
-        ("TaskRunThird", {"status": {"startTime": "2022-09-07T18:24:51Z"}}),
-        ("TaskRunMissingKey", {"status": {}}),
-        ("TaskRunMissingKeyAlso", {"status": {}}),
-    ]
-
-    actual_sorted = get_sorted_task_runs(task_runs)
-    assert actual_sorted == expected_sorted

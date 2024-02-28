@@ -32,7 +32,7 @@ from tests.constants import (TEST_COMPONENT, TEST_GIT_BRANCH, TEST_GIT_REF, TEST
                              TEST_TARGET, TEST_USER, TEST_KOJI_TASK_ID, TEST_VERSION,
                              TEST_PIPELINE_RUN_TEMPLATE, TEST_PIPELINE_REPLACEMENTS_TEMPLATE,
                              TEST_OCP_NAMESPACE)
-from osbs.tekton import PipelineRun
+from osbs.tekton import PipelineRun, TaskRun
 
 
 REQUIRED_BUILD_ARGS = {
@@ -1033,23 +1033,31 @@ class TestOSBS(object):
         message = [{'key': 'task_result', 'value': 'bad thing'}]
         steps = [{'name': 'step1', 'terminated': {'exitCode': 0}},
                  {'name': 'step2', 'terminated': {'exitCode': 128, 'message': json.dumps(message)}}]
-        taskruns = {'task1': {'status': {'conditions': [{'reason': 'Succeeded'}],
-                                         'startTime': '2022-04-26T15:58:42Z'},
-                              'pipelineTaskName': 'prun-task1'},
-                    'task2': {'status': {'conditions': [{'reason': 'Failed'}],
-                                         'steps': steps,
-                                         'startTime': '2022-04-26T15:58:42Z'},
-                              'pipelineTaskName': 'prun-task2'},
-                    'task3': {'status': {'conditions': [{'reason': 'Succeeded'}],
-                                         'startTime': '2022-04-26T16:58:42Z',
-                                         'taskResults': [{'name': 'annotations',
-                                                          'value': metadata}]},
-                              'pipelineTaskName': 'binary-container-exit'}}
+        taskstat1 = {'conditions': [{'reason': 'Succeeded'}],
+                     'startTime': '2022-04-26T15:58:42Z'}
+        taskstat2 = {'conditions': [{'reason': 'Failed'}], 'steps': steps,
+                     'startTime': '2022-04-26T15:58:42Z'}
+        taskstat3 = {'conditions': [{'reason': 'Succeeded'}],
+                     'startTime': '2022-04-26T16:58:42Z',
+                     'taskResults': [{'name': 'annotations', 'value': metadata}]}
+        childrefs = [{'name': 'task_run_name1', 'kind': 'TaskRun'},
+                     {'name': 'task_run_name2', 'kind': 'TaskRun'},
+                     {'name': 'task_run_name3', 'kind': 'TaskRun'}]
 
-        resp = {'metadata': {'name': 'run_name'},
-                'status': {'taskRuns': taskruns, 'conditions': [{'message': 'error'}]}}
+        resp1 = {'metadata': {'name': 'run_name'},
+                 'status': {'childReferences': childrefs, 'conditions': [{'message': 'error'}]}}
+        resp2 = {'metadata': {'labels': {'tekton.dev/pipelineTask': 'prun-task1'}},
+                 'status': taskstat1}
+        resp3 = {'metadata': {'labels': {'tekton.dev/pipelineTask': 'prun-task2'}},
+                 'status': taskstat2}
+        resp4 = {'metadata': {'labels': {'tekton.dev/pipelineTask': 'binary-container-exit'}},
+                 'status': taskstat3}
 
-        flexmock(PipelineRun).should_receive('get_info').and_return(resp)
+        flexmock(PipelineRun).should_receive('get_info').and_return(resp1)
+        (flexmock(TaskRun).should_receive('get_info')
+         .and_return(resp2)
+         .and_return(resp3)
+         .and_return(resp4))
 
         error_msg = "Error in plugin plugin1: error1;\n"
         error_msg += "Error in prun-task2: bad thing;\n"
@@ -1059,15 +1067,18 @@ class TestOSBS(object):
         '{"platforms": ["x86_64", "ppc64le"]}',
     ])
     def test_get_final_platforms(self, osbs_binary, platforms_result):
-        taskruns = {'task1': {'status': {'conditions': [{'reason': 'Succeeded'}],
-                                         'taskResults': [{'name': 'platforms_result',
-                                                          'value': platforms_result}],
-                                         'startTime': '2022-04-26T15:58:42Z'},
-                              'pipelineTaskName': 'binary-container-prebuild'}}
+        taskstatus = {'conditions': [{'reason': 'Succeeded'}],
+                      'taskResults': [{'name': 'platforms_result',
+                                       'value': platforms_result}],
+                      'startTime': '2022-04-26T15:58:42Z'}
+        childrefs = [{'name': 'task_run_name', 'kind': 'TaskRun'}]
 
-        resp = {'metadata': {'name': 'run_name'}, 'status': {'taskRuns': taskruns}}
+        resp1 = {'metadata': {'name': 'run_name'}, 'status': {'childReferences': childrefs}}
+        resp2 = {'metadata': {'labels': {'tekton.dev/pipelineTask': 'binary-container-prebuild'}},
+                 'status': taskstatus}
 
-        flexmock(PipelineRun).should_receive('get_info').and_return(resp)
+        flexmock(PipelineRun).should_receive('get_info').and_return(resp1)
+        flexmock(TaskRun).should_receive('get_info').and_return(resp2)
         assert osbs_binary.get_final_platforms('run_name') == ["x86_64", "ppc64le"]
 
     def test_get_build_results(self, osbs_binary):
