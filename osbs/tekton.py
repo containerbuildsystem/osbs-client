@@ -11,8 +11,7 @@ import base64
 import os
 import requests
 import copy
-from typing import Dict, List, Tuple, Callable, Any
-from datetime import datetime
+from typing import Dict, Tuple, Callable, Any
 
 
 from osbs.exceptions import OsbsResponseException, OsbsAuthException, OsbsException
@@ -64,25 +63,6 @@ def check_response_json(response, cmd):
             raise
 
     return run_json
-
-
-def get_sorted_task_runs(task_runs: Dict[str, Any]) -> List[Tuple[str, Dict[str, Any]]]:
-    def custom_key(x):
-        """
-        Handles cases where the startTime key is missing.
-        These items are put at the end.
-        """
-        missing_start_time = "startTime" not in x[1]["status"]
-        containing_start_time = (
-            datetime.strptime(
-                x[1]["status"]["startTime"], "%Y-%m-%dT%H:%M:%SZ"
-            ).timestamp()
-            if not missing_start_time
-            else None
-        )
-        return (missing_start_time, containing_start_time)
-
-    return sorted(task_runs.items(), key=custom_key)
 
 
 class Openshift(object):
@@ -493,22 +473,16 @@ class PipelineRun():
         if not data:
             return task_results
 
-        task_runs_status = data['status'].get('taskRuns', {})
+        for task_run in self.child_references:
+            task_info = TaskRun(os=self.os, task_run_name=task_run['name']).get_info()
 
-        for _, stats in get_sorted_task_runs(task_runs_status):
-            if not ('status' in stats and 'conditions' in stats['status']):
-                continue
-
-            if stats['status']['conditions'][0]['reason'] != 'Succeeded':
-                continue
-
-            if 'taskResults' not in stats['status']:
-                continue
-
-            task_name = stats['pipelineTaskName']
+            task_name = task_info['metadata']['labels']['tekton.dev/pipelineTask']
             results = {}
 
-            for result in stats['status']['taskResults']:
+            if 'taskResults' not in task_info['status']:
+                continue
+
+            for result in task_info['status']['taskResults']:
                 results[result['name']] = result['value']
 
             task_results[task_name] = results
@@ -520,9 +494,6 @@ class PipelineRun():
 
         if not data:
             return "pipeline run removed;"
-
-        task_runs_status = data['status'].get('taskRuns', {})
-        sorted_tasks = get_sorted_task_runs(task_runs_status)
 
         plugin_errors = None
         annotations_str = None
@@ -550,14 +521,16 @@ class PipelineRun():
 
         pipeline_error = data['status']['conditions'][0].get('message')
 
-        for _, stats in sorted_tasks:
-            task_name = stats['pipelineTaskName']
+        for task_run in self.child_references:
+            task_info = TaskRun(os=self.os, task_run_name=task_run['name']).get_info()
+
+            task_name = task_info['metadata']['labels']['tekton.dev/pipelineTask']
             got_task_error = False
-            if stats['status']['conditions'][0]['reason'] == 'Succeeded':
+            if task_info['status']['conditions'][0]['reason'] == 'Succeeded':
                 continue
 
-            if 'steps' in stats['status']:
-                for step in stats['status']['steps']:
+            if 'steps' in task_info['status']:
+                for step in task_info['status']['steps']:
                     if 'terminated' in step:
                         exit_code = step['terminated']['exitCode']
                         if exit_code == 0:
@@ -578,7 +551,7 @@ class PipelineRun():
 
             if not got_task_error:
                 err_message += f"Error in {task_name}: " \
-                               f"{stats['status']['conditions'][0]['message']};\n"
+                               f"{task_info['status']['conditions'][0]['message']};\n"
 
         if not err_message:
             if pipeline_error:
@@ -651,9 +624,11 @@ class PipelineRun():
 
         def matches_state(task_run: Dict[str, Any]) -> bool:
             task_run_status = task_run['status']
+            task_name = task_run['metadata']['labels']['tekton.dev/pipelineTask']
+
             if 'conditions' not in task_run_status:
                 logger.debug('conditions are missing from status in task %s : %s',
-                             task_run['pipelineTaskName'], task_run_status)
+                             task_name, task_run_status)
                 return False
 
             status = task_run_status['conditions'][0]['status']
@@ -663,13 +638,17 @@ class PipelineRun():
             if match_state(status, reason, completion_time is not None):
                 logger.debug(
                     'Found %s task: name=%s; status=%s; reason=%s; completionTime=%s',
-                    state_name, task_run['pipelineTaskName'], status, reason, completion_time,
+                    state_name, task_name, status, reason, completion_time,
                 )
                 return True
 
             return False
 
-        task_runs = self.data['status'].get('taskRuns', {}).values()
+        task_runs = []
+        for task_run in self.child_references:
+            task_info = TaskRun(os=self.os, task_run_name=task_run['name']).get_info()
+            task_runs.append(task_info)
+
         return any(matches_state(tr) for tr in task_runs)
 
     def wait_for_finish(self):
@@ -701,6 +680,17 @@ class PipelineRun():
         if not data:
             return None
         return data['status']['conditions'][0]['status']
+
+    @property
+    def child_references(self):
+        data = self.data
+
+        if not data:
+            return []
+
+        child_references = data['status'].get('childReferences', [])
+
+        return [child for child in child_references if child['kind'] == 'TaskRun']
 
     @property
     def pipeline_results(self) -> Dict[str, any]:
@@ -785,17 +775,24 @@ class PipelineRun():
                 return []
 
             try:
-                task_runs = pipeline_run['status']['taskRuns']
+                child_references = self.data['status']['childReferences']
             except KeyError:
                 logger.debug(
                     "Pipeline run '%s' does not have any task runs yet",
                     self.pipeline_run_name)
                 continue
             current_task_runs = []
-            for task_run_name, task_run_data in task_runs.items():
+
+            for task_run in child_references:
+                if task_run['kind'] != 'TaskRun':
+                    continue
+                task_run_name = task_run['name']
+                task_info = TaskRun(os=self.os, task_run_name=task_run_name).get_info()
+                task_name = task_info['metadata']['labels']['tekton.dev/pipelineTask']
+
                 if task_run_name not in watched_task_runs:
                     watched_task_runs.add(task_run_name)
-                    current_task_runs.append((task_run_data['pipelineTaskName'], task_run_name))
+                    current_task_runs.append((task_name, task_run_name))
 
             yield current_task_runs
 
@@ -815,12 +812,14 @@ class PipelineRun():
         if not pipeline_run:
             return None
 
-        task_runs = pipeline_run['status']['taskRuns']
+        for task_run in self.child_references:
 
-        for task_run_name, task_run_data in get_sorted_task_runs(task_runs):
-            pipeline_task_name = task_run_data['pipelineTaskName']
+            task_run_object = TaskRun(os=self.os, task_run_name=task_run['name'])
+            task_info = task_run_object.get_info()
+            pipeline_task_name = task_info['metadata']['labels']['tekton.dev/pipelineTask']
 
-            logs[pipeline_task_name] = TaskRun(os=self.os, task_run_name=task_run_name).get_logs()
+            logs[pipeline_task_name] = task_run_object.get_logs()
+
         return logs
 
     def _get_logs_stream(self):
