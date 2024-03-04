@@ -8,7 +8,7 @@
 %global osbs_obsolete_vr 0.14-2
 
 Name:           osbs-client
-Version:        2.5.0
+Version:        2.6.0
 Release:        1%{?dist}
 
 Summary:        Python command line client for OpenShift Build Service
@@ -99,6 +99,9 @@ ln -s  %{_bindir}/osbs-%{binaries_py_version} %{buildroot}%{_bindir}/osbs
 
 
 %changelog
+* Mon Mar 04 2024 Robert Cerven <rcerven@redhat.com> 2.6.0-1
+- new upstream release: 2.6.0
+
 * Tue May 09 2023 Robert Cerven <rcerven@redhat.com> 2.5.0-1
 - new upstream release: 2.5.0
 
