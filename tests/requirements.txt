@@ -1,5 +1,5 @@
 flexmock>=0.11.0
-urllib3<1.26
+urllib3>=1.26.19
 pytest==7.0.1
 pytest-cov
 pytest-html
