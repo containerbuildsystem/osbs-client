@@ -19,7 +19,7 @@ import http
 from osbs.exceptions import OsbsException, OsbsNetworkException, OsbsResponseException
 from osbs.constants import (
     HTTP_MAX_RETRIES, HTTP_BACKOFF_FACTOR, HTTP_RETRIES_STATUS_FORCELIST,
-    HTTP_RETRIES_METHODS_WHITELIST, HTTP_REQUEST_TIMEOUT)
+    HTTP_RETRIES_ALLOWED_METHODS, HTTP_REQUEST_TIMEOUT)
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -111,7 +111,7 @@ class HttpStream(object):
             read=HTTP_MAX_RETRIES,
             backoff_factor=HTTP_BACKOFF_FACTOR,
             status_forcelist=HTTP_RETRIES_STATUS_FORCELIST,
-            method_whitelist=HTTP_RETRIES_METHODS_WHITELIST,
+            allowed_methods=HTTP_RETRIES_ALLOWED_METHODS,
             raise_on_status=False,
         )
         self.session = requests.Session()
