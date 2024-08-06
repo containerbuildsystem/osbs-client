@@ -83,7 +83,7 @@ case ${ACTION} in
   ;;
 "bandit")
   setup_osbs
-  $RUN $PIP install bandit
+  $RUN $PIP install 'bandit[baseline]'
   TEST_CMD="bandit-baseline -r osbs -ll -ii"
   ;;
 *)
