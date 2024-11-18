@@ -303,6 +303,14 @@ def test_validate_with_schema_bad_schema(caplog):
             ),
             r"Additional properties are not allowed \('additional_property' was unexpected\)",
         ),
+        (
+            (
+             """
+             remote_sources_version: 40
+             """
+            ),
+            r"40 is greater than the maximum of 2",
+        ),
     ],
 )
 def test_invalid_remote_sources_schema(config, err_message, caplog):
