@@ -17,6 +17,7 @@
         "tags": {"$ref": "#/definitions/tags"},
         "set_release_env": {"$ref": "#/definitions/set_release_env"},
         "version": {"$ref": "#/definitions/version"},
+        "remote_sources_version": {"$ref": "#/definitions/remote_sources_version"},
         "go": {"$ref": "#/definitions/go"}
       },
       "additionalProperties": false
@@ -33,6 +34,7 @@
         "tags": {"$ref": "#/definitions/tags"},
         "set_release_env": {"$ref": "#/definitions/set_release_env"},
         "version": {"$ref": "#/definitions/version"},
+        "remote_sources_version": {"$ref": "#/definitions/remote_sources_version"},
         "remote_source": {"$ref": "#/definitions/remote_source"}
       },
       "additionalProperties": false
@@ -49,6 +51,7 @@
         "tags": {"$ref": "#/definitions/tags"},
         "set_release_env": {"$ref": "#/definitions/set_release_env"},
         "version": {"$ref": "#/definitions/version"},
+        "remote_sources_version": {"$ref": "#/definitions/remote_sources_version"},
         "remote_sources": {"$ref": "#/definitions/remote_sources"}
       },
       "additionalProperties": false
@@ -438,6 +441,14 @@
         }
       },
       "additionalProperties": false
+    },
+    "remote_sources_version": {
+      "type": "number",
+      "description": "Feature version of remote sources",
+      "examples": [1, 2],
+      "minimum": 1,
+      "maximum": 2,
+      "default": 1
     }
   }
 }
