@@ -850,6 +850,7 @@ class TestPipelineRun():
     @pytest.mark.parametrize(('get_json', 'reason', 'succeeded'), [
         (deepcopy(PIPELINE_RUN_JSON), 'Running', False),
         (deepcopy(PIPELINE_RUN_JSON), 'Succeeded', True),
+        (deepcopy(PIPELINE_RUN_JSON), 'Completed', True),
         ({}, None, False),
     ])
     def test_status(self, pipeline_run, get_json, reason, succeeded):
@@ -870,6 +871,15 @@ class TestPipelineRun():
                 False,
                 [
                     ("clone", ("True", "Succeeded", "2022-05-27T08:07:27Z")),
+                    ("binary-container-prebuild", ("Unknown", "Running", None)),
+                ],
+            ),
+            # a task runs are skipped or still running
+            (
+                False,
+                False,
+                [
+                    ("clone", ("True", "None", "2022-05-27T08:07:27Z")),
                     ("binary-container-prebuild", ("Unknown", "Running", None)),
                 ],
             ),

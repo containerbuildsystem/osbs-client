@@ -526,7 +526,8 @@ class PipelineRun():
 
             task_name = task_info['metadata']['labels']['tekton.dev/pipelineTask']
             got_task_error = False
-            if task_info['status']['conditions'][0]['reason'] == 'Succeeded':
+            if task_info['status']['conditions'][0]['reason'] in ['Succeeded', 'None']:
+                # tekton: "None" reason means skipped task; yes string
                 continue
 
             if 'steps' in task_info['status']:
@@ -581,7 +582,8 @@ class PipelineRun():
     def has_succeeded(self):
         status_reason = self.status_reason
         logger.info("Pipeline run info: '%s'", self.data)
-        return status_reason == 'Succeeded'
+        # tekton: completed means succeeded with a skipped task
+        return status_reason in ['Succeeded', 'Completed']
 
     def has_not_finished(self):
         data = self.data
