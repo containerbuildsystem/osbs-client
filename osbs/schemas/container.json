@@ -348,6 +348,7 @@
           "type": ["array", "null"],
           "items": {
               "type": "string",
+              "enum": ["gomod", "rubygems", "pip", "yarn", "npm", "git-submodule"],
               "examples": [
                 "gomod"
               ]
