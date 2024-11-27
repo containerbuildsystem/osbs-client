@@ -360,3 +360,43 @@ def test_invalid_remote_sources_schema(config, err_message, caplog):
 def test_valid_remote_sources_schema(config, expected_data):
     data = read_yaml(dedent(config), "schemas/container.json")
     assert expected_data == data
+
+
+@pytest.mark.parametrize("pkg_manager,valid", [
+    ("npm", True),
+    ("pip", True),
+    ("gomod", True),
+    ("git-submodule", True),
+    ("yarn", True),
+    ("rubygems", True),
+    ("generic", False),
+    ("rpm", False),
+])
+def test_valid_pkg_managers(pkg_manager, valid):
+    remote_sources = f"""
+        remote_sources:
+        - name: valid-name
+          remote_source:
+            repo: https://git.example.com/team/repo.git
+            ref: b55c00f45ec3dfee0c766cea3d395d6e21cc2e5a
+            pkg_managers:
+                - {pkg_manager}
+        """
+    if valid:
+        assert read_yaml(dedent(remote_sources), "schemas/container.json")
+    else:
+        with pytest.raises(OsbsValidationException):
+            read_yaml(dedent(remote_sources), "schemas/container.json")
+
+    remote_source = f"""
+        remote_source:
+          repo: https://git.example.com/team/repo.git
+          ref: b55c00f45ec3dfee0c766cea3d395d6e21cc2e5a
+          pkg_managers:
+            - {pkg_manager}
+    """
+    if valid:
+        read_yaml(dedent(remote_source), "schemas/container.json")
+    else:
+        with pytest.raises(OsbsValidationException):
+            read_yaml(dedent(remote_source), "schemas/container.json")
