@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import os.path
+from pathlib import Path
 import random
 import re
 import shutil
@@ -67,6 +68,50 @@ class RegistryURI(object):
 
     def __repr__(self):
         return self.uri
+
+
+def enforce_sandbox(repo_root: str, *, remove_unsafe_symlinks: bool) -> None:
+    """
+    Check that there are no symlinks that try to leave the cloned repository.
+
+    :param (str | Path) repo_root: absolute path to root of cloned repository
+    :raises OsbsValidationException: if any symlink points outside of cloned repository
+    """
+    for dirpath, subdirs, files in os.walk(repo_root):
+        dirpath = Path(dirpath)
+
+        for entry in subdirs + files:
+            # the logic in here actually *requires* f-strings with `!r`. using
+            # `%r` DOES NOT WORK (tested)
+            # pylint: disable=logging-fstring-interpolation
+
+            # apparently pylint doesn't understand Path
+            full_path = dirpath / entry  # pylint: disable=old-division
+
+            try:
+                real_path = full_path.resolve()
+            except RuntimeError as e:
+                if "Symlink loop from " in str(e):
+                    logger.info(f"Symlink loop from {full_path!r}")
+                    continue
+                logger.exception("RuntimeError encountered")
+                raise
+
+            try:
+                real_path.relative_to(repo_root)
+            except ValueError:
+                # Unlike the real path, the full path is always relative to the root
+                relative_path = str(full_path.relative_to(repo_root))
+                if remove_unsafe_symlinks:
+                    full_path.unlink()
+                    logger.warning(
+                        f"The destination of {relative_path!r} is outside of cloned repository. "
+                        "Removing...",
+                    )
+                else:
+                    raise OsbsValidationException(
+                        f"The destination of {relative_path!r} is outside of cloned repository",
+                    )
 
 
 @contextlib.contextmanager
