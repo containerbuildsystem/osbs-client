@@ -18,6 +18,7 @@
         "set_release_env": {"$ref": "#/definitions/set_release_env"},
         "version": {"$ref": "#/definitions/version"},
         "remote_sources_version": {"$ref": "#/definitions/remote_sources_version"},
+        "remove_unsafe_symlinks": {"$ref": "#/definitions/remove_unsafe_symlinks"},
         "go": {"$ref": "#/definitions/go"}
       },
       "additionalProperties": false
@@ -35,7 +36,8 @@
         "set_release_env": {"$ref": "#/definitions/set_release_env"},
         "version": {"$ref": "#/definitions/version"},
         "remote_sources_version": {"$ref": "#/definitions/remote_sources_version"},
-        "remote_source": {"$ref": "#/definitions/remote_source"}
+        "remote_source": {"$ref": "#/definitions/remote_source"},
+        "remove_unsafe_symlinks": {"$ref": "#/definitions/remove_unsafe_symlinks"}
       },
       "additionalProperties": false
     },
@@ -52,7 +54,8 @@
         "set_release_env": {"$ref": "#/definitions/set_release_env"},
         "version": {"$ref": "#/definitions/version"},
         "remote_sources_version": {"$ref": "#/definitions/remote_sources_version"},
-        "remote_sources": {"$ref": "#/definitions/remote_sources"}
+        "remote_sources": {"$ref": "#/definitions/remote_sources"},
+        "remove_unsafe_symlinks": {"$ref": "#/definitions/remove_unsafe_symlinks"}
       },
       "additionalProperties": false
     }
@@ -450,6 +453,11 @@
       "minimum": 1,
       "maximum": 2,
       "default": 1
+    },
+    "remove_unsafe_symlinks": {
+      "description": "Remove unsafe symlinks if any are found?",
+      "type": "boolean",
+      "default": false
     }
   }
 }
