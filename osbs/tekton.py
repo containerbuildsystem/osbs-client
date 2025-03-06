@@ -570,12 +570,17 @@ class PipelineRun():
 
         task_results = self.get_task_results()
 
-        if 'binary-container-prebuild' not in task_results:
-            return None
+        if 'binary-container-prebuild' in task_results:
+            if 'platforms_result' in task_results['binary-container-prebuild']:
+                platforms = json.loads(
+                    task_results['binary-container-prebuild']['platforms_result'])
+                return platforms['platforms']
 
-        if 'platforms_result' in task_results['binary-container-prebuild']:
-            platforms = json.loads(task_results['binary-container-prebuild']['platforms_result'])
-            return platforms['platforms']
+        if 'binary-container-init' in task_results:
+            if 'platforms_result' in task_results['binary-container-init']:
+                platforms = json.loads(
+                    task_results['binary-container-init']['platforms_result'])
+                return platforms['platforms']
 
         return None
 

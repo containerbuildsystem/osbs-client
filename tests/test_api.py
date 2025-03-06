@@ -1066,7 +1066,11 @@ class TestOSBS(object):
     @pytest.mark.parametrize('platforms_result', [
         '{"platforms": ["x86_64", "ppc64le"]}',
     ])
-    def test_get_final_platforms(self, osbs_binary, platforms_result):
+    @pytest.mark.parametrize('task', [
+        'binary-container-prebuild',
+        'binary-container-init',
+    ])
+    def test_get_final_platforms(self, osbs_binary, platforms_result, task):
         taskstatus = {'conditions': [{'reason': 'Succeeded'}],
                       'taskResults': [{'name': 'platforms_result',
                                        'value': platforms_result}],
@@ -1074,7 +1078,7 @@ class TestOSBS(object):
         childrefs = [{'name': 'task_run_name', 'kind': 'TaskRun'}]
 
         resp1 = {'metadata': {'name': 'run_name'}, 'status': {'childReferences': childrefs}}
-        resp2 = {'metadata': {'labels': {'tekton.dev/pipelineTask': 'binary-container-prebuild'}},
+        resp2 = {'metadata': {'labels': {'tekton.dev/pipelineTask': task}},
                  'status': taskstatus}
 
         flexmock(PipelineRun).should_receive('get_info').and_return(resp1)
